@@ -48,8 +48,8 @@ int main(int argc, char *argv[])
   boost::program_options::options_description desc("Allowed options");
 
   desc.add_options()
-    ("sdr_address", boost::program_options::value<std::string>()->default_value(""), "IPv4 address of SDR")
-    ("rx_port", boost::program_options::value<unsigned>()->default_value(1030), "port to receive data")
+    ("local_address", boost::program_options::value<std::string>()->default_value(""), "IPv4 address of local interface")
+    ("local_port", boost::program_options::value<unsigned>()->default_value(1030), "port to use on local interface")
     ("packet_size", boost::program_options::value<size_t>()->default_value(65536), "packet size in bytes")
   ;
 
