@@ -12,8 +12,9 @@
 #include <boost/version.hpp>
 #include <boost/program_options.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
-#include <boost/lockfree/spsc_queue.hpp>
 #include <boost/format.hpp>
+
+#include "udp_server.hpp"
 
 static volatile sig_atomic_t stop_signal_called = 0;
 extern "C" void sig_int_handler(int) {
@@ -48,11 +49,20 @@ int main(int argc, char *argv[])
 
   desc.add_options()
     ("sdr_address", boost::program_options::value<std::string>()->default_value(""), "IPv4 address of SDR")
+    ("rx_port", boost::program_options::value<unsigned>()->default_value(1030), "port to receive data")
     ("packet_size", boost::program_options::value<size_t>()->default_value(65536), "packet size in bytes")
   ;
 
   boost::program_options::variables_map vm;
   init_vm(desc, vm, argc, argv);
 
+  try {
+    boost::asio::io_service io_service;
+    udp_server server(io_service, vm["rx_port"].as<unsigned>());
+    io_service.run();
+  }
+  catch (std::exception& e) {
+    std::cerr << e.what() << std::endl;
+  }
 
 }
