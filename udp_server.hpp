@@ -13,8 +13,8 @@ class udp_server {
     void start_receive() {
       socket_.async_receive_from(boost::asio::buffer(recv_buffer_), remote_endpoint_,
           boost::bind(&udp_server::handle_receive, this,
-          boost::asio::placeholders::error,
-          boost::asio::placeholders::bytes_transferred));
+            boost::asio::placeholders::error,
+            boost::asio::placeholders::bytes_transferred));
     }
 
     void handle_receive(const boost::system::error_code& error, std::size_t bytes_transferred) {
