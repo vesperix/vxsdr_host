@@ -48,6 +48,7 @@ int main(int argc, char *argv[])
 
   desc.add_options()
     ("sdr_address", boost::program_options::value<std::string>()->default_value(""), "IPv4 address of SDR")
+    ("packet_size", boost::program_options::value<size_t>()->default_value(65536), "packet size in bytes")
   ;
 
   boost::program_options::variables_map vm;
