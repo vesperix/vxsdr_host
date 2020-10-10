@@ -33,6 +33,23 @@ class udp_server {
   public:
     udp_server(boost::asio::io_service& io_service, const unsigned port)
       : socket_(io_service, boost::asio::ip::udp::endpoint(boost::asio::ip::udp::v4(), port)) {
+/*
+// open it
+boost::asio::ip::udp::endpoint rx_endpoint_(udp::v4(), 9999);
+socket_.open(rx_endpoint_.protocol(), error);
+if (error)
+  return false;
+
+// then set it for reuse and bind it
+socket_.set_option(boost::asio::ip::udp::socket::reuse_address(true));
+socket_.bind(rx_endpoint_, error);
+if (error)
+   return false;
+
+// set multicast group, etc.
+socket_.set_option(boost::asio::ip::multicast::join_group(ip_address));
+
+*/
       start_receive();
     }
 
