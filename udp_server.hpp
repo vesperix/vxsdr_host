@@ -13,21 +13,22 @@ void call_stop_signal() { stop_signal_called = 1; }
 
 typedef  boost::array<char, buffer_bytes> buffer_element;
 
-boost::lockfree::spsc_queue<buffer_element, boost::lockfree::capacity<queue_length> > outqueue;
+boost::lockfree::spsc_queue<buffer_element, boost::lockfree::capacity<queue_length> > txqueue;
+boost::lockfree::spsc_queue<buffer_element, boost::lockfree::capacity<queue_length> > rxqueue;
 
 void writer(const std::string &outfilename) {
   std::vector<buffer_element> buffer(write_buffer_size);
   std::ofstream outfile(outfilename.c_str(), std::ofstream::binary);
 
   while(!stop_signal_called) {
-    while(outqueue.read_available() > write_buffer_size) {
-    	size_t nwrite = outqueue.pop(&buffer.front(), write_buffer_size);
+    while(rxqueue.read_available() > write_buffer_size) {
+    	size_t nwrite = rxqueue.pop(&buffer.front(), write_buffer_size);
       outfile.write((const char*)&buffer.front(), nwrite * sizeof(buffer_element));
       }
     std::this_thread::sleep_for(std::chrono::microseconds(write_thread_sleep_us));
   }
 
-  while(size_t nwrite = outqueue.pop(&buffer.front(), write_buffer_size))
+  while(size_t nwrite = rxqueue.pop(&buffer.front(), write_buffer_size))
     outfile.write((const char*)&buffer.front(), nwrite * sizeof(buffer_element));
 
   outfile.close();
@@ -66,12 +67,12 @@ class udp_server {
 
     void handle_receive(const boost::system::error_code& error, std::size_t bytes_transferred) {
       if (!error || error == boost::asio::error::message_size) {
-        outqueue.push(recv_buffer_);
+        rxqueue.push(recv_buffer_);
       }
     }
 
-    void handle_send(boost::shared_ptr<std::string> data, const boost::system::error_code& error) {
-
+    void send(boost::shared_ptr<std::string> data_) {
+      // FIXME socket_.send_to(boost::asio::buffer(data_, data_->size()), remote_endpoint_);
     }
 
     boost::asio::ip::udp::socket socket_;
