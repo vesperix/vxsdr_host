@@ -7,7 +7,9 @@ static const size_t queue_length          = 4096;   // buffers
 static const size_t write_buffer_size     = 16;     // buffers
 static const int    write_thread_sleep_us = 100;
 
-static const volatile sig_atomic_t stop_signal_called = 0;
+static volatile sig_atomic_t stop_signal_called = 0;
+
+void call_stop_signal() { stop_signal_called = 1; }
 
 typedef  boost::array<char, buffer_bytes> buffer_element;
 

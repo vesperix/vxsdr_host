@@ -44,6 +44,7 @@ int main(int argc, char *argv[])
 
   desc.add_options()
     ("local_ip_address", boost::program_options::value<std::string>()->default_value(""), "IPv4 address of local interface")
+    ("multicast_address", boost::program_options::value<std::string>()->default_value(""), "IPv4 address of multicast group to join")
     ("local_port", boost::program_options::value<unsigned>()->default_value(1030), "port to use on local interface")
     ("destination_ip_address", boost::program_options::value<std::string>()->default_value(""), "IPv4 address of destination SDR")
     ("destination_port", boost::program_options::value<unsigned>()->default_value(1030), "port to receive data at destination SDR")
@@ -55,7 +56,11 @@ int main(int argc, char *argv[])
 
   try {
     boost::asio::io_service io_service;
-    udp_server server(io_service, boost::asio::ip::address_v4::from_string(vm["local_ip_address"].as<std::string>()), vm["rx_port"].as<unsigned>());
+    if(vm["multicast_address"].as<std::string>().size() > 0)
+      udp_server server(io_service, boost::asio::ip::address_v4::from_string(vm["local_ip_address"].as<std::string>()), vm["rx_port"].as<unsigned>(),
+                        boost::asio::ip::address_v4::from_string(vm["multicast_address"].as<std::string>()));
+    else
+      udp_server server(io_service, boost::asio::ip::address_v4::from_string(vm["local_ip_address"].as<std::string>()), vm["rx_port"].as<unsigned>());
     io_service.run();
   }
   catch (std::exception& e) {

@@ -10,10 +10,10 @@ PROGS := host_tx host_rx
 
 all: $(PROGS) Makefile
 
-host_tx: host_tx.cpp
+host_tx: host_tx.cpp udp_server.hpp
 	$(CXX) $(CXXFLAGS) -o $@ $< $(LDFLAGS)
 
-host_rx: host_rx.cpp
+host_rx: host_rx.cpp udp_server.hpp
 	$(CXX) $(CXXFLAGS) -o $@ $< $(LDFLAGS)
 
 clean:
