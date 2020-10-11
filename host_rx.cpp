@@ -13,13 +13,9 @@
 #include <boost/program_options.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/format.hpp>
+#include <boost/asio/ip/address_v4.hpp>
 
 #include "udp_server.hpp"
-
-static volatile sig_atomic_t stop_signal_called = 0;
-extern "C" void sig_int_handler(int) {
-  stop_signal_called = 1;
-}
 
 void init_vm(boost::program_options::options_description &desc, boost::program_options::variables_map &vm, int argc, char *argv[])
 {
@@ -58,7 +54,7 @@ int main(int argc, char *argv[])
 
   try {
     boost::asio::io_service io_service;
-    udp_server server(io_service, vm["rx_port"].as<unsigned>());
+    udp_server server(io_service, boost::asio::ip::address_v4::from_string(vm["local_ip_address"].as<std::string>()), vm["rx_port"].as<unsigned>());
     io_service.run();
   }
   catch (std::exception& e) {

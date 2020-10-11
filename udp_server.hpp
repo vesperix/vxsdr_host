@@ -7,6 +7,8 @@ static const size_t queue_length          = 4096;   // buffers
 static const size_t write_buffer_size     = 16;     // buffers
 static const int    write_thread_sleep_us = 100;
 
+static const volatile sig_atomic_t stop_signal_called = 0;
+
 typedef  boost::array<char, buffer_bytes> buffer_element;
 
 boost::lockfree::spsc_queue<buffer_element, boost::lockfree::capacity<queue_length> > outqueue;
@@ -31,28 +33,27 @@ void writer(const std::string &outfilename) {
 
 class udp_server {
   public:
-    udp_server(boost::asio::io_service& io_service, const unsigned port)
-      : socket_(io_service, boost::asio::ip::udp::endpoint(boost::asio::ip::udp::v4(), port)) {
-/*
-// open it
-boost::asio::ip::udp::endpoint rx_endpoint_(udp::v4(), 9999);
-socket_.open(rx_endpoint_.protocol(), error);
-if (error)
-  return false;
+    udp_server(boost::asio::io_service& io_service, const boost::asio::ip::address_v4 local_ip, const unsigned local_port)
+      : socket_(io_service, boost::asio::ip::udp::endpoint(boost::asio::ip::udp::v4(), local_port)) {
 
-// then set it for reuse and bind it
-socket_.set_option(boost::asio::ip::udp::socket::reuse_address(true));
-socket_.bind(rx_endpoint_, error);
-if (error)
-   return false;
+      socket_.set_option(boost::asio::ip::udp::socket::reuse_address(true));
+      local_endpoint_ = boost::asio::ip::udp::endpoint(local_ip, local_port);
+      socket_.bind(local_endpoint_);
 
-// set multicast group, etc.
-socket_.set_option(boost::asio::ip::multicast::join_group(ip_address));
-
-*/
       start_receive();
     }
+    udp_server(boost::asio::io_service& io_service, const boost::asio::ip::address_v4 local_ip, const unsigned local_port,
+               const boost::asio::ip::address_v4 multicast_ip)
+      : socket_(io_service, boost::asio::ip::udp::endpoint(boost::asio::ip::udp::v4(), local_port)) {
 
+      socket_.set_option(boost::asio::ip::udp::socket::reuse_address(true));
+      local_endpoint_ = boost::asio::ip::udp::endpoint(local_ip, local_port);
+      socket_.bind(local_endpoint_);
+
+      socket_.set_option(boost::asio::ip::multicast::join_group(multicast_ip));
+
+      start_receive();
+    }
   private:
     void start_receive() {
       socket_.async_receive_from(boost::asio::buffer(recv_buffer_), remote_endpoint_,
@@ -72,6 +73,7 @@ socket_.set_option(boost::asio::ip::multicast::join_group(ip_address));
     }
 
     boost::asio::ip::udp::socket socket_;
+    boost::asio::ip::udp::endpoint local_endpoint_;
     boost::asio::ip::udp::endpoint remote_endpoint_;
     boost::array<char, buffer_bytes> recv_buffer_;
 };
