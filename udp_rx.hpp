@@ -2,10 +2,10 @@
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
 
-static const size_t rx_buffer_bytes          = 4096;
+static const size_t rx_buffer_bytes          = 65536;
 static const size_t rx_queue_length          = 4096;   // buffers
 static const size_t rx_write_buffer_size     = 16;     // buffers
-static const int    rx_write_thread_sleep_us = 100;    // (buffer_bytes / 4 bytes per sample) * write_buffer_size / f_s
+static const int    rx_write_thread_sleep_us = 1600;    // (buffer_bytes / 4 bytes per sample) * write_buffer_size / f_s
 
 typedef boost::array<char, rx_buffer_bytes> rx_buffer;
 
