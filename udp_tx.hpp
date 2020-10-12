@@ -37,9 +37,17 @@ class udp_tx {
       socket_.set_option(boost::asio::ip::multicast::join_group(multicast_ip));
     }
   private:
+    void start_send() {
+      BOOST_LOG_TRIVIAL(info) << "send started";
+      socket_.async_send_to(boost::asio::buffer(send_buffer_.data), destination_endpoint_,
+          boost::bind(&udp_tx::handle_send, this,
+            boost::asio::placeholders::error,
+            boost::asio::placeholders::bytes_transferred));
+    }
+
     void handle_send(const boost::system::error_code& error, std::size_t bytes_transferred) {
       if (!error || error == boost::asio::error::message_size) {
-        tx_queue.push(send_buffer_);
+
       }
     }
 
