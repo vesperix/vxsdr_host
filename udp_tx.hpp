@@ -45,5 +45,5 @@ class udp_tx {
     boost::asio::ip::udp::socket socket_;
     boost::asio::ip::udp::endpoint local_endpoint_;
     boost::asio::ip::udp::endpoint remote_endpoint_;
-    boost::array<char, tx_buffer_bytes> send_buffer_;
+    tx_buffer_element send_buffer_;
 };

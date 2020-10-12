@@ -73,5 +73,5 @@ class udp_rx {
     boost::asio::ip::udp::socket socket_;
     boost::asio::ip::udp::endpoint local_endpoint_;
     boost::asio::ip::udp::endpoint remote_endpoint_;
-    boost::array<char, rx_buffer_bytes> recv_buffer_;
+    rx_buffer_element recv_buffer_;
 };
