@@ -1,4 +1,5 @@
 *.o
+*.dat
 host_rx
 host_tx
 .vscode
