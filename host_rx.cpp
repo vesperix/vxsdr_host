@@ -27,8 +27,8 @@ void init_vm(boost::program_options::options_description &desc, boost::program_o
   if (vm.count("config_file")) {
     std::ifstream ifs(vm["config_file"].as<std::string>().c_str());
     if (!ifs) {
-      std::cerr << "Error: cannot open config file " << vm["config_file"].as<std::string>() << "!" << std::endl;
-      throw std::runtime_error("Specified config file not found.");
+      BOOST_LOG_TRIVIAL(error) << "cannot open config file " << vm["config_file"].as<std::string>();
+      exit(3);
     }
     boost::program_options::store(boost::program_options::parse_config_file(ifs, desc), vm);
     boost::program_options::notify(vm);
@@ -42,10 +42,12 @@ void init_vm(boost::program_options::options_description &desc, boost::program_o
 
 int main(int argc, char *argv[])
 {
+  BOOST_LOG_TRIVIAL(info) << "host_rx started";
   boost::program_options::options_description desc("Allowed options");
 
   desc.add_options()
     ("help,H", "show help message")
+    ("config_file,C", boost::program_options::value<std::string>(), "configuration file for command line options")
     ("local_address,L", boost::program_options::value<std::string>()->default_value(""), "IPv4 address of local interface")
     ("multicast_address,M", boost::program_options::value<std::string>()->default_value(""), "IPv4 address of multicast group to join")
     ("local_port,P", boost::program_options::value<unsigned>()->default_value(1030), "port to use on local interface")
@@ -57,16 +59,18 @@ int main(int argc, char *argv[])
   boost::program_options::variables_map vm;
   init_vm(desc, vm, argc, argv);
 
+  BOOST_LOG_TRIVIAL(info) << "arguments parsed";
+
   if(vm["local_address"].as<std::string>().size() == 0) {
     BOOST_LOG_TRIVIAL(error) << "Local IP address must be specified";
     exit(1);
   }
 
-  boost::asio::ip::address_v4 local_ip = boost::asio::ip::address_v4::from_string(vm["local_ip_address"].as<std::string>());
+  boost::asio::ip::address_v4 local_ip = boost::asio::ip::address_v4::from_string(vm["local_address"].as<std::string>());
   boost::asio::ip::address_v4 multicast_ip;
   bool use_multicast = false;
   if(vm["multicast_address"].as<std::string>().size() > 0) {
-    multicast_ip = boost::asio::ip::address_v4::from_string(vm["multicast_ip_address"].as<std::string>());
+    multicast_ip = boost::asio::ip::address_v4::from_string(vm["multicast_address"].as<std::string>());
     if(multicast_ip.is_multicast())
       use_multicast = true;
     else {
@@ -74,18 +78,22 @@ int main(int argc, char *argv[])
       exit(2);
     }
   }
-  try {
-    std::thread writer_thread(writer, std::ref(vm["output_filename"].as<std::string>()), vm["num_packets"].as<size_t>());
 
+  try {
+    BOOST_LOG_TRIVIAL(info) << "starting receive";
+
+    std::thread writer_thread(writer, std::ref(vm["output_filename"].as<std::string>()), vm["num_packets"].as<size_t>());
+    writer_thread.detach();
     boost::asio::io_service io_service;
     if(use_multicast)
       udp_rx server(io_service, local_ip, vm["rx_port"].as<unsigned>(), multicast_ip);
     else
       udp_rx server(io_service, local_ip, vm["rx_port"].as<unsigned>());
     io_service.run();
-    writer_thread.join();
   }
   catch (std::exception& e) {
-    std::cerr << e.what() << std::endl;
+    BOOST_LOG_TRIVIAL(error) << "exception caught:" << e.what();
   }
+
+  BOOST_LOG_TRIVIAL(info) << "host_rx finished";
 }

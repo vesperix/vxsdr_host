@@ -12,6 +12,9 @@ typedef  boost::array<char, rx_buffer_bytes> rx_buffer_element;
 static boost::lockfree::spsc_queue<rx_buffer_element, boost::lockfree::capacity<rx_queue_length> > rx_queue;
 
 void writer(const std::string &outfilename, const size_t max_packets) {
+
+  BOOST_LOG_TRIVIAL(info) << "writer thread started";
+
   std::vector<rx_buffer_element> buffer(rx_write_buffer_size);
   std::ofstream outfile(outfilename.c_str(), std::ofstream::binary);
   size_t packets = 0;
@@ -29,6 +32,7 @@ void writer(const std::string &outfilename, const size_t max_packets) {
     outfile.write((const char*)&buffer.front(), nwrite * sizeof(rx_buffer_element));
 
   outfile.close();
+  BOOST_LOG_TRIVIAL(info) << "writer thread finished";
 }
 
 class udp_rx {

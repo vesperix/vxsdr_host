@@ -1,3 +1,4 @@
 *.o
 host_rx
 host_tx
+.vscode
