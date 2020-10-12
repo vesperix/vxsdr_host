@@ -49,7 +49,8 @@ int main(int argc, char *argv[])
     ("multicast_address", boost::program_options::value<std::string>()->default_value(""), "IPv4 address of multicast group to join")
     ("local_port", boost::program_options::value<unsigned>()->default_value(1030), "port to use on local interface")
     ("packet_size", boost::program_options::value<size_t>()->default_value(65536), "packet size in bytes")
-    ("duration", boost::program_options::value<double>()->default_value(10.0), "duration in seconds (0 runs until ctrl-C)")
+    ("num_packets", boost::program_options::value<size_t>()->default_value(1024), "number of packets to receive")
+    ("output_filename", boost::program_options::value<std::string>()->default_value("test.dat"), "filename to save recieved data")
   ;
 
   boost::program_options::variables_map vm;
@@ -68,7 +69,7 @@ int main(int argc, char *argv[])
     }
 
   try {
-    //FIXME: start writer thread here
+    std::thread writer_thread(writer, std::ref(vm["output_filename"].as<std::string>()), vm["num_packets"].as<size_t>());
 
     boost::asio::io_service io_service;
     if(use_multicast)
@@ -76,9 +77,9 @@ int main(int argc, char *argv[])
     else
       udp_rx server(io_service, local_ip, vm["rx_port"].as<unsigned>());
     io_service.run();
+    writer_thread.join();
   }
   catch (std::exception& e) {
     std::cerr << e.what() << std::endl;
   }
-
 }

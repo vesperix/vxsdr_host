@@ -7,23 +7,21 @@ static const size_t rx_queue_length          = 4096;   // buffers
 static const size_t rx_write_buffer_size     = 16;     // buffers
 static const int    rx_write_thread_sleep_us = 100;    // (buffer_bytes / 4 bytes per sample) * write_buffer_size / f_s
 
-static volatile sig_atomic_t rx_stop_signal_called = 0;
-
-void call_rx_stop_signal() { rx_stop_signal_called = 1; }
-
 typedef  boost::array<char, rx_buffer_bytes> rx_buffer_element;
 
 static boost::lockfree::spsc_queue<rx_buffer_element, boost::lockfree::capacity<rx_queue_length> > rx_queue;
 
-void writer(const std::string &outfilename) {
+void writer(const std::string &outfilename, const size_t max_packets) {
   std::vector<rx_buffer_element> buffer(rx_write_buffer_size);
   std::ofstream outfile(outfilename.c_str(), std::ofstream::binary);
+  size_t packets = 0;
 
-  while(!rx_stop_signal_called) {
+  while(packets < max_packets) {
     while(rx_queue.read_available() > rx_write_buffer_size) {
     	size_t nwrite = rx_queue.pop(&buffer.front(), rx_write_buffer_size);
       outfile.write((const char*)&buffer.front(), nwrite * sizeof(rx_buffer_element));
-      }
+      packets += nwrite;
+    }
     std::this_thread::sleep_for(std::chrono::microseconds(rx_write_thread_sleep_us));
   }
 
