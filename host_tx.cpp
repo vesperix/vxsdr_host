@@ -13,6 +13,7 @@
 #include <boost/program_options.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/format.hpp>
+#include <boost/log/trivial.hpp>
 
 #include "udp_tx.hpp"
 
@@ -38,33 +39,64 @@ void init_vm(boost::program_options::options_description &desc, boost::program_o
   }
 }
 
+extern "C" void sig_int_handler(int) {
+  BOOST_LOG_TRIVIAL(fatal) << "terminated by SIGINT (ctrl-C)";
+  exit(99);
+}
+
 int main(int argc, char *argv[])
 {
+  BOOST_LOG_TRIVIAL(info) << argv[0] << " started";
+  signal(SIGINT, &sig_int_handler);
   boost::program_options::options_description desc("Allowed options");
 
   desc.add_options()
-    ("local_ip_address", boost::program_options::value<std::string>()->default_value(""), "IPv4 address of local interface")
-    ("multicast_address", boost::program_options::value<std::string>()->default_value(""), "IPv4 address of multicast group to join")
-    ("local_port", boost::program_options::value<unsigned>()->default_value(1030), "port to use on local interface")
-    ("destination_ip_address", boost::program_options::value<std::string>()->default_value(""), "IPv4 address of destination SDR")
-    ("destination_port", boost::program_options::value<unsigned>()->default_value(1030), "port to receive data at destination SDR")
-    ("packet_size", boost::program_options::value<size_t>()->default_value(65536), "packet size in bytes")
+    ("help,H", "show help message")
+    ("config_file,C", boost::program_options::value<std::string>(), "configuration file for command line options")
+    ("local_address,A", boost::program_options::value<std::string>()->default_value(""), "IPv4 address of local interface")
+    ("local_port,L", boost::program_options::value<unsigned>()->default_value(1030), "port to use on local interface")
+    ("destination_address,D", boost::program_options::value<std::string>()->default_value(""), "IPv4 address of destination interface")
+    ("destination_port,P", boost::program_options::value<unsigned>()->default_value(1030), "port to use on destination interface")
+    ("multicast_address,M", boost::program_options::value<std::string>()->default_value(""), "IPv4 address of multicast gropu")
+    ("packet_size,S", boost::program_options::value<size_t>()->default_value(65536), "packet size in bytes")
+    ("num_packets,N", boost::program_options::value<size_t>()->default_value(1024), "number of packets to receive")
+    ("output_filename,O", boost::program_options::value<std::string>()->default_value("test.dat"), "filename to save recieved data")
   ;
 
   boost::program_options::variables_map vm;
   init_vm(desc, vm, argc, argv);
 
+  if(vm["local_address"].as<std::string>().size() == 0) {
+    BOOST_LOG_TRIVIAL(fatal) << "local IP address must be specified";
+    exit(1);
+  }
+
+  boost::asio::ip::address_v4 local_ip = boost::asio::ip::address_v4::from_string(vm["local_address"].as<std::string>());
+  boost::asio::ip::address_v4 destination_ip = boost::asio::ip::address_v4::from_string(vm["destination_address"].as<std::string>());
+  boost::asio::ip::udp::endpoint local_endpoint(local_ip, vm["local_port"].as<unsigned>());
+  boost::asio::ip::udp::endpoint destination_endpoint(destination_ip, vm["destination_port"].as<unsigned>());
+
+  boost::asio::ip::address_v4 multicast_ip;
+  bool use_multicast = false;
+  if(vm["multicast_address"].as<std::string>().size() > 0) {
+    use_multicast = true;
+    multicast_ip = boost::asio::ip::address_v4::from_string(vm["multicast_address"].as<std::string>());
+  }
   try {
+    std::string outfile_name = vm["output_filename"].as<std::string>();
+    std::thread generator_thread(generator, vm["num_packets"].as<size_t>());
     boost::asio::io_service io_service;
-    if(vm["multicast_address"].as<std::string>().size() > 0)
-      udp_tx server(io_service, boost::asio::ip::address_v4::from_string(vm["local_ip_address"].as<std::string>()), vm["rx_port"].as<unsigned>(),
-                        boost::asio::ip::address_v4::from_string(vm["multicast_address"].as<std::string>()));
+    if(use_multicast)
+      udp_tx server(io_service, local_endpoint, destination_endpoint);
     else
-      udp_tx server(io_service, boost::asio::ip::address_v4::from_string(vm["local_ip_address"].as<std::string>()), vm["rx_port"].as<unsigned>());
+      udp_tx server(io_service, local_endpoint, multicast_ip, vm["destination_port"].as<unsigned>());
     io_service.run();
+    generator_thread.join();
   }
   catch (std::exception& e) {
-    std::cerr << e.what() << std::endl;
+    BOOST_LOG_TRIVIAL(error) << "exception caught: " << e.what();
   }
+
+  BOOST_LOG_TRIVIAL(info) << argv[0] << " finished";
 
 }

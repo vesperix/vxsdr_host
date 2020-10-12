@@ -13,7 +13,6 @@
 #include <boost/program_options.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/format.hpp>
-#include <boost/asio/ip/address_v4.hpp>
 #include <boost/log/trivial.hpp>
 
 #include "udp_rx.hpp"
@@ -54,9 +53,9 @@ int main(int argc, char *argv[])
   desc.add_options()
     ("help,H", "show help message")
     ("config_file,C", boost::program_options::value<std::string>(), "configuration file for command line options")
-    ("local_address,L", boost::program_options::value<std::string>()->default_value(""), "IPv4 address of local interface")
+    ("local_address,A", boost::program_options::value<std::string>()->default_value(""), "IPv4 address of local interface")
+    ("local_port,L", boost::program_options::value<unsigned>()->default_value(1030), "port to use on local interface")
     ("multicast_address,M", boost::program_options::value<std::string>()->default_value(""), "IPv4 address of multicast group to join")
-    ("local_port,P", boost::program_options::value<unsigned>()->default_value(1030), "port to use on local interface")
     ("packet_size,S", boost::program_options::value<size_t>()->default_value(65536), "packet size in bytes")
     ("num_packets,N", boost::program_options::value<size_t>()->default_value(1024), "number of packets to receive")
     ("output_filename,O", boost::program_options::value<std::string>()->default_value("test.dat"), "filename to save recieved data")
