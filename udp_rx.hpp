@@ -37,25 +37,17 @@ void writer(const std::string &outfilename, const size_t max_packets) {
 
 class udp_rx {
   public:
-    udp_rx(boost::asio::io_service& io_service, const boost::asio::ip::address_v4 local_ip, const unsigned local_port)
-      : socket_(io_service, boost::asio::ip::udp::endpoint(boost::asio::ip::udp::v4(), local_port)) {
-
-      socket_.set_option(boost::asio::ip::udp::socket::reuse_address(true));
-      local_endpoint_ = boost::asio::ip::udp::endpoint(local_ip, local_port);
-      socket_.bind(local_endpoint_);
-
+    udp_rx(boost::asio::io_service& io_service, boost::asio::ip::udp::endpoint& local_endpoint)
+      : socket_(io_service, local_endpoint) {
+      local_endpoint_ = local_endpoint;
       start_receive();
     }
-    udp_rx(boost::asio::io_service& io_service, const boost::asio::ip::address_v4 local_ip, const unsigned local_port,
+    udp_rx(boost::asio::io_service& io_service, boost::asio::ip::udp::endpoint& local_endpoint,
                const boost::asio::ip::address_v4 multicast_ip)
-      : socket_(io_service, boost::asio::ip::udp::endpoint(boost::asio::ip::udp::v4(), local_port)) {
-
+      : socket_(io_service, local_endpoint) {
       socket_.set_option(boost::asio::ip::udp::socket::reuse_address(true));
-      local_endpoint_ = boost::asio::ip::udp::endpoint(local_ip, local_port);
-      socket_.bind(local_endpoint_);
-
       socket_.set_option(boost::asio::ip::multicast::join_group(multicast_ip));
-
+      local_endpoint_ = local_endpoint;
       start_receive();
     }
   private:

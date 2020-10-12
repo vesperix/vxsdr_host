@@ -67,6 +67,7 @@ int main(int argc, char *argv[])
   }
 
   boost::asio::ip::address_v4 local_ip = boost::asio::ip::address_v4::from_string(vm["local_address"].as<std::string>());
+  boost::asio::ip::udp::endpoint local_endpoint(local_ip, vm["local_port"].as<unsigned>());
   boost::asio::ip::address_v4 multicast_ip;
   bool use_multicast = false;
   if(vm["multicast_address"].as<std::string>().size() > 0) {
@@ -74,25 +75,25 @@ int main(int argc, char *argv[])
     if(multicast_ip.is_multicast())
       use_multicast = true;
     else {
-      BOOST_LOG_TRIVIAL(error) << "Invalid multicast address:" << vm["multicast_address"].as<std::string>();
+      BOOST_LOG_TRIVIAL(error) << "Invalid multicast address: " << vm["multicast_address"].as<std::string>();
       exit(2);
     }
   }
 
   try {
     BOOST_LOG_TRIVIAL(info) << "starting receive";
-
-    std::thread writer_thread(writer, std::ref(vm["output_filename"].as<std::string>()), vm["num_packets"].as<size_t>());
-    writer_thread.detach();
+    std::string outfile_name = vm["output_filename"].as<std::string>();
+    std::thread writer_thread(writer, std::ref(outfile_name), vm["num_packets"].as<size_t>());
     boost::asio::io_service io_service;
     if(use_multicast)
-      udp_rx server(io_service, local_ip, vm["rx_port"].as<unsigned>(), multicast_ip);
+      udp_rx server(io_service, local_endpoint, multicast_ip);
     else
-      udp_rx server(io_service, local_ip, vm["rx_port"].as<unsigned>());
+      udp_rx server(io_service, local_endpoint);
     io_service.run();
+    writer_thread.join();
   }
   catch (std::exception& e) {
-    BOOST_LOG_TRIVIAL(error) << "exception caught:" << e.what();
+    BOOST_LOG_TRIVIAL(error) << "exception caught: " << e.what();
   }
 
   BOOST_LOG_TRIVIAL(info) << "host_rx finished";
