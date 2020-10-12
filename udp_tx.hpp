@@ -3,9 +3,8 @@
 #include <boost/bind.hpp>
 
 static const size_t tx_buffer_bytes          = 65536;
-static const size_t tx_queue_length          = 4096;   // buffers
-static const size_t tx_write_buffer_size     = 16;     // buffers
-static const int    tx_write_thread_sleep_us = 1600;   // (buffer_bytes / 4 bytes per sample) * write_buffer_size / f_s
+static const size_t tx_queue_length          = 256;   // buffers
+static const int    tx_send_thread_sleep_us  = 100;   // (buffer_bytes / 4 bytes per sample) / f_s
 
 typedef boost::array<char, tx_buffer_bytes> tx_buffer;
 
@@ -26,28 +25,24 @@ class udp_tx {
       boost::asio::ip::udp::endpoint &destination_endpoint) : socket_(io_service, local_endpoint) {
       local_endpoint_ = local_endpoint;
       destination_endpoint_ = destination_endpoint;
-    }
-    udp_tx(boost::asio::io_service& io_service,  boost::asio::ip::udp::endpoint &local_endpoint,
-      const boost::asio::ip::address_v4 multicast_ip, unsigned multicast_port)
-      : socket_(io_service, local_endpoint) {
-      local_endpoint_ = local_endpoint;
-      multicast_ip_ = multicast_ip;
-      multicast_port_ = multicast_port;
-      socket_.set_option(boost::asio::ip::udp::socket::reuse_address(true));
-      socket_.set_option(boost::asio::ip::multicast::join_group(multicast_ip));
+      start_send();
     }
   private:
     void start_send() {
       BOOST_LOG_TRIVIAL(info) << "send started";
-      socket_.async_send_to(boost::asio::buffer(send_buffer_.data), destination_endpoint_,
-          boost::bind(&udp_tx::handle_send, this,
-            boost::asio::placeholders::error,
-            boost::asio::placeholders::bytes_transferred));
+      while(true) {
+        if(tx_queue.read_available()) {
+          tx_queue.pop(&send_buffer_);
+          socket_.async_send_to(boost::asio::buffer(send_buffer_.data, send_buffer_.bytes_used), destination_endpoint_,
+              boost::bind(&udp_tx::handle_send, this, boost::asio::placeholders::error,
+              boost::asio::placeholders::bytes_transferred));
+        }
+        std::this_thread::sleep_for(std::chrono::microseconds(tx_send_thread_sleep_us));
+      }
     }
-
     void handle_send(const boost::system::error_code& error, std::size_t bytes_transferred) {
-      if (!error || error == boost::asio::error::message_size) {
-
+      if (error && error != boost::asio::error::message_size) {
+        BOOST_LOG_TRIVIAL(error) << "async send error " << error;
       }
     }
 
