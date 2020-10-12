@@ -14,7 +14,7 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/format.hpp>
 
-#include "udp_server.hpp"
+#include "udp_tx.hpp"
 
 void init_vm(boost::program_options::options_description &desc, boost::program_options::variables_map &vm, int argc, char *argv[])
 {
@@ -57,10 +57,10 @@ int main(int argc, char *argv[])
   try {
     boost::asio::io_service io_service;
     if(vm["multicast_address"].as<std::string>().size() > 0)
-      udp_server server(io_service, boost::asio::ip::address_v4::from_string(vm["local_ip_address"].as<std::string>()), vm["rx_port"].as<unsigned>(),
+      udp_tx server(io_service, boost::asio::ip::address_v4::from_string(vm["local_ip_address"].as<std::string>()), vm["rx_port"].as<unsigned>(),
                         boost::asio::ip::address_v4::from_string(vm["multicast_address"].as<std::string>()));
     else
-      udp_server server(io_service, boost::asio::ip::address_v4::from_string(vm["local_ip_address"].as<std::string>()), vm["rx_port"].as<unsigned>());
+      udp_tx server(io_service, boost::asio::ip::address_v4::from_string(vm["local_ip_address"].as<std::string>()), vm["rx_port"].as<unsigned>());
     io_service.run();
   }
   catch (std::exception& e) {
