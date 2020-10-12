@@ -45,29 +45,35 @@ int main(int argc, char *argv[])
   boost::program_options::options_description desc("Allowed options");
 
   desc.add_options()
-    ("local_address", boost::program_options::value<std::string>()->required(), "IPv4 address of local interface")
-    ("multicast_address", boost::program_options::value<std::string>()->default_value(""), "IPv4 address of multicast group to join")
-    ("local_port", boost::program_options::value<unsigned>()->default_value(1030), "port to use on local interface")
-    ("packet_size", boost::program_options::value<size_t>()->default_value(65536), "packet size in bytes")
-    ("num_packets", boost::program_options::value<size_t>()->default_value(1024), "number of packets to receive")
-    ("output_filename", boost::program_options::value<std::string>()->default_value("test.dat"), "filename to save recieved data")
+    ("help,H", "show help message")
+    ("local_address,L", boost::program_options::value<std::string>()->default_value(""), "IPv4 address of local interface")
+    ("multicast_address,M", boost::program_options::value<std::string>()->default_value(""), "IPv4 address of multicast group to join")
+    ("local_port,P", boost::program_options::value<unsigned>()->default_value(1030), "port to use on local interface")
+    ("packet_size,S", boost::program_options::value<size_t>()->default_value(65536), "packet size in bytes")
+    ("num_packets,N", boost::program_options::value<size_t>()->default_value(1024), "number of packets to receive")
+    ("output_filename,O", boost::program_options::value<std::string>()->default_value("test.dat"), "filename to save recieved data")
   ;
 
   boost::program_options::variables_map vm;
   init_vm(desc, vm, argc, argv);
 
+  if(vm["local_address"].as<std::string>().size() == 0) {
+    BOOST_LOG_TRIVIAL(error) << "Local IP address must be specified";
+    exit(1);
+  }
+
   boost::asio::ip::address_v4 local_ip = boost::asio::ip::address_v4::from_string(vm["local_ip_address"].as<std::string>());
   boost::asio::ip::address_v4 multicast_ip;
   bool use_multicast = false;
-  if(vm["multicast_address"].as<std::string>().size() > 0) {}
+  if(vm["multicast_address"].as<std::string>().size() > 0) {
     multicast_ip = boost::asio::ip::address_v4::from_string(vm["multicast_ip_address"].as<std::string>());
     if(multicast_ip.is_multicast())
       use_multicast = true;
     else {
       BOOST_LOG_TRIVIAL(error) << "Invalid multicast address:" << vm["multicast_address"].as<std::string>();
-      exit(1);
+      exit(2);
     }
-
+  }
   try {
     std::thread writer_thread(writer, std::ref(vm["output_filename"].as<std::string>()), vm["num_packets"].as<size_t>());
 
