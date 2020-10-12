@@ -40,9 +40,15 @@ void init_vm(boost::program_options::options_description &desc, boost::program_o
   }
 }
 
+extern "C" void sig_int_handler(int) {
+  BOOST_LOG_TRIVIAL(fatal) << "terminated by SIGINT (ctrl-C)";
+  exit(99);
+}
+
 int main(int argc, char *argv[])
 {
-  BOOST_LOG_TRIVIAL(info) << "host_rx started";
+  BOOST_LOG_TRIVIAL(info) << argv[0] << " started";
+  signal(SIGINT, &sig_int_handler);
   boost::program_options::options_description desc("Allowed options");
 
   desc.add_options()
@@ -59,10 +65,8 @@ int main(int argc, char *argv[])
   boost::program_options::variables_map vm;
   init_vm(desc, vm, argc, argv);
 
-  BOOST_LOG_TRIVIAL(info) << "arguments parsed";
-
   if(vm["local_address"].as<std::string>().size() == 0) {
-    BOOST_LOG_TRIVIAL(error) << "Local IP address must be specified";
+    BOOST_LOG_TRIVIAL(fatal) << "local IP address must be specified";
     exit(1);
   }
 
@@ -75,13 +79,12 @@ int main(int argc, char *argv[])
     if(multicast_ip.is_multicast())
       use_multicast = true;
     else {
-      BOOST_LOG_TRIVIAL(error) << "Invalid multicast address: " << vm["multicast_address"].as<std::string>();
+      BOOST_LOG_TRIVIAL(fatal) << "Invalid multicast address: " << vm["multicast_address"].as<std::string>();
       exit(2);
     }
   }
 
   try {
-    BOOST_LOG_TRIVIAL(info) << "starting receive";
     std::string outfile_name = vm["output_filename"].as<std::string>();
     std::thread writer_thread(writer, std::ref(outfile_name), vm["num_packets"].as<size_t>());
     boost::asio::io_service io_service;
@@ -96,5 +99,5 @@ int main(int argc, char *argv[])
     BOOST_LOG_TRIVIAL(error) << "exception caught: " << e.what();
   }
 
-  BOOST_LOG_TRIVIAL(info) << "host_rx finished";
+  BOOST_LOG_TRIVIAL(info) << argv[0] << " finished";
 }

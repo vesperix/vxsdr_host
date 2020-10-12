@@ -37,12 +37,12 @@ void writer(const std::string &outfilename, const size_t max_packets) {
 
 class udp_rx {
   public:
-    udp_rx(boost::asio::io_service& io_service, boost::asio::ip::udp::endpoint& local_endpoint)
+    udp_rx(boost::asio::io_service &io_service, boost::asio::ip::udp::endpoint &local_endpoint)
       : socket_(io_service, local_endpoint) {
       local_endpoint_ = local_endpoint;
       start_receive();
     }
-    udp_rx(boost::asio::io_service& io_service, boost::asio::ip::udp::endpoint& local_endpoint,
+    udp_rx(boost::asio::io_service &io_service, boost::asio::ip::udp::endpoint &local_endpoint,
                const boost::asio::ip::address_v4 multicast_ip)
       : socket_(io_service, local_endpoint) {
       socket_.set_option(boost::asio::ip::udp::socket::reuse_address(true));
@@ -52,6 +52,7 @@ class udp_rx {
     }
   private:
     void start_receive() {
+      BOOST_LOG_TRIVIAL(info) << "receive started";
       socket_.async_receive_from(boost::asio::buffer(recv_buffer_), remote_endpoint_,
           boost::bind(&udp_rx::handle_receive, this,
             boost::asio::placeholders::error,
