@@ -52,13 +52,14 @@ int main(int argc, char *argv[])
 
   desc.add_options()
     ("help,H", "show help message")
-    ("config_file,C", boost::program_options::value<std::string>(), "configuration file for command line options")
+    ("config_file,C", boost::program_options::value<std::string>(), "configuration file giving command line options")
     ("local_address,A", boost::program_options::value<std::string>()->default_value(""), "IPv4 address of local interface")
     ("local_port,L", boost::program_options::value<unsigned>()->default_value(1030), "port to use on local interface")
     ("destination_address,D", boost::program_options::value<std::string>()->default_value(""), "IPv4 address of destination (including multicast)")
     ("destination_port,P", boost::program_options::value<unsigned>()->default_value(1030), "port to use on destination")
-    ("packet_size,S", boost::program_options::value<size_t>()->default_value(65536), "packet size in bytes")
-    ("num_packets,N", boost::program_options::value<size_t>()->default_value(1024), "number of packets to receive")
+    ("packet_size,S", boost::program_options::value<size_t>()->default_value(1024), "packet size in bytes")
+    ("num_packets,N", boost::program_options::value<size_t>()->default_value(1024), "number of packets to send")
+    ("wait_us,W", boost::program_options::value<unsigned>()->default_value(1000000), "wait between packets in us")
   ;
 
   boost::program_options::variables_map vm;
@@ -75,7 +76,7 @@ int main(int argc, char *argv[])
   boost::asio::ip::udp::endpoint destination_endpoint(destination_ip, vm["destination_port"].as<unsigned>());
 
   try {
-    std::thread generator_thread(generator, vm["num_packets"].as<size_t>());
+    std::thread generator_thread(generator, vm["num_packets"].as<size_t>(), vm["packet_size"].as<size_t>(), vm["wait_us"].as<unsigned>());
     boost::asio::io_service io_service;
     udp_tx server(io_service, local_endpoint, destination_endpoint);
     io_service.run();

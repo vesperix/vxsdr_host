@@ -15,9 +15,16 @@ typedef  struct {
 
 static boost::lockfree::spsc_queue<tx_buffer_element, boost::lockfree::capacity<tx_queue_length> > tx_queue;
 
-void generator(const size_t max_packets) {
+void generator(const size_t max_packets, const size_t packet_size, const unsigned packet_wait_us) {
+  tx_buffer_element buf;
 
-  std::this_thread::sleep_for(std::chrono::microseconds(tx_send_thread_sleep_us));
+  for(unsigned i = 0; i < max_packets; i++) {
+    memset(&buf.data, 0, packet_size);
+    memcpy(&buf.data, &i, sizeof(i));
+    buf.bytes_used = packet_size;
+    tx_queue.push(buf);
+    std::this_thread::sleep_for(std::chrono::microseconds(packet_wait_us));
+  }
 }
 
 class udp_tx {
