@@ -5,8 +5,7 @@ DEFINES=-DBOOST_LOG_DYN_LINK
 #CXXFLAGS=-Wall -pedantic -O3 -march=native -std=c++14 $(DEFINES)
 CXXFLAGS=-Wall -pedantic -g -Og -march=native -std=c++14 $(DEFINES)
 
-LDFLAGS = -lboost_program_options -lboost_date_time -lboost_log -lpthread
-
+LDFLAGS=-lpthread -lboost_log -lboost_program_options
 PROGS := host_tx host_rx
 
 all: $(PROGS) Makefile
