@@ -17,6 +17,7 @@ static boost::lockfree::spsc_queue<tx_buffer_element, boost::lockfree::capacity<
 
 void generator(const size_t max_packets) {
 
+  std::this_thread::sleep_for(std::chrono::microseconds(tx_send_thread_sleep_us));
 }
 
 class udp_tx {
@@ -49,7 +50,5 @@ class udp_tx {
     boost::asio::ip::udp::socket socket_;
     boost::asio::ip::udp::endpoint local_endpoint_;
     boost::asio::ip::udp::endpoint destination_endpoint_;
-    boost::asio::ip::address_v4 multicast_ip_;
-    unsigned multicast_port_;
     tx_buffer_element send_buffer_;
 };
