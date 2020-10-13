@@ -6,6 +6,8 @@ BASEFLAGS = -Wall -pedantic -std=c++14
 OPTFLAGS = -O3
 DBGFLAGS = -g -Og
 
+LDFLAGS = -lpthread -lboost_log -lboost_program_options
+
 #DEBUG = 1
 
 ifdef DEBUG
@@ -14,7 +16,6 @@ else
 	CXXFLAGS = $(BASEFLAGS) $(OPTFLAGS) $(DEFINES)
 endif
 
-LDFLAGS = -lpthread -lboost_log -lboost_program_options
 PROGS = host_tx host_rx
 
 all: $(PROGS) Makefile
