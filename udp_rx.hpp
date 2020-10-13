@@ -41,6 +41,35 @@ void writer(const std::string &outfilename, const size_t max_packets) {
   BOOST_LOG_TRIVIAL(info) << "writer thread finished";
 }
 
+void sequence_checker(const size_t max_packets) {
+
+  BOOST_LOG_TRIVIAL(info) << "sequence checker thread started";
+
+  rx_buffer_element buffer;
+  std::ofstream outfile(outfilename.c_str(), std::ofstream::binary);
+  size_t packets = 0;
+  unsigned seq, last_seq = 0;
+
+  while(packets < max_packets) {
+    while(rx_queue.read_available()) {
+    	rx_queue.pop(&buffer);
+      memcpy(&seq, &buffer.data, sizeof(seq));
+      if(seq != last_seq + 1)
+        BOOST_LOG_TRIVIAL(error) << "recieved " << seq << ", expected " << (last_seq + 1);
+      else
+        last_seq = seq;
+      packets++;
+    }
+    std::this_thread::sleep_for(std::chrono::microseconds(rx_write_thread_sleep_us));
+  }
+
+  while(size_t nwrite = rx_queue.pop(&buffer.front(), rx_write_buffer_size))
+    outfile.write((const char*)&buffer.front(), nwrite * sizeof(rx_buffer_element));
+
+  outfile.close();
+  BOOST_LOG_TRIVIAL(info) << "writer thread finished";
+}
+
 class udp_rx {
   public:
     udp_rx(boost::asio::io_service &io_service, boost::asio::ip::udp::endpoint &local_endpoint)

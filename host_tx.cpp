@@ -48,7 +48,7 @@ int main(int argc, char *argv[])
 {
   BOOST_LOG_TRIVIAL(info) << argv[0] << " started";
   signal(SIGINT, &sig_int_handler);
-  boost::program_options::options_description desc("Allowed options");
+  boost::program_options::options_description desc("Command line options");
 
   desc.add_options()
     ("help,H", "show help message")
