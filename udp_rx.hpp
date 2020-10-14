@@ -97,11 +97,8 @@ class udp_rx {
     udp_rx(boost::asio::io_service &io_service, boost::asio::ip::udp::endpoint &local_endpoint)
       : socket_(io_service, local_endpoint) {
       local_endpoint_ = local_endpoint;
-//      io_service_sptr_ = boost::shared_ptr<boost::asio::io_service>(&io_service);
       if(!rx_stop_flag)
         start_receive();
-//      else
-//        io_service_sptr_->stop();
     }
     udp_rx(boost::asio::io_service &io_service, boost::asio::ip::udp::endpoint &local_endpoint,
                const boost::asio::ip::address_v4 multicast_ip)
@@ -109,11 +106,8 @@ class udp_rx {
       socket_.set_option(boost::asio::ip::udp::socket::reuse_address(true));
       socket_.set_option(boost::asio::ip::multicast::join_group(multicast_ip));
       local_endpoint_ = local_endpoint;
-//      io_service_sptr_ = boost::shared_ptr<boost::asio::io_service>(&io_service);
       if(!rx_stop_flag)
         start_receive();
-//      else
-//        io_service_sptr_->stop();
     }
   private:
     void start_receive() {
@@ -131,14 +125,10 @@ class udp_rx {
         BOOST_LOG_TRIVIAL(error) << "receive error: " << error.message();
       if(!rx_stop_flag)
         start_receive();
-//      else
-//        io_service_sptr_->stop();
-
     }
 
     boost::asio::ip::udp::socket socket_;
     boost::asio::ip::udp::endpoint local_endpoint_;
     boost::asio::ip::udp::endpoint remote_endpoint_;
-//    boost::shared_ptr<boost::asio::io_service> io_service_sptr_;
     rx_buffer_element recv_buffer_;
 };
