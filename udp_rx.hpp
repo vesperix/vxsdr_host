@@ -1,6 +1,7 @@
 #include <boost/lockfree/spsc_queue.hpp>
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
+#include <boost/shared_ptr.hpp>
 
 static const size_t rx_buffer_bytes          = 65536;
 static const size_t rx_queue_length          = 4096;   // buffers
@@ -62,6 +63,22 @@ void sequence_checker(const size_t max_packets) {
   BOOST_LOG_TRIVIAL(info) << "sequence checker thread finished";
 }
 
+void rx_printer(const size_t max_packets) {
+  BOOST_LOG_TRIVIAL(info) << "rx printer thread started (" << max_packets <<" packets)";
+  rx_buffer_element buffer;
+  size_t packets = 0;
+
+  while(packets < max_packets) {
+    while(rx_queue.read_available()) {
+    	rx_queue.pop(&buffer);
+      BOOST_LOG_TRIVIAL(info) << "rx_printer recieved packet with " << buffer.bytes_used << " bytes";
+      packets++;
+    }
+    std::this_thread::sleep_for(std::chrono::microseconds(rx_write_thread_sleep_us));
+  }
+  BOOST_LOG_TRIVIAL(info) << "rx_printer thread finished";
+}
+
 class udp_rx {
   public:
     udp_rx(boost::asio::io_service &io_service, boost::asio::ip::udp::endpoint &local_endpoint)
@@ -85,12 +102,14 @@ class udp_rx {
             boost::asio::placeholders::error,
             boost::asio::placeholders::bytes_transferred));
     }
-
     void handle_receive(const boost::system::error_code& error, std::size_t bytes_transferred) {
       if (!error || error == boost::asio::error::message_size) {
         recv_buffer_.bytes_used = bytes_transferred;
+        BOOST_LOG_TRIVIAL(info) << "pushing packet with " << bytes_transferred << " bytes";
         rx_queue.push(recv_buffer_);
       }
+      else
+        BOOST_LOG_TRIVIAL(error) << "receive error: " << error.message();
     }
 
     boost::asio::ip::udp::socket socket_;

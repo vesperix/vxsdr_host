@@ -1,6 +1,7 @@
 #include <boost/lockfree/spsc_queue.hpp>
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
+#include <boost/shared_ptr.hpp>
 
 static const size_t tx_buffer_bytes          = 65536;
 static const size_t tx_queue_length          = 256;   // buffers

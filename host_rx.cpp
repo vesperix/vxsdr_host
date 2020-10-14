@@ -3,7 +3,6 @@
 #include <csignal>
 #include <complex>
 #include <string>
-#include <thread>
 #include <chrono>
 #include <ctime>
 #include <limits>
@@ -13,6 +12,7 @@
 #include <boost/program_options.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/format.hpp>
+#include <boost/thread.hpp>
 #include <boost/log/trivial.hpp>
 
 #include "udp_rx.hpp"
@@ -85,14 +85,18 @@ int main(int argc, char *argv[])
 
   try {
     std::string outfile_name = vm["output_filename"].as<std::string>();
-    std::thread writer_thread(writer, std::ref(outfile_name), vm["num_packets"].as<size_t>());
+//    boost::thread handler_thread(writer, std::ref(outfile_name), vm["num_packets"].as<size_t>());
+    boost::thread handler_thread(&rx_printer, vm["num_packets"].as<size_t>());
     boost::asio::io_service io_service;
-    if(use_multicast)
+    if(use_multicast) {
       udp_rx server(io_service, local_endpoint, multicast_ip);
-    else
+      io_service.run();
+    }
+    else {
       udp_rx server(io_service, local_endpoint);
-    io_service.run();
-    writer_thread.join();
+      io_service.run();
+    }
+    handler_thread.join();
   }
   catch (std::exception& e) {
     BOOST_LOG_TRIVIAL(error) << "exception caught: " << e.what();
