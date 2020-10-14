@@ -102,8 +102,9 @@ class udp_rx {
     }
     udp_rx(boost::asio::io_service &io_service, boost::asio::ip::udp::endpoint &local_endpoint,
                const boost::asio::ip::address_v4 multicast_ip)
-      : socket_(io_service, local_endpoint) {
+      : socket_(io_service, local_endpoint.protocol()) {
       socket_.set_option(boost::asio::ip::udp::socket::reuse_address(true));
+      socket_.bind(local_endpoint);
       socket_.set_option(boost::asio::ip::multicast::join_group(multicast_ip));
       local_endpoint_ = local_endpoint;
       if(!rx_stop_flag)

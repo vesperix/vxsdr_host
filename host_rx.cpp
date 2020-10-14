@@ -90,6 +90,7 @@ int main(int argc, char *argv[])
     std::thread handler_thread(std::ref(sequence_checker), vm["num_packets"].as<size_t>());
     boost::asio::io_service io_service;
     if(use_multicast) {
+      BOOST_LOG_TRIVIAL(info) << "joining multicast group " << vm["multicast_address"].as<std::string>();
       udp_rx server(io_service, local_endpoint, multicast_ip);
       io_service.run();
     }
