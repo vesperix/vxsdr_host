@@ -7,6 +7,12 @@ static const size_t tx_buffer_bytes          = 65536;
 static const size_t tx_queue_length          = 256;   // buffers
 static const int    tx_send_thread_sleep_us  = 100;   // (buffer_bytes / 4 bytes per sample) / f_s
 
+static std::atomic<bool> tx_stop_flag;
+
+void set_tx_stop_flag() {
+  tx_stop_flag = true;
+}
+
 typedef boost::array<char, tx_buffer_bytes> tx_buffer;
 
 typedef  struct {
@@ -19,7 +25,7 @@ static boost::lockfree::spsc_queue<tx_buffer_element, boost::lockfree::capacity<
 void generator(const size_t max_packets, const size_t packet_size, const unsigned packet_wait_us) {
   tx_buffer_element buf;
 
-  for(unsigned i = 0; i < max_packets; i++) {
+  for(unsigned i = 0; i < max_packets and !tx_stop_flag; i++) {
     memset(&buf.data, 0, packet_size);
     memcpy(&buf.data, &i, sizeof(i));
     buf.bytes_used = packet_size;
@@ -39,7 +45,7 @@ class udp_tx {
   private:
     void start_send() {
       BOOST_LOG_TRIVIAL(info) << "send started";
-      while(true) {
+      while(!tx_stop_flag) {
         if(tx_queue.read_available()) {
           tx_queue.pop(&send_buffer_);
           socket_.async_send_to(boost::asio::buffer(send_buffer_.data, send_buffer_.bytes_used), destination_endpoint_,

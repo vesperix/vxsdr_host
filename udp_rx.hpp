@@ -8,6 +8,12 @@ static const size_t rx_queue_length          = 4096;   // buffers
 static const size_t rx_write_buffer_size     = 16;     // buffers
 static const int    rx_write_thread_sleep_us = 1600;   // (buffer_bytes / 4 bytes per sample) * write_buffer_size / f_s
 
+static std::atomic<bool> rx_stop_flag;
+
+void set_rx_stop_flag() {
+  rx_stop_flag = true;
+}
+
 typedef boost::array<char, rx_buffer_bytes> rx_buffer;
 
 typedef  struct {
@@ -25,7 +31,7 @@ void writer(const std::string &outfilename, const size_t max_packets) {
   std::ofstream outfile(outfilename.c_str(), std::ofstream::binary);
   size_t packets = 0;
 
-  while(packets < max_packets) {
+  while(packets < max_packets and !rx_stop_flag) {
     while(rx_queue.read_available() > rx_write_buffer_size) {
     	size_t nwrite = rx_queue.pop(&buffer.front(), rx_write_buffer_size);
       for(size_t i = 0; i < nwrite; i++)
@@ -39,6 +45,8 @@ void writer(const std::string &outfilename, const size_t max_packets) {
     outfile.write((const char*)&buffer.front(), nwrite * sizeof(rx_buffer_element));
 
   outfile.close();
+  if(!rx_stop_flag)
+    set_rx_stop_flag();
   BOOST_LOG_TRIVIAL(info) << "writer thread finished";
 }
 
@@ -48,7 +56,7 @@ void sequence_checker(const size_t max_packets) {
   size_t packets = 0;
   unsigned seq, last_seq = 0;
 
-  while(packets < max_packets) {
+  while(packets < max_packets and !rx_stop_flag) {
     while(rx_queue.read_available()) {
     	rx_queue.pop(&buffer);
       memcpy(&seq, &buffer.data, sizeof(seq));
@@ -61,6 +69,8 @@ void sequence_checker(const size_t max_packets) {
     }
     std::this_thread::sleep_for(std::chrono::microseconds(rx_write_thread_sleep_us));
   }
+  if(!rx_stop_flag)
+    set_rx_stop_flag();
   BOOST_LOG_TRIVIAL(info) << "sequence checker thread finished";
 }
 
@@ -69,7 +79,7 @@ void rx_printer(const size_t max_packets) {
   rx_buffer_element buffer;
   size_t packets = 0;
 
-  while(packets < max_packets) {
+  while(packets < max_packets and !rx_stop_flag) {
     while(rx_queue.read_available()) {
     	rx_queue.pop(&buffer);
       BOOST_LOG_TRIVIAL(info) << "rx_printer recieved packet with " << buffer.bytes_used << " bytes";
@@ -77,6 +87,8 @@ void rx_printer(const size_t max_packets) {
     }
     std::this_thread::sleep_for(std::chrono::microseconds(rx_write_thread_sleep_us));
   }
+  if(!rx_stop_flag)
+    set_rx_stop_flag();
   BOOST_LOG_TRIVIAL(info) << "rx_printer thread finished";
 }
 
@@ -85,7 +97,11 @@ class udp_rx {
     udp_rx(boost::asio::io_service &io_service, boost::asio::ip::udp::endpoint &local_endpoint)
       : socket_(io_service, local_endpoint) {
       local_endpoint_ = local_endpoint;
-      start_receive();
+//      io_service_sptr_ = boost::shared_ptr<boost::asio::io_service>(&io_service);
+      if(!rx_stop_flag)
+        start_receive();
+//      else
+//        io_service_sptr_->stop();
     }
     udp_rx(boost::asio::io_service &io_service, boost::asio::ip::udp::endpoint &local_endpoint,
                const boost::asio::ip::address_v4 multicast_ip)
@@ -93,7 +109,11 @@ class udp_rx {
       socket_.set_option(boost::asio::ip::udp::socket::reuse_address(true));
       socket_.set_option(boost::asio::ip::multicast::join_group(multicast_ip));
       local_endpoint_ = local_endpoint;
-      start_receive();
+//      io_service_sptr_ = boost::shared_ptr<boost::asio::io_service>(&io_service);
+      if(!rx_stop_flag)
+        start_receive();
+//      else
+//        io_service_sptr_->stop();
     }
   private:
     void start_receive() {
@@ -109,11 +129,16 @@ class udp_rx {
       }
       else
         BOOST_LOG_TRIVIAL(error) << "receive error: " << error.message();
-      start_receive();
+      if(!rx_stop_flag)
+        start_receive();
+//      else
+//        io_service_sptr_->stop();
+
     }
 
     boost::asio::ip::udp::socket socket_;
     boost::asio::ip::udp::endpoint local_endpoint_;
     boost::asio::ip::udp::endpoint remote_endpoint_;
+//    boost::shared_ptr<boost::asio::io_service> io_service_sptr_;
     rx_buffer_element recv_buffer_;
 };
