@@ -55,7 +55,8 @@ void sequence_checker(const size_t max_packets) {
       if(seq != last_seq + 1)
         BOOST_LOG_TRIVIAL(error) << "recieved " << seq << ", expected " << (last_seq + 1);
       else
-        last_seq = seq;
+        BOOST_LOG_TRIVIAL(info) << "recieved " << seq;
+      last_seq = seq;
       packets++;
     }
     std::this_thread::sleep_for(std::chrono::microseconds(rx_write_thread_sleep_us));

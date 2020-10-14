@@ -7,13 +7,13 @@
 #include <ctime>
 #include <limits>
 #include <cstdlib>
+#include <thread>
 
 #include <boost/version.hpp>
 #include <boost/program_options.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/format.hpp>
 #include <boost/log/trivial.hpp>
-#include <boost/thread.hpp>
 
 #include "udp_tx.hpp"
 
@@ -76,7 +76,7 @@ int main(int argc, char *argv[])
   boost::asio::ip::udp::endpoint destination_endpoint(destination_ip, vm["destination_port"].as<unsigned>());
 
   try {
-    boost::thread generator_thread(generator, vm["num_packets"].as<size_t>(), vm["packet_size"].as<size_t>(), vm["wait_us"].as<unsigned>());
+    std::thread generator_thread(std::ref(generator), vm["num_packets"].as<size_t>(), vm["packet_size"].as<size_t>(), vm["wait_us"].as<unsigned>());
     boost::asio::io_service io_service;
     udp_tx server(io_service, local_endpoint, destination_endpoint);
     io_service.run();
