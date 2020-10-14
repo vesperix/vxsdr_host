@@ -43,7 +43,8 @@ class udp_tx {
         if(tx_queue.read_available()) {
           tx_queue.pop(&send_buffer_);
           socket_.async_send_to(boost::asio::buffer(send_buffer_.data, send_buffer_.bytes_used), destination_endpoint_,
-              boost::bind(&udp_tx::handle_send, this, boost::asio::placeholders::error,
+            boost::bind(&udp_tx::handle_send, this,
+              boost::asio::placeholders::error,
               boost::asio::placeholders::bytes_transferred));
         }
         std::this_thread::sleep_for(std::chrono::microseconds(tx_send_thread_sleep_us));

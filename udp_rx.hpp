@@ -96,8 +96,7 @@ class udp_rx {
     }
   private:
     void start_receive() {
-      BOOST_LOG_TRIVIAL(info) << "receive started";
-      socket_.async_receive_from(boost::asio::buffer(recv_buffer_.data), remote_endpoint_,
+      socket_.async_receive_from(boost::asio::buffer(recv_buffer_.data, recv_buffer_.data.size()), remote_endpoint_,
           boost::bind(&udp_rx::handle_receive, this,
             boost::asio::placeholders::error,
             boost::asio::placeholders::bytes_transferred));
@@ -105,11 +104,11 @@ class udp_rx {
     void handle_receive(const boost::system::error_code& error, std::size_t bytes_transferred) {
       if (!error || error == boost::asio::error::message_size) {
         recv_buffer_.bytes_used = bytes_transferred;
-        BOOST_LOG_TRIVIAL(info) << "pushing packet with " << bytes_transferred << " bytes";
         rx_queue.push(recv_buffer_);
       }
       else
         BOOST_LOG_TRIVIAL(error) << "receive error: " << error.message();
+      start_receive();
     }
 
     boost::asio::ip::udp::socket socket_;
