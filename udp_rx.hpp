@@ -14,7 +14,7 @@ void set_rx_stop_flag() {
   rx_stop_flag = true;
 }
 
-typedef boost::array<char, rx_buffer_bytes> rx_buffer;
+typedef std::array<char, rx_buffer_bytes> rx_buffer;
 
 typedef  struct {
   size_t bytes_used;
