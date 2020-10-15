@@ -7,13 +7,12 @@
 #include <ctime>
 #include <limits>
 #include <cstdlib>
-#include <thread>
 
 #include <boost/version.hpp>
 #include <boost/program_options.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/format.hpp>
-//#include <boost/thread.hpp>
+#include <boost/thread.hpp>
 #include <boost/log/trivial.hpp>
 
 #include "udp_rx.hpp"
@@ -86,8 +85,8 @@ int main(int argc, char *argv[])
 
   try {
     std::string outfile_name = vm["output_filename"].as<std::string>();
-//    std::thread handler_thread(std::ref(writer), std::cref(outfile_name), vm["num_packets"].as<size_t>());
-    std::thread handler_thread(std::ref(sequence_checker), vm["num_packets"].as<size_t>());
+//    boost::thread handler_thread(std::ref(writer), std::cref(outfile_name), vm["num_packets"].as<size_t>());
+    boost::thread handler_thread(std::ref(sequence_checker), vm["num_packets"].as<size_t>());
     boost::asio::io_service io_service;
     if(use_multicast) {
       BOOST_LOG_TRIVIAL(info) << "joining multicast group " << vm["multicast_address"].as<std::string>();

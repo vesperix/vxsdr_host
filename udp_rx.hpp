@@ -53,22 +53,28 @@ void writer(const std::string &outfilename, const size_t max_packets) {
 void sequence_checker(const size_t max_packets) {
   BOOST_LOG_TRIVIAL(info) << "sequence checker thread started";
   rx_buffer_element buffer;
-  size_t packets = 0;
+  size_t packets = 0, errors = 0;
   unsigned seq, last_seq = 0;
 
   while(packets < max_packets and !rx_stop_flag) {
     while(rx_queue.read_available()) {
     	rx_queue.pop(&buffer);
       memcpy(&seq, &buffer.data, sizeof(seq));
-      if(seq != last_seq + 1)
-        BOOST_LOG_TRIVIAL(error) << "recieved " << seq << ", expected " << (last_seq + 1);
-      else
-        BOOST_LOG_TRIVIAL(info) << "recieved " << seq;
+      if(seq != last_seq + 1) {
+        packets++;
+        errors++;
+//        BOOST_LOG_TRIVIAL(error) << "recieved " << seq << ", expected " << (last_seq + 1);
+      }
+      else {
+        packets++;
+//        BOOST_LOG_TRIVIAL(info) << "recieved " << seq;
+      }
       last_seq = seq;
       packets++;
     }
     std::this_thread::sleep_for(std::chrono::microseconds(rx_write_thread_sleep_us));
   }
+  BOOST_LOG_TRIVIAL(info) << packets << " packets recieved; " << errors << " out of sequence";
   if(!rx_stop_flag)
     set_rx_stop_flag();
   BOOST_LOG_TRIVIAL(info) << "sequence checker thread finished";

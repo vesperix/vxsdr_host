@@ -1,12 +1,12 @@
 CXX = clang++
 
-DEFINES = -DBOOST_LOG_DYN_LINK
+DEFINES = -DBOOST_LOG_DYN_LINK -DBOOST_THREAD_DYN_LINK
 
 BASEFLAGS = -Wall -pedantic -std=c++14
 OPTFLAGS = -O3
 DBGFLAGS = -g -Og
 
-LDFLAGS = -lpthread -lboost_log -lboost_program_options
+LDFLAGS = -lpthread -lboost_log -lboost_program_options -lboost_thread
 
 DEBUG = 1
 

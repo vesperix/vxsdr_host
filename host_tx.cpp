@@ -7,13 +7,13 @@
 #include <ctime>
 #include <limits>
 #include <cstdlib>
-#include <thread>
 
 #include <boost/version.hpp>
 #include <boost/program_options.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/format.hpp>
 #include <boost/log/trivial.hpp>
+#include <boost/thread.hpp>
 
 #include "udp_tx.hpp"
 
@@ -70,13 +70,18 @@ int main(int argc, char *argv[])
     exit(1);
   }
 
+  if(vm["destination_address"].as<std::string>().size() == 0) {
+    BOOST_LOG_TRIVIAL(fatal) << "destination IP address must be specified";
+    exit(2);
+  }
+
   boost::asio::ip::address_v4 local_ip = boost::asio::ip::address_v4::from_string(vm["local_address"].as<std::string>());
   boost::asio::ip::address_v4 destination_ip = boost::asio::ip::address_v4::from_string(vm["destination_address"].as<std::string>());
   boost::asio::ip::udp::endpoint local_endpoint(local_ip, vm["local_port"].as<unsigned>());
   boost::asio::ip::udp::endpoint destination_endpoint(destination_ip, vm["destination_port"].as<unsigned>());
 
   try {
-    std::thread generator_thread(std::ref(generator), vm["num_packets"].as<size_t>(), vm["packet_size"].as<size_t>(), vm["wait_us"].as<unsigned>());
+    boost::thread generator_thread(std::ref(generator), vm["num_packets"].as<size_t>(), vm["packet_size"].as<size_t>(), vm["wait_us"].as<unsigned>());
     boost::asio::io_service io_service;
     udp_tx server(io_service, local_endpoint, destination_endpoint);
     io_service.run();

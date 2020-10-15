@@ -24,7 +24,7 @@ static boost::lockfree::spsc_queue<tx_buffer_element, boost::lockfree::capacity<
 
 void generator(const size_t max_packets, const size_t packet_size, const unsigned packet_wait_us) {
   tx_buffer_element buf;
-
+  BOOST_LOG_TRIVIAL(info) << "generator thread started";
   for(unsigned i = 0; i < max_packets and !tx_stop_flag; i++) {
     memset(&buf.data, 0, packet_size);
     memcpy(&buf.data, &i, sizeof(i));
@@ -32,6 +32,9 @@ void generator(const size_t max_packets, const size_t packet_size, const unsigne
     tx_queue.push(buf);
     std::this_thread::sleep_for(std::chrono::microseconds(packet_wait_us));
   }
+  if(!tx_stop_flag)
+    set_tx_stop_flag();
+  BOOST_LOG_TRIVIAL(info) << "generator thread finished";
 }
 
 class udp_tx {
