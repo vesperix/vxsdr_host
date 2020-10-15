@@ -33,12 +33,15 @@ void generator(const size_t max_packets, const size_t requested_packet_size, con
 
   auto t0 = std::chrono::steady_clock::now();
 
-  for(unsigned i = 0; i < max_packets and !tx_stop_flag; i++) {
+  for(unsigned i = 1; i <= max_packets and !tx_stop_flag; i++) {
     memset(&buf.data, 0, packet_size);
     memcpy(&buf.data, &i, sizeof(i));
     buf.bytes_used = packet_size;
+    while(!tx_queue.write_available()) {}
+
     tx_queue.push(buf);
-    std::this_thread::sleep_for(std::chrono::microseconds(packet_wait_us));
+    if(packet_wait_us > 0)
+      std::this_thread::sleep_for(std::chrono::microseconds(packet_wait_us));
   }
 
   auto t1 = std::chrono::steady_clock::now();

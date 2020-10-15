@@ -86,7 +86,7 @@ int main(int argc, char *argv[])
   try {
     std::string outfile_name = vm["output_filename"].as<std::string>();
 //    boost::thread handler_thread(std::ref(writer), std::cref(outfile_name), vm["num_packets"].as<size_t>());
-    boost::thread handler_thread(std::ref(sequence_checker), vm["num_packets"].as<size_t>());
+    boost::thread handler_thread(std::ref(sequence_checker), vm["num_packets"].as<size_t>(), vm["packet_size"].as<size_t>());
     boost::asio::io_service io_service;
     if(use_multicast) {
       BOOST_LOG_TRIVIAL(info) << "joining multicast group " << vm["multicast_address"].as<std::string>();
