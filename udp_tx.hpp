@@ -3,9 +3,8 @@
 #include <boost/bind.hpp>
 #include <boost/shared_ptr.hpp>
 
-static const size_t tx_buffer_bytes          = 65536;
+static const size_t tx_buffer_max_bytes      = 262144;
 static const size_t tx_queue_length          = 256;   // buffers
-static const int    tx_send_thread_sleep_us  = 100;   // (buffer_bytes / 4 bytes per sample) / f_s
 
 static std::atomic<bool> tx_stop_flag;
 
@@ -13,7 +12,7 @@ void set_tx_stop_flag() {
   tx_stop_flag = true;
 }
 
-typedef boost::array<char, tx_buffer_bytes> tx_buffer;
+typedef boost::array<char, tx_buffer_max_bytes> tx_buffer;
 
 typedef  struct {
   size_t bytes_used;
@@ -22,9 +21,15 @@ typedef  struct {
 
 static boost::lockfree::spsc_queue<tx_buffer_element, boost::lockfree::capacity<tx_queue_length> > tx_queue;
 
-void generator(const size_t max_packets, const size_t packet_size, const unsigned packet_wait_us) {
+void generator(const size_t max_packets, const size_t requested_packet_size, const unsigned packet_wait_us) {
   tx_buffer_element buf;
   BOOST_LOG_TRIVIAL(info) << "generator thread started";
+
+  size_t packet_size = requested_packet_size;
+  if(requested_packet_size > tx_buffer_max_bytes) {
+    BOOST_LOG_TRIVIAL(error) << "requested packet size is greater than maximum (" << tx_buffer_max_bytes <<"); setting to maximum";
+    packet_size = tx_buffer_max_bytes;
+  }
 
   auto t0 = std::chrono::steady_clock::now();
 
@@ -56,15 +61,22 @@ class udp_tx {
       start_send();
     }
   private:
+    boost::asio::ip::udp::socket socket_;
+    boost::asio::ip::udp::endpoint local_endpoint_;
+    boost::asio::ip::udp::endpoint destination_endpoint_;
+    static const size_t tx_buffer_size_ = 16;
+    std::array<tx_buffer_element, tx_buffer_size_> send_buffer_;
+    unsigned send_errors_;
+
     void start_send() {
-      auto hdlr = boost::bind(&udp_tx::handle_send, this, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred);
       BOOST_LOG_TRIVIAL(info) << "send started";
+      auto hdlr = boost::bind(&udp_tx::handle_send, this, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred);
       while(!tx_stop_flag) {
         if(tx_queue.read_available()) {
-          tx_queue.pop(&send_buffer_);
-          socket_.async_send_to(boost::asio::buffer(send_buffer_.data, send_buffer_.bytes_used), destination_endpoint_, hdlr);
+          size_t n_popped = tx_queue.pop(&send_buffer_.front(), tx_buffer_size_);
+          for(size_t i = 0; i < n_popped; i++)
+            socket_.async_send_to(boost::asio::buffer(&send_buffer_[i].data, send_buffer_[i].bytes_used), destination_endpoint_, hdlr);
         }
-        //std::this_thread::sleep_for(std::chrono::microseconds(tx_send_thread_sleep_us));
       }
     }
     void handle_send(const boost::system::error_code& error, std::size_t bytes_transferred) {
@@ -73,10 +85,4 @@ class udp_tx {
         //BOOST_LOG_TRIVIAL(error) << "async send error " << error;
       }
     }
-
-    boost::asio::ip::udp::socket socket_;
-    boost::asio::ip::udp::endpoint local_endpoint_;
-    boost::asio::ip::udp::endpoint destination_endpoint_;
-    tx_buffer_element send_buffer_;
-    unsigned send_errors_;
 };
