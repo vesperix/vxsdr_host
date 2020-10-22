@@ -68,11 +68,13 @@ typedef struct {
   uint64_t              fractional_timestamp;
 } vesperix_vrt_header;
 
-int setup_vesperix_signal_header(vesperix_vrt_header *hdr, const size_t packet_count, 
+int setup_vesperix_signal_header(vesperix_vrt_header *hdr, 
+                                const size_t packet_count, 
                                 const size_t packet_data_size_cplx_samples,
-                                const uint32_t integer_time, const uint64_t fractional_time)
+                                const uint32_t integer_time,
+                                const uint64_t fractional_time)
 {
-  const unsigned header_size_words = sizeof(vesperix_vrt_header) / 4;
+  const size_t header_size_words = sizeof(vesperix_vrt_header) / 4;
   // maximum number of 32-bit words in a VITA49 packet is 65535, including header
   if(packet_size_cplx_samples > 65535 - header_size_words)
     return 1;
