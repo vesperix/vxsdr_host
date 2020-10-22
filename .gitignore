@@ -2,4 +2,6 @@
 *.dat
 host_rx
 host_tx
+minimal_rx
+minimal_tx
 .vscode
