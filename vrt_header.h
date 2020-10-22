@@ -58,7 +58,7 @@ typedef struct __attribute__((packed)) {
   uint8_t         packet_count           :  4;
   /* legacy 4-bit counter field = packet_count % 16; not reliable for
      detecting out-of-order packets */
-  uint16_t        packet_size            : 16;
+  uint16_t        packet_size_words      : 16;
   /* the total number of 32-bit words in the packet, including the header */
 } vrt_packet_preamble;
 
@@ -68,17 +68,23 @@ typedef struct {
   uint64_t              fractional_timestamp;
 } vesperix_vrt_header;
 
-int setup_vesperix_signal_header(vesperix_vrt_header *hdr, const size_t packet_count, const size_t packet_size,
-                                const uint32_t integer_time, const uint64_t fractional_time) {
+int setup_vesperix_signal_header(vesperix_vrt_header *hdr, const size_t packet_count, 
+                                const size_t packet_data_size_cplx_samples,
+                                const uint32_t integer_time, const uint64_t fractional_time)
+{
+  const unsigned header_size_words = sizeof(vesperix_vrt_header) / 4;
+  // maximum number of 32-bit words in a VITA49 packet is 65535, including header
+  if(packet_size_cplx_samples > 65535 - header_size_words)
+    return 1;
   hdr->preamble.packet_type            = 0; // signal data without stream identifier
   hdr->preamble.class_present          = 0; // no class data included
   hdr->preamble.indicators             = 0; // no trailer, is VITA 49.0 compliant, not spectral data
   hdr->preamble.integer_time_format    = 3; // other (not GPS or UTC) time
   hdr->preamble.fractional_time_format = 2; // picoseconds
   hdr->preamble.packet_count           = packet_count % 16;
-  if(packet_size > 65536) // maximum number of 32-bit words in a VITA49 packet
-    return 1;
-  hdr->preamble.packet_size            = packet_size;
+  // note that 1 complex sample (16-bit I & Q samples) occupies 1 32-bit word, 
+  // so the number of data words is the same as the number of complex samples
+  hdr->preamble.packet_size_words      = packet_data_size_cplx_samples + header_size_words;
   hdr->integer_timestamp               = integer_time;
   hdr->fractional_timestamp            = fractional_time;
   return 0;
