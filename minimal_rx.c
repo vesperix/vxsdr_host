@@ -115,39 +115,45 @@ int main(int argc, char *argv[])
 
   done = false;
 
-  printf("local_port =  %i\n", local_port);
+  local_ip.s_addr = 0;
 
   while((opt = getopt(argc, argv, "A:L:S:N:")) != -1) {
     switch (opt) {
       case 'A':
         if(inet_pton(AF_INET, optarg, &local_ip) != 1)
           fatal_error("Invalid local IP address");
+        break;
       case 'L':
-        local_port = atoi(optarg);
+        local_port = strtoul(optarg, NULL, 0);
         break;
       case 'S':
-        packet_size = atoll(optarg);
+        packet_size = strtoul(optarg, NULL, 0);
         break;
       case 'N':
-        n_packets = atoll(optarg);
+        n_packets = strtoul(optarg, NULL, 0);
         break;
       case '?':
+        fprintf (stderr, "Unknown option `-%c'.\n", optopt);
       default:
         fprintf(stderr, USAGE_STRING, argv[0]);
         exit(EXIT_FAILURE);
     }
   }
 
-  printf("local_port =  %i\n", local_port);
-
   if (optind < argc) {
     fprintf(stderr, USAGE_STRING, argv[0]);
     fatal_error("Command line option syntax error\n");
   }
 
+  if(local_ip.s_addr == 0) {
+    fprintf(stderr, USAGE_STRING, argv[0]);
+    fatal_error("Must specify local address\n");
+  }
+
+
   int rx_sock = socket(AF_INET, SOCK_DGRAM, 0);
   if(rx_sock < 0)
-    fatal_error("Unable to create socket (%s)\n", strerror(errno));
+    fatal_error("Cannot create socket (%s)\n", strerror(errno));
 
   struct sockaddr_in local_addr;
   local_addr.sin_family = AF_INET;
@@ -155,7 +161,7 @@ int main(int argc, char *argv[])
   local_addr.sin_addr = local_ip; // already in network order from inet_pton
 
   if(bind(rx_sock, (struct sockaddr *)&local_addr, sizeof(struct sockaddr_in)))
-    fatal_error("Unable to bind to local address %s port %i (%s)\n", inet_ntoa(local_ip), local_port, strerror(errno));
+    fatal_error("Cannot bind to local address %s port %i (%s)\n", inet_ntoa(local_ip), local_port, strerror(errno));
 
   struct sockaddr_in source_addr;
   source_addr.sin_family = AF_INET;
@@ -170,7 +176,7 @@ int main(int argc, char *argv[])
   ha.n_packets = n_packets;
 
   if(thrd_create(&handler_thread, &handler, (void *)&ha) != thrd_success)
-    fatal_error("Unable to create handler thread");
+    fatal_error("Cannot create handler thread");
 
   /* receive and push to buffer */
 

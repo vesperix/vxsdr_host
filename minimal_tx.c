@@ -18,6 +18,7 @@
                      "   -A <local_address> [required]\n" \
                      "   -L <local_port>\n" \
                      "   -D <destination address> [required]\n" \
+                     "   -B (enable broadcast; required when destination is a broadcast address)\n" \
                      "   -P <destination_port>\n" \
                      "   -S <packet_size>\n" \
                      "   -N <num_packets>\n" \
@@ -125,60 +126,77 @@ int filler(void *args) {
 
 int main(int argc, char *argv[])
 {
-  struct in_addr local_ip, destination_ip;
+  struct in_addr local_ip,  destination_ip;
   unsigned short local_port = 1030, destination_port = 1030;
 
   size_t packet_size = 1024, n_packets = 1024;
   unsigned wait_us = 1000;
 
+  done = false;
+
+  local_ip.s_addr = 0;
+  destination_ip.s_addr = 0;
+
+  bool broadcast = false;
+
   int opt;
   extern char *optarg;
   extern int optind, opterr, optopt;
 
-  done = false;
-
-  printf("local_port =  %i\n", local_port);
-
-  while((opt = getopt(argc, argv, "A:L:D:P:S:N:W:")) != -1) {
+  while((opt = getopt(argc, argv, "A:L:D:BP:S:N:W:")) != -1) {
     switch (opt) {
       case 'A':
         if(inet_pton(AF_INET, optarg, &local_ip) != 1)
           fatal_error("Invalid local IP address");
+        break;
       case 'L':
-        local_port = atol(optarg);
+        local_port = strtoul(optarg, NULL, 0);
         break;
       case 'D':
         if(inet_pton(AF_INET, optarg, &destination_ip) != 1)
           fatal_error("Invalid destination IP address");
+        break;
+      case 'B':
+        broadcast = true;
+        break;
       case 'P':
-        destination_port = atoi(optarg);
+        destination_port = strtoul(optarg, NULL, 0);
         break;
       case 'S':
-        packet_size = atoll(optarg);
+        packet_size = strtoul(optarg, NULL, 0);
         break;
       case 'N':
-        n_packets = atoll(optarg);
+        n_packets = strtoul(optarg, NULL, 0);
         break;
       case 'W':
-        wait_us = atoll(optarg);
+        wait_us = strtoul(optarg, NULL, 0);
         break;
       case '?':
+        fprintf (stderr, "Unknown option `-%c'.\n", optopt);
       default:
         fprintf(stderr, USAGE_STRING, argv[0]);
         exit(EXIT_FAILURE);
     }
   }
 
-  printf("local_port =  %i\n", local_port);
-
-  if (optind < argc) {
+  if(optind < argc) {
     fprintf(stderr, USAGE_STRING, argv[0]);
     fatal_error("Command line option syntax error\n");
   }
 
+  if(local_ip.s_addr == 0) {
+    fprintf(stderr, USAGE_STRING, argv[0]);
+    fatal_error("Must specify local address\n");
+  }
+
+  if(destination_ip.s_addr == 0) {
+    fprintf(stderr, USAGE_STRING, argv[0]);
+    fatal_error("Must specify destination address\n");
+  }
+
   int tx_sock = socket(AF_INET, SOCK_DGRAM, 0);
   if(tx_sock < 0)
-    fatal_error("Unable to create socket (%s)\n", strerror(errno));
+    fatal_error("Cannot create socket (%s)\n", strerror(errno));
 
   struct sockaddr_in local_addr;
   local_addr.sin_family = AF_INET;
@@ -186,12 +204,18 @@ int main(int argc, char *argv[])
   local_addr.sin_addr = local_ip; // already in network order from inet_pton
 
   if(bind(tx_sock, (struct sockaddr *)&local_addr, sizeof(struct sockaddr_in)))
-    fatal_error("Unable to bind to local address %s port %i (%s)\n", inet_ntoa(local_ip), local_port, strerror(errno));
+    fatal_error("Cannot bind to local address %s port %i (%s)\n", inet_ntoa(local_ip), local_port, strerror(errno));
 
   struct sockaddr_in destination_addr;
   destination_addr.sin_family = AF_INET;
   destination_addr.sin_port = htons(destination_port);
   destination_addr.sin_addr = destination_ip; // already in network order from inet_pton
+
+  if(broadcast) {
+	  int enable = 1;
+    if(setsockopt(tx_sock, SOL_SOCKET, SO_BROADCAST, &enable, sizeof(enable)) < 0)
+      fatal_error("Cannot enable broadcast on local socket");
+  }
 
   init_ring_buffer(&tx_ring);
 
@@ -204,7 +228,7 @@ int main(int argc, char *argv[])
   fa.wait_us = wait_us;
 
   if(thrd_create(&filler_thread, &filler, (void *)&fa) != thrd_success)
-    fatal_error("Unable to create filler thread");
+    fatal_error("Cannot create filler thread");
 
   /* pop from buffer and send */
 
