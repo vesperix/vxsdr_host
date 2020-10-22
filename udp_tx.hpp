@@ -3,8 +3,8 @@
 #include <boost/bind.hpp>
 #include <boost/shared_ptr.hpp>
 
-static const size_t tx_buffer_max_bytes      = 262144;
-static const size_t tx_queue_length          = 256;   // buffers
+static const size_t tx_buffer_max_bytes      = 262144;  // maxumum size of a VITA49 data packet
+static const size_t tx_queue_length          = 256;     // tx_buffers in queue
 
 static std::atomic<bool> tx_stop_flag;
 
@@ -57,10 +57,12 @@ void generator(const size_t max_packets, const size_t requested_packet_size, con
 class udp_tx {
   public:
     udp_tx(boost::asio::io_service &io_service, boost::asio::ip::udp::endpoint &local_endpoint,
-      boost::asio::ip::udp::endpoint &destination_endpoint) : socket_(io_service, local_endpoint) {
+      boost::asio::ip::udp::endpoint &destination_endpoint,
+      bool broadcast) : socket_(io_service, local_endpoint) {
       local_endpoint_ = local_endpoint;
       destination_endpoint_ = destination_endpoint;
       send_errors_ = 0;
+      socket_.set_option(boost::asio::socket_base::broadcast(broadcast));
       start_send();
     }
   private:

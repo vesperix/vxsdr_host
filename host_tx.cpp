@@ -55,7 +55,8 @@ int main(int argc, char *argv[])
     ("config_file,C", boost::program_options::value<std::string>(), "configuration file giving command line options")
     ("local_address,A", boost::program_options::value<std::string>()->default_value(""), "IPv4 address of local interface")
     ("local_port,L", boost::program_options::value<unsigned>()->default_value(1030), "port to use on local interface")
-    ("destination_address,D", boost::program_options::value<std::string>()->default_value(""), "IPv4 address of destination (including multicast)")
+    ("destination_address,D", boost::program_options::value<std::string>()->default_value(""), "IPv4 address of destination (including broadcast/multicast)")
+    ("broadcast,B", boost::program_options::bool_switch()->default_value(false), "flag to enable broadcast")
     ("destination_port,P", boost::program_options::value<unsigned>()->default_value(1030), "port to use on destination")
     ("packet_size,S", boost::program_options::value<size_t>()->default_value(1024), "packet size in bytes")
     ("num_packets,N", boost::program_options::value<size_t>()->default_value(1024), "number of packets to send")
@@ -83,7 +84,7 @@ int main(int argc, char *argv[])
   try {
     boost::thread generator_thread(std::ref(generator), vm["num_packets"].as<size_t>(), vm["packet_size"].as<size_t>(), vm["wait_us"].as<unsigned>());
     boost::asio::io_service io_service;
-    udp_tx server(io_service, local_endpoint, destination_endpoint);
+    udp_tx server(io_service, local_endpoint, destination_endpoint, vm["broadcast"].as<bool>());
     io_service.run();
     generator_thread.join();
   }

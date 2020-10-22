@@ -3,10 +3,10 @@
 #include <boost/bind.hpp>
 #include <boost/shared_ptr.hpp>
 
-static const size_t rx_buffer_bytes          = 262144;
-static const size_t rx_queue_length          = 256;   // buffers
-static const size_t rx_write_buffer_size     = 16;     // buffers
-static const int    rx_write_thread_sleep_us = 1600;   // (buffer_bytes / 4 bytes per sample) * write_buffer_size / f_s
+static const size_t rx_buffer_bytes          = 262144; // maxumum size of a VITA49 data packet
+static const size_t rx_queue_length          = 256;    // rx_buffers
+static const size_t rx_write_buffer_size     = 16;     // rx_buffers
+//static const int    rx_write_thread_sleep_us = 1600;   // (currently unused)
 
 static std::atomic<bool> rx_stop_flag;
 
