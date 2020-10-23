@@ -71,8 +71,8 @@ void generator(const size_t max_packets, const size_t requested_packet_size, con
   tx_buffer_element buf;
   BOOST_LOG_TRIVIAL(info) << "generator thread started";
 
-  if(set_current_thread_priority_realtime(50))
-    BOOST_LOG_TRIVIAL(error) << "unable to set realtime thread priority";
+//  if(set_current_thread_priority_realtime(50))
+//    BOOST_LOG_TRIVIAL(error) << "unable to set realtime thread priority";
 
   size_t packet_size = requested_packet_size;
   if(requested_packet_size > tx_buffer_max_bytes) {

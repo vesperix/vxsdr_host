@@ -79,8 +79,8 @@ void writer(const std::string &outfilename, const size_t max_packets) {
 
   BOOST_LOG_TRIVIAL(info) << "writer thread started";
 
-  if(set_current_thread_priority_realtime(50))
-    BOOST_LOG_TRIVIAL(error) << "unable to set realtime thread priority";
+//  if(set_current_thread_priority_realtime(50))
+//    BOOST_LOG_TRIVIAL(error) << "unable to set realtime thread priority";
 
   std::array<rx_buffer_element, rx_write_buffer_size> buffer;
   std::ofstream outfile(outfilename.c_str(), std::ofstream::binary);
@@ -108,8 +108,8 @@ void writer(const std::string &outfilename, const size_t max_packets) {
 void sequence_checker(const size_t max_packets, const size_t packet_size) {
   BOOST_LOG_TRIVIAL(info) << "sequence checker thread started";
 
-  if(set_current_thread_priority_realtime(50))
-    BOOST_LOG_TRIVIAL(error) << "unable to set realtime thread priority";
+//  if(set_current_thread_priority_realtime(50))
+//    BOOST_LOG_TRIVIAL(error) << "unable to set realtime thread priority";
 
   const unsigned buffer_max_packets = 256;
   static std::array<rx_buffer_element, buffer_max_packets> buffer;
@@ -145,8 +145,8 @@ void sequence_checker(const size_t max_packets, const size_t packet_size) {
 void rx_printer(const size_t max_packets, const size_t packet_size) {
   BOOST_LOG_TRIVIAL(info) << "rx printer thread started (" << max_packets <<" packets)";
 
-  if(set_current_thread_priority_realtime(50))
-    BOOST_LOG_TRIVIAL(error) << "unable to set realtime thread priority";
+//  if(set_current_thread_priority_realtime(50))
+//    BOOST_LOG_TRIVIAL(error) << "unable to set realtime thread priority";
 
   static const size_t buffer_max_packets = 16;
   std::array<rx_buffer_element, buffer_max_packets> buffer;
