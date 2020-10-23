@@ -13,7 +13,7 @@
 
 #include "thread_utils.h"
 
-#define BUFFER_ELEMENT_SIZE    65536
+#define BUFFER_ELEMENT_SIZE   262144
 #define RING_BUFFER_SIZE         256
 
 #define USAGE_STRING "Usage: %s [options]\n" \
