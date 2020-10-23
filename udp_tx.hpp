@@ -60,9 +60,9 @@ class udp_tx {
       }
     }
     void handle_send(const boost::system::error_code& error, std::size_t bytes_transferred) {
-      if (error && error != boost::asio::error::message_size) {
+      if (error) {
         send_errors_++;
-        //BOOST_LOG_TRIVIAL(error) << "async send error " << error;
+        BOOST_LOG_TRIVIAL(error) << "async send error " << error;
       }
     }
 };
