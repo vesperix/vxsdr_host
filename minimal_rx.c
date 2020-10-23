@@ -7,6 +7,7 @@
 #include <stdbool.h>
 #include <stdarg.h>
 #include <limits.h>
+#include <time.h>
 #include <errno.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
@@ -102,9 +103,28 @@ void fatal_error(const char *s, ...) {
 
 int handler(void *args) {
   static buffer_element b;
+  size_t packets = 0, errors = 0, bytes = 0;
+  unsigned seq, last_seq = 0;
+  struct timespec t0, t1;
 
   init_buffer_element(&b);
 
+  while(!done) {
+    if(packets == 0)
+      clock_gettime(CLOCK_MONOTONIC, &t0);
+    pop(&rx_ring, &b);
+    bytes += b.bytes_used;
+    memcpy(&seq, &b.data, sizeof(seq));
+    if(seq != last_seq + 1)
+      errors++;
+    packets++;
+    last_seq = seq;
+  }
+  clock_gettime(CLOCK_MONOTONIC, &t1);
+
+  double dt = (t1.tv_sec - t0.tv_sec) + 1e-9 * (t1.tv_nsec - t0.tv_nsec);
+  printf("%ld packets received; %ld out of sequence\n", packets, errors);
+  printf("%g bytes/s, %g bits/s\n", bytes / dt, 8.0 * bytes / dt);
   return 0;
 }
 
@@ -173,9 +193,6 @@ int main(int argc, char *argv[])
   if(bind(rx_sock, (struct sockaddr *)&local_addr, sizeof(struct sockaddr_in)))
     fatal_error("Cannot bind to local address %s port %i (%s)\n", inet_ntoa(local_ip), local_port, strerror(errno));
 
-  struct sockaddr_in source_addr;
-  source_addr.sin_family = AF_INET;
-
   init_ring_buffer(&rx_ring);
 
   /* create buffer filling thread */
@@ -190,17 +207,13 @@ int main(int argc, char *argv[])
 
   /* receive and push to buffer */
 
-  size_t ntry = 0, nrec = 0, nerr = 0;
+  size_t ntry = 0, nrec = 0, nerr = 0, nover = 0;
   static buffer_element b;
   init_buffer_element(&b);
 
-  socklen_t addr_size;
-
   while(!done) {
     while(has_space(&rx_ring) && !done) {
-      addr_size = sizeof(struct sockaddr_in);
-      ssize_t ns = recvfrom(rx_sock, b.data, BUFFER_ELEMENT_SIZE, 0,
-                      (struct sockaddr *)&source_addr, &addr_size);
+      ssize_t ns = recvfrom(rx_sock, b.data, BUFFER_ELEMENT_SIZE, 0, NULL, NULL);
       ntry++;
       if(ns > 0) {
         b.bytes_used = ns;
@@ -214,6 +227,10 @@ int main(int argc, char *argv[])
 
       if(ntry >= n_packets)
         done = true;
+    }
+    if(!done) {
+      nover++;
+      fprintf(stderr, "Receive ring buffer overflow\n");
     }
   }
 

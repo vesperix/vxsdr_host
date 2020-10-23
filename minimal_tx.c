@@ -242,7 +242,7 @@ int main(int argc, char *argv[])
 
   /* pop from buffer and send */
 
-  size_t ntry = 0, nsent = 0, nerr = 0;
+  size_t ntry = 0, nsent = 0, nerr = 0, nunder = 0;
   static buffer_element b;
   init_buffer_element(&b);
 
@@ -262,6 +262,10 @@ int main(int argc, char *argv[])
         nsent++;
       if(ntry >= n_packets)
         done = true;
+    }
+    if(!done) {
+      nunder++;
+      fprintf(stderr, "Transmit ring buffer underflow\n");
     }
   }
 
