@@ -35,7 +35,7 @@ host_tx: host_tx.cpp udp_tx.hpp
 
 host_rx: host_rx.cpp udp_rx.hpp
 	$(CXX) $(CXX_FLAGS) -o $@ $< $(CXX_LDFLAGS)
-	
+
 minimal_tx: minimal_tx.c
 	$(CC) $(CC_FLAGS) -o $@ $< $(CC_LDFLAGS)
 

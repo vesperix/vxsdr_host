@@ -71,6 +71,9 @@ void generator(const size_t max_packets, const size_t requested_packet_size, con
   tx_buffer_element buf;
   BOOST_LOG_TRIVIAL(info) << "generator thread started";
 
+  if(set_current_thread_priority_realtime(50))
+    BOOST_LOG_TRIVIAL(error) << "unable to set thread priority";
+
   size_t packet_size = requested_packet_size;
   if(requested_packet_size > tx_buffer_max_bytes) {
     BOOST_LOG_TRIVIAL(error) << "requested packet size is greater than maximum (" << tx_buffer_max_bytes <<"); setting to maximum";
@@ -104,6 +107,10 @@ void sender(const boost::asio::ip::udp::endpoint &local_endpoint,
       const bool broadcast)
 {
   BOOST_LOG_TRIVIAL(info) << "sender thread started";
+
+  if(set_current_thread_priority_realtime(50))
+    BOOST_LOG_TRIVIAL(error) << "unable to set thread priority";
+
   boost::asio::io_service io_service;
   udp_tx server(io_service, local_endpoint, destination_endpoint, broadcast);
   io_service.run();

@@ -31,87 +31,6 @@ typedef  struct {
 
 static boost::lockfree::spsc_queue<rx_buffer_element, boost::lockfree::capacity<rx_queue_length> > rx_queue;
 
-void writer(const std::string &outfilename, const size_t max_packets) {
-
-  BOOST_LOG_TRIVIAL(info) << "writer thread started";
-
-  std::array<rx_buffer_element, rx_write_buffer_size> buffer;
-  std::ofstream outfile(outfilename.c_str(), std::ofstream::binary);
-  size_t packets = 0;
-
-  while(packets < max_packets and !rx_stop_flag) {
-    while(rx_queue.read_available() > rx_write_buffer_size) {
-    	size_t nwrite = rx_queue.pop(&buffer.front(), rx_write_buffer_size);
-      for(size_t i = 0; i < nwrite; i++)
-        outfile.write((const char*)&buffer[i].data, buffer[i].bytes_used);
-      packets += nwrite;
-    }
-    //std::this_thread::sleep_for(std::chrono::microseconds(rx_write_thread_sleep_us));
-  }
-
-  while(size_t nwrite = rx_queue.pop(&buffer.front(), rx_write_buffer_size))
-    outfile.write((const char*)&buffer.front(), nwrite * sizeof(rx_buffer_element));
-
-  outfile.close();
-  if(!rx_stop_flag)
-    set_rx_stop_flag();
-  BOOST_LOG_TRIVIAL(info) << "writer thread finished";
-}
-
-void sequence_checker(const size_t max_packets, const size_t packet_size) {
-  BOOST_LOG_TRIVIAL(info) << "sequence checker thread started";
-  const unsigned buffer_max_packets = 256;
-  static std::array<rx_buffer_element, buffer_max_packets> buffer;
-  size_t packets = 0, errors = 0;
-  unsigned seq, last_seq = 0;
-
-  auto t0 = std::chrono::steady_clock::now();
-
-  while(packets < max_packets and !rx_stop_flag) {
-    if(packets == 0)
-      t0 = std::chrono::steady_clock::now();
-    while(rx_queue.read_available()) {
-      size_t n_popped = rx_queue.pop(&buffer.front(), buffer_max_packets);
-      for(size_t i = 0; i < n_popped; i++) {
-        memcpy(&seq, &buffer[i].data, sizeof(seq));
-        if(seq != last_seq + 1)
-          errors++;
-        packets++;
-        last_seq = seq;
-      }
-    }
-    //std::this_thread::sleep_for(std::chrono::microseconds(rx_write_thread_sleep_us));
-  }
-  auto t1 = std::chrono::steady_clock::now();
-  std::chrono::duration<double> dt = t1 - t0;
-  BOOST_LOG_TRIVIAL(info) << packets << " packets recieved; " << errors << " out of sequence";
-  BOOST_LOG_TRIVIAL(info) << (packets * packet_size / dt.count()) << " bytes/s, " << (8 * packets * packet_size / dt.count()) << " bits/s";
-  if(!rx_stop_flag)
-    set_rx_stop_flag();
-  BOOST_LOG_TRIVIAL(info) << "sequence checker thread finished";
-}
-
-void rx_printer(const size_t max_packets, const size_t packet_size) {
-  BOOST_LOG_TRIVIAL(info) << "rx printer thread started (" << max_packets <<" packets)";
-  static const size_t buffer_max_packets = 16;
-  std::array<rx_buffer_element, buffer_max_packets> buffer;
-  size_t packets = 0;
-
-  while(packets < max_packets and !rx_stop_flag) {
-    while(rx_queue.read_available()) {
-      size_t n_popped = rx_queue.pop(&buffer.front(), buffer_max_packets);
-      for(size_t i = 0; i < n_popped; i++) {
-        BOOST_LOG_TRIVIAL(info) << "rx_printer recieved packet with " << buffer[i].bytes_used << " bytes";
-        packets++;
-      }
-    }
-    //std::this_thread::sleep_for(std::chrono::microseconds(rx_write_thread_sleep_us));
-  }
-  if(!rx_stop_flag)
-    set_rx_stop_flag();
-  BOOST_LOG_TRIVIAL(info) << "rx_printer thread finished";
-}
-
 class udp_rx {
   public:
     udp_rx(boost::asio::io_service &io_service, const boost::asio::ip::udp::endpoint &local_endpoint)
@@ -156,9 +75,105 @@ class udp_rx {
     }
 };
 
+void writer(const std::string &outfilename, const size_t max_packets) {
+
+  BOOST_LOG_TRIVIAL(info) << "writer thread started";
+
+  if(set_current_thread_priority_realtime(50))
+    BOOST_LOG_TRIVIAL(error) << "unable to set realtime thread priority";
+
+  std::array<rx_buffer_element, rx_write_buffer_size> buffer;
+  std::ofstream outfile(outfilename.c_str(), std::ofstream::binary);
+  size_t packets = 0;
+
+  while(packets < max_packets and !rx_stop_flag) {
+    while(rx_queue.read_available() > rx_write_buffer_size) {
+    	size_t nwrite = rx_queue.pop(&buffer.front(), rx_write_buffer_size);
+      for(size_t i = 0; i < nwrite; i++)
+        outfile.write((const char*)&buffer[i].data, buffer[i].bytes_used);
+      packets += nwrite;
+    }
+    //std::this_thread::sleep_for(std::chrono::microseconds(rx_write_thread_sleep_us));
+  }
+
+  while(size_t nwrite = rx_queue.pop(&buffer.front(), rx_write_buffer_size))
+    outfile.write((const char*)&buffer.front(), nwrite * sizeof(rx_buffer_element));
+
+  outfile.close();
+  if(!rx_stop_flag)
+    set_rx_stop_flag();
+  BOOST_LOG_TRIVIAL(info) << "writer thread finished";
+}
+
+void sequence_checker(const size_t max_packets, const size_t packet_size) {
+  BOOST_LOG_TRIVIAL(info) << "sequence checker thread started";
+
+  if(set_current_thread_priority_realtime(50))
+    BOOST_LOG_TRIVIAL(error) << "unable to set realtime thread priority";
+
+  const unsigned buffer_max_packets = 256;
+  static std::array<rx_buffer_element, buffer_max_packets> buffer;
+  size_t packets = 0, errors = 0;
+  unsigned seq, last_seq = 0;
+
+  auto t0 = std::chrono::steady_clock::now();
+
+  while(packets < max_packets and !rx_stop_flag) {
+    if(packets == 0)
+      t0 = std::chrono::steady_clock::now();
+    while(rx_queue.read_available()) {
+      size_t n_popped = rx_queue.pop(&buffer.front(), buffer_max_packets);
+      for(size_t i = 0; i < n_popped; i++) {
+        memcpy(&seq, &buffer[i].data, sizeof(seq));
+        if(seq != last_seq + 1)
+          errors++;
+        packets++;
+        last_seq = seq;
+      }
+    }
+    //std::this_thread::sleep_for(std::chrono::microseconds(rx_write_thread_sleep_us));
+  }
+  auto t1 = std::chrono::steady_clock::now();
+  std::chrono::duration<double> dt = t1 - t0;
+  BOOST_LOG_TRIVIAL(info) << packets << " packets recieved; " << errors << " out of sequence";
+  BOOST_LOG_TRIVIAL(info) << (packets * packet_size / dt.count()) << " bytes/s, " << (8 * packets * packet_size / dt.count()) << " bits/s";
+  if(!rx_stop_flag)
+    set_rx_stop_flag();
+  BOOST_LOG_TRIVIAL(info) << "sequence checker thread finished";
+}
+
+void rx_printer(const size_t max_packets, const size_t packet_size) {
+  BOOST_LOG_TRIVIAL(info) << "rx printer thread started (" << max_packets <<" packets)";
+
+  if(set_current_thread_priority_realtime(50))
+    BOOST_LOG_TRIVIAL(error) << "unable to set realtime thread priority";
+
+  static const size_t buffer_max_packets = 16;
+  std::array<rx_buffer_element, buffer_max_packets> buffer;
+  size_t packets = 0;
+
+  while(packets < max_packets and !rx_stop_flag) {
+    while(rx_queue.read_available()) {
+      size_t n_popped = rx_queue.pop(&buffer.front(), buffer_max_packets);
+      for(size_t i = 0; i < n_popped; i++) {
+        BOOST_LOG_TRIVIAL(info) << "rx_printer recieved packet with " << buffer[i].bytes_used << " bytes";
+        packets++;
+      }
+    }
+    //std::this_thread::sleep_for(std::chrono::microseconds(rx_write_thread_sleep_us));
+  }
+  if(!rx_stop_flag)
+    set_rx_stop_flag();
+  BOOST_LOG_TRIVIAL(info) << "rx_printer thread finished";
+}
+
 void receiver(const boost::asio::ip::udp::endpoint &local_endpoint)
 {
   BOOST_LOG_TRIVIAL(info) << "receiver thread started";
+
+  if(set_current_thread_priority_realtime(50))
+    BOOST_LOG_TRIVIAL(error) << "unable to set realtime thread priority";
+
   boost::asio::io_service io_service;
   udp_rx server(io_service, local_endpoint);
   io_service.run();
@@ -168,6 +183,10 @@ void receiver(const boost::asio::ip::udp::endpoint &local_endpoint)
 void multicast_receiver(const boost::asio::ip::udp::endpoint &local_endpoint, const boost::asio::ip::address_v4 &multicast_ip)
 {
   BOOST_LOG_TRIVIAL(info) << "multicast receiver thread started";
+
+  if(set_current_thread_priority_realtime(50))
+    BOOST_LOG_TRIVIAL(error) << "unable to set realtime thread priority";
+
   boost::asio::io_service io_service;
   udp_rx server(io_service, local_endpoint, multicast_ip);
   io_service.run();
