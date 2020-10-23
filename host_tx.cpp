@@ -87,7 +87,6 @@ int main(int argc, char *argv[])
   try {
     boost::thread generator_thread(std::ref(generator), vm["num_packets"].as<size_t>(), vm["packet_size"].as<size_t>(), vm["wait_us"].as<unsigned>());
     boost::thread sender_thread(std::ref(sender), std::cref(local_endpoint), std::cref(destination_endpoint), vm["broadcast"].as<bool>());
-    // adjust thread priorities here if needed
     generator_thread.join();
     sender_thread.join();
   }
