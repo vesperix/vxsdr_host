@@ -1,4 +1,4 @@
-CC = gcc
+CC = clang
 
 CC_DEFINES =
 CC_BASEFLAGS = -Wall -pedantic -std=gnu11
@@ -6,7 +6,7 @@ CC_OPTFLAGS = -O3
 CC_DBGFLAGS = -g -Og
 CC_LDFLAGS = -lpthread
 
-CXX = g++
+CXX = clang++
 
 CXX_DEFINES = -DBOOST_LOG_DYN_LINK -DBOOST_THREAD_DYN_LINK
 CXX_BASEFLAGS = -Wall -pedantic -std=c++14
