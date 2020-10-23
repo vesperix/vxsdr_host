@@ -3,6 +3,8 @@
 #include <boost/bind.hpp>
 #include <boost/shared_ptr.hpp>
 
+#include "thread_utils.h"
+
 static const size_t tx_buffer_max_bytes      = 262144;  // maxumum size of a VITA49 data packet
 static const size_t tx_queue_length          = 256;     // tx_buffers in queue
 

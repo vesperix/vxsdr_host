@@ -11,6 +11,8 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 
+#include "thread_utils.h"
+
 #define BUFFER_ELEMENT_SIZE    65536
 #define RING_BUFFER_SIZE         256
 
