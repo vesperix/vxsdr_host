@@ -22,17 +22,20 @@ void init_vm(boost::program_options::options_description &desc, boost::program_o
   // setup the program options
   boost::program_options::store(boost::program_options::parse_command_line(argc, argv, desc), vm);
   boost::program_options::notify(vm);
-
+  // if a config file is specified on the command line, load it
   if (vm.count("config_file")) {
     std::ifstream ifs(vm["config_file"].as<std::string>().c_str());
     if (!ifs) {
-      BOOST_LOG_TRIVIAL(error) << "cannot open config file " << vm["config_file"].as<std::string>();
-      exit(3);
+      std::cerr << "Error: cannot open config file " << vm["config_file"].as<std::string>() << "!" << std::endl;
+      throw std::runtime_error("Specified config file not found.");
     }
     boost::program_options::store(boost::program_options::parse_config_file(ifs, desc), vm);
     boost::program_options::notify(vm);
   }
-
+  // now reload the command line options so that they take precedence ofer the config file
+  boost::program_options::store(boost::program_options::parse_command_line(argc, argv, desc), vm);
+  boost::program_options::notify(vm);
+  // if --help was specified, show help and exir
   if(vm.count("help")) {
     std::cout << desc << std::endl;
     exit(0);
@@ -87,15 +90,13 @@ int main(int argc, char *argv[])
     std::string outfile_name = vm["output_filename"].as<std::string>();
 //    boost::thread handler_thread(std::ref(writer), std::cref(outfile_name), vm["num_packets"].as<size_t>());
     boost::thread handler_thread(std::ref(sequence_checker), vm["num_packets"].as<size_t>(), vm["packet_size"].as<size_t>());
-    boost::asio::io_service io_service;
     if(use_multicast) {
-      BOOST_LOG_TRIVIAL(info) << "joining multicast group " << vm["multicast_address"].as<std::string>();
-      udp_rx server(io_service, local_endpoint, multicast_ip);
-      io_service.run();
+      boost::thread multicast_receiver_thread(std::ref(multicast_receiver), std::cref(local_endpoint), std::cref(multicast_ip));
+      multicast_receiver_thread.join();
     }
     else {
-      udp_rx server(io_service, local_endpoint);
-      io_service.run();
+      boost::thread receiver_thread(std::ref(receiver), std::cref(local_endpoint));
+      receiver_thread.join();
     }
     handler_thread.join();
   }

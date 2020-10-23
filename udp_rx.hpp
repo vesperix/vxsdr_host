@@ -106,14 +106,14 @@ void rx_printer(const size_t max_packets, const size_t packet_size) {
 
 class udp_rx {
   public:
-    udp_rx(boost::asio::io_service &io_service, boost::asio::ip::udp::endpoint &local_endpoint)
+    udp_rx(boost::asio::io_service &io_service, const boost::asio::ip::udp::endpoint &local_endpoint)
       : socket_(io_service, local_endpoint) {
       local_endpoint_ = local_endpoint;
       if(!rx_stop_flag)
         start_receive();
     }
-    udp_rx(boost::asio::io_service &io_service, boost::asio::ip::udp::endpoint &local_endpoint,
-               const boost::asio::ip::address_v4 multicast_ip)
+    udp_rx(boost::asio::io_service &io_service, const boost::asio::ip::udp::endpoint &local_endpoint,
+               const boost::asio::ip::address_v4 &multicast_ip)
       : socket_(io_service, local_endpoint.protocol()) {
       socket_.set_option(boost::asio::ip::udp::socket::reuse_address(true));
       socket_.bind(local_endpoint);
@@ -143,3 +143,21 @@ class udp_rx {
         start_receive();
     }
 };
+
+void receiver(const boost::asio::ip::udp::endpoint &local_endpoint)
+{
+  BOOST_LOG_TRIVIAL(info) << "receiver thread started";
+  boost::asio::io_service io_service;
+  udp_rx server(io_service, local_endpoint);
+  io_service.run();
+  BOOST_LOG_TRIVIAL(info) << "receiver thread finished";
+}
+
+void multicast_receiver(const boost::asio::ip::udp::endpoint &local_endpoint, const boost::asio::ip::address_v4 &multicast_ip)
+{
+  BOOST_LOG_TRIVIAL(info) << "multicast receiver thread started";
+  boost::asio::io_service io_service;
+  udp_rx server(io_service, local_endpoint, multicast_ip);
+  io_service.run();
+  BOOST_LOG_TRIVIAL(info) << "multicast receiver thread finished";
+}

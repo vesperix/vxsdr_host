@@ -22,7 +22,7 @@ void init_vm(boost::program_options::options_description &desc, boost::program_o
   // setup the program options
   boost::program_options::store(boost::program_options::parse_command_line(argc, argv, desc), vm);
   boost::program_options::notify(vm);
-
+  // if a config file is specified on the command line, load it
   if (vm.count("config_file")) {
     std::ifstream ifs(vm["config_file"].as<std::string>().c_str());
     if (!ifs) {
@@ -32,7 +32,10 @@ void init_vm(boost::program_options::options_description &desc, boost::program_o
     boost::program_options::store(boost::program_options::parse_config_file(ifs, desc), vm);
     boost::program_options::notify(vm);
   }
-
+  // now reload the command line options so that they take precedence ofer the config file
+  boost::program_options::store(boost::program_options::parse_command_line(argc, argv, desc), vm);
+  boost::program_options::notify(vm);
+  // if --help was specified, show help and exir
   if(vm.count("help")) {
     std::cout << desc << std::endl;
     exit(0);
@@ -83,10 +86,10 @@ int main(int argc, char *argv[])
 
   try {
     boost::thread generator_thread(std::ref(generator), vm["num_packets"].as<size_t>(), vm["packet_size"].as<size_t>(), vm["wait_us"].as<unsigned>());
-    boost::asio::io_service io_service;
-    udp_tx server(io_service, local_endpoint, destination_endpoint, vm["broadcast"].as<bool>());
-    io_service.run();
+    boost::thread sender_thread(std::ref(sender), std::cref(local_endpoint), std::cref(destination_endpoint), vm["broadcast"].as<bool>());
+    // adjust thread priorities here if needed
     generator_thread.join();
+    sender_thread.join();
   }
   catch (std::exception& e) {
     BOOST_LOG_TRIVIAL(error) << "exception caught: " << e.what();

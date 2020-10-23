@@ -21,6 +21,44 @@ typedef  struct {
 
 static boost::lockfree::spsc_queue<tx_buffer_element, boost::lockfree::capacity<tx_queue_length> > tx_queue;
 
+class udp_tx {
+  public:
+    udp_tx(boost::asio::io_service &io_service, const boost::asio::ip::udp::endpoint &local_endpoint,
+      const boost::asio::ip::udp::endpoint &destination_endpoint,
+      const bool broadcast) : socket_(io_service, local_endpoint) {
+      local_endpoint_ = local_endpoint;
+      destination_endpoint_ = destination_endpoint;
+      send_errors_ = 0;
+      socket_.set_option(boost::asio::socket_base::broadcast(broadcast));
+      start_send();
+    }
+  private:
+    boost::asio::ip::udp::socket socket_;
+    boost::asio::ip::udp::endpoint local_endpoint_;
+    boost::asio::ip::udp::endpoint destination_endpoint_;
+    static const size_t tx_buffer_size_ = 16;
+    std::array<tx_buffer_element, tx_buffer_size_> send_buffer_;
+    unsigned send_errors_;
+
+    void start_send() {
+      BOOST_LOG_TRIVIAL(info) << "send started";
+      auto hdlr = boost::bind(&udp_tx::handle_send, this, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred);
+      while(!tx_stop_flag) {
+        if(tx_queue.read_available()) {
+          size_t n_popped = tx_queue.pop(&send_buffer_.front(), tx_buffer_size_);
+          for(size_t i = 0; i < n_popped; i++)
+            socket_.async_send_to(boost::asio::buffer(&send_buffer_[i].data, send_buffer_[i].bytes_used), destination_endpoint_, hdlr);
+        }
+      }
+    }
+    void handle_send(const boost::system::error_code& error, std::size_t bytes_transferred) {
+      if (error && error != boost::asio::error::message_size) {
+        send_errors_++;
+        //BOOST_LOG_TRIVIAL(error) << "async send error " << error;
+      }
+    }
+};
+
 void generator(const size_t max_packets, const size_t requested_packet_size, const unsigned packet_wait_us) {
   tx_buffer_element buf;
   BOOST_LOG_TRIVIAL(info) << "generator thread started";
@@ -54,40 +92,13 @@ void generator(const size_t max_packets, const size_t requested_packet_size, con
   BOOST_LOG_TRIVIAL(info) << "generator thread finished";
 }
 
-class udp_tx {
-  public:
-    udp_tx(boost::asio::io_service &io_service, boost::asio::ip::udp::endpoint &local_endpoint,
-      boost::asio::ip::udp::endpoint &destination_endpoint,
-      bool broadcast) : socket_(io_service, local_endpoint) {
-      local_endpoint_ = local_endpoint;
-      destination_endpoint_ = destination_endpoint;
-      send_errors_ = 0;
-      socket_.set_option(boost::asio::socket_base::broadcast(broadcast));
-      start_send();
-    }
-  private:
-    boost::asio::ip::udp::socket socket_;
-    boost::asio::ip::udp::endpoint local_endpoint_;
-    boost::asio::ip::udp::endpoint destination_endpoint_;
-    static const size_t tx_buffer_size_ = 16;
-    std::array<tx_buffer_element, tx_buffer_size_> send_buffer_;
-    unsigned send_errors_;
-
-    void start_send() {
-      BOOST_LOG_TRIVIAL(info) << "send started";
-      auto hdlr = boost::bind(&udp_tx::handle_send, this, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred);
-      while(!tx_stop_flag) {
-        if(tx_queue.read_available()) {
-          size_t n_popped = tx_queue.pop(&send_buffer_.front(), tx_buffer_size_);
-          for(size_t i = 0; i < n_popped; i++)
-            socket_.async_send_to(boost::asio::buffer(&send_buffer_[i].data, send_buffer_[i].bytes_used), destination_endpoint_, hdlr);
-        }
-      }
-    }
-    void handle_send(const boost::system::error_code& error, std::size_t bytes_transferred) {
-      if (error && error != boost::asio::error::message_size) {
-        send_errors_++;
-        //BOOST_LOG_TRIVIAL(error) << "async send error " << error;
-      }
-    }
-};
+void sender(const boost::asio::ip::udp::endpoint &local_endpoint,
+      const boost::asio::ip::udp::endpoint &destination_endpoint,
+      const bool broadcast)
+{
+  BOOST_LOG_TRIVIAL(info) << "sender thread started";
+  boost::asio::io_service io_service;
+  udp_tx server(io_service, local_endpoint, destination_endpoint, broadcast);
+  io_service.run();
+  BOOST_LOG_TRIVIAL(info) << "sender thread finished";
+}
