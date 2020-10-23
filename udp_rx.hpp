@@ -150,7 +150,7 @@ class udp_rx {
         rx_queue.push(recv_buffer_);
       }
       else
-        BOOST_LOG_TRIVIAL(error) << "receive error: " << error.message();
+        BOOST_LOG_TRIVIAL(error) << "async receive error: " << error.message();
       if(!rx_stop_flag)
         start_receive();
     }
