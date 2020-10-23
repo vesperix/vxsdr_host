@@ -184,7 +184,7 @@ int main(int argc, char *argv[])
   int rx_buf_size = PACKETS_PER_NETWORK_BUFFER * packet_size;
   if(setsockopt(rx_sock, SOL_SOCKET, SO_RCVBUF, &rx_buf_size, sizeof(int)))
     fatal_error("Cannot set socket RX buffer size to %d (%s)\n", rx_buf_size, strerror(errno));
-  
+
   struct sockaddr_in local_addr;
   local_addr.sin_family = AF_INET;
   local_addr.sin_port = htons(local_port);
@@ -211,6 +211,9 @@ int main(int argc, char *argv[])
   static buffer_element b;
   init_buffer_element(&b);
 
+  if(set_current_thread_priority_realtime(50))
+    fprintf(stderr, "unable to set realtime thread priority\n");
+
   while(!done) {
     while(has_space(&rx_ring) && !done) {
       ssize_t ns = recvfrom(rx_sock, b.data, BUFFER_ELEMENT_SIZE, 0, NULL, NULL);
@@ -236,7 +239,7 @@ int main(int argc, char *argv[])
 
   thrd_join(handler_thread, NULL);
   close(rx_sock);
-  
+
   printf("ntry = %10ld, nrec = %10ld, nerr = %10ld\n", ntry, nrec, nerr);
 
   return 0;

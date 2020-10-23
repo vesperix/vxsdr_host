@@ -246,6 +246,9 @@ int main(int argc, char *argv[])
   static buffer_element b;
   init_buffer_element(&b);
 
+  if(set_current_thread_priority_realtime(50))
+    fprintf(stderr, "unable to set realtime thread priority\n");
+
   while(!done) {
     while(has_data(&tx_ring) && !done) {
       pop(&tx_ring, &b);
