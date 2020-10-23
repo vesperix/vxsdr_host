@@ -145,7 +145,7 @@ class udp_rx {
       socket_.async_receive_from(boost::asio::buffer(recv_buffer_.data, recv_buffer_.data.size()), remote_endpoint_, hdlr_);
     }
     void handle_receive(const boost::system::error_code& error, std::size_t bytes_transferred) {
-      if (!error || error == boost::asio::error::message_size) {
+      if (!error) {
         recv_buffer_.bytes_used = bytes_transferred;
         rx_queue.push(recv_buffer_);
       }

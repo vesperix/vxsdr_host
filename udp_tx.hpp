@@ -93,7 +93,6 @@ void generator(const size_t max_packets, const size_t requested_packet_size, con
   auto t1 = std::chrono::steady_clock::now();
   std::chrono::duration<double> dt = t1 - t0;
   BOOST_LOG_TRIVIAL(info) << max_packets << " packets (" << (max_packets * packet_size) << " bytes) sent in " << dt.count() << " seconds";
-  BOOST_LOG_TRIVIAL(info) << (max_packets * packet_size / dt.count()) << " bytes/s, " << (8 * max_packets * packet_size / dt.count()) << " bits/s";
 
   if(!tx_stop_flag)
     set_tx_stop_flag();
