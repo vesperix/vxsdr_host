@@ -5,10 +5,16 @@
 
 #include "thread_utils.h"
 
-static const size_t rx_buffer_bytes          = 262144; // maxumum size of a VITA49 data packet
+// parameters of the internal ring buffer
+static const size_t rx_buffer_max_bytes      = 262144; // maxumum size of a VITA49 data packet
 static const size_t rx_queue_length          = 256;    // rx_buffers
+
+// parameters of the writer thread's buffers
 static const size_t rx_write_buffer_size     = 16;     // rx_buffers
 //static const int    rx_write_thread_sleep_us = 1600;   // (currently unused)
+
+// parameters used to set the OS's network buffer
+static const unsigned packets_per_network_buffer = 16;
 
 static std::atomic<bool> rx_stop_flag;
 
@@ -16,7 +22,7 @@ void set_rx_stop_flag() {
   rx_stop_flag = true;
 }
 
-typedef std::array<char, rx_buffer_bytes> rx_buffer;
+typedef std::array<char, rx_buffer_max_bytes> rx_buffer;
 
 typedef  struct {
   size_t bytes_used;
@@ -111,6 +117,8 @@ class udp_rx {
     udp_rx(boost::asio::io_service &io_service, const boost::asio::ip::udp::endpoint &local_endpoint)
       : socket_(io_service, local_endpoint) {
       local_endpoint_ = local_endpoint;
+      boost::asio::socket_base::receive_buffer_size opt(packets_per_network_buffer * rx_buffer_max_bytes);
+      socket_.set_option(opt);
       if(!rx_stop_flag)
         start_receive();
     }
@@ -118,6 +126,8 @@ class udp_rx {
                const boost::asio::ip::address_v4 &multicast_ip)
       : socket_(io_service, local_endpoint.protocol()) {
       socket_.set_option(boost::asio::ip::udp::socket::reuse_address(true));
+      boost::asio::socket_base::receive_buffer_size opt(packets_per_network_buffer * rx_buffer_max_bytes);
+      socket_.set_option(opt);
       socket_.bind(local_endpoint);
       socket_.set_option(boost::asio::ip::multicast::join_group(multicast_ip));
       local_endpoint_ = local_endpoint;

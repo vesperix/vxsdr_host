@@ -5,8 +5,12 @@
 
 #include "thread_utils.h"
 
-static const size_t tx_buffer_max_bytes      = 262144;  // maxumum size of a VITA49 data packet
-static const size_t tx_queue_length          = 256;     // tx_buffers in queue
+// parameters of the internal ring buffer
+static const size_t tx_buffer_max_bytes          = 262144;  // maxumum size of a VITA49 data packet
+static const size_t tx_queue_length              = 256;     // tx_buffers in queue
+
+// parameters used to set the OS's network buffer
+static const unsigned packets_per_network_buffer = 16;
 
 static std::atomic<bool> tx_stop_flag;
 
@@ -32,6 +36,8 @@ class udp_tx {
       destination_endpoint_ = destination_endpoint;
       send_errors_ = 0;
       socket_.set_option(boost::asio::socket_base::broadcast(broadcast));
+      boost::asio::socket_base::send_buffer_size opt(packets_per_network_buffer * tx_buffer_max_bytes);
+      socket_.set_option(opt);
       start_send();
     }
   private:

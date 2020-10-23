@@ -13,8 +13,12 @@
 
 #include "thread_utils.h"
 
-#define BUFFER_ELEMENT_SIZE   262144
-#define RING_BUFFER_SIZE         256
+// parameters of the internal ring buffer
+#define BUFFER_ELEMENT_SIZE       262144
+#define RING_BUFFER_SIZE             256
+
+// parameters used to set the OS's network buffer
+#define PACKETS_PER_NETWORK_BUFFER    16
 
 #define USAGE_STRING "Usage: %s [options]\n" \
                      "   -A <local_address> [required]\n" \
@@ -157,6 +161,10 @@ int main(int argc, char *argv[])
   if(rx_sock < 0)
     fatal_error("Cannot create socket (%s)\n", strerror(errno));
 
+  int rx_buf_size = PACKETS_PER_NETWORK_BUFFER * packet_size;
+  if(setsockopt(rx_sock, SOL_SOCKET, SO_RCVBUF, &rx_buf_size, sizeof(int)))
+    fatal_error("Cannot set socket RX buffer size to %d (%s)\n", rx_buf_size, strerror(errno));
+  
   struct sockaddr_in local_addr;
   local_addr.sin_family = AF_INET;
   local_addr.sin_port = htons(local_port);
@@ -211,6 +219,8 @@ int main(int argc, char *argv[])
 
   thrd_join(handler_thread, NULL);
   close(rx_sock);
+  
+  printf("ntry = %10ld, nrec = %10ld, nerr = %10ld\n", ntry, nrec, nerr);
 
   return 0;
 }

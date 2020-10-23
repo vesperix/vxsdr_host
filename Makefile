@@ -14,7 +14,7 @@ CXX_OPTFLAGS = -O3
 CXX_DBGFLAGS = -g -Og
 CXX_LDFLAGS = -lpthread -lboost_log -lboost_program_options -lboost_thread
 
-DEBUG = 1
+#DEBUG = 1
 
 ifdef DEBUG
 	CC_FLAGS = $(CC_BASEFLAGS) $(CC_DBGFLAGS) $(CC_DEFINES)
