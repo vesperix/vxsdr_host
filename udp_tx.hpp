@@ -35,7 +35,6 @@ class udp_tx {
       const bool broadcast) : socket_(io_service, local_endpoint) {
       local_endpoint_ = local_endpoint;
       destination_endpoint_ = destination_endpoint;
-      send_errors_ = 0;
       socket_.set_option(boost::asio::socket_base::broadcast(broadcast));
       boost::asio::socket_base::send_buffer_size opt(packets_per_network_buffer * tx_buffer_max_bytes);
       socket_.set_option(opt);
@@ -45,9 +44,9 @@ class udp_tx {
     boost::asio::ip::udp::socket socket_;
     boost::asio::ip::udp::endpoint local_endpoint_;
     boost::asio::ip::udp::endpoint destination_endpoint_;
-    static const size_t tx_buffer_size_ = 16;
+    static const size_t tx_buffer_size_ = 256;
     std::array<tx_buffer_element, tx_buffer_size_> send_buffer_;
-    unsigned send_errors_;
+    unsigned send_errors_ = 0;
 
     void start_send() {
       LOGGER(info) << "send started";
