@@ -34,13 +34,13 @@ void define_options(boost::program_options::options_description &desc)
 void check_options(boost::program_options::variables_map &vm)
 {
   if(vm["local_address"].as<std::string>().size() == 0) {
-    LOG(fatal) << "local IP address must be specified";
+    LOGGER(fatal) << "local IP address must be specified";
     exit(1);
   }
   if(vm["multicast_address"].as<std::string>().size() > 0) {
     boost::asio::ip::address_v4 multicast_ip = boost::asio::ip::address_v4::from_string(vm["multicast_address"].as<std::string>());
     if(!multicast_ip.is_multicast()) {
-      LOG(fatal) << "Invalid multicast address: " << vm["multicast_address"].as<std::string>();
+      LOGGER(fatal) << "Invalid multicast address: " << vm["multicast_address"].as<std::string>();
       exit(2);
     }
   }
@@ -74,14 +74,14 @@ void init_options(boost::program_options::options_description &desc, boost::prog
 }
 
 extern "C" void sig_int_handler(int) {
-  LOG(fatal) << "terminated by SIGINT (ctrl-C)";
+  LOGGER(fatal) << "terminated by SIGINT (ctrl-C)";
   exit(99);
 }
 
 int main(int argc, char *argv[])
 {
-  INIT_LOG();
-  LOG(info) << argv[0] << " started";
+  INIT_LOGGER();
+  LOGGER(info) << argv[0] << " started";
   signal(SIGINT, &sig_int_handler);
   boost::program_options::options_description desc("Command line options");
   boost::program_options::variables_map vm;
@@ -113,8 +113,8 @@ int main(int argc, char *argv[])
     handler_thread.join();
   }
   catch (std::exception& e) {
-    LOG(error) << "exception caught: " << e.what();
+    LOGGER(error) << "exception caught: " << e.what();
   }
 
-  LOG(info) << argv[0] << " finished";
+  LOGGER(info) << argv[0] << " finished";
 }

@@ -70,7 +70,7 @@ class udp_rx {
         rx_queue.push(recv_buffer_);
       }
       else
-        LOG(error) << "async receive error: " << error.message();
+        LOGGER(error) << "async receive error: " << error.message();
       if(!rx_stop_flag)
         start_receive();
     }
@@ -78,10 +78,10 @@ class udp_rx {
 
 void writer(const std::string &outfilename, const size_t max_packets) {
 
-  LOG(info) << "writer thread started";
+  LOGGER(info) << "writer thread started";
 
 //  if(set_current_thread_priority_realtime(50))
-//    LOG(error) << "unable to set realtime thread priority";
+//    LOGGER(error) << "unable to set realtime thread priority";
 
   std::array<rx_buffer_element, rx_write_buffer_size> buffer;
   std::ofstream outfile(outfilename.c_str(), std::ofstream::binary);
@@ -103,14 +103,14 @@ void writer(const std::string &outfilename, const size_t max_packets) {
   outfile.close();
   if(!rx_stop_flag)
     set_rx_stop_flag();
-  LOG(info) << "writer thread finished";
+  LOGGER(info) << "writer thread finished";
 }
 
 void sequence_checker(const size_t max_packets, const size_t packet_size) {
-  LOG(info) << "sequence checker thread started";
+  LOGGER(info) << "sequence checker thread started";
 
 //  if(set_current_thread_priority_realtime(50))
-//    LOG(error) << "unable to set realtime thread priority";
+//    LOGGER(error) << "unable to set realtime thread priority";
 
   const unsigned buffer_max_packets = 256;
   static std::array<rx_buffer_element, buffer_max_packets> buffer;
@@ -136,18 +136,18 @@ void sequence_checker(const size_t max_packets, const size_t packet_size) {
   }
   auto t1 = std::chrono::steady_clock::now();
   std::chrono::duration<double> dt = t1 - t0;
-  LOG(info) << packets << " packets recieved; " << errors << " out of sequence";
-  LOG(info) << (packets * packet_size / dt.count()) << " bytes/s, " << (8 * packets * packet_size / dt.count()) << " bits/s";
+  LOGGER(info) << packets << " packets recieved; " << errors << " out of sequence";
+  LOGGER(info) << (packets * packet_size / dt.count()) << " bytes/s, " << (8 * packets * packet_size / dt.count()) << " bits/s";
   if(!rx_stop_flag)
     set_rx_stop_flag();
-  LOG(info) << "sequence checker thread finished";
+  LOGGER(info) << "sequence checker thread finished";
 }
 
 void rx_printer(const size_t max_packets, const size_t packet_size) {
-  LOG(info) << "rx printer thread started (" << max_packets <<" packets)";
+  LOGGER(info) << "rx printer thread started (" << max_packets <<" packets)";
 
 //  if(set_current_thread_priority_realtime(50))
-//    LOG(error) << "unable to set realtime thread priority";
+//    LOGGER(error) << "unable to set realtime thread priority";
 
   static const size_t buffer_max_packets = 16;
   std::array<rx_buffer_element, buffer_max_packets> buffer;
@@ -157,7 +157,7 @@ void rx_printer(const size_t max_packets, const size_t packet_size) {
     while(rx_queue.read_available()) {
       size_t n_popped = rx_queue.pop(&buffer.front(), buffer_max_packets);
       for(size_t i = 0; i < n_popped; i++) {
-        LOG(info) << "rx_printer recieved packet with " << buffer[i].bytes_used << " bytes";
+        LOGGER(info) << "rx_printer recieved packet with " << buffer[i].bytes_used << " bytes";
         packets++;
       }
     }
@@ -165,31 +165,31 @@ void rx_printer(const size_t max_packets, const size_t packet_size) {
   }
   if(!rx_stop_flag)
     set_rx_stop_flag();
-  LOG(info) << "rx_printer thread finished";
+  LOGGER(info) << "rx_printer thread finished";
 }
 
 void receiver(const boost::asio::ip::udp::endpoint &local_endpoint)
 {
-  LOG(info) << "receiver thread started";
+  LOGGER(info) << "receiver thread started";
 
   if(set_current_thread_priority_realtime(50))
-    LOG(error) << "unable to set realtime thread priority";
+    LOGGER(error) << "unable to set realtime thread priority";
 
   boost::asio::io_service io_service;
   udp_rx server(io_service, local_endpoint);
   io_service.run();
-  LOG(info) << "receiver thread finished";
+  LOGGER(info) << "receiver thread finished";
 }
 
 void multicast_receiver(const boost::asio::ip::udp::endpoint &local_endpoint, const boost::asio::ip::address_v4 &multicast_ip)
 {
-  LOG(info) << "multicast receiver thread started";
+  LOGGER(info) << "multicast receiver thread started";
 
   if(set_current_thread_priority_realtime(50))
-    LOG(error) << "unable to set realtime thread priority";
+    LOGGER(error) << "unable to set realtime thread priority";
 
   boost::asio::io_service io_service;
   udp_rx server(io_service, local_endpoint, multicast_ip);
   io_service.run();
-  LOG(info) << "multicast receiver thread finished";
+  LOGGER(info) << "multicast receiver thread finished";
 }
