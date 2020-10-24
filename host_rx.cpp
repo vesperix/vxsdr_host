@@ -17,9 +17,40 @@
 
 #include "udp_rx.hpp"
 
-void init_vm(boost::program_options::options_description &desc, boost::program_options::variables_map &vm, int argc, char *argv[])
+void define_options(boost::program_options::options_description &desc)
 {
-  // setup the program options
+  desc.add_options()
+    ("help,H", "show help message")
+    ("config_file,C", boost::program_options::value<std::string>(), "configuration file giving command line options")
+    ("local_address,A", boost::program_options::value<std::string>()->default_value(""), "IPv4 address of local interface")
+    ("local_port,L", boost::program_options::value<unsigned>()->default_value(1030), "port to use on local interface")
+    ("multicast_address,M", boost::program_options::value<std::string>()->default_value(""), "IPv4 address of multicast group to join")
+    ("packet_size,S", boost::program_options::value<size_t>()->default_value(65536), "packet size in bytes")
+    ("num_packets,N", boost::program_options::value<size_t>()->default_value(1024), "number of packets to receive")
+    ("output_filename,O", boost::program_options::value<std::string>()->default_value("test.dat"), "filename to save recieved data")
+  ;
+}
+
+void check_options(boost::program_options::variables_map &vm)
+{
+  if(vm["local_address"].as<std::string>().size() == 0) {
+    BOOST_LOG_TRIVIAL(fatal) << "local IP address must be specified";
+    exit(1);
+  }
+  if(vm["multicast_address"].as<std::string>().size() > 0) {
+    boost::asio::ip::address_v4 multicast_ip = boost::asio::ip::address_v4::from_string(vm["multicast_address"].as<std::string>());
+    if(!multicast_ip.is_multicast()) {
+      BOOST_LOG_TRIVIAL(fatal) << "Invalid multicast address: " << vm["multicast_address"].as<std::string>();
+      exit(2);
+    }
+  }
+}
+
+void init_options(boost::program_options::options_description &desc, boost::program_options::variables_map &vm, int argc, char *argv[])
+{
+  // define the allowed options
+  define_options(desc);
+  // setup the program options from the command line
   boost::program_options::store(boost::program_options::parse_command_line(argc, argv, desc), vm);
   boost::program_options::notify(vm);
   // if a config file is specified on the command line, load it
@@ -32,10 +63,10 @@ void init_vm(boost::program_options::options_description &desc, boost::program_o
     boost::program_options::store(boost::program_options::parse_config_file(ifs, desc), vm);
     boost::program_options::notify(vm);
   }
-  // now reload the command line options so that they take precedence ofer the config file
+  // now reload the command line options so that they take precedence over the config file
   boost::program_options::store(boost::program_options::parse_command_line(argc, argv, desc), vm);
   boost::program_options::notify(vm);
-  // if --help was specified, show help and exir
+  // if --help was specified, show help and exit
   if(vm.count("help")) {
     std::cout << desc << std::endl;
     exit(0);
@@ -52,25 +83,10 @@ int main(int argc, char *argv[])
   BOOST_LOG_TRIVIAL(info) << argv[0] << " started";
   signal(SIGINT, &sig_int_handler);
   boost::program_options::options_description desc("Command line options");
-
-  desc.add_options()
-    ("help,H", "show help message")
-    ("config_file,C", boost::program_options::value<std::string>(), "configuration file giving command line options")
-    ("local_address,A", boost::program_options::value<std::string>()->default_value(""), "IPv4 address of local interface")
-    ("local_port,L", boost::program_options::value<unsigned>()->default_value(1030), "port to use on local interface")
-    ("multicast_address,M", boost::program_options::value<std::string>()->default_value(""), "IPv4 address of multicast group to join")
-    ("packet_size,S", boost::program_options::value<size_t>()->default_value(65536), "packet size in bytes")
-    ("num_packets,N", boost::program_options::value<size_t>()->default_value(1024), "number of packets to receive")
-    ("output_filename,O", boost::program_options::value<std::string>()->default_value("test.dat"), "filename to save recieved data")
-  ;
-
   boost::program_options::variables_map vm;
-  init_vm(desc, vm, argc, argv);
 
-  if(vm["local_address"].as<std::string>().size() == 0) {
-    BOOST_LOG_TRIVIAL(fatal) << "local IP address must be specified";
-    exit(1);
-  }
+  init_options(desc, vm, argc, argv);
+  check_options(vm);
 
   boost::asio::ip::address_v4 local_ip = boost::asio::ip::address_v4::from_string(vm["local_address"].as<std::string>());
   boost::asio::ip::udp::endpoint local_endpoint(local_ip, vm["local_port"].as<unsigned>());
@@ -78,16 +94,11 @@ int main(int argc, char *argv[])
   bool use_multicast = false;
   if(vm["multicast_address"].as<std::string>().size() > 0) {
     multicast_ip = boost::asio::ip::address_v4::from_string(vm["multicast_address"].as<std::string>());
-    if(multicast_ip.is_multicast())
-      use_multicast = true;
-    else {
-      BOOST_LOG_TRIVIAL(fatal) << "Invalid multicast address: " << vm["multicast_address"].as<std::string>();
-      exit(2);
-    }
+    use_multicast = true;
   }
 
   try {
-    std::string outfile_name = vm["output_filename"].as<std::string>();
+//    std::string outfile_name = vm["output_filename"].as<std::string>();
 //    boost::thread handler_thread(std::ref(writer), std::cref(outfile_name), vm["num_packets"].as<size_t>());
     boost::thread handler_thread(std::ref(sequence_checker), vm["num_packets"].as<size_t>(), vm["packet_size"].as<size_t>());
     if(use_multicast) {
