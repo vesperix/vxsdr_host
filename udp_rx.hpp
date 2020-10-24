@@ -172,7 +172,7 @@ void receiver(const boost::asio::ip::udp::endpoint &local_endpoint)
 {
   LOGGER(info) << "receiver thread started";
 
-  if(set_current_thread_priority_realtime(50))
+  if(set_current_thread_priority_realtime(10))
     LOGGER(error) << "unable to set realtime thread priority";
 
   boost::asio::io_service io_service;
@@ -185,7 +185,7 @@ void multicast_receiver(const boost::asio::ip::udp::endpoint &local_endpoint, co
 {
   LOGGER(info) << "multicast receiver thread started";
 
-  if(set_current_thread_priority_realtime(50))
+  if(set_current_thread_priority_realtime(10))
     LOGGER(error) << "unable to set realtime thread priority";
 
   boost::asio::io_service io_service;

@@ -58,6 +58,8 @@ class udp_tx {
           for(size_t i = 0; i < n_popped; i++)
             socket_.async_send_to(boost::asio::buffer(&send_buffer_[i].data, send_buffer_[i].bytes_used), destination_endpoint_, hdlr);
         }
+        //else
+        //  LOGGER(error) << "tx queue empty";
       }
     }
     void handle_send(const boost::system::error_code& error, std::size_t bytes_transferred) {
@@ -109,8 +111,8 @@ void sender(const boost::asio::ip::udp::endpoint &local_endpoint,
 {
   LOGGER(info) << "sender thread started";
 
-  if(set_current_thread_priority_realtime(50))
-    LOGGER(error) << "unable to set realtime thread priority";
+  //if(set_current_thread_priority_realtime(1))
+  //  LOGGER(error) << "unable to set realtime thread priority";
 
   boost::asio::io_service io_service;
   udp_tx server(io_service, local_endpoint, destination_endpoint, broadcast);
