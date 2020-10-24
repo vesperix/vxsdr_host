@@ -3,6 +3,7 @@
 #include <boost/bind.hpp>
 #include <boost/shared_ptr.hpp>
 
+#include "logging.hpp"
 #include "thread_utils.h"
 
 // parameters of the internal ring buffer
@@ -49,7 +50,7 @@ class udp_tx {
     unsigned send_errors_;
 
     void start_send() {
-      BOOST_LOG_TRIVIAL(info) << "send started";
+      LOG(info) << "send started";
       auto hdlr = boost::bind(&udp_tx::handle_send, this, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred);
       while(!tx_stop_flag) {
         if(tx_queue.read_available()) {
@@ -62,21 +63,21 @@ class udp_tx {
     void handle_send(const boost::system::error_code& error, std::size_t bytes_transferred) {
       if (error) {
         send_errors_++;
-        BOOST_LOG_TRIVIAL(error) << "async send error: " << error.message();
+        LOG(error) << "async send error: " << error.message();
       }
     }
 };
 
 void generator(const size_t max_packets, const size_t requested_packet_size, const unsigned packet_wait_us) {
   tx_buffer_element buf;
-  BOOST_LOG_TRIVIAL(info) << "generator thread started";
+  LOG(info) << "generator thread started";
 
 //  if(set_current_thread_priority_realtime(50))
-//    BOOST_LOG_TRIVIAL(error) << "unable to set realtime thread priority";
+//    LOG(error) << "unable to set realtime thread priority";
 
   size_t packet_size = requested_packet_size;
   if(requested_packet_size > tx_buffer_max_bytes) {
-    BOOST_LOG_TRIVIAL(error) << "requested packet size is greater than maximum (" << tx_buffer_max_bytes <<"); setting to maximum";
+    LOG(error) << "requested packet size is greater than maximum (" << tx_buffer_max_bytes <<"); setting to maximum";
     packet_size = tx_buffer_max_bytes;
   }
 
@@ -95,24 +96,24 @@ void generator(const size_t max_packets, const size_t requested_packet_size, con
 
   auto t1 = std::chrono::steady_clock::now();
   std::chrono::duration<double> dt = t1 - t0;
-  BOOST_LOG_TRIVIAL(info) << max_packets << " packets (" << (max_packets * packet_size) << " bytes) sent in " << dt.count() << " seconds";
+  LOG(info) << max_packets << " packets (" << (max_packets * packet_size) << " bytes) sent in " << dt.count() << " seconds";
 
   if(!tx_stop_flag)
     set_tx_stop_flag();
-  BOOST_LOG_TRIVIAL(info) << "generator thread finished";
+  LOG(info) << "generator thread finished";
 }
 
 void sender(const boost::asio::ip::udp::endpoint &local_endpoint,
       const boost::asio::ip::udp::endpoint &destination_endpoint,
       const bool broadcast)
 {
-  BOOST_LOG_TRIVIAL(info) << "sender thread started";
+  LOG(info) << "sender thread started";
 
   if(set_current_thread_priority_realtime(50))
-    BOOST_LOG_TRIVIAL(error) << "unable to set realtime thread priority";
+    LOG(error) << "unable to set realtime thread priority";
 
   boost::asio::io_service io_service;
   udp_tx server(io_service, local_endpoint, destination_endpoint, broadcast);
   io_service.run();
-  BOOST_LOG_TRIVIAL(info) << "sender thread finished";
+  LOG(info) << "sender thread finished";
 }

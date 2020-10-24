@@ -12,9 +12,9 @@
 #include <boost/program_options.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/format.hpp>
-#include <boost/log/trivial.hpp>
 #include <boost/thread.hpp>
 
+#include "logging.hpp"
 #include "udp_tx.hpp"
 
 void define_options(boost::program_options::options_description &desc)
@@ -36,16 +36,16 @@ void define_options(boost::program_options::options_description &desc)
 void check_options( boost::program_options::variables_map &vm)
 {
   if(vm["local_address"].as<std::string>().size() == 0) {
-    BOOST_LOG_TRIVIAL(fatal) << "local IP address must be specified";
+    LOG(fatal) << "local IP address must be specified";
     exit(1);
   }
   if(vm["destination_address"].as<std::string>().size() == 0) {
-    BOOST_LOG_TRIVIAL(fatal) << "destination IP address must be specified";
+    LOG(fatal) << "destination IP address must be specified";
     exit(2);
   }
 }
 
-void init_options(boost::program_options::options_description &desc, boost::program_options::variables_map &vm, int argc, char *argv[])
+void init_options(boost::program_options::options_description &desc, boost::program_options::variables_map &vm, const int argc, char *argv[])
 {
   // define the allowed options
   define_options(desc);
@@ -73,13 +73,14 @@ void init_options(boost::program_options::options_description &desc, boost::prog
 }
 
 extern "C" void sig_int_handler(int) {
-  BOOST_LOG_TRIVIAL(fatal) << "terminated by SIGINT (ctrl-C)";
+  LOG(fatal) << "terminated by SIGINT (ctrl-C)";
   exit(99);
 }
 
 int main(int argc, char *argv[])
 {
-  BOOST_LOG_TRIVIAL(info) << argv[0] << " started";
+  INIT_LOG();
+  LOG(info) << argv[0] << " started";
   signal(SIGINT, &sig_int_handler);
   boost::program_options::options_description desc("Command line options");
   boost::program_options::variables_map vm;
@@ -99,9 +100,9 @@ int main(int argc, char *argv[])
     sender_thread.join();
   }
   catch (std::exception& e) {
-    BOOST_LOG_TRIVIAL(error) << "exception caught: " << e.what();
+    LOG(error) << "exception caught: " << e.what();
   }
 
-  BOOST_LOG_TRIVIAL(info) << argv[0] << " finished";
+  LOG(info) << argv[0] << " finished";
 
 }
