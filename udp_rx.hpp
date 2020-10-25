@@ -7,15 +7,15 @@
 #include "thread_utils.h"
 
 // parameters of the internal ring buffer
-static const size_t rx_buffer_max_bytes      = 262144; // maxumum size of a VITA49 data packet
-static const size_t rx_queue_length          = 256;    // rx_buffers
+static const size_t rx_buffer_max_bytes           = 9000;   // max mtu
+static const size_t rx_queue_length               = 1024;   // rx_buffers
 
 // parameters of the writer thread's buffers
-static const size_t rx_write_buffer_size     = 16;     // rx_buffers
+static const size_t rx_write_buffer_size          = 256;     // rx_buffers
 //static const int    rx_write_thread_sleep_us = 1600;   // (currently unused)
 
 // parameters used to set the OS's network buffer
-static const unsigned packets_per_network_buffer = 16;
+static const unsigned packets_per_network_buffer  = 256;
 
 static std::atomic<bool> rx_stop_flag;
 
@@ -79,9 +79,6 @@ void writer(const std::string &outfilename, const size_t max_packets) {
 
   LOGGER(info) << "writer thread started";
 
-//  if(set_current_thread_priority_realtime(50))
-//    LOGGER(error) << "unable to set realtime thread priority";
-
   std::array<rx_buffer_element, rx_write_buffer_size> buffer;
   std::ofstream outfile(outfilename.c_str(), std::ofstream::binary);
   size_t packets = 0;
@@ -108,10 +105,7 @@ void writer(const std::string &outfilename, const size_t max_packets) {
 void sequence_checker(const size_t max_packets, const size_t packet_size) {
   LOGGER(info) << "sequence checker thread started";
 
-//  if(set_current_thread_priority_realtime(50))
-//    LOGGER(error) << "unable to set realtime thread priority";
-
-  const unsigned buffer_max_packets = 256;
+  const unsigned buffer_max_packets = 16;
   static std::array<rx_buffer_element, buffer_max_packets> buffer;
   size_t packets = 0, errors = 0;
   unsigned seq, last_seq = 0;
@@ -144,9 +138,6 @@ void sequence_checker(const size_t max_packets, const size_t packet_size) {
 
 void rx_printer(const size_t max_packets, const size_t packet_size) {
   LOGGER(info) << "rx printer thread started (" << max_packets <<" packets)";
-
-//  if(set_current_thread_priority_realtime(50))
-//    LOGGER(error) << "unable to set realtime thread priority";
 
   static const size_t buffer_max_packets = 16;
   std::array<rx_buffer_element, buffer_max_packets> buffer;
