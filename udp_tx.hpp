@@ -44,7 +44,7 @@ class udp_tx {
     boost::asio::ip::udp::socket socket_;
     boost::asio::ip::udp::endpoint local_endpoint_;
     boost::asio::ip::udp::endpoint destination_endpoint_;
-    static const size_t tx_buffer_size_ = 256;
+    static const size_t tx_buffer_size_ = 16;
     std::array<tx_buffer_element, tx_buffer_size_> send_buffer_;
     unsigned send_errors_ = 0;
 
