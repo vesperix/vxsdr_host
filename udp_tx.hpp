@@ -85,6 +85,7 @@ void generator(const size_t max_packets, const size_t requested_packet_size, con
     memset(&buf.data, 0, packet_size);
     memcpy(&buf.data, &i, sizeof(i));
     buf.bytes_used = packet_size;
+    // wait for room in the tx queue
     while(!tx_queue.write_available()) {}
 
     tx_queue.push(buf);
