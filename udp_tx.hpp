@@ -7,11 +7,11 @@
 #include "thread_utils.h"
 
 // parameters of the internal ring buffer
-static const size_t tx_buffer_max_bytes          = 262144;  // maxumum size of a VITA49 data packet
-static const size_t tx_queue_length              = 256;     // tx_buffers in queue
+static const size_t tx_buffer_max_bytes          = 9000;  // max mtu
+static const size_t tx_queue_length              = 1024;   // tx_buffers in queue
 
 // parameters used to set the OS's network buffer
-static const unsigned packets_per_network_buffer = 16;
+static const unsigned packets_per_network_buffer = 256;
 
 static std::atomic<bool> tx_stop_flag;
 
@@ -73,9 +73,6 @@ void generator(const size_t max_packets, const size_t requested_packet_size, con
   tx_buffer_element buf;
   LOGGER(info) << "generator thread started";
 
-//  if(set_current_thread_priority_realtime(50))
-//    LOGGER(error) << "unable to set realtime thread priority";
-
   size_t packet_size = requested_packet_size;
   if(requested_packet_size > tx_buffer_max_bytes) {
     LOGGER(error) << "requested packet size is greater than maximum (" << tx_buffer_max_bytes <<"); setting to maximum";
@@ -110,7 +107,7 @@ void sender(const boost::asio::ip::udp::endpoint &local_endpoint,
 {
   LOGGER(info) << "sender thread started";
 
-  //if(set_current_thread_priority_realtime(1))
+  //if(set_current_thread_priority_realtime(10))
   //  LOGGER(error) << "unable to set realtime thread priority";
 
   boost::asio::io_service io_service;
