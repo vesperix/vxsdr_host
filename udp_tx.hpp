@@ -44,7 +44,7 @@ class udp_tx {
     boost::asio::ip::udp::socket socket_;
     boost::asio::ip::udp::endpoint local_endpoint_;
     boost::asio::ip::udp::endpoint destination_endpoint_;
-    static const size_t tx_buffer_size_ = 16;
+    static constexpr size_t tx_buffer_size_ = 256;
     std::array<tx_buffer_element, tx_buffer_size_> send_buffer_;
     unsigned send_errors_ = 0;
 
@@ -52,7 +52,7 @@ class udp_tx {
       LOGGER(info) << "send started";
       while(!tx_stop_flag) {
         if(tx_queue.read_available()) {
-          size_t n_popped = tx_queue.pop(&send_buffer_.front(), tx_buffer_size_);
+          size_t n_popped = tx_queue.pop(&send_buffer_.front(), send_buffer_.size());
           for(size_t i = 0; i < n_popped; i++) {
             try {
               socket_.send_to(boost::asio::buffer(&send_buffer_[i].data, send_buffer_[i].bytes_used), destination_endpoint_);
