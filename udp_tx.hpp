@@ -11,7 +11,7 @@ static const size_t tx_buffer_max_bytes          = 9000;  // max mtu
 static const size_t tx_queue_length              = 1024;   // tx_buffers in queue
 
 // parameters used to set the OS's network buffer
-static const unsigned packets_per_network_buffer = 256;
+static const unsigned packets_per_network_buffer = 1024;
 
 static std::atomic<bool> tx_stop_flag;
 

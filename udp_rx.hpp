@@ -11,11 +11,11 @@ static const size_t rx_buffer_max_bytes          = 9000; // max mtu
 static const size_t rx_queue_length              = 1024;    // rx_buffers
 
 // parameters of the writer thread's buffers
-static const size_t rx_write_buffer_size         = 256;     // rx_buffers
+static const size_t rx_write_buffer_size         =  256;     // rx_buffers
 //static const int    rx_write_thread_sleep_us = 1600;   // (currently unused)
 
 // parameters used to set the OS's network buffer
-static const unsigned packets_per_network_buffer = 256;
+static const unsigned packets_per_network_buffer = 1024;
 
 static std::atomic<bool> rx_stop_flag;
 
@@ -129,7 +129,7 @@ void sequence_checker(const size_t max_packets, const size_t packet_size) {
   }
   auto t1 = std::chrono::steady_clock::now();
   std::chrono::duration<double> dt = t1 - t0;
-  LOGGER(info) << packets << " packets recieved; " << errors << " out of sequence";
+  LOGGER(info) << packets << " packets recieved in " << dt.count() << " sec; " << errors << " out of sequence";
   LOGGER(info) << (packets * packet_size / dt.count()) << " bytes/s, " << (8 * packets * packet_size / dt.count()) << " bits/s";
   if(!rx_stop_flag)
     set_rx_stop_flag();
