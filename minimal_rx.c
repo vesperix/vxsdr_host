@@ -108,6 +108,7 @@ int handler(void *args) {
   struct timespec t0, t1;
 
   init_buffer_element(&b);
+  clock_gettime(CLOCK_MONOTONIC, &t0);
 
   while(!done) {
     if(packets == 0)
