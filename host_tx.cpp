@@ -94,8 +94,8 @@ int main(int argc, char *argv[])
   boost::asio::ip::udp::endpoint destination_endpoint(destination_ip, vm["destination_port"].as<unsigned>());
 
   try {
-    boost::thread generator_thread(std::ref(generator), vm["num_packets"].as<size_t>(), vm["packet_size"].as<size_t>(), vm["wait_us"].as<unsigned>());
-    boost::thread sender_thread(std::ref(sender), std::cref(local_endpoint), std::cref(destination_endpoint), vm["broadcast"].as<bool>());
+    std::thread generator_thread(std::ref(generator), vm["num_packets"].as<size_t>(), vm["packet_size"].as<size_t>(), vm["wait_us"].as<unsigned>());
+    std::thread sender_thread(std::ref(sender), std::cref(local_endpoint), std::cref(destination_endpoint), vm["broadcast"].as<bool>());
     generator_thread.join();
     sender_thread.join();
   }

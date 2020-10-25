@@ -84,7 +84,7 @@ void writer(const std::string &outfilename, const size_t max_packets) {
   size_t packets = 0;
 
   while(packets < max_packets and !rx_stop_flag) {
-    while(rx_queue.read_available() > rx_write_buffer_size) {
+    while(rx_queue.read_available() >= rx_write_buffer_size) {
     	size_t nwrite = rx_queue.pop(&buffer.front(), rx_write_buffer_size);
       for(size_t i = 0; i < nwrite; i++)
         outfile.write((const char*)&buffer[i].data, buffer[i].bytes_used);

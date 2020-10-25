@@ -101,13 +101,13 @@ int main(int argc, char *argv[])
   try {
 //    std::string outfile_name = vm["output_filename"].as<std::string>();
 //    boost::thread handler_thread(std::ref(writer), std::cref(outfile_name), vm["num_packets"].as<size_t>());
-    boost::thread handler_thread(std::ref(sequence_checker), vm["num_packets"].as<size_t>(), vm["packet_size"].as<size_t>());
+    std::thread handler_thread(std::ref(sequence_checker), vm["num_packets"].as<size_t>(), vm["packet_size"].as<size_t>());
     if(use_multicast) {
-      boost::thread multicast_receiver_thread(std::ref(multicast_receiver), std::cref(local_endpoint), std::cref(multicast_ip));
+      std::thread multicast_receiver_thread(std::ref(multicast_receiver), std::cref(local_endpoint), std::cref(multicast_ip));
       multicast_receiver_thread.join();
     }
     else {
-      boost::thread receiver_thread(std::ref(receiver), std::cref(local_endpoint));
+      std::thread receiver_thread(std::ref(receiver), std::cref(local_endpoint));
       receiver_thread.join();
     }
     handler_thread.join();

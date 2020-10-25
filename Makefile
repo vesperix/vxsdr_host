@@ -8,13 +8,13 @@ CC_LDFLAGS = -lpthread
 
 CXX = g++
 
-CXX_DEFINES = -DBOOST_LOG_DYN_LINK -DBOOST_THREAD_DYN_LINK
+CXX_DEFINES = -DBOOST_LOG_DYN_LINK
 CXX_BASEFLAGS = -Wall -pedantic -std=c++14
 CXX_OPTFLAGS = -O3
 CXX_DBGFLAGS = -g -Og
-CXX_LDFLAGS = -lpthread -lboost_log -lboost_program_options -lboost_thread
+CXX_LDFLAGS = -lpthread -lboost_log -lboost_program_options
 
-DEBUG = 1
+#DEBUG = 1
 
 ifdef DEBUG
 	CC_FLAGS = $(CC_BASEFLAGS) $(CC_DBGFLAGS) $(CC_DEFINES)
