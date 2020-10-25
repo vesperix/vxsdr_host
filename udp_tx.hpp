@@ -50,21 +50,21 @@ class udp_tx {
 
     void start_send() {
       LOGGER(info) << "send started";
-      auto hdlr = boost::bind(&udp_tx::handle_send, this, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred);
       while(!tx_stop_flag) {
         if(tx_queue.read_available()) {
           size_t n_popped = tx_queue.pop(&send_buffer_.front(), tx_buffer_size_);
-          for(size_t i = 0; i < n_popped; i++)
-            socket_.async_send_to(boost::asio::buffer(&send_buffer_[i].data, send_buffer_[i].bytes_used), destination_endpoint_, hdlr);
+          for(size_t i = 0; i < n_popped; i++) {
+            try {
+              socket_.send_to(boost::asio::buffer(&send_buffer_[i].data, send_buffer_[i].bytes_used), destination_endpoint_);
+            }
+            catch(const boost::system::system_error &error) {
+              send_errors_++;
+              LOGGER(error) << "sync send error: " << error.what();
+            }
+          }
         }
         //else
         //  LOGGER(error) << "tx queue empty";
-      }
-    }
-    void handle_send(const boost::system::error_code& error, std::size_t bytes_transferred) {
-      if (error) {
-        send_errors_++;
-        LOGGER(error) << "async send error: " << error.message();
       }
     }
 };

@@ -61,18 +61,17 @@ class udp_rx {
     rx_buffer_element recv_buffer_;
 
     void start_receive() {
-      auto hdlr_ = boost::bind(&udp_rx::handle_receive, this, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred);
-      socket_.async_receive_from(boost::asio::buffer(recv_buffer_.data, recv_buffer_.data.size()), remote_endpoint_, hdlr_);
-    }
-    void handle_receive(const boost::system::error_code& error, std::size_t bytes_transferred) {
-      if (!error) {
-        recv_buffer_.bytes_used = bytes_transferred;
-        rx_queue.push(recv_buffer_);
+      size_t bytes_received;
+      while(!rx_stop_flag) {
+        try {
+          bytes_received = socket_.receive_from(boost::asio::buffer(recv_buffer_.data, recv_buffer_.data.size()), remote_endpoint_);
+          recv_buffer_.bytes_used = bytes_received;
+          rx_queue.push(recv_buffer_);
+        }
+        catch(const boost::system::system_error &error) {
+          LOGGER(error) << "sync receive error: " << error.what();
+        }
       }
-      else
-        LOGGER(error) << "async receive error: " << error.message();
-      if(!rx_stop_flag)
-        start_receive();
     }
 };
 
