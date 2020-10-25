@@ -15,11 +15,11 @@
 #include "thread_utils.h"
 
 // parameters of the internal ring buffer
-#define BUFFER_ELEMENT_SIZE       262144
-#define RING_BUFFER_SIZE             256
+#define BUFFER_ELEMENT_SIZE         9000
+#define RING_BUFFER_SIZE            1024
 
 // parameters used to set the OS's network buffer
-#define PACKETS_PER_NETWORK_BUFFER    16
+#define PACKETS_PER_NETWORK_BUFFER   256
 
 #define USAGE_STRING "Usage: %s [options]\n" \
                      "   -A <local_address> [required]\n" \
