@@ -1,3 +1,4 @@
+#define _GNU_SOURCE  // needed for setting thread affinity
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdatomic.h>

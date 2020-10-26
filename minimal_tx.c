@@ -1,7 +1,7 @@
+#define _GNU_SOURCE  // needed for setting thread affinity
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdatomic.h>
-#include <threads.h>
 #include <unistd.h>
 #include <string.h>
 #include <stdbool.h>
@@ -10,6 +10,7 @@
 #include <errno.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include <threads.h>
 
 #include "thread_utils.h"
 
