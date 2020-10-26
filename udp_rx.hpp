@@ -3,8 +3,8 @@
 #include <boost/bind.hpp>
 #include <boost/shared_ptr.hpp>
 
-#include "cycle_counter.h"
 #include "logging.hpp"
+#include "cycle_counter.h"
 #include "thread_utils.h"
 
 // parameters of the internal ring buffer
@@ -67,6 +67,9 @@ class udp_rx {
     }
     void handle_receive(const boost::system::error_code& error, std::size_t bytes_transferred) {
       if (!error) {
+        // cycle count when received
+        unsigned long long cycles = read_cycle_counter();
+        memcpy(&recv_buffer_.data + sizeof(size_t) + 2 * sizeof(unsigned long long), &cycles, sizeof(cycles));
         recv_buffer_.bytes_used = bytes_transferred;
         rx_queue.push(recv_buffer_);
       }
@@ -109,7 +112,7 @@ void sequence_checker(const size_t max_packets, const size_t packet_size) {
   const unsigned buffer_max_packets = 256;
   static std::array<rx_buffer_element, buffer_max_packets> buffer;
   size_t packets = 0, errors = 0;
-  unsigned seq, last_seq = 0;
+  size_t seq, last_seq = 0;
 
   auto t0 = std::chrono::steady_clock::now();
 
@@ -143,9 +146,9 @@ void sequence_timer(const size_t max_packets, const size_t packet_size) {
   const unsigned buffer_max_packets = 256;
   static std::array<rx_buffer_element, buffer_max_packets> buffer;
   size_t packets = 0, errors = 0;
-  unsigned seq, last_seq = 0;
+  size_t seq, last_seq = 0;
 
-  std::vector<unsigned long long> counts(max_packets);
+  std::vector<unsigned long long> count1(max_packets), count2(max_packets), count3(max_packets), count4(max_packets);
   std::vector<unsigned> seqnums(max_packets);
 
   auto t0 = std::chrono::steady_clock::now();
@@ -160,10 +163,17 @@ void sequence_timer(const size_t max_packets, const size_t packet_size) {
       size_t n_popped = rx_queue.pop(&buffer.front(), buffer_max_packets);
       unsigned long long tpop = read_cycle_counter();
       for(size_t i = 0; i < n_popped; i++) {
-        memcpy(&seq, &buffer[i].data, sizeof(seq));
+        memcpy(&seq, &buffer[i].data.front(), sizeof(seq));
         if(seq != last_seq + 1)
           errors++;
-        counts[packets] = tpop;
+        unsigned long long cycles;
+        memcpy(&cycles, &buffer[i].data.front() + sizeof(size_t), sizeof(cycles));
+        count1[packets] = cycles;
+        memcpy(&cycles, &buffer[i].data.front() + sizeof(size_t) + sizeof(unsigned long long), sizeof(cycles));
+        count2[packets] = cycles;
+        memcpy(&cycles, &buffer[i].data.front() + sizeof(size_t) + 2 * sizeof(unsigned long long), sizeof(cycles));
+        count3[packets] = cycles;
+        count4[packets] = tpop;
         seqnums[packets] = seq;
         packets++;
         last_seq = seq;
@@ -181,11 +191,7 @@ void sequence_timer(const size_t max_packets, const size_t packet_size) {
   LOGGER(info) << (packets * packet_size / dt.count()) << " bytes/s, " << (8 * packets * packet_size / dt.count()) << " bits/s";
 
   for(size_t i = 0; i < packets; i++)
-    if(i > 0)
-      std::cout << boost::format(" %12d %12d %12.3f %12d %12d %12.3f") % seqnums[i] % counts[i] % (1e6 * counts[i] / cal) %
-                                  (seqnums[i] - seqnums[i - 1]) % (counts[i] - counts[i - 1]) % (1e6 * (counts[i] - counts[i - 1]) / cal) << std::endl;
-    else
-      std::cout << boost::format(" %12d %12d %12.3f") % seqnums[i] % counts[i] % (1e6 * counts[i] / cal) << std::endl;
+    std::cout << boost::format(" %12d %12d %12d %12d %12df") % seqnums[i] % count1[i] % count2[i] % count3[i] % count4[i] << std::endl;
   if(!rx_stop_flag)
     set_rx_stop_flag();
   LOGGER(info) << "sequence checker thread finished";

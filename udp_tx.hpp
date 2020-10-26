@@ -4,6 +4,7 @@
 #include <boost/shared_ptr.hpp>
 
 #include "logging.hpp"
+#include "cycle_counter.h"
 #include "thread_utils.h"
 
 // parameters of the internal ring buffer
@@ -19,7 +20,7 @@ void set_tx_stop_flag() {
   tx_stop_flag = true;
 }
 
-typedef boost::array<char, tx_buffer_max_bytes> tx_buffer;
+typedef std::array<char, tx_buffer_max_bytes> tx_buffer;
 
 typedef  struct {
   size_t bytes_used;
@@ -54,8 +55,12 @@ class udp_tx {
       while(!tx_stop_flag) {
         if(tx_queue.read_available()) {
           size_t n_popped = tx_queue.pop(&send_buffer_.front(), send_buffer_.size());
-          for(size_t i = 0; i < n_popped; i++)
+          for(size_t i = 0; i < n_popped; i++) {
+            // cycle count when sent
+            unsigned long long cycles = read_cycle_counter();
+            memcpy(&send_buffer_[i].data + sizeof(size_t) + sizeof(unsigned long long), &cycles, sizeof(cycles));
             socket_.async_send_to(boost::asio::buffer(&send_buffer_[i].data, send_buffer_[i].bytes_used), destination_endpoint_, hdlr);
+          }
         }
         //else
         //  LOGGER(error) << "tx queue empty";
@@ -81,13 +86,16 @@ void generator(const size_t max_packets, const size_t requested_packet_size, con
 
   auto t0 = std::chrono::steady_clock::now();
 
-  for(unsigned i = 1; i <= max_packets and !tx_stop_flag; i++) {
-    memset(&buf.data, 0, packet_size);
-    memcpy(&buf.data, &i, sizeof(i));
+  for(size_t i = 1; i <= max_packets and !tx_stop_flag; i++) {
+    memset(&buf.data.front(), 0, packet_size);
+    memcpy(&buf.data.front(), &i, sizeof(i));
     buf.bytes_used = packet_size;
     // wait for room in the tx queue
     while(!tx_queue.write_available()) {}
 
+    // cycle count when pushed
+    unsigned long long cycles = read_cycle_counter();
+    memcpy(&buf.data.front() + sizeof(size_t), &cycles, sizeof(cycles));
     tx_queue.push(buf);
     if(packet_wait_us > 0)
       std::this_thread::sleep_for(std::chrono::microseconds(packet_wait_us));
