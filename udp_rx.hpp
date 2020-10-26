@@ -138,7 +138,7 @@ void sequence_checker(const size_t max_packets, const size_t packet_size) {
 }
 
 void sequence_timer(const size_t max_packets, const size_t packet_size) {
-  LOGGER(info) << "sequence checker thread started";
+  LOGGER(info) << "sequence timer thread started";
 
   const unsigned buffer_max_packets = 256;
   static std::array<rx_buffer_element, buffer_max_packets> buffer;
@@ -186,7 +186,7 @@ void sequence_timer(const size_t max_packets, const size_t packet_size) {
     std::cout << boost::format(" %12d %12.3f %12.3f %12.3f %12.3f") % seqnums[i] % (count1[i] / cal) % (count2[i] / cal) % (count3[i] / cal) % (count4[i] / cal) << std::endl;
   if(!rx_stop_flag)
     set_rx_stop_flag();
-  LOGGER(info) << "sequence checker thread finished";
+  LOGGER(info) << "sequence timer thread finished";
 }
 
 void rx_printer(const size_t max_packets, const size_t packet_size) {
