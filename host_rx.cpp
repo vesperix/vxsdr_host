@@ -7,12 +7,13 @@
 #include <ctime>
 #include <limits>
 #include <cstdlib>
+#include <thread>
 
 #include <boost/version.hpp>
 #include <boost/program_options.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/format.hpp>
-#include <boost/thread.hpp>
+
 
 #include "logging.hpp"
 #include "udp_rx.hpp"

@@ -8,10 +8,9 @@ extern "C" {
 #endif
 
 #ifdef HAVE_PTHREADS
-//#define _GNU_SOURCE
 #include <pthread.h>
 #endif
-/*
+
 int set_current_thread_affinity(const int cpunum)
 {
 #ifdef HAVE_PTHREADS
@@ -24,7 +23,7 @@ int set_current_thread_affinity(const int cpunum)
   return -1;
 #endif
 }
-*/
+
 int set_current_thread_priority_realtime(const int priority)
 {
 #ifdef HAVE_PTHREADS
