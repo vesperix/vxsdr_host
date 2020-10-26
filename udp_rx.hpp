@@ -3,6 +3,7 @@
 #include <boost/bind.hpp>
 #include <boost/shared_ptr.hpp>
 
+#include "cycle_counter.h"
 #include "logging.hpp"
 #include "thread_utils.h"
 
@@ -131,6 +132,58 @@ void sequence_checker(const size_t max_packets, const size_t packet_size) {
   std::chrono::duration<double> dt = t1 - t0;
   LOGGER(info) << packets << " packets recieved in " << dt.count() << " sec; " << errors << " out of sequence";
   LOGGER(info) << (packets * packet_size / dt.count()) << " bytes/s, " << (8 * packets * packet_size / dt.count()) << " bits/s";
+  if(!rx_stop_flag)
+    set_rx_stop_flag();
+  LOGGER(info) << "sequence checker thread finished";
+}
+
+void sequence_timer(const size_t max_packets, const size_t packet_size) {
+  LOGGER(info) << "sequence checker thread started";
+
+  const unsigned buffer_max_packets = 256;
+  static std::array<rx_buffer_element, buffer_max_packets> buffer;
+  size_t packets = 0, errors = 0;
+  unsigned seq, last_seq = 0;
+
+  std::vector<unsigned long long> counts(max_packets);
+  std::vector<unsigned> seqnums(max_packets);
+
+  auto t0 = std::chrono::steady_clock::now();
+  unsigned long long tt0 = read_cycle_counter();
+
+  while(packets < max_packets and !rx_stop_flag) {
+    if(packets == 0)
+      t0 = std::chrono::steady_clock::now();
+    while(rx_queue.read_available()) {
+      size_t n_popped = rx_queue.pop(&buffer.front(), buffer_max_packets);
+      unsigned long long tpop = read_cycle_counter();
+      for(size_t i = 0; i < n_popped; i++) {
+        memcpy(&seq, &buffer[i].data, sizeof(seq));
+        if(seq != last_seq + 1)
+          errors++;
+        counts[packets] = tpop;
+        seqnums[packets] = seq;
+        packets++;
+        last_seq = seq;
+      }
+    }
+  }
+  auto t1 = std::chrono::steady_clock::now();
+  unsigned long long tt1 = read_cycle_counter();
+  std::chrono::duration<double> dt = t1 - t0;
+
+  double cal = (tt1 - tt0) / dt.count();
+  LOGGER(info) << "cycle counter: " << cal << " counts/s";
+
+  LOGGER(info) << packets << " packets recieved in " << dt.count() << " sec; " << errors << " out of sequence";
+  LOGGER(info) << (packets * packet_size / dt.count()) << " bytes/s, " << (8 * packets * packet_size / dt.count()) << " bits/s";
+
+  for(size_t i = 0; i < packets; i++)
+    if(i > 0)
+      LOGGER(info) << boost::format(" %12d %12d %12.3f %12d %12d %12.3f") % seqnums[i] % counts[i] % (1e6 * counts[i] / cal) %
+                                  (seqnums[i] - seqnums[i - 1]) % (counts[i] - counts[i - 1]) % (1e6 * (counts[i] - counts[i - 1]) / cal);
+    else
+      LOGGER(info) << boost::format(" %12d %12d %12.3f") % seqnums[i] % counts[i] % (1e6 * counts[i] / cal);
   if(!rx_stop_flag)
     set_rx_stop_flag();
   LOGGER(info) << "sequence checker thread finished";

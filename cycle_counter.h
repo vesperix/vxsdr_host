@@ -13,8 +13,9 @@ extern "C" {
 
 inline unsigned long long read_cycle_counter()
 {
-#ifndef __X86_64__
+#ifndef __x86_64__
 #error("TSC is not available")
+  return 0;
 #else
   return __rdtsc();
 #endif /* __X86_64__ */
