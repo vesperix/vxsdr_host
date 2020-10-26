@@ -152,8 +152,10 @@ void sequence_timer(const size_t max_packets, const size_t packet_size) {
   unsigned long long tt0 = read_cycle_counter();
 
   while(packets < max_packets and !rx_stop_flag) {
-    if(packets == 0)
+    if(packets == 0) {
       t0 = std::chrono::steady_clock::now();
+      tt0 = read_cycle_counter();
+    }
     while(rx_queue.read_available()) {
       size_t n_popped = rx_queue.pop(&buffer.front(), buffer_max_packets);
       unsigned long long tpop = read_cycle_counter();
@@ -180,10 +182,10 @@ void sequence_timer(const size_t max_packets, const size_t packet_size) {
 
   for(size_t i = 0; i < packets; i++)
     if(i > 0)
-      LOGGER(info) << boost::format(" %12d %12d %12.3f %12d %12d %12.3f") % seqnums[i] % counts[i] % (1e6 * counts[i] / cal) %
-                                  (seqnums[i] - seqnums[i - 1]) % (counts[i] - counts[i - 1]) % (1e6 * (counts[i] - counts[i - 1]) / cal);
+      std::cout << boost::format(" %12d %12d %12.3f %12d %12d %12.3f") % seqnums[i] % counts[i] % (1e6 * counts[i] / cal) %
+                                  (seqnums[i] - seqnums[i - 1]) % (counts[i] - counts[i - 1]) % (1e6 * (counts[i] - counts[i - 1]) / cal) << std::endl;
     else
-      LOGGER(info) << boost::format(" %12d %12d %12.3f") % seqnums[i] % counts[i] % (1e6 * counts[i] / cal);
+      std::cout << boost::format(" %12d %12d %12.3f") % seqnums[i] % counts[i] % (1e6 * counts[i] / cal) << std::endl;
   if(!rx_stop_flag)
     set_rx_stop_flag();
   LOGGER(info) << "sequence checker thread finished";
