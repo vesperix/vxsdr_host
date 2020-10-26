@@ -24,11 +24,11 @@ void set_rx_stop_flag() {
   rx_stop_flag = true;
 }
 
-typedef std::array<char, rx_buffer_max_bytes> rx_buffer;
-
-typedef  struct {
+typedef struct {
+  size_t seq;
   size_t bytes_used;
-  rx_buffer data;
+  cycle_count_t ts[4];
+  std::array<char, (rx_buffer_max_bytes - 2 * sizeof(size_t) - 4 * sizeof(cycle_count_t))> data;
 } rx_buffer_element;
 
 static boost::lockfree::spsc_queue<rx_buffer_element, boost::lockfree::capacity<rx_queue_length> > rx_queue;
@@ -63,14 +63,12 @@ class udp_rx {
 
     void start_receive() {
       auto hdlr_ = boost::bind(&udp_rx::handle_receive, this, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred);
-      socket_.async_receive_from(boost::asio::buffer(recv_buffer_.data, recv_buffer_.data.size()), remote_endpoint_, hdlr_);
+      socket_.async_receive_from(boost::asio::buffer(&recv_buffer_, sizeof(recv_buffer_)), remote_endpoint_, hdlr_);
     }
     void handle_receive(const boost::system::error_code& error, std::size_t bytes_transferred) {
       if (!error) {
         // cycle count when received
-        unsigned long long cycles = read_cycle_counter();
-        memcpy(&recv_buffer_.data + sizeof(size_t) + 2 * sizeof(unsigned long long), &cycles, sizeof(cycles));
-        recv_buffer_.bytes_used = bytes_transferred;
+        recv_buffer_.ts[2] = read_cycle_counter();
         rx_queue.push(recv_buffer_);
       }
       else
@@ -112,7 +110,7 @@ void sequence_checker(const size_t max_packets, const size_t packet_size) {
   const unsigned buffer_max_packets = 256;
   static std::array<rx_buffer_element, buffer_max_packets> buffer;
   size_t packets = 0, errors = 0;
-  size_t seq, last_seq = 0;
+  size_t last_seq = 0;
 
   auto t0 = std::chrono::steady_clock::now();
 
@@ -122,11 +120,10 @@ void sequence_checker(const size_t max_packets, const size_t packet_size) {
     while(rx_queue.read_available()) {
       size_t n_popped = rx_queue.pop(&buffer.front(), buffer_max_packets);
       for(size_t i = 0; i < n_popped; i++) {
-        memcpy(&seq, &buffer[i].data, sizeof(seq));
-        if(seq != last_seq + 1)
+        if(buffer[i].seq != last_seq + 1)
           errors++;
         packets++;
-        last_seq = seq;
+        last_seq = buffer[i].seq;
       }
     }
     //std::this_thread::sleep_for(std::chrono::microseconds(rx_write_thread_sleep_us));
@@ -146,13 +143,13 @@ void sequence_timer(const size_t max_packets, const size_t packet_size) {
   const unsigned buffer_max_packets = 256;
   static std::array<rx_buffer_element, buffer_max_packets> buffer;
   size_t packets = 0, errors = 0;
-  size_t seq, last_seq = 0;
+  size_t last_seq = 0;
 
-  std::vector<unsigned long long> count1(max_packets), count2(max_packets), count3(max_packets), count4(max_packets);
+  std::vector<cycle_count_t> count1(max_packets), count2(max_packets), count3(max_packets), count4(max_packets);
   std::vector<unsigned> seqnums(max_packets);
 
   auto t0 = std::chrono::steady_clock::now();
-  unsigned long long tt0 = read_cycle_counter();
+  cycle_count_t tt0 = read_cycle_counter();
 
   while(packets < max_packets and !rx_stop_flag) {
     if(packets == 0) {
@@ -161,37 +158,32 @@ void sequence_timer(const size_t max_packets, const size_t packet_size) {
     }
     while(rx_queue.read_available()) {
       size_t n_popped = rx_queue.pop(&buffer.front(), buffer_max_packets);
-      unsigned long long tpop = read_cycle_counter();
+      cycle_count_t tpop = read_cycle_counter();
       for(size_t i = 0; i < n_popped; i++) {
-        memcpy(&seq, &buffer[i].data.front(), sizeof(seq));
-        if(seq != last_seq + 1)
+        if(buffer[i].seq != last_seq + 1)
           errors++;
-        unsigned long long cycles;
-        memcpy(&cycles, &buffer[i].data.front() + sizeof(size_t), sizeof(cycles));
-        count1[packets] = cycles;
-        memcpy(&cycles, &buffer[i].data.front() + sizeof(size_t) + sizeof(unsigned long long), sizeof(cycles));
-        count2[packets] = cycles;
-        memcpy(&cycles, &buffer[i].data.front() + sizeof(size_t) + 2 * sizeof(unsigned long long), sizeof(cycles));
-        count3[packets] = cycles;
-        count4[packets] = tpop;
-        seqnums[packets] = seq;
+        count1[packets] = buffer[i].ts[0];
+        count2[packets] = buffer[i].ts[1] - buffer[i].ts[0];
+        count3[packets] = buffer[i].ts[2] - buffer[i].ts[0];
+        count4[packets] = tpop - buffer[i].ts[0];
+        seqnums[packets] = buffer[i].seq;
         packets++;
-        last_seq = seq;
+        last_seq = buffer[i].seq;
       }
     }
   }
   auto t1 = std::chrono::steady_clock::now();
-  unsigned long long tt1 = read_cycle_counter();
+  cycle_count_t tt1 = read_cycle_counter();
   std::chrono::duration<double> dt = t1 - t0;
 
-  double cal = (tt1 - tt0) / dt.count();
-  LOGGER(info) << "cycle counter: " << cal << " counts/s";
+  double cal = 1e-6 * (tt1 - tt0) / dt.count();
+  LOGGER(info) << "cycle counter: " << cal << " counts/us";
 
   LOGGER(info) << packets << " packets recieved in " << dt.count() << " sec; " << errors << " out of sequence";
   LOGGER(info) << (packets * packet_size / dt.count()) << " bytes/s, " << (8 * packets * packet_size / dt.count()) << " bits/s";
 
   for(size_t i = 0; i < packets; i++)
-    std::cout << boost::format(" %12d %12d %12d %12d %12df") % seqnums[i] % count1[i] % count2[i] % count3[i] % count4[i] << std::endl;
+    std::cout << boost::format(" %12d %12.3f %12.3f %12.3f %12.3f") % seqnums[i] % (count1[i] / cal) % (count2[i] / cal) % (count3[i] / cal) % (count4[i] / cal) << std::endl;
   if(!rx_stop_flag)
     set_rx_stop_flag();
   LOGGER(info) << "sequence checker thread finished";

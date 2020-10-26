@@ -11,7 +11,9 @@ extern "C" {
 #include <x86intrin.h>
 #endif
 
-inline unsigned long long read_cycle_counter()
+typedef unsigned long long cycle_count_t;
+
+inline cycle_count_t read_cycle_counter()
 {
 #ifndef __x86_64__
 #error("TSC is not available")

@@ -20,11 +20,11 @@ void set_tx_stop_flag() {
   tx_stop_flag = true;
 }
 
-typedef std::array<char, tx_buffer_max_bytes> tx_buffer;
-
-typedef  struct {
+typedef struct {
+  size_t seq;
   size_t bytes_used;
-  tx_buffer data;
+  cycle_count_t ts[4];
+  std::array<char, (tx_buffer_max_bytes - 2 * sizeof(size_t) - 4 * sizeof(cycle_count_t))> data;
 } tx_buffer_element;
 
 static boost::lockfree::spsc_queue<tx_buffer_element, boost::lockfree::capacity<tx_queue_length> > tx_queue;
@@ -57,9 +57,8 @@ class udp_tx {
           size_t n_popped = tx_queue.pop(&send_buffer_.front(), send_buffer_.size());
           for(size_t i = 0; i < n_popped; i++) {
             // cycle count when sent
-            unsigned long long cycles = read_cycle_counter();
-            memcpy(&send_buffer_[i].data + sizeof(size_t) + sizeof(unsigned long long), &cycles, sizeof(cycles));
-            socket_.async_send_to(boost::asio::buffer(&send_buffer_[i].data, send_buffer_[i].bytes_used), destination_endpoint_, hdlr);
+            send_buffer_[i].ts[1] = read_cycle_counter();
+            socket_.async_send_to(boost::asio::buffer(&send_buffer_[i], send_buffer_[i].bytes_used), destination_endpoint_, hdlr);
           }
         }
         //else
@@ -88,14 +87,13 @@ void generator(const size_t max_packets, const size_t requested_packet_size, con
 
   for(size_t i = 1; i <= max_packets and !tx_stop_flag; i++) {
     memset(&buf.data.front(), 0, packet_size);
-    memcpy(&buf.data.front(), &i, sizeof(i));
+    buf.seq = i;
     buf.bytes_used = packet_size;
     // wait for room in the tx queue
     while(!tx_queue.write_available()) {}
 
     // cycle count when pushed
-    unsigned long long cycles = read_cycle_counter();
-    memcpy(&buf.data.front() + sizeof(size_t), &cycles, sizeof(cycles));
+    buf.ts[0] = read_cycle_counter();
     tx_queue.push(buf);
     if(packet_wait_us > 0)
       std::this_thread::sleep_for(std::chrono::microseconds(packet_wait_us));
