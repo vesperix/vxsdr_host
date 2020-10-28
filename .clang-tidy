@@ -1,0 +1,3 @@
+Checks:         -*,bugprone-*,misc-*,modernize-*,portability-*,readability-*,cppcoreguidelines-*,hicpp-*,performance-*,-hicpp-braces-around-statements,-readability-braces-around-statements,-readability-isolate-declaration,  -modernize-use-trailing-return-type
+
+
