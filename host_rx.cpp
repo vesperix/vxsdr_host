@@ -34,11 +34,11 @@ void define_options(boost::program_options::options_description &desc)
 
 void check_options(boost::program_options::variables_map &vm)
 {
-  if(vm["local_address"].as<std::string>().size() == 0) {
+  if(vm["local_address"].as<std::string>().empty()) {
     LOGGER(fatal) << "local IP address must be specified";
     exit(1);
   }
-  if(vm["multicast_address"].as<std::string>().size() > 0) {
+  if(not vm["multicast_address"].as<std::string>().empty()) {
     boost::asio::ip::address_v4 multicast_ip = boost::asio::ip::address_v4::from_string(vm["multicast_address"].as<std::string>());
     if(!multicast_ip.is_multicast()) {
       LOGGER(fatal) << "Invalid multicast address: " << vm["multicast_address"].as<std::string>();
@@ -55,7 +55,7 @@ void init_options(boost::program_options::options_description &desc, boost::prog
   boost::program_options::store(boost::program_options::parse_command_line(argc, argv, desc), vm);
   boost::program_options::notify(vm);
   // if a config file is specified on the command line, load it
-  if (vm.count("config_file")) {
+  if (vm.count("config_file") > 0) {
     std::ifstream ifs(vm["config_file"].as<std::string>().c_str());
     if (!ifs) {
       std::cerr << "Error: cannot open config file " << vm["config_file"].as<std::string>() << "!" << std::endl;
@@ -68,13 +68,13 @@ void init_options(boost::program_options::options_description &desc, boost::prog
   boost::program_options::store(boost::program_options::parse_command_line(argc, argv, desc), vm);
   boost::program_options::notify(vm);
   // if --help was specified, show help and exit
-  if(vm.count("help")) {
+  if(vm.count("help") > 0) {
     std::cerr << desc << std::endl;
     exit(0);
   }
 }
 
-extern "C" void sig_int_handler(int) {
+extern "C" void sig_int_handler(int sig_num) {
   LOGGER(fatal) << "terminated by SIGINT (ctrl-C)";
   exit(99);
 }
@@ -82,26 +82,26 @@ extern "C" void sig_int_handler(int) {
 int main(int argc, char *argv[])
 {
   INIT_LOGGER();
-  LOGGER(info) << argv[0] << " started";
-  signal(SIGINT, &sig_int_handler);
-  boost::program_options::options_description desc("Command line options");
-  boost::program_options::variables_map vm;
-
-  init_options(desc, vm, argc, argv);
-  check_options(vm);
-
-  boost::asio::ip::address_v4 local_ip = boost::asio::ip::address_v4::from_string(vm["local_address"].as<std::string>());
-  boost::asio::ip::udp::endpoint local_endpoint(local_ip, vm["local_port"].as<unsigned>());
-  boost::asio::ip::address_v4 multicast_ip;
-  bool use_multicast = false;
-  if(vm["multicast_address"].as<std::string>().size() > 0) {
-    multicast_ip = boost::asio::ip::address_v4::from_string(vm["multicast_address"].as<std::string>());
-    use_multicast = true;
-  }
-
   try {
-//    std::string outfile_name = vm["output_filename"].as<std::string>();
-//    boost::thread handler_thread(std::ref(writer), std::cref(outfile_name), vm["num_packets"].as<size_t>());
+    LOGGER(info) << argv[0] << " started";
+    signal(SIGINT, &sig_int_handler);
+    boost::program_options::options_description desc("Command line options");
+    boost::program_options::variables_map vm;
+
+    init_options(desc, vm, argc, argv);
+    check_options(vm);
+
+    boost::asio::ip::address_v4 local_ip = boost::asio::ip::address_v4::from_string(vm["local_address"].as<std::string>());
+    boost::asio::ip::udp::endpoint local_endpoint(local_ip, vm["local_port"].as<unsigned>());
+    boost::asio::ip::address_v4 multicast_ip;
+    bool use_multicast = false;
+    if(not vm["multicast_address"].as<std::string>().empty()) {
+      multicast_ip = boost::asio::ip::address_v4::from_string(vm["multicast_address"].as<std::string>());
+      use_multicast = true;
+    }
+
+  //  std::string outfile_name = vm["output_filename"].as<std::string>();
+  //  boost::thread handler_thread(std::ref(writer), std::cref(outfile_name), vm["num_packets"].as<size_t>());
     std::thread handler_thread(std::ref(sequence_timer), vm["num_packets"].as<size_t>(), vm["packet_size"].as<size_t>());
     if(use_multicast) {
       std::thread multicast_receiver_thread(std::ref(multicast_receiver), std::cref(local_endpoint), std::cref(multicast_ip));
