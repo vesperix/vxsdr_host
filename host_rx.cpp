@@ -14,7 +14,6 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/format.hpp>
 
-
 #include "logging.hpp"
 #include "errors.hpp"
 #include "udp_rx.hpp"
