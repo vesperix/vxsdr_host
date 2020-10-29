@@ -15,6 +15,7 @@
 #include <boost/format.hpp>
 
 #include "logging.hpp"
+#include "errors.hpp"
 #include "udp_tx.hpp"
 
 void define_options(boost::program_options::options_description &desc)
@@ -37,11 +38,11 @@ void check_options( boost::program_options::variables_map &vm)
 {
   if(vm["local_address"].as<std::string>().empty()) {
     LOGGER(fatal) << "local IP address must be specified";
-    exit(1);
+    exit(EXIT_CMD_LINE_ERROR);
   }
   if(vm["destination_address"].as<std::string>().empty()) {
     LOGGER(fatal) << "destination IP address must be specified";
-    exit(2);
+    exit(EXIT_CMD_LINE_ERROR);
   }
 }
 
@@ -68,13 +69,13 @@ void init_options(boost::program_options::options_description &desc, boost::prog
   // if --help was specified, show help and exit
   if(vm.count("help") > 0) {
     std::cout << desc << std::endl;
-    exit(0);
+    exit(EXIT_SUCCESS);
   }
 }
 
 extern "C" void sig_int_handler(int sig_num) {
   LOGGER(fatal) << "terminated by SIGINT (ctrl-C)";
-  exit(99);
+  exit(EXIT_USER_TERMINATED);
 }
 
 int main(int argc, char *argv[])
@@ -100,9 +101,10 @@ int main(int argc, char *argv[])
     sender_thread.join();
   }
   catch (std::exception& e) {
-    LOGGER(error) << "exception caught: " << e.what();
+    LOGGER(fatal) << "exception caught: " << e.what();
+    return EXIT_INTERNAL_ERROR;
   }
 
   LOGGER(info) << argv[0] << " finished";
-
+  return EXIT_SUCCESS;
 }
