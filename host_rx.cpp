@@ -26,6 +26,7 @@ void define_options(boost::program_options::options_description &desc)
     ("local_address,A", boost::program_options::value<std::string>()->default_value(""), "IPv4 address of local interface")
     ("local_port,L", boost::program_options::value<unsigned>()->default_value(1030), "port to use on local interface")
     ("multicast_address,M", boost::program_options::value<std::string>()->default_value(""), "IPv4 address of multicast group to join")
+    ("broadcast,B", boost::program_options::bool_switch()->default_value(false), "flag to enable broadcast reception")
     ("packet_size,S", boost::program_options::value<size_t>()->default_value(65536), "packet size in bytes")
     ("num_packets,N", boost::program_options::value<size_t>()->default_value(1024), "number of packets to receive")
     ("output_filename,O", boost::program_options::value<std::string>()->default_value("test.dat"), "filename to save recieved data")
@@ -100,15 +101,15 @@ int main(int argc, char *argv[])
       use_multicast = true;
     }
 
-  //  std::string outfile_name = vm["output_filename"].as<std::string>();
-  //  boost::thread handler_thread(std::ref(writer), std::cref(outfile_name), vm["num_packets"].as<size_t>());
-    std::thread handler_thread(std::ref(sequence_timer), vm["num_packets"].as<size_t>(), vm["packet_size"].as<size_t>());
+    std::string outfile_name = vm["output_filename"].as<std::string>();
+    std::thread handler_thread(std::ref(writer), std::cref(outfile_name), vm["num_packets"].as<size_t>());
+  //  std::thread handler_thread(std::ref(sequence_timer), vm["num_packets"].as<size_t>(), vm["packet_size"].as<size_t>());
     if(use_multicast) {
       std::thread multicast_receiver_thread(std::ref(multicast_receiver), std::cref(local_endpoint), std::cref(multicast_ip));
       multicast_receiver_thread.join();
     }
     else {
-      std::thread receiver_thread(std::ref(receiver), std::cref(local_endpoint));
+      std::thread receiver_thread(std::ref(receiver), std::cref(local_endpoint), vm["broadcast"].as<bool>());
       receiver_thread.join();
     }
     handler_thread.join();
