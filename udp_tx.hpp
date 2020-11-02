@@ -36,9 +36,10 @@ class udp_tx {
       const bool broadcast) : socket_(io_service, local_endpoint) {
       local_endpoint_ = local_endpoint;
       destination_endpoint_ = destination_endpoint;
-      socket_.set_option(boost::asio::socket_base::broadcast(broadcast));
-      boost::asio::socket_base::send_buffer_size opt(packets_per_network_buffer * tx_buffer_max_bytes);
-      socket_.set_option(opt);
+      boost::asio::socket_base::broadcast bcast(broadcast);
+      socket_.set_option(bcast);
+      boost::asio::socket_base::send_buffer_size bufsiz(packets_per_network_buffer * tx_buffer_max_bytes);
+      socket_.set_option(bufsiz);
       start_send();
     }
   private:
