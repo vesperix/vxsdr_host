@@ -108,8 +108,12 @@ int main(int argc, char *argv[])
       std::thread multicast_receiver_thread(std::ref(multicast_receiver), std::cref(local_endpoint), std::cref(multicast_ip));
       multicast_receiver_thread.join();
     }
+    else if(vm["broadcast"].as<bool>()) {
+      std::thread broadcast_thread(std::ref(broadcast_receiver), std::cref(local_endpoint), vm["broadcast"].as<bool>());
+      broadcast_thread.join();
+    }
     else {
-      std::thread receiver_thread(std::ref(receiver), std::cref(local_endpoint), vm["broadcast"].as<bool>());
+      std::thread receiver_thread(std::ref(receiver), std::cref(local_endpoint));
       receiver_thread.join();
     }
     handler_thread.join();
