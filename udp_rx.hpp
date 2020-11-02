@@ -38,10 +38,8 @@ class udp_rx {
     udp_rx(boost::asio::io_service &io_service, const boost::asio::ip::udp::endpoint &local_endpoint, const bool broadcast)
       : socket_(io_service, local_endpoint) {
       local_endpoint_ = local_endpoint;
-      boost::asio::socket_base::broadcast bcast(broadcast);
-      socket_.set_option(bcast);
-      boost::asio::socket_base::receive_buffer_size bufsiz(packets_per_network_buffer * rx_buffer_max_bytes);
-      socket_.set_option(bufsiz);
+      socket_.set_option( boost::asio::socket_base::broadcast(broadcast));
+      socket_.set_option(boost::asio::socket_base::receive_buffer_size(packets_per_network_buffer * rx_buffer_max_bytes));
       if(!rx_stop_flag)
         start_receive();
     }
@@ -49,8 +47,7 @@ class udp_rx {
                const boost::asio::ip::address_v4 &multicast_ip)
       : socket_(io_service, local_endpoint.protocol()) {
       socket_.set_option(boost::asio::ip::udp::socket::reuse_address(true));
-      boost::asio::socket_base::receive_buffer_size bufsiz(packets_per_network_buffer * rx_buffer_max_bytes);
-      socket_.set_option(bufsiz);
+      socket_.set_option(boost::asio::socket_base::receive_buffer_size(packets_per_network_buffer * rx_buffer_max_bytes));
       socket_.bind(local_endpoint);
       socket_.set_option(boost::asio::ip::multicast::join_group(multicast_ip));
       local_endpoint_ = local_endpoint;
