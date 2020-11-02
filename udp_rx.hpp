@@ -37,9 +37,16 @@ class udp_rx {
   public:
     udp_rx(boost::asio::io_service &io_service, const boost::asio::ip::udp::endpoint &local_endpoint, const bool broadcast)
       : socket_(io_service, local_endpoint) {
-      local_endpoint_ = local_endpoint;
-      socket_.set_option( boost::asio::socket_base::broadcast(broadcast));
+      if(broadcast) {
+        socket_.set_option(boost::asio::ip::udp::socket::reuse_address(true));
+        socket_.set_option( boost::asio::socket_base::broadcast(broadcast));
+        auto bcast_addr = boost::asio::ip::address_v4::broadcast(local_endpoint.address().to_v4(), boost::asio::ip::address_v4::from_string("255.255.255.0"));
+        boost::asio::ip::udp::endpoint bcast_endpoint = local_endpoint;
+        bcast_endpoint.address(bcast_addr);
+        socket_.bind(bcast_endpoint);
+      }
       socket_.set_option(boost::asio::socket_base::receive_buffer_size(packets_per_network_buffer * rx_buffer_max_bytes));
+      local_endpoint_ = local_endpoint;
       if(!rx_stop_flag)
         start_receive();
     }
