@@ -46,7 +46,6 @@ typedef struct {
 typedef struct {
   size_t n_packets;
   size_t packet_size;
-  unsigned wait_us;
 } filler_args;
 
 static bool done;
@@ -122,10 +121,6 @@ int filler(void *args) {
       memcpy(&b.data, &seq, sizeof(seq));
       push(&tx_ring, &b);
       n_pushed++;
-      if(n_pushed >= a->n_packets)
-        done = true;
-      if(a->wait_us > 0)
-        usleep(a->wait_us);
     }
   }
   return 0;
@@ -236,7 +231,6 @@ int main(int argc, char *argv[])
   filler_args fa;
   fa.packet_size = packet_size;
   fa.n_packets = n_packets;
-  fa.wait_us = wait_us;
 
   if(thrd_create(&filler_thread, &filler, (void *)&fa) != thrd_success)
     fatal_error("Cannot create filler thread");
