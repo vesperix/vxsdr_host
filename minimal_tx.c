@@ -243,7 +243,7 @@ int main(int argc, char *argv[])
 
   /* pop from buffer and send */
 
-  size_t ntry = 0, nsent = 0, nerr = 0, nunder = 0;
+  size_t ntry = 0, nsent = 0, nerr = 0;
   static buffer_element b;
   init_buffer_element(&b);
 
@@ -272,6 +272,8 @@ int main(int argc, char *argv[])
 
   thrd_join(filler_thread, NULL);
   close(tx_sock);
+
+  printf("ntry = %ld, nsent = %ld, nerr = %ld\n", ntry, nsent, nerr);
 
   return 0;
 }
