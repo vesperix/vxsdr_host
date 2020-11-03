@@ -190,8 +190,8 @@ void sequence_timer(const size_t max_packets, const size_t packet_size) {
           errors++;
         count1[packets] = buffer[i].ts[0];
         count2[packets] = buffer[i].ts[1] - buffer[i].ts[0];
-        count3[packets] = buffer[i].ts[2] - buffer[i].ts[0];
-        count4[packets] = tpop - buffer[i].ts[0];
+        count3[packets] = buffer[i].ts[2];
+        count4[packets] = tpop - buffer[i].ts[2];
         seqnums[packets] = buffer[i].seq;
         packets++;
         last_seq = buffer[i].seq;
