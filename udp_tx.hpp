@@ -33,17 +33,15 @@ class udp_tx {
   public:
     udp_tx(boost::asio::io_service &io_service, const boost::asio::ip::udp::endpoint &local_endpoint,
       const boost::asio::ip::udp::endpoint &destination_endpoint,
-      const bool broadcast) : socket_(io_service, local_endpoint) {
-      local_endpoint_ = local_endpoint;
-      destination_endpoint_ = destination_endpoint;
-      socket_.set_option(boost::asio::socket_base::broadcast(broadcast));
-      socket_.set_option(boost::asio::socket_base::send_buffer_size(packets_per_network_buffer * tx_buffer_max_bytes));
+      const bool broadcast) : socket(io_service, local_endpoint) {
+      destination = destination_endpoint;
+      socket.set_option(boost::asio::socket_base::broadcast(broadcast));
+      socket.set_option(boost::asio::socket_base::send_buffer_size(packets_per_network_buffer * tx_buffer_max_bytes));
       start_send();
     }
   private:
-    boost::asio::ip::udp::socket socket_;
-    boost::asio::ip::udp::endpoint local_endpoint_;
-    boost::asio::ip::udp::endpoint destination_endpoint_;
+    boost::asio::ip::udp::socket socket;
+    boost::asio::ip::udp::endpoint destination;
     static constexpr size_t tx_buffer_size_ = 256;
     std::array<tx_buffer_element, tx_buffer_size_> send_buffer_;
     unsigned send_errors_ = 0;
@@ -57,7 +55,7 @@ class udp_tx {
           for(size_t i = 0; i < n_popped; i++) {
             // cycle count when sent
             send_buffer_[i].ts[1] = read_cycle_counter();
-            socket_.async_send_to(boost::asio::buffer(&send_buffer_[i], send_buffer_[i].bytes_used), destination_endpoint_, hdlr);
+            socket.async_send_to(boost::asio::buffer(&send_buffer_[i], send_buffer_[i].bytes_used), destination, hdlr);
           }
         }
         //else

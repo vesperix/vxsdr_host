@@ -36,50 +36,47 @@ static boost::lockfree::spsc_queue<rx_buffer_element, boost::lockfree::capacity<
 class udp_rx {
   public:
     udp_rx(boost::asio::io_service &io_service, const boost::asio::ip::udp::endpoint &local_endpoint)
-      : socket_(io_service, local_endpoint) {
-      socket_.set_option(boost::asio::socket_base::receive_buffer_size(packets_per_network_buffer * rx_buffer_max_bytes));
-      local_endpoint_ = local_endpoint;
+      : socket(io_service, local_endpoint) {
+      socket.set_option(boost::asio::socket_base::receive_buffer_size(packets_per_network_buffer * rx_buffer_max_bytes));
       if(!rx_stop_flag)
         start_receive();
     }
     udp_rx(boost::asio::io_service &io_service, const boost::asio::ip::udp::endpoint &local_endpoint,
                const boost::asio::ip::address_v4 &extra_ip, const bool use_multicast)
-      : socket_(io_service, local_endpoint.protocol()) {
+      : socket(io_service, local_endpoint.protocol()) {
       if(use_multicast) {
         // multicast; in this case, extra_ip is the multicast group
-        socket_.set_option(boost::asio::ip::udp::socket::reuse_address(true));
-        socket_.bind(local_endpoint);
-        socket_.set_option(boost::asio::ip::multicast::join_group(extra_ip));
+        socket.set_option(boost::asio::ip::udp::socket::reuse_address(true));
+        socket.bind(local_endpoint);
+        socket.set_option(boost::asio::ip::multicast::join_group(extra_ip));
       }
       else {
         // broadcast; in this case extra_ip is the broadcast netmask
-        socket_.set_option( boost::asio::socket_base::broadcast());
-        auto bcast_addr = boost::asio::ip::address_v4::broadcast(local_endpoint.address().to_v4(), extra_ip);
+        socket.set_option( boost::asio::socket_base::broadcast());
         boost::asio::ip::udp::endpoint bcast_endpoint = local_endpoint;
-        bcast_endpoint.address(bcast_addr);
-        socket_.bind(bcast_endpoint);
+        // replace the local endpoint address with the broadcast address
+        bcast_endpoint.address( boost::asio::ip::address_v4::broadcast(local_endpoint.address().to_v4(), extra_ip));
+        socket.bind(bcast_endpoint);
       }
-      socket_.set_option(boost::asio::socket_base::receive_buffer_size(packets_per_network_buffer * rx_buffer_max_bytes));
-      local_endpoint_ = local_endpoint;
+      socket.set_option(boost::asio::socket_base::receive_buffer_size(packets_per_network_buffer * rx_buffer_max_bytes));
       if(!rx_stop_flag)
         start_receive();
     }
   private:
-    boost::asio::ip::udp::socket socket_;
-    boost::asio::ip::udp::endpoint local_endpoint_;
-    boost::asio::ip::udp::endpoint remote_endpoint_;
-    rx_buffer_element recv_buffer_;
+    boost::asio::ip::udp::socket socket;
+    boost::asio::ip::udp::endpoint remote;
+    rx_buffer_element recv_buffer;
 
     void start_receive() {
-      auto hdlr_ = boost::bind(&udp_rx::handle_receive, this, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred);
-      socket_.async_receive_from(boost::asio::buffer(&recv_buffer_, sizeof(recv_buffer_)), remote_endpoint_, hdlr_);
+      auto hdlr = boost::bind(&udp_rx::handle_receive, this, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred);
+      socket.async_receive_from(boost::asio::buffer(&recv_buffer, sizeof(recv_buffer)), remote, hdlr);
     }
     void handle_receive(const boost::system::error_code& error, std::size_t bytes_transferred) {
       if (!error) {
         // cycle count when received
-        recv_buffer_.ts[2] = read_cycle_counter();
-        recv_buffer_.bytes_used = bytes_transferred;
-        rx_queue.push(recv_buffer_);
+        recv_buffer.ts[2] = read_cycle_counter();
+        recv_buffer.bytes_used = bytes_transferred;
+        rx_queue.push(recv_buffer);
       }
       else
         LOGGER(error) << "async receive error: " << error.message();

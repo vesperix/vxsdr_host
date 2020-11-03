@@ -98,6 +98,7 @@ int main(int argc, char *argv[])
 
     boost::asio::ip::address_v4 local_ip = boost::asio::ip::address_v4::from_string(vm["local_address"].as<std::string>());
     boost::asio::ip::udp::endpoint local_endpoint(local_ip, vm["local_port"].as<unsigned>());
+
     boost::asio::ip::address_v4 multicast_ip;
     bool use_multicast = false;
     if(not vm["multicast_address"].as<std::string>().empty()) {
