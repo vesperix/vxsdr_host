@@ -42,25 +42,24 @@ class udp_rx {
       if(!rx_stop_flag)
         start_receive();
     }
-    udp_rx(boost::asio::io_service &io_service, const boost::asio::ip::udp::endpoint &local_endpoint, const bool broadcast)
-      : socket_(io_service, local_endpoint.protocol()) {
-      socket_.set_option( boost::asio::socket_base::broadcast(broadcast));
-      auto bcast_addr = boost::asio::ip::address_v4::broadcast(local_endpoint.address().to_v4(), boost::asio::ip::address_v4::from_string("255.255.255.0"));
-      boost::asio::ip::udp::endpoint bcast_endpoint = local_endpoint;
-      bcast_endpoint.address(bcast_addr);
-      socket_.bind(bcast_endpoint);
-      socket_.set_option(boost::asio::socket_base::receive_buffer_size(packets_per_network_buffer * rx_buffer_max_bytes));
-      local_endpoint_ = local_endpoint;
-      if(!rx_stop_flag)
-        start_receive();
-    }
     udp_rx(boost::asio::io_service &io_service, const boost::asio::ip::udp::endpoint &local_endpoint,
-               const boost::asio::ip::address_v4 &multicast_ip)
+               const boost::asio::ip::address_v4 &extra_ip, const bool use_multicast)
       : socket_(io_service, local_endpoint.protocol()) {
-      socket_.set_option(boost::asio::ip::udp::socket::reuse_address(true));
+      if(use_multicast) {
+        // multicast; in this case, extra_ip is the multicast group
+        socket_.set_option(boost::asio::ip::udp::socket::reuse_address(true));
+        socket_.bind(local_endpoint);
+        socket_.set_option(boost::asio::ip::multicast::join_group(extra_ip));
+      }
+      else {
+        // broadcast; in this case extra_ip is the broadcast netmask
+        socket_.set_option( boost::asio::socket_base::broadcast());
+        auto bcast_addr = boost::asio::ip::address_v4::broadcast(local_endpoint.address().to_v4(), extra_ip);
+        boost::asio::ip::udp::endpoint bcast_endpoint = local_endpoint;
+        bcast_endpoint.address(bcast_addr);
+        socket_.bind(bcast_endpoint);
+      }
       socket_.set_option(boost::asio::socket_base::receive_buffer_size(packets_per_network_buffer * rx_buffer_max_bytes));
-      socket_.bind(local_endpoint);
-      socket_.set_option(boost::asio::ip::multicast::join_group(multicast_ip));
       local_endpoint_ = local_endpoint;
       if(!rx_stop_flag)
         start_receive();
@@ -234,7 +233,7 @@ void receiver(const boost::asio::ip::udp::endpoint &local_endpoint)
   LOGGER(info) << "receiver thread finished";
 }
 
-void broadcast_receiver(const boost::asio::ip::udp::endpoint &local_endpoint, const bool broadcast)
+void broadcast_receiver(const boost::asio::ip::udp::endpoint &local_endpoint, const boost::asio::ip::address_v4 &broadcast_netmask)
 {
   LOGGER(info) << "broadcast receiver thread started";
 
@@ -242,7 +241,7 @@ void broadcast_receiver(const boost::asio::ip::udp::endpoint &local_endpoint, co
     LOGGER(error) << "unable to set realtime thread priority";
 
   boost::asio::io_service io_service;
-  udp_rx server(io_service, local_endpoint, broadcast);
+  udp_rx server(io_service, local_endpoint, broadcast_netmask, false);
   io_service.run();
   LOGGER(info) << "broadcast receiver thread finished";
 }
@@ -255,7 +254,7 @@ void multicast_receiver(const boost::asio::ip::udp::endpoint &local_endpoint, co
     LOGGER(error) << "unable to set realtime thread priority";
 
   boost::asio::io_service io_service;
-  udp_rx server(io_service, local_endpoint, multicast_ip);
+  udp_rx server(io_service, local_endpoint, multicast_ip, true);
   io_service.run();
   LOGGER(info) << "multicast receiver thread finished";
 }
