@@ -45,17 +45,19 @@ class udp_rx {
                const boost::asio::ip::address_v4 &extra_ip, const bool use_multicast)
       : socket(io_service, local_endpoint.protocol()) {
       if(use_multicast) {
+        LOGGER(info) << "setting up udp_rx for multicast";
         // multicast; in this case, extra_ip is the multicast group
         socket.set_option(boost::asio::ip::udp::socket::reuse_address(true));
         socket.bind(local_endpoint);
         socket.set_option(boost::asio::ip::multicast::join_group(extra_ip));
       }
       else {
+        LOGGER(info) << "setting up udp_rx for broadcast";
         // broadcast; in this case extra_ip is the broadcast netmask
-        socket.set_option( boost::asio::socket_base::broadcast());
+        socket.set_option(boost::asio::socket_base::broadcast(true));
         boost::asio::ip::udp::endpoint bcast_endpoint = local_endpoint;
         // replace the local endpoint address with the broadcast address
-        bcast_endpoint.address( boost::asio::ip::address_v4::broadcast(local_endpoint.address().to_v4(), extra_ip));
+        bcast_endpoint.address(boost::asio::ip::address_v4::broadcast(local_endpoint.address().to_v4(), extra_ip));
         socket.bind(bcast_endpoint);
       }
       socket.set_option(boost::asio::socket_base::receive_buffer_size(packets_per_network_buffer * rx_buffer_max_bytes));

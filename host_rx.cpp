@@ -27,7 +27,7 @@ void define_options(boost::program_options::options_description &desc)
     ("local_port,L", boost::program_options::value<unsigned>()->default_value(1030), "port to use on local interface")
     ("multicast_address,M", boost::program_options::value<std::string>()->default_value(""), "IPv4 address of multicast group to join")
     ("broadcast_netmask,B", boost::program_options::value<std::string>()->default_value(""), "enable broadcast reception with this IPv4 netmask")
-    ("packet_size,S", boost::program_options::value<size_t>()->default_value(65536), "packet size in bytes")
+    ("packet_size,S", boost::program_options::value<size_t>()->default_value(1024), "packet size in bytes")
     ("num_packets,N", boost::program_options::value<size_t>()->default_value(1024), "number of packets to receive")
     ("output_filename,O", boost::program_options::value<std::string>()->default_value("test.dat"), "filename to save recieved data")
   ;
@@ -40,13 +40,13 @@ void check_options(boost::program_options::variables_map &vm)
     exit(EXIT_CMD_LINE_ERROR);
   }
   if((not vm["multicast_address"].as<std::string>().empty()) and (not vm["broadcast_netmask"].as<std::string>().empty())) {
-    LOGGER(fatal) << "Cannot specify both multicast and broadcast";
+    LOGGER(fatal) << "cannot specify both multicast and broadcast";
     exit(EXIT_CMD_LINE_ERROR);
   }
   if(not vm["multicast_address"].as<std::string>().empty()) {
     boost::asio::ip::address_v4 multicast_ip = boost::asio::ip::address_v4::from_string(vm["multicast_address"].as<std::string>());
-    if(!multicast_ip.is_multicast()) {
-      LOGGER(fatal) << "Invalid multicast address: " << vm["multicast_address"].as<std::string>();
+    if(not multicast_ip.is_multicast()) {
+      LOGGER(fatal) << "invalid multicast address: " << vm["multicast_address"].as<std::string>();
       exit(EXIT_CMD_LINE_ERROR);
     }
   }
@@ -98,18 +98,22 @@ int main(int argc, char *argv[])
 
     boost::asio::ip::address_v4 local_ip = boost::asio::ip::address_v4::from_string(vm["local_address"].as<std::string>());
     boost::asio::ip::udp::endpoint local_endpoint(local_ip, vm["local_port"].as<unsigned>());
+    LOGGER(info) << "using local IP " << local_endpoint.address().to_string() << " and port " << local_endpoint.port();
 
     boost::asio::ip::address_v4 multicast_ip;
     bool use_multicast = false;
     if(not vm["multicast_address"].as<std::string>().empty()) {
       multicast_ip = boost::asio::ip::address_v4::from_string(vm["multicast_address"].as<std::string>());
       use_multicast = true;
+//      LOGGER(info) << "Enabling multicast to " << vm["multicast_address"].as<std::string>();
+      LOGGER(info) << "enabling multicast from group " << multicast_ip.to_string();
     }
     boost::asio::ip::address_v4 broadcast_mask;
     bool use_broadcast = false;
     if(not vm["broadcast_netmask"].as<std::string>().empty()) {
       broadcast_mask = boost::asio::ip::address_v4::from_string(vm["broadcast_netmask"].as<std::string>());
       use_broadcast = true;
+      LOGGER(info) << "enabling broadcast receive with netmask " << broadcast_mask.to_string();
     }
 
     std::string outfile_name = vm["output_filename"].as<std::string>();
