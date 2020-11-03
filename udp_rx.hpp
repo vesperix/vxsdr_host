@@ -12,7 +12,7 @@ static const size_t rx_buffer_max_bytes          =  9000;    // max mtu
 static const size_t rx_queue_length              =  1024;    // rx_buffers
 
 // parameters of the writer thread's buffers
-static const size_t rx_write_buffer_size         =   256;     // rx_buffers
+static const size_t rx_write_buffer_size         =    16;     // rx_buffers
 static const int    rx_write_thread_sleep_us     =   100;
 static const int     rx_queue_clear_sleep_us     = 10000;
 
@@ -53,10 +53,11 @@ class udp_rx {
       }
       else {
         // broadcast; in this case extra_ip is the broadcast netmask
-        socket.set_option(boost::asio::socket_base::broadcast(true));
+       // socket.set_option(boost::asio::socket_base::broadcast(true));
         boost::asio::ip::udp::endpoint bcast_endpoint = local_endpoint;
         // replace the local endpoint address with the broadcast address
         bcast_endpoint.address(boost::asio::ip::address_v4::broadcast(local_endpoint.address().to_v4(), extra_ip));
+        //bcast_endpoint.address(boost::asio::ip::address_v4::any());
         socket.bind(bcast_endpoint);
       }
       socket.set_option(boost::asio::socket_base::receive_buffer_size(packets_per_network_buffer * rx_buffer_max_bytes));
@@ -76,7 +77,6 @@ class udp_rx {
       static size_t packets = 0;
       if (!error) {
         packets++;
-        LOGGER(info) << "packet " << packets << " pushed";
         // cycle count when received
         recv_buffer.ts[2] = read_cycle_counter();
         recv_buffer.bytes_used = bytes_transferred;
@@ -103,7 +103,6 @@ void writer(const std::string &outfilename, const size_t max_packets) {
         nwrite = max_packets - packets;
       for(size_t i = 0; i < nwrite; i++) {
         outfile.write((const char*)&buffer[i], buffer[i].bytes_used);
-        LOGGER(info) << "packet " << (packets + i) << " written";
       }
       packets += nwrite;
     }
