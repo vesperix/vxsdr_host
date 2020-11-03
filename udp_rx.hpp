@@ -8,15 +8,16 @@
 #include "thread_utils.h"
 
 // parameters of the internal ring buffer
-static const size_t rx_buffer_max_bytes          = 9000;    // max mtu
-static const size_t rx_queue_length              = 1024;    // rx_buffers
+static const size_t rx_buffer_max_bytes          =  9000;    // max mtu
+static const size_t rx_queue_length              =  1024;    // rx_buffers
 
 // parameters of the writer thread's buffers
-static const size_t rx_write_buffer_size         =  256;     // rx_buffers
-static const int    rx_write_thread_sleep_us     =  100;
+static const size_t rx_write_buffer_size         =   256;     // rx_buffers
+static const int    rx_write_thread_sleep_us     =   100;
+static const int     rx_queue_clear_sleep_us     = 10000;
 
 // parameters used to set the OS's network buffer
-static const unsigned packets_per_network_buffer = 1024;
+static const unsigned packets_per_network_buffer =  1024;
 
 static std::atomic<bool> rx_stop_flag;
 
@@ -45,14 +46,12 @@ class udp_rx {
                const boost::asio::ip::address_v4 &extra_ip, const bool use_multicast)
       : socket(io_service, local_endpoint.protocol()) {
       if(use_multicast) {
-        LOGGER(info) << "setting up udp_rx for multicast";
         // multicast; in this case, extra_ip is the multicast group
         socket.set_option(boost::asio::ip::udp::socket::reuse_address(true));
         socket.bind(local_endpoint);
         socket.set_option(boost::asio::ip::multicast::join_group(extra_ip));
       }
       else {
-        LOGGER(info) << "setting up udp_rx for broadcast";
         // broadcast; in this case extra_ip is the broadcast netmask
         socket.set_option(boost::asio::socket_base::broadcast(true));
         boost::asio::ip::udp::endpoint bcast_endpoint = local_endpoint;
@@ -74,7 +73,10 @@ class udp_rx {
       socket.async_receive_from(boost::asio::buffer(&recv_buffer, sizeof(recv_buffer)), remote, hdlr);
     }
     void handle_receive(const boost::system::error_code& error, std::size_t bytes_transferred) {
+      static size_t packets = 0;
       if (!error) {
+        packets++;
+        LOGGER(info) << "packet " << packets << " pushed";
         // cycle count when received
         recv_buffer.ts[2] = read_cycle_counter();
         recv_buffer.bytes_used = bytes_transferred;
@@ -95,20 +97,29 @@ void writer(const std::string &outfilename, const size_t max_packets) {
   size_t packets = 0;
 
   while(packets < max_packets and !rx_stop_flag) {
-    while(packets < max_packets and rx_queue.read_available() >= rx_write_buffer_size) {
+    while(packets < max_packets and rx_queue.read_available()) {
     	size_t nwrite = rx_queue.pop(&buffer.front(), rx_write_buffer_size);
       if(nwrite > max_packets - packets)
         nwrite = max_packets - packets;
-      for(size_t i = 0; i < nwrite; i++)
+      for(size_t i = 0; i < nwrite; i++) {
         outfile.write((const char*)&buffer[i], buffer[i].bytes_used);
+        LOGGER(info) << "packet " << (packets + i) << " written";
+      }
       packets += nwrite;
     }
     std::this_thread::sleep_for(std::chrono::microseconds(rx_write_thread_sleep_us));
   }
 
   outfile.close();
+
+  // set stop flag so pushing stops
   if(!rx_stop_flag)
     set_rx_stop_flag();
+  std::this_thread::sleep_for(std::chrono::microseconds(rx_queue_clear_sleep_us));
+  // empty the queue
+  while(rx_queue.read_available())
+    rx_queue.pop(&buffer.front(), rx_write_buffer_size);
+
   LOGGER(info) << "writer thread finished";
 }
 
@@ -136,12 +147,20 @@ void sequence_checker(const size_t max_packets, const size_t packet_size) {
     }
     //std::this_thread::sleep_for(std::chrono::microseconds(rx_write_thread_sleep_us));
   }
+
   auto t1 = std::chrono::steady_clock::now();
   std::chrono::duration<double> dt = t1 - t0;
   LOGGER(info) << packets << " packets recieved in " << dt.count() << " sec; " << errors << " out of sequence";
   LOGGER(info) << (packets * packet_size / dt.count()) << " bytes/s, " << (8 * packets * packet_size / dt.count()) << " bits/s";
+
+  // set stop flag so pushing stops
   if(!rx_stop_flag)
     set_rx_stop_flag();
+  std::this_thread::sleep_for(std::chrono::microseconds(rx_queue_clear_sleep_us));
+  // empty the queue
+  while(rx_queue.read_available())
+    rx_queue.pop(&buffer.front(), rx_write_buffer_size);
+
   LOGGER(info) << "sequence checker thread finished";
 }
 
@@ -180,6 +199,7 @@ void sequence_timer(const size_t max_packets, const size_t packet_size) {
       }
     }
   }
+
   auto t1 = std::chrono::steady_clock::now();
   cycle_count_t tt1 = read_cycle_counter();
   std::chrono::duration<double> dt = t1 - t0;
@@ -192,8 +212,15 @@ void sequence_timer(const size_t max_packets, const size_t packet_size) {
 
   for(size_t i = 0; i < packets; i++)
     std::cout << boost::format(" %12d %12.3f %12.3f %12.3f %12.3f") % seqnums[i] % (count1[i] / cal) % (count2[i] / cal) % (count3[i] / cal) % (count4[i] / cal) << std::endl;
+
+  // set stop flag so pushing stops
   if(!rx_stop_flag)
     set_rx_stop_flag();
+  std::this_thread::sleep_for(std::chrono::microseconds(rx_queue_clear_sleep_us));
+  // empty the queue
+  while(rx_queue.read_available())
+    rx_queue.pop(&buffer.front(), rx_write_buffer_size);
+
   LOGGER(info) << "sequence timer thread finished";
 }
 
@@ -214,8 +241,15 @@ void rx_printer(const size_t max_packets, const size_t packet_size) {
     }
     //std::this_thread::sleep_for(std::chrono::microseconds(rx_write_thread_sleep_us));
   }
+
+  // set stop flag so pushing stops
   if(!rx_stop_flag)
     set_rx_stop_flag();
+  std::this_thread::sleep_for(std::chrono::microseconds(rx_queue_clear_sleep_us));
+  // empty the queue
+  while(rx_queue.read_available())
+    rx_queue.pop(&buffer.front(), rx_write_buffer_size);
+
   LOGGER(info) << "rx_printer thread finished";
 }
 
