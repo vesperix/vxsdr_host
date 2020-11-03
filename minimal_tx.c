@@ -267,10 +267,7 @@ int main(int argc, char *argv[])
       if(ntry >= n_packets)
         done = true;
     }
-    if(!done) {
-      nunder++;
-      fprintf(stderr, "Transmit ring buffer underflow\n");
-    }
+    usleep(wait_us);
   }
 
   thrd_join(filler_thread, NULL);
