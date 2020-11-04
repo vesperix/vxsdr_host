@@ -200,10 +200,6 @@ int main(int argc, char *argv[])
     fatal_error("Must specify local address\n");
   }
 
-  if(accept_broadcast) {
-    local_ip.s_addr = htonl(INADDR_ANY);
-  }
-
   int rx_sock = socket(AF_INET, SOCK_DGRAM, 0);
   if(rx_sock < 0)
     fatal_error("Cannot create socket (%s)\n", strerror(errno));
@@ -211,6 +207,10 @@ int main(int argc, char *argv[])
   int rx_buf_size = PACKETS_PER_NETWORK_BUFFER * packet_size;
   if(setsockopt(rx_sock, SOL_SOCKET, SO_RCVBUF, &rx_buf_size, sizeof(int)))
     fatal_error("Cannot set socket RX buffer size to %d (%s)\n", rx_buf_size, strerror(errno));
+
+  if(accept_broadcast) {
+    local_ip.s_addr = htonl(INADDR_ANY);
+  }
 
   struct sockaddr_in local_addr;
   local_addr.sin_family = AF_INET;
