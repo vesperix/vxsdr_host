@@ -45,7 +45,7 @@ typedef struct {
   size_t packet_size;
 } handler_args;
 
-static bool done;
+static atomic_bool done;
 static ring_buffer rx_ring;
 
 void init_buffer_element(buffer_element *b) {
@@ -108,25 +108,44 @@ int handler(void *args) {
   unsigned seq, last_seq = 0;
   struct timespec t0, t1;
 
+  printf("starting handler thread\n");
+
   init_buffer_element(&b);
   clock_gettime(CLOCK_MONOTONIC, &t0);
 
   while(!done) {
     if(packets == 0)
       clock_gettime(CLOCK_MONOTONIC, &t0);
-    pop(&rx_ring, &b);
-    bytes += b.bytes_used;
-    memcpy(&seq, &b.data, sizeof(seq));
-    if(seq != last_seq + 1)
-      errors++;
-    packets++;
-    last_seq = seq;
+    if(!pop(&rx_ring, &b)) { // pop returns 0 on success
+      packets++;
+      bytes += b.bytes_used;
+      memcpy(&seq, &b.data, sizeof(seq));
+      if(seq != last_seq + 1)
+        errors++;
+      last_seq = seq;
+    }
   }
+  // clean out the queue
+  while(!pop(&rx_ring, &b)) {
+    // only count stats for the specified numer of packets
+    if(packets < ((handler_args *)args)->n_packets) {
+      packets++;
+      bytes += b.bytes_used;
+      memcpy(&seq, &b.data, sizeof(seq));
+      if(seq != last_seq + 1)
+        errors++;
+      last_seq = seq;
+    }
+  }
+
   clock_gettime(CLOCK_MONOTONIC, &t1);
 
   double dt = (t1.tv_sec - t0.tv_sec) + 1e-9 * (t1.tv_nsec - t0.tv_nsec);
-  printf("%ld packets received; %ld out of sequence\n", packets, errors);
+  printf("%zu packets received; %zu out of sequence\n", packets, errors);
   printf("%g bytes/s, %g bits/s\n", bytes / dt, 8.0 * bytes / dt);
+
+  printf("handler thread returning\n");
+
   return 0;
 }
 
@@ -137,15 +156,15 @@ int main(int argc, char *argv[])
 
   size_t packet_size = 1024, n_packets = 1024;
 
+  bool accept_broadcast = false;
+
   int opt;
   extern char *optarg;
   extern int optind, opterr, optopt;
 
-  done = false;
-
   local_ip.s_addr = 0;
 
-  while((opt = getopt(argc, argv, "A:L:S:N:")) != -1) {
+  while((opt = getopt(argc, argv, "A:L:S:N:B")) != -1) {
     switch (opt) {
       case 'A':
         if(inet_pton(AF_INET, optarg, &local_ip) != 1)
@@ -159,6 +178,9 @@ int main(int argc, char *argv[])
         break;
       case 'N':
         n_packets = strtoul(optarg, NULL, 0);
+        break;
+      case 'B':
+        accept_broadcast = true;
         break;
       case '?':
         fprintf (stderr, "Unknown option `-%c'.\n", optopt);
@@ -178,6 +200,9 @@ int main(int argc, char *argv[])
     fatal_error("Must specify local address\n");
   }
 
+  if(accept_broadcast) {
+    local_ip.s_addr = htonl(INADDR_ANY);
+  }
 
   int rx_sock = socket(AF_INET, SOCK_DGRAM, 0);
   if(rx_sock < 0)
@@ -216,6 +241,8 @@ int main(int argc, char *argv[])
   if(set_current_thread_priority_realtime(50))
     fprintf(stderr, "unable to set realtime thread priority\n");
 
+  done = false;
+
   while(!done) {
     while(has_space(&rx_ring) && !done) {
       ssize_t ns = recvfrom(rx_sock, b.data, BUFFER_ELEMENT_SIZE, 0, NULL, NULL);
@@ -224,16 +251,18 @@ int main(int argc, char *argv[])
         b.bytes_used = ns;
         push(&rx_ring, &b);
         nrec++;
+        //fprintf(stderr,"%ld %ld %ld\n", ntry, nrec, nerr);
       }
       else {
         nerr++;
         fprintf(stderr, "Receive error (%s)\n", strerror(errno));
       }
-
-      if(ntry >= n_packets)
+      if(ntry >= n_packets) {
         done = true;
+      }
     }
     if(!done) {
+      // we got here because has_space() was false
       nover++;
       fprintf(stderr, "Receive ring buffer overflow\n");
     }
