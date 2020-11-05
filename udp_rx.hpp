@@ -90,22 +90,39 @@ void writer(const std::string &outfilename, const size_t max_packets) {
 
   std::array<rx_buffer_element, rx_write_buffer_size> buffer;
   std::ofstream outfile(outfilename.c_str(), std::ofstream::binary);
-  size_t packets = 0;
+  size_t packets = 0, errors = 0, write_errors = 0;
+  size_t last_seq = 0;
+
+  auto t0 = std::chrono::steady_clock::now();
 
   while(packets < max_packets and !rx_stop_flag) {
-    while(packets < max_packets and rx_queue.read_available()) {
+    if(packets == 0)
+      t0 = std::chrono::steady_clock::now();
+    while(rx_queue.read_available()) {
     	size_t nwrite = rx_queue.pop(&buffer.front(), rx_write_buffer_size);
       if(nwrite > max_packets - packets)
         nwrite = max_packets - packets;
       for(size_t i = 0; i < nwrite; i++) {
-        outfile.write((const char*)&buffer[i], sizeof(buffer[i]));
+        size_t seq = (((size_t)buffer[i].seq_hi) << 16) + buffer[i].seq_lo;
+        if(seq != last_seq + 1)
+          errors++;
+        packets++;
+        last_seq = seq;
+        outfile.write((const char*)&buffer[i].data.front(), sizeof(buffer[i].data));
+        if(outfile.bad())
+          write_errors++;
       }
       packets += nwrite;
     }
-    std::this_thread::sleep_for(std::chrono::microseconds(rx_write_thread_sleep_us));
+    //std::this_thread::sleep_for(std::chrono::microseconds(rx_write_thread_sleep_us));
   }
 
   outfile.close();
+
+  auto t1 = std::chrono::steady_clock::now();
+  std::chrono::duration<double> dt = t1 - t0;
+  LOGGER(info) << packets << " packets recieved in " << dt.count() << " sec; " << errors << " out of sequence, " << write_errors << " write errors";
+  LOGGER(info) << (packets * sizeof(rx_buffer_element) / dt.count()) << " bytes/s, " << (8 * packets * sizeof(rx_buffer_element) / dt.count()) << " bits/s";
 
   // set stop flag so pushing stops
   if(!rx_stop_flag)
