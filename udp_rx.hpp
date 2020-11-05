@@ -37,7 +37,7 @@ typedef struct {
   uint16_t seq_hi;
   uint16_t data_id;
   uint16_t pad;
-  std::array<std::complex<int16_t>, 1024> data;
+  std::array<int16_t, 2048> data;
 } rx_buffer_element;
 
 static boost::lockfree::spsc_queue<rx_buffer_element, boost::lockfree::capacity<rx_queue_length> > rx_queue;

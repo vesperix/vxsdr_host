@@ -33,7 +33,7 @@ typedef struct {
   uint16_t seq_hi;
   uint16_t data_id;
   uint16_t pad;
-  std::array<std::complex<int16_t>, 1024> data;
+  std::array<int16_t, 2048> data;
 } tx_buffer_element;
 
 static boost::lockfree::spsc_queue<tx_buffer_element, boost::lockfree::capacity<tx_queue_length> > tx_queue;
