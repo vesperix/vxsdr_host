@@ -28,7 +28,8 @@
                      "   -M <multicast address>\n" \
                      "   -S <packet_size>\n" \
                      "   -N <num_packets>\n" \
-                     "   -O <output_filename>\n"
+                     "   -O <output_filename>\n" \
+                     "   -B (set INADDR_ANY to accept broadcast)\n"
 
 typedef struct {
   char data[BUFFER_ELEMENT_SIZE];
