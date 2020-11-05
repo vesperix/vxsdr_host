@@ -25,8 +25,10 @@
 #define USAGE_STRING "Usage: %s [options]\n" \
                      "   -A <local_address> [required]\n" \
                      "   -L <local_port>\n" \
+                     "   -M <multicast address>\n" \
                      "   -S <packet_size>\n" \
                      "   -N <num_packets>\n" \
+                     "   -O <output_filename>\n"
 
 typedef struct {
   char data[BUFFER_ELEMENT_SIZE];
@@ -43,7 +45,13 @@ typedef struct {
 typedef struct {
   size_t n_packets;
   size_t packet_size;
-} handler_args;
+} checker_args;
+
+typedef struct {
+  size_t n_packets;
+  size_t packet_size;
+  int output_fd;
+} writer_args;
 
 static atomic_bool done;
 static ring_buffer rx_ring;
@@ -102,13 +110,13 @@ void fatal_error(const char *s, ...) {
   exit(EXIT_FAILURE);
 }
 
-int handler(void *args) {
+int sequence_checker(void *args) {
   static buffer_element b;
   size_t packets = 0, errors = 0, bytes = 0;
   unsigned seq, last_seq = 0;
   struct timespec t0, t1;
 
-  printf("starting handler thread\n");
+  printf("starting sequence checker thread\n");
 
   init_buffer_element(&b);
   clock_gettime(CLOCK_MONOTONIC, &t0);
@@ -128,7 +136,7 @@ int handler(void *args) {
   // clean out the queue
   while(!pop(&rx_ring, &b)) {
     // only count stats for the specified numer of packets
-    if(packets < ((handler_args *)args)->n_packets) {
+    if(packets < ((checker_args *)args)->n_packets) {
       packets++;
       bytes += b.bytes_used;
       memcpy(&seq, &b.data, sizeof(seq));
@@ -144,17 +152,74 @@ int handler(void *args) {
   printf("%zu packets received; %zu out of sequence\n", packets, errors);
   printf("%g bytes/s, %g bits/s\n", bytes / dt, 8.0 * bytes / dt);
 
-  printf("handler thread returning\n");
+  printf("sequence checker thread returning\n");
+
+  return 0;
+}
+
+int writer(void *args) {
+  static buffer_element b;
+  size_t packets = 0, errors = 0, bytes = 0, write_errors = 0, bytes_written;
+  unsigned seq, last_seq = 0;
+  struct timespec t0, t1;
+
+  printf("starting writer thread\n");
+
+  init_buffer_element(&b);
+  clock_gettime(CLOCK_MONOTONIC, &t0);
+
+  while(!done) {
+    if(packets == 0)
+      clock_gettime(CLOCK_MONOTONIC, &t0);
+    if(!pop(&rx_ring, &b)) { // pop returns 0 on success
+      packets++;
+      bytes_written = write(((writer_args *)args)->output_fd, &b.data, b.bytes_used);
+      bytes += bytes_written;
+      if(bytes_written != b.bytes_used)
+        write_errors++;
+      memcpy(&seq, &b.data, sizeof(seq));
+      if(seq != last_seq + 1)
+        errors++;
+      last_seq = seq;
+    }
+    else
+      bytes_written = 0;
+  }
+  // clean out the queue
+  while(!pop(&rx_ring, &b)) {
+    // only count stats for the specified numer of packets
+    if(packets < ((writer_args *)args)->n_packets) {
+      packets++;
+      bytes_written = write(((writer_args *)args)->output_fd, &b.data, b.bytes_used);
+      bytes += bytes_written;
+      if(bytes_written != b.bytes_used)
+        write_errors++;
+      memcpy(&seq, &b.data, sizeof(seq));
+      if(seq != last_seq + 1)
+        errors++;
+      last_seq = seq;
+    }
+  }
+
+  clock_gettime(CLOCK_MONOTONIC, &t1);
+
+  double dt = (t1.tv_sec - t0.tv_sec) + 1e-9 * (t1.tv_nsec - t0.tv_nsec);
+  printf("%zu packets received; %zu out of sequence\n", packets, errors);
+  printf("%g bytes/s, %g bits/s\n", bytes / dt, 8.0 * bytes / dt);
+
+  printf("sequence checker thread returning\n");
 
   return 0;
 }
 
 int main(int argc, char *argv[])
 {
-  struct in_addr local_ip;
+  struct in_addr local_ip, multicast_ip;
   unsigned short local_port = 1030;
 
   size_t packet_size = 1024, n_packets = 1024;
+
+  char output_filename[FILENAME_MAX + 1] = { 0 };
 
   bool accept_broadcast = false;
 
@@ -173,11 +238,18 @@ int main(int argc, char *argv[])
       case 'L':
         local_port = strtoul(optarg, NULL, 0);
         break;
+      case 'M':
+        if(inet_pton(AF_INET, optarg, &multicast_ip) != 1)
+          fatal_error("Invalid multicast IP address");
+        break;
       case 'S':
         packet_size = strtoul(optarg, NULL, 0);
         break;
       case 'N':
         n_packets = strtoul(optarg, NULL, 0);
+        break;
+      case 'O':
+        strncpy(output_filename, optarg, FILENAME_MAX);
         break;
       case 'B':
         accept_broadcast = true;
@@ -225,11 +297,11 @@ int main(int argc, char *argv[])
   /* create buffer filling thread */
 
   thrd_t handler_thread;
-  handler_args ha;
+  checker_args ha;
   ha.packet_size = packet_size;
   ha.n_packets = n_packets;
 
-  if(thrd_create(&handler_thread, &handler, (void *)&ha) != thrd_success)
+  if(thrd_create(&handler_thread, &sequence_checker, (void *)&ha) != thrd_success)
     fatal_error("Cannot create handler thread");
 
   /* receive and push to buffer */
