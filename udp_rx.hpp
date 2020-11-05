@@ -8,8 +8,8 @@
 #include "thread_utils.h"
 
 // parameters of the internal ring buffer
-static const size_t rx_buffer_max_bytes          =  4104;    // max mtu
-static const size_t rx_queue_length              =  1024;    // rx_buffers
+static const size_t rx_buffer_max_bytes          =  4104;    // size of largest packet
+static const size_t rx_queue_length              = 65536;    // rx_buffers
 
 // parameters of the writer thread's buffers
 static const size_t rx_write_buffer_size         =    16;     // rx_buffers
@@ -90,7 +90,7 @@ void writer(const std::string &outfilename, const size_t max_packets) {
 
   std::array<rx_buffer_element, rx_write_buffer_size> buffer;
   std::ofstream outfile(outfilename.c_str(), std::ofstream::binary);
-  size_t packets = 0, errors = 0, write_errors = 0;
+  size_t packets = 0, seq_errors = 0, write_errors = 0;
   size_t last_seq = 0;
 
   auto t0 = std::chrono::steady_clock::now();
@@ -98,14 +98,14 @@ void writer(const std::string &outfilename, const size_t max_packets) {
   while(packets < max_packets and !rx_stop_flag) {
     if(packets == 0)
       t0 = std::chrono::steady_clock::now();
-    while(rx_queue.read_available()) {
+    while(rx_queue.read_available() >= rx_write_buffer_size) {
     	size_t nwrite = rx_queue.pop(&buffer.front(), rx_write_buffer_size);
       if(nwrite > max_packets - packets)
         nwrite = max_packets - packets;
       for(size_t i = 0; i < nwrite; i++) {
         size_t seq = (((size_t)buffer[i].seq_hi) << 16) + buffer[i].seq_lo;
-        if(seq != last_seq + 1)
-          errors++;
+        if(packets > 0 and seq != last_seq + 1)
+          seq_errors++;
         packets++;
         last_seq = seq;
         outfile.write((const char*)&buffer[i].data.front(), sizeof(buffer[i].data));
@@ -121,7 +121,8 @@ void writer(const std::string &outfilename, const size_t max_packets) {
 
   auto t1 = std::chrono::steady_clock::now();
   std::chrono::duration<double> dt = t1 - t0;
-  LOGGER(info) << packets << " packets recieved in " << dt.count() << " sec; " << errors << " out of sequence, " << write_errors << " write errors";
+  LOGGER(info) << packets << " packets recieved in " << dt.count() << " sec";
+  LOGGER(info) << seq_errors << " sequence errors, " << write_errors << " write errors";
   LOGGER(info) << (packets * sizeof(rx_buffer_element) / dt.count()) << " bytes/s, " << (8 * packets * sizeof(rx_buffer_element) / dt.count()) << " bits/s";
 
   // set stop flag so pushing stops
@@ -152,7 +153,7 @@ void sequence_checker(const size_t max_packets, const size_t packet_size) {
       size_t n_popped = rx_queue.pop(&buffer.front(), buffer_max_packets);
       for(size_t i = 0; i < n_popped; i++) {
         size_t seq = (((size_t)buffer[i].seq_hi) << 16) + buffer[i].seq_lo;
-        if(seq != last_seq + 1)
+        if(packets > 0 and seq != last_seq + 1)
           errors++;
         packets++;
         last_seq = seq;
@@ -270,8 +271,11 @@ void receiver(const boost::asio::ip::udp::endpoint &local_endpoint)
 {
   LOGGER(info) << "receiver thread started";
 
-  if(set_current_thread_priority_realtime(10))
+  if(set_current_thread_priority_realtime(50))
     LOGGER(error) << "unable to set realtime thread priority";
+
+  if(set_current_thread_affinity(0))
+    LOGGER(error) << "unable to set thread CPU affinity";
 
   boost::asio::io_service io_service;
   udp_rx server(io_service, local_endpoint);
@@ -283,8 +287,11 @@ void multicast_receiver(const boost::asio::ip::udp::endpoint &local_endpoint, co
 {
   LOGGER(info) << "multicast receiver thread started";
 
-  if(set_current_thread_priority_realtime(10))
+  if(set_current_thread_priority_realtime(50))
     LOGGER(error) << "unable to set realtime thread priority";
+
+  if(set_current_thread_affinity(0))
+    LOGGER(error) << "unable to set thread CPU affinity";
 
   boost::asio::io_service io_service;
   udp_rx server(io_service, local_endpoint, multicast_ip);
