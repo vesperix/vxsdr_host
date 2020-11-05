@@ -103,9 +103,9 @@ int main(int argc, char *argv[])
       LOGGER(info) << "enabling multicast from group " << multicast_ip.to_string();
     }
 
-  //  std::string outfile_name = vm["output_filename"].as<std::string>();
-  //  std::thread handler_thread(std::ref(writer), std::cref(outfile_name), vm["num_packets"].as<size_t>());
-    std::thread handler_thread(std::ref(sequence_timer), vm["num_packets"].as<size_t>(), vm["packet_size"].as<size_t>());
+//    std::string outfile_name = vm["output_filename"].as<std::string>();
+//    std::thread handler_thread(std::ref(writer), std::cref(outfile_name), vm["num_packets"].as<size_t>());
+    std::thread handler_thread(std::ref(sequence_checker), vm["num_packets"].as<size_t>(), vm["packet_size"].as<size_t>());
     if(use_multicast) {
       std::thread multicast_receiver_thread(std::ref(multicast_receiver), std::cref(local_endpoint), std::cref(multicast_ip));
       multicast_receiver_thread.join();

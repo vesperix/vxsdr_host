@@ -8,7 +8,7 @@
 #include "thread_utils.h"
 
 // parameters of the internal ring buffer
-static const size_t tx_buffer_max_bytes          = 9000;  // max mtu
+static const size_t tx_buffer_max_bytes          = 4104;  // max mtu
 static const size_t tx_queue_length              = 1024;   // tx_buffers in queue
 
 // parameters used to set the OS's network buffer
@@ -19,12 +19,21 @@ static std::atomic<bool> tx_stop_flag;
 void set_tx_stop_flag() {
   tx_stop_flag = true;
 }
-
+/*
 typedef struct {
   size_t seq;
   size_t bytes_used;
   cycle_count_t ts[4];
   std::array<char, (tx_buffer_max_bytes - 2 * sizeof(size_t) - 4 * sizeof(cycle_count_t))> data;
+} tx_buffer_element;
+*/
+
+typedef struct {
+  uint16_t seq_lo;
+  uint16_t seq_hi;
+  uint16_t data_id;
+  uint16_t pad;
+  std::array<std::complex<int16_t>, 1024> data;
 } tx_buffer_element;
 
 static boost::lockfree::spsc_queue<tx_buffer_element, boost::lockfree::capacity<tx_queue_length> > tx_queue;
@@ -54,8 +63,8 @@ class udp_tx {
           size_t n_popped = tx_queue.pop(&send_buffer_.front(), send_buffer_.size());
           for(size_t i = 0; i < n_popped; i++) {
             // cycle count when sent
-            send_buffer_[i].ts[1] = read_cycle_counter();
-            socket.async_send_to(boost::asio::buffer(&send_buffer_[i], send_buffer_[i].bytes_used), destination, hdlr);
+            //send_buffer_[i].ts[1] = read_cycle_counter();
+            socket.async_send_to(boost::asio::buffer(&send_buffer_[i], sizeof(tx_buffer_element)), destination, hdlr);
           }
         }
         //else
@@ -83,14 +92,15 @@ void generator(const size_t max_packets, const size_t requested_packet_size, con
   auto t0 = std::chrono::steady_clock::now();
 
   for(size_t i = 1; i <= max_packets and !tx_stop_flag; i++) {
-    memset(&buf.data.front(), 0, packet_size);
-    buf.seq = i;
-    buf.bytes_used = packet_size;
+    memset(&buf, 0, sizeof(buf));
+    buf.seq_lo = i % 65536;
+    buf.seq_hi = i >> 16;
+    //buf.bytes_used = packet_size;
     // wait for room in the tx queue
     while(!tx_queue.write_available()) {}
 
     // cycle count when pushed
-    buf.ts[0] = read_cycle_counter();
+    //buf.ts[0] = read_cycle_counter();
     tx_queue.push(buf);
     if(packet_wait_us > 0)
       std::this_thread::sleep_for(std::chrono::microseconds(packet_wait_us));

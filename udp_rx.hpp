@@ -8,7 +8,7 @@
 #include "thread_utils.h"
 
 // parameters of the internal ring buffer
-static const size_t rx_buffer_max_bytes          =  9000;    // max mtu
+static const size_t rx_buffer_max_bytes          =  4104;    // max mtu
 static const size_t rx_queue_length              =  1024;    // rx_buffers
 
 // parameters of the writer thread's buffers
@@ -24,12 +24,20 @@ static std::atomic<bool> rx_stop_flag;
 void set_rx_stop_flag() {
   rx_stop_flag = true;
 }
-
+/*
 typedef struct {
   size_t seq;
   size_t bytes_used;
   cycle_count_t ts[4];
   std::array<char, (rx_buffer_max_bytes - 2 * sizeof(size_t) - 4 * sizeof(cycle_count_t))> data;
+} rx_buffer_element;
+*/
+typedef struct {
+  uint16_t seq_lo;
+  uint16_t seq_hi;
+  uint16_t data_id;
+  uint16_t pad;
+  std::array<std::complex<int16_t>, 1024> data;
 } rx_buffer_element;
 
 static boost::lockfree::spsc_queue<rx_buffer_element, boost::lockfree::capacity<rx_queue_length> > rx_queue;
@@ -66,8 +74,8 @@ class udp_rx {
       if (!error) {
         packets++;
         // cycle count when received
-        recv_buffer.ts[2] = read_cycle_counter();
-        recv_buffer.bytes_used = bytes_transferred;
+        //recv_buffer.ts[2] = read_cycle_counter();
+        //recv_buffer.bytes_used = bytes_transferred;
         rx_queue.push(recv_buffer);
       }
       else
@@ -90,7 +98,7 @@ void writer(const std::string &outfilename, const size_t max_packets) {
       if(nwrite > max_packets - packets)
         nwrite = max_packets - packets;
       for(size_t i = 0; i < nwrite; i++) {
-        outfile.write((const char*)&buffer[i], buffer[i].bytes_used);
+        outfile.write((const char*)&buffer[i], sizeof(buffer[i]));
       }
       packets += nwrite;
     }
@@ -126,10 +134,11 @@ void sequence_checker(const size_t max_packets, const size_t packet_size) {
     while(rx_queue.read_available()) {
       size_t n_popped = rx_queue.pop(&buffer.front(), buffer_max_packets);
       for(size_t i = 0; i < n_popped; i++) {
-        if(buffer[i].seq != last_seq + 1)
+        size_t seq = (((size_t)buffer[i].seq_hi) << 16) + buffer[i].seq_lo;
+        if(seq != last_seq + 1)
           errors++;
         packets++;
-        last_seq = buffer[i].seq;
+        last_seq = seq;
       }
     }
     //std::this_thread::sleep_for(std::chrono::microseconds(rx_write_thread_sleep_us));
@@ -150,7 +159,7 @@ void sequence_checker(const size_t max_packets, const size_t packet_size) {
 
   LOGGER(info) << "sequence checker thread finished";
 }
-
+/*
 void sequence_timer(const size_t max_packets, const size_t packet_size) {
   LOGGER(info) << "sequence timer thread started";
 
@@ -239,7 +248,7 @@ void rx_printer(const size_t max_packets, const size_t packet_size) {
 
   LOGGER(info) << "rx_printer thread finished";
 }
-
+*/
 void receiver(const boost::asio::ip::udp::endpoint &local_endpoint)
 {
   LOGGER(info) << "receiver thread started";
