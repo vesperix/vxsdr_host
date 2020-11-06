@@ -104,7 +104,7 @@ void writer(const std::string &outfilename, const size_t max_packets) {
         nwrite = max_packets - packets;
       for(size_t i = 0; i < nwrite; i++) {
         size_t seq = (((size_t)buffer[i].seq_hi) << 16) + buffer[i].seq_lo;
-        if(packets > 0 and seq != last_seq + 1)
+        if(packets > 0 and seq != last_seq + 1 and last_seq != UINT32_MAX)
           seq_errors++;
         packets++;
         last_seq = seq;
@@ -153,7 +153,7 @@ void sequence_checker(const size_t max_packets, const size_t packet_size) {
       size_t n_popped = rx_queue.pop(&buffer.front(), buffer_max_packets);
       for(size_t i = 0; i < n_popped; i++) {
         size_t seq = (((size_t)buffer[i].seq_hi) << 16) + buffer[i].seq_lo;
-        if(packets > 0 and seq != last_seq + 1)
+        if(packets > 0 and seq != last_seq + 1 and last_seq != UINT32_MAX)
           errors++;
         packets++;
         last_seq = seq;
