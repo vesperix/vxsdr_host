@@ -69,7 +69,8 @@ class udp_rx {
       while(!rx_stop_flag) {
         size_t bytes_received = socket.receive_from(boost::asio::buffer(&recv_buffer, sizeof(recv_buffer)), remote);
         // FIXME: sort out packets and handle commands
-        rx_queue.push(recv_buffer);
+        if(bytes_received == sizeof(recv_buffer))
+          rx_queue.push(recv_buffer);
       }
     }
 };
