@@ -8,16 +8,16 @@
 #include "thread_utils.h"
 
 // packet type ids
-static const int TX_DATA_ID = 0xDACD;
-static const int RX_DATA_ID = 0xADCD;
-static const int TX_ACK_ID  = 0xDACA;
+static const int TX_DATA_ID                      = 0xDACD;
+static const int RX_DATA_ID                      = 0xADCD;
+static const int TX_DATA_ACK_ID                  = 0xDACA;
 
 // parameters of the internal ring buffers
 static const size_t msg_buffer_max_bytes           =   256;    // size of largest command/status message packet
 static const size_t data_buffer_max_bytes          =  4104;    // size of largest data packet
 static const size_t rx_data_queue_length           = 65536;    // slots in rx data queue
 static const size_t tx_data_queue_length           =  1024;    // slots in tx data queue
-static const size_t rx_msg_queue_length            = 16384;    // slots in rx msg queue
+static const size_t rx_msg_queue_length            =   256;    // slots in rx msg queue
 static const size_t tx_msg_queue_length            =   256;    // slots in tx msg queue
 
 // parameters of the writer thread's buffers
@@ -74,6 +74,7 @@ class udp_rx {
   public:
     udp_rx(boost::asio::io_service &io_service, const boost::asio::ip::udp::endpoint &local_endpoint)
       : socket(io_service, local_endpoint) {
+      socket.set_option(boost::asio::ip::udp::socket::reuse_address(true));
       socket.set_option(boost::asio::socket_base::receive_buffer_size(packets_per_network_buffer * data_buffer_max_bytes));
       if(!rx_stop_flag)
         start_receive();
@@ -98,7 +99,7 @@ class udp_rx {
         size_t bytes_received = socket.receive_from(boost::asio::buffer(&recv_buffer, sizeof(recv_buffer)), remote);
         if(recv_buffer.id == RX_DATA_ID)
           rx_data_queue.push(recv_buffer);
-        else if(recv_buffer.id == TX_ACK_ID) {
+        else if(recv_buffer.id == TX_DATA_ACK_ID) {
           ack_buffer_element ack;
           memcpy(&ack, &recv_buffer, sizeof(ack));
           radio_buffer_fill_percent = (100 * ack.dac_ddr_used) / ack.dac_ddr_size;
