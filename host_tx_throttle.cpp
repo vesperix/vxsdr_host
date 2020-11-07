@@ -24,7 +24,7 @@ void define_options(boost::program_options::options_description &desc)
     ("help,H", "show help message")
     ("config_file,C", boost::program_options::value<std::string>(), "configuration file giving command line options")
     ("local_address,A", boost::program_options::value<std::string>()->default_value(""), "IPv4 address of local interface")
-    //("local_port,L", boost::program_options::value<unsigned>()->default_value(1030), "port to use on local interface")
+    ("local_port,L", boost::program_options::value<unsigned>()->default_value(1030), "port to use on local interface")
     ("destination_address,D", boost::program_options::value<std::string>()->default_value(""), "IPv4 address of destination (including broadcast/multicast)")
     ("broadcast,B", boost::program_options::bool_switch()->default_value(false), "flag to enable broadcast")
     ("destination_port,P", boost::program_options::value<unsigned>()->default_value(1030), "port to use on destination")
@@ -100,9 +100,13 @@ int main(int argc, char *argv[])
     LOGGER(info) << "using destination IP " << destination_endpoint.address().to_string() << " and port " << destination_endpoint.port();
 
     std::thread generator_thread(std::ref(generator), vm["num_packets"].as<size_t>(), vm["packet_size"].as<size_t>(), vm["wait_us"].as<unsigned>());
-    std::thread sender_thread(std::ref(sender), std::cref(local_endpoint), std::cref(destination_endpoint), vm["broadcast"].as<bool>());
+
+    boost::asio::io_service io_service;
+    std::thread sender_thread(std::ref(sender), std::ref(io_service), std::cref(local_endpoint), std::cref(destination_endpoint), vm["broadcast"].as<bool>());
+    std::thread receiver_thread(std::ref(receiver), std::ref(io_service), std::cref(local_endpoint));
     generator_thread.join();
     sender_thread.join();
+    receiver_thread.join();
   }
   catch (std::exception& e) {
     LOGGER(fatal) << "exception caught: " << e.what();

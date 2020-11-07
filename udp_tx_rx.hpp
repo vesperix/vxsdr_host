@@ -7,6 +7,8 @@
 #include "cycle_counter.h"
 #include "thread_utils.h"
 
+#define SINGLE_CHANNEL
+
 // packet type ids
 static const int TX_DATA_ID                      = 0xDACD;
 static const int RX_DATA_ID                      = 0xADCD;
@@ -44,7 +46,11 @@ typedef struct {
   uint16_t seq_hi;
   uint16_t id;
   uint16_t pad;
+#ifdef SINGLE_CHANNEL
   std::array<int16_t, 2048> data;
+#else
+  std::array<std::complex<int16_t>, 2048> data;
+#endif
 } data_buffer_element;
 
 typedef struct {
@@ -286,10 +292,24 @@ void generator(const size_t max_packets, const size_t requested_packet_size, con
     packet_size = data_buffer_max_bytes;
   }
 
+  memset(&buf, 0, sizeof(buf));
+  buf.id = TX_DATA_ID;
+  const double a = 800;
+  const int ncycles = 80;  // must be a whole number of cycles in bufer to avoid jumps on repeat
+
+  for(unsigned i = 0; i < buf.data.size(); i++) {
+#ifdef SINGLE_CHANNEL
+    buf.data[i] = std::round(a * sin(2 * M_PI * ncycles * i / ((double)buf.data.size())));
+#else
+    buf.data[i].real = std::round(a * cos(2 * M_PI * ncycles * i / ((double)buf.data.size())));
+    buf.data[i].imag = std::round(a * sin(2 * M_PI * ncycles * i / ((double)buf.data.size())));
+#endif
+  }
+
   auto t0 = std::chrono::steady_clock::now();
 
   for(size_t i = 1; i <= max_packets and !tx_stop_flag; i++) {
-    memset(&buf, 0, sizeof(buf));
+
     buf.seq_lo = i % 65536;
     buf.seq_hi = i >> 16;
 
