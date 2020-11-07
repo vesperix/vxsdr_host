@@ -73,9 +73,6 @@ class udp_rx {
       static size_t packets = 0;
       if (!error) {
         packets++;
-        // cycle count when received
-        //recv_buffer.ts[2] = read_cycle_counter();
-        //recv_buffer.bytes_used = bytes_transferred;
         rx_queue.push(recv_buffer);
       }
       else
@@ -109,13 +106,9 @@ class udp_tx {
         if(tx_queue.read_available()) {
           size_t n_popped = tx_queue.pop(&send_buffer_.front(), send_buffer_.size());
           for(size_t i = 0; i < n_popped; i++) {
-            // cycle count when sent
-            //send_buffer_[i].ts[1] = read_cycle_counter();
             socket.async_send_to(boost::asio::buffer(&send_buffer_[i], sizeof(buffer_element)), destination, hdlr);
           }
         }
-        //else
-        //  LOGGER(error) << "tx queue empty";
       }
     }
     void handle_send(const boost::system::error_code& error, std::size_t bytes_transferred) {
@@ -219,7 +212,7 @@ void sequence_checker(const size_t max_packets, const size_t packet_size) {
   LOGGER(info) << "sequence checker thread finished";
 }
 
-void receiver(const boost::asio::ip::udp::endpoint &local_endpoint)
+void receiver(boost::asio::io_service io_service, const boost::asio::ip::udp::endpoint &local_endpoint)
 {
   LOGGER(info) << "receiver thread started";
 
@@ -229,13 +222,12 @@ void receiver(const boost::asio::ip::udp::endpoint &local_endpoint)
   if(set_current_thread_affinity(0))
     LOGGER(error) << "unable to set thread CPU affinity";
 
-  boost::asio::io_service io_service;
   udp_rx server(io_service, local_endpoint);
   io_service.run();
   LOGGER(info) << "receiver thread finished";
 }
 
-void multicast_receiver(const boost::asio::ip::udp::endpoint &local_endpoint, const boost::asio::ip::address_v4 &multicast_ip)
+void multicast_receiver(boost::asio::io_service io_service, const boost::asio::ip::udp::endpoint &local_endpoint, const boost::asio::ip::address_v4 &multicast_ip)
 {
   LOGGER(info) << "multicast receiver thread started";
 
@@ -267,12 +259,10 @@ void generator(const size_t max_packets, const size_t requested_packet_size, con
     memset(&buf, 0, sizeof(buf));
     buf.seq_lo = i % 65536;
     buf.seq_hi = i >> 16;
-    //buf.bytes_used = packet_size;
+
     // wait for room in the tx queue
     while(!tx_queue.write_available()) {}
 
-    // cycle count when pushed
-    //buf.ts[0] = read_cycle_counter();
     tx_queue.push(buf);
     if(packet_wait_us > 0)
       std::this_thread::sleep_for(std::chrono::microseconds(packet_wait_us));
@@ -287,7 +277,7 @@ void generator(const size_t max_packets, const size_t requested_packet_size, con
   LOGGER(info) << "generator thread finished";
 }
 
-void sender(const boost::asio::ip::udp::endpoint &local_endpoint,
+void sender(boost::asio::io_service io_service,  const boost::asio::ip::udp::endpoint &local_endpoint,
       const boost::asio::ip::udp::endpoint &destination_endpoint,
       const bool broadcast)
 {
@@ -296,7 +286,6 @@ void sender(const boost::asio::ip::udp::endpoint &local_endpoint,
   //if(set_current_thread_priority_realtime(10))
   //  LOGGER(error) << "unable to set realtime thread priority";
 
-  boost::asio::io_service io_service;
   udp_tx server(io_service, local_endpoint, destination_endpoint, broadcast);
   io_service.run();
   LOGGER(info) << "sender thread finished";
