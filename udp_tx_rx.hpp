@@ -101,6 +101,7 @@ class udp_rx {
     data_buffer_element recv_buffer;
 
     void start_receive() {
+      // FIXME: need to add timeout if no packets are coming in
       while(!rx_stop_flag) {
         size_t bytes_received = socket.receive_from(boost::asio::buffer(&recv_buffer, sizeof(recv_buffer)), remote);
         if(recv_buffer.id == RX_DATA_ID and bytes_received == sizeof(data_buffer_element))
@@ -324,8 +325,10 @@ void generator(const size_t max_packets, const size_t requested_packet_size, con
   std::chrono::duration<double> dt = t1 - t0;
   LOGGER(info) << max_packets << " packets (" << (max_packets * packet_size) << " bytes) sent in " << dt.count() << " seconds";
 
-  if(!tx_stop_flag)
+  if(!tx_stop_flag) {
     set_tx_stop_flag();
+    set_rx_stop_flag();
+  }
   LOGGER(info) << "generator thread finished";
 }
 
