@@ -66,19 +66,11 @@ class udp_rx {
     buffer_element recv_buffer;
 
     void start_receive() {
-      auto hdlr = boost::bind(&udp_rx::handle_receive, this, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred);
-      socket.async_receive_from(boost::asio::buffer(&recv_buffer, sizeof(recv_buffer)), remote, hdlr);
-    }
-    void handle_receive(const boost::system::error_code& error, std::size_t bytes_transferred) {
-      static size_t packets = 0;
-      if (!error) {
-        packets++;
+      while(!rx_stop_flag) {
+        size_t bytes_received = socket.receive_from(boost::asio::buffer(&recv_buffer, sizeof(recv_buffer)), remote);
+        // FIXME:
         rx_queue.push(recv_buffer);
       }
-      else
-        LOGGER(error) << "async receive error: " << error.message();
-      if(!rx_stop_flag)
-        start_receive();
     }
 };
 
@@ -101,20 +93,15 @@ class udp_tx {
 
     void start_send() {
       LOGGER(info) << "send started";
-      auto hdlr = boost::bind(&udp_tx::handle_send, this, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred);
       while(!tx_stop_flag) {
         if(tx_queue.read_available()) {
           size_t n_popped = tx_queue.pop(&send_buffer_.front(), send_buffer_.size());
           for(size_t i = 0; i < n_popped; i++) {
-            socket.async_send_to(boost::asio::buffer(&send_buffer_[i], sizeof(buffer_element)), destination, hdlr);
+            size_t bytes_sent = socket.send_to(boost::asio::buffer(&send_buffer_[i], sizeof(tx_buffer_element)), destination);
+            if(bytes_sent != sizeof(tx_buffer_element))
+              send_errors_++;
           }
         }
-      }
-    }
-    void handle_send(const boost::system::error_code& error, std::size_t bytes_transferred) {
-      if (error) {
-        send_errors_++;
-        LOGGER(error) << "async send error: " << error.message();
       }
     }
 };

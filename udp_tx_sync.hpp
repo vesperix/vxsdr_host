@@ -63,7 +63,7 @@ class udp_tx {
           for(size_t i = 0; i < n_popped; i++) {
             size_t bytes_sent = socket.send_to(boost::asio::buffer(&send_buffer_[i], sizeof(tx_buffer_element)), destination);
             if(bytes_sent != sizeof(tx_buffer_element))
-              send_errors++;
+              send_errors_++;
           }
         }
       }
