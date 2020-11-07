@@ -33,7 +33,7 @@ all: $(PROGS) Makefile
 host_tx: host_tx.cpp udp_tx_sync.hpp
 	$(CXX) $(CXX_FLAGS) -o $@ $< $(CXX_LDFLAGS)
 
-host_tx_throttle: host_tx.cpp udp_tx_rx.hpp
+host_tx_throttle: host_tx_throttle.cpp udp_tx_rx.hpp
 	$(CXX) $(CXX_FLAGS) -o $@ $< $(CXX_LDFLAGS)
 
 host_rx: host_rx.cpp udp_rx_sync.hpp

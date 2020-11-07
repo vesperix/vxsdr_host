@@ -31,7 +31,7 @@ static const int    rx_data_queue_clear_sleep_us   = 10000;
 static const unsigned packets_per_network_buffer   =  1024;
 
 static std::atomic<bool> rx_stop_flag, tx_stop_flag;
-static std::atomic<int> radio_buffer_fill_percent;
+static std::atomic<unsigned> radio_buffer_fill_percent;
 
 void set_rx_stop_flag() {
   rx_stop_flag = true;
@@ -103,9 +103,9 @@ class udp_rx {
     void start_receive() {
       while(!rx_stop_flag) {
         size_t bytes_received = socket.receive_from(boost::asio::buffer(&recv_buffer, sizeof(recv_buffer)), remote);
-        if(recv_buffer.id == RX_DATA_ID)
+        if(recv_buffer.id == RX_DATA_ID and bytes_received == sizeof(data_buffer_element))
           rx_data_queue.push(recv_buffer);
-        else if(recv_buffer.id == TX_DATA_ACK_ID) {
+        else if(recv_buffer.id == TX_DATA_ACK_ID and bytes_received == sizeof(ack_buffer_element)) {
           ack_buffer_element ack;
           memcpy(&ack, &recv_buffer, sizeof(ack));
           radio_buffer_fill_percent = (100 * ack.dac_ddr_used) / ack.dac_ddr_size;
@@ -251,7 +251,7 @@ void sequence_checker(const size_t max_packets, const size_t packet_size) {
   LOGGER(info) << "sequence checker thread finished";
 }
 
-void receiver(boost::asio::io_service io_service, const boost::asio::ip::udp::endpoint &local_endpoint)
+void receiver(boost::asio::io_service &io_service, const boost::asio::ip::udp::endpoint &local_endpoint)
 {
   LOGGER(info) << "receiver thread started";
 
@@ -266,7 +266,7 @@ void receiver(boost::asio::io_service io_service, const boost::asio::ip::udp::en
   LOGGER(info) << "receiver thread finished";
 }
 
-void multicast_receiver(boost::asio::io_service io_service, const boost::asio::ip::udp::endpoint &local_endpoint, const boost::asio::ip::address_v4 &multicast_ip)
+void multicast_receiver(boost::asio::io_service &io_service, const boost::asio::ip::udp::endpoint &local_endpoint, const boost::asio::ip::address_v4 &multicast_ip)
 {
   LOGGER(info) << "multicast receiver thread started";
 
@@ -276,7 +276,6 @@ void multicast_receiver(boost::asio::io_service io_service, const boost::asio::i
   if(set_current_thread_affinity(0))
     LOGGER(error) << "unable to set thread CPU affinity";
 
-  boost::asio::io_service io_service;
   udp_rx server(io_service, local_endpoint, multicast_ip);
   io_service.run();
   LOGGER(info) << "multicast receiver thread finished";
@@ -330,7 +329,7 @@ void generator(const size_t max_packets, const size_t requested_packet_size, con
   LOGGER(info) << "generator thread finished";
 }
 
-void sender(boost::asio::io_service io_service,  const boost::asio::ip::udp::endpoint &local_endpoint,
+void sender(boost::asio::io_service &io_service, const boost::asio::ip::udp::endpoint &local_endpoint,
       const boost::asio::ip::udp::endpoint &destination_endpoint,
       const bool broadcast)
 {
