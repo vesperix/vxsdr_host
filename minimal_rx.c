@@ -183,8 +183,6 @@ int writer(void *args) {
         errors++;
       last_seq = seq;
     }
-    else
-      bytes_written = 0;
   }
   // clean out the queue
   while(!pop(&rx_ring, &b)) {
