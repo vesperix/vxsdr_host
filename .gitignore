@@ -2,6 +2,7 @@
 *.dat
 host_rx
 host_tx
+host_tx_throttle
 minimal_rx
 minimal_tx
 .vscode
