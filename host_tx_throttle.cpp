@@ -92,18 +92,17 @@ int main(int argc, char *argv[])
 
     boost::asio::ip::address_v4 local_ip = boost::asio::ip::address_v4::from_string(vm["local_address"].as<std::string>());
     boost::asio::ip::address_v4 destination_ip = boost::asio::ip::address_v4::from_string(vm["destination_address"].as<std::string>());
-    boost::asio::ip::udp::endpoint local_endpoint(local_ip, 0);
-    //boost::asio::ip::udp::endpoint local_endpoint(local_ip, vm["local_port"].as<unsigned>());
-    //LOGGER(info) << "using local IP " << local_endpoint.address().to_string() << " and port " << local_endpoint.port();
-    LOGGER(info) << "using local IP " << local_endpoint.address().to_string();
+    boost::asio::ip::udp::endpoint local_tx_endpoint(local_ip, 0);
+    boost::asio::ip::udp::endpoint local_rx_endpoint(local_ip, vm["local_port"].as<unsigned>());
+    LOGGER(info) << "using local IP " << local_ip.to_string();
     boost::asio::ip::udp::endpoint destination_endpoint(destination_ip, vm["destination_port"].as<unsigned>());
     LOGGER(info) << "using destination IP " << destination_endpoint.address().to_string() << " and port " << destination_endpoint.port();
 
     std::thread generator_thread(std::ref(generator), vm["num_packets"].as<size_t>(), vm["packet_size"].as<size_t>(), vm["wait_us"].as<unsigned>());
 
     boost::asio::io_service io_service;
-    std::thread sender_thread(std::ref(sender), std::ref(io_service), std::cref(local_endpoint), std::cref(destination_endpoint), vm["broadcast"].as<bool>());
-    std::thread receiver_thread(std::ref(receiver), std::ref(io_service), std::cref(local_endpoint));
+    std::thread sender_thread(std::ref(sender), std::ref(io_service), std::cref(local_tx_endpoint), std::cref(destination_endpoint), vm["broadcast"].as<bool>());
+    std::thread receiver_thread(std::ref(receiver), std::ref(io_service), std::cref(local_rx_endpoint));
     generator_thread.join();
     sender_thread.join();
     receiver_thread.join();
