@@ -10,7 +10,7 @@ extern "C" {
 #include <byteswap.h>
 
 /*
-  NOTE: VITA49 is big endian; any types longer than 1 byte will need syapping on little-endian systems
+  NOTE: VITA49 is big endian; any types longer than 1 byte will need swapping on little-endian systems
 */
 
 #if defined(__BYTE_ORDER) && __BYTE_ORDER == __BIG_ENDIAN || defined(__BIG_ENDIAN__)
