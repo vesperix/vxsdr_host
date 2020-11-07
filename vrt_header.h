@@ -91,7 +91,7 @@ int setup_vesperix_signal_header(vesperix_vrt_header *hdr,
 {
   const size_t header_size_words = sizeof(vesperix_vrt_header) / 4;
   // maximum number of 32-bit words in a VITA49 packet is 65535, including header
-  if(packet_size_cplx_samples > 65535 - header_size_words)
+  if(packet_data_size_cplx_samples > 65535 - header_size_words)
     return 1;
   hdr->preamble.packet_type            = 0; // signal data without stream identifier
   hdr->preamble.class_present          = 0; // no class data included

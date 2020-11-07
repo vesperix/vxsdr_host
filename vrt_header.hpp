@@ -12,7 +12,7 @@
   (i.e. for any elements bigger than a byte)
 */
 
-
+#if defined(__GNUC__)  // g++ or clang or intel define this
 typedef struct __attribute__((packed)) {
   uint8_t         packet_type            :  4;
   /* allowed values:
@@ -66,6 +66,19 @@ typedef struct __attribute__((packed)) {
   big_uint16_t    packet_size_words      : 16;
   /* the total number of 32-bit words in the packet, including the header */
 } vrt_packet_preamble;
+#else if defined(_MSC_VER) // msvc defines this (and so does clang???)
+#pragma pack(push, 1)
+typedef struct {
+  uint8_t         packet_type            :  4;
+  uint8_t         class_present          :  1;
+  uint8_t         indicators             :  3;
+  uint8_t         integer_time_format    :  2;
+  uint8_t         fractional_time_format :  2;
+  uint8_t         packet_count           :  4;
+  big_uint16_t    packet_size_words      : 16;
+} vrt_packet_preamble;
+#pragma pack(pop)
+#endif
 
 typedef struct {
   vrt_packet_preamble   preamble;
@@ -73,7 +86,7 @@ typedef struct {
   big_uint64_t          fractional_timestamp;
 } vesperix_vrt_header;
 
-int setup_vesperix_signal_header(vesperix_vrt_header *hdr,
+int setup_vesperix_signal_header(vesperix_vrt_header &hdr,
                                 const size_t packet_count,
                                 const size_t packet_data_size_cplx_samples,
                                 const uint32_t integer_time,
@@ -81,24 +94,20 @@ int setup_vesperix_signal_header(vesperix_vrt_header *hdr,
 {
   const size_t header_size_words = sizeof(vesperix_vrt_header) / 4;
   // maximum number of 32-bit words in a VITA49 packet is 65535, including header
-  if(packet_size_cplx_samples > 65535 - header_size_words)
+  if(packet_data_size_cplx_samples > 65535 - header_size_words)
     return 1;
-  hdr->preamble.packet_type            = 0; // signal data without stream identifier
-  hdr->preamble.class_present          = 0; // no class data included
-  hdr->preamble.indicators             = 0; // no trailer, is VITA 49.0 compliant, not spectral data
-  hdr->preamble.integer_time_format    = 3; // other (not GPS or UTC) time
-  hdr->preamble.fractional_time_format = 2; // picoseconds
-  hdr->preamble.packet_count           = packet_count % 16;
+  hdr.preamble.packet_type            = 0; // signal data without stream identifier
+  hdr.preamble.class_present          = 0; // no class data included
+  hdr.preamble.indicators             = 0; // no trailer, is VITA 49.0 compliant, not spectral data
+  hdr.preamble.integer_time_format    = 3; // other (not GPS or UTC) time
+  hdr.preamble.fractional_time_format = 2; // picoseconds
+  hdr.preamble.packet_count           = packet_count % 16;
   // note that 1 complex sample (16-bit I & Q samples) occupies 1 32-bit word,
   // so the number of data words is the same as the number of complex samples
-  hdr->preamble.packet_size_words      = packet_data_size_cplx_samples + header_size_words;
-  hdr->integer_timestamp               = integer_time;
-  hdr->fractional_timestamp            = fractional_time;
+  hdr.preamble.packet_size_words      = packet_data_size_cplx_samples + header_size_words;
+  hdr.integer_timestamp               = integer_time;
+  hdr.fractional_timestamp            = fractional_time;
   return 0;
 }
 
-#ifdef __cplusplus
-}
-#endif
-
-#endif /* VRT_HEADER_H */
+#endif /* VRT_HEADER_HPP */
