@@ -10,9 +10,9 @@
 #define SINGLE_CHANNEL
 
 // packet type ids
-static constexpr uint16_t TX_SIGNAL_ID             = 0xDACD;
-static constexpr uint16_t RX_SIGNAL_ID             = 0xADCD;
-static constexpr uint16_t TX_ACK_ID                = 0xDACA;
+static constexpr uint16_t TX_DATA_ID               = 0xDACD;
+static constexpr uint16_t RX_DATA_ID               = 0xADCD;
+static constexpr uint16_t TX_DATA_ACK_ID           = 0xDACA;
 
 // parameters of the internal ring buffers
 static const size_t msg_buffer_max_bytes           =    256;    // size of largest command/status message packet

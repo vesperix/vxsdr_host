@@ -92,7 +92,7 @@ void generator(const size_t max_packets, const size_t requested_packet_size, con
   auto t0 = std::chrono::steady_clock::now();
 
   double a = 800;
-  double f = 800. / 2048.0; 
+  double f = 200. / 2048.0; 
 
   memset(&buf, 0, sizeof(buf));
   buf.data_id = 0xDACD;
