@@ -30,7 +30,7 @@ all: $(PROGS) Makefile
 
 .PHONY: all
 
-host_tx: host_tx.cpp udp_tx_sync.hpp
+host_tx: host_tx.cpp udp_tx.hpp
 	$(CXX) $(CXX_FLAGS) -o $@ $< $(CXX_LDFLAGS)
 
 host_tx_throttle: host_tx_throttle.cpp udp_tx_rx.hpp
