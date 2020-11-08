@@ -91,8 +91,15 @@ void generator(const size_t max_packets, const size_t requested_packet_size, con
 
   auto t0 = std::chrono::steady_clock::now();
 
+  double a = 800;
+  double f = 800. / 2048.0; 
+
+  memset(&buf, 0, sizeof(buf));
+  buf.data_id = 0xDACD;
+  for(int i = 0; i < 2048; i++)
+    buf.data[i] = std::round(a * sin(2 * M_PI * f * i));
+
   for(size_t i = 1; i <= max_packets and !tx_stop_flag; i++) {
-    memset(&buf, 0, sizeof(buf));
     buf.seq_lo = i % 65536;
     buf.seq_hi = i >> 16;
     //buf.bytes_used = packet_size;
