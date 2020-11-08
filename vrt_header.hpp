@@ -12,8 +12,12 @@
   (i.e. for any elements bigger than a byte)
 */
 
-#if defined(__GNUC__)  // g++ or clang or intel define this
+#if defined(__GNUC__)  // g++, clang, and intel define this
 typedef struct __attribute__((packed)) {
+#else if defined(_MSC_VER) // msvc defines this (and so does clang???)
+#pragma pack(push, 1)
+typedef struct {
+#endif
   uint8_t         packet_type            :  4;
   /* allowed values:
     0000 (0) - signal data packet without stream identifier
@@ -66,17 +70,7 @@ typedef struct __attribute__((packed)) {
   big_uint16_t    packet_size_words      : 16;
   /* the total number of 32-bit words in the packet, including the header */
 } vrt_packet_preamble;
-#else if defined(_MSC_VER) // msvc defines this (and so does clang???)
-#pragma pack(push, 1)
-typedef struct {
-  uint8_t         packet_type            :  4;
-  uint8_t         class_present          :  1;
-  uint8_t         indicators             :  3;
-  uint8_t         integer_time_format    :  2;
-  uint8_t         fractional_time_format :  2;
-  uint8_t         packet_count           :  4;
-  big_uint16_t    packet_size_words      : 16;
-} vrt_packet_preamble;
+#if defined(_MSC_VER)
 #pragma pack(pop)
 #endif
 
