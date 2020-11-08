@@ -7,10 +7,52 @@
 #include <boost/static_assert.hpp>
 
 /*
-  NOTE: VITA49 is big endian; any types longer than 1 byte will need swapping on little-endian systems
-  The struct below uses boost endian types to transparently convert to big endian where needed
-  (i.e. for any elements bigger than a byte)
+  NOTE: VITA49 is big endian; any types longer than 1 byte will need swapping
+  on little-endian systems. The struct below uses boost endian types to
+  transparently convert to big endian where needed (i.e. for any elements bigger
+  than a byte)
 */
+
+// Constants used in VITA49 packets
+namespace VITA49 {
+  namespace PACKET_TYPE {
+    constexpr unsigned SIGNAL_PKT_WITHOUT_STREAM_ID      = 0;
+    constexpr unsigned SIGNAL_PKT_WITH_STREAM_ID         = 1;
+    constexpr unsigned EXTENSION_PKT_WITHOUT_STREAM_ID   = 2;
+    constexpr unsigned EXTENSION_PKT_WITH_STREAM_ID      = 3;
+    constexpr unsigned CONTEXT_PKT                       = 4;
+    constexpr unsigned EXTENSION_CONTEXT_PKT             = 5;
+    constexpr unsigned COMMAND_PKT                       = 6;
+    constexpr unsigned EXTENSION_COMMAND_PKT             = 7;
+  };
+  namespace INDICATORS {
+    namespace SIGNAL {
+      constexpr unsigned TRAILER_PRESENT                 = 4;
+      constexpr unsigned NOT_VITA_49_0                   = 2;
+      constexpr unsigned SPECTRAL_DATA                   = 1;
+    };
+    namespace CONTEXT {
+      constexpr unsigned NOT_VITA_49_0                   = 2;
+      constexpr unsigned TIMESTAMP_APPROXIMATE           = 1;
+    };
+    namespace CONTROL {
+      constexpr unsigned REQUEST_ACK                     = 4;
+      constexpr unsigned CANCELLATION                    = 1;
+    };
+  };
+  namespace INTEGER_TIME_FMT {
+    constexpr unsigned NOT_PRESENT                       = 0;
+    constexpr unsigned GPS_TIME                          = 1;
+    constexpr unsigned UTC_TIME                          = 2;
+    constexpr unsigned OTHER_TIME                        = 3;
+  };
+  namespace FRACTIONAL_TIME_FMT {
+    constexpr unsigned NOT_PRESENT                       = 0;
+    constexpr unsigned SAMPLE_COUNT                      = 1;
+    constexpr unsigned PICOSECONDS                       = 2;
+    constexpr unsigned FREE_RUNNING                      = 3;
+  };
+};
 
 #if defined(__GNUC__)  // g++, clang, and intel define this
 typedef struct __attribute__((packed)) {
@@ -90,11 +132,14 @@ int setup_vesperix_signal_header(vesperix_vrt_header &hdr,
   // maximum number of 32-bit words in a VITA49 packet is 65535, including header
   if(packet_data_size_cplx_samples > 65535 - header_size_words)
     return 1;
-  hdr.preamble.packet_type            = 0; // signal data without stream identifier
+  hdr.preamble.packet_type            = VITA49::PACKET_TYPE::SIGNAL_PKT_WITHOUT_STREAM_ID;
   hdr.preamble.class_present          = 0; // no class data included
-  hdr.preamble.indicators             = 0; // no trailer, is VITA 49.0 compliant, not spectral data
-  hdr.preamble.integer_time_format    = 3; // other (not GPS or UTC) time
-  hdr.preamble.fractional_time_format = 2; // picoseconds
+  hdr.preamble.indicators             = 0; // 3 bits:
+                                           //   0 - no trailer,
+                                           //   0 - VITA 49.0 compliant,
+                                           //   0 - time series, not spectral data
+  hdr.preamble.integer_time_format    = VITA49::INTEGER_TIME_FMT::OTHER_TIME;
+  hdr.preamble.fractional_time_format = VITA49::FRACTIONAL_TIME_FMT::FREE_RUNNING;
   hdr.preamble.packet_count           = packet_count % 16;
   // note that 1 complex sample (16-bit I & Q samples) occupies 1 32-bit word,
   // so the number of data words is the same as the number of complex samples
