@@ -78,16 +78,16 @@ static boost::lockfree::spsc_queue<msg_buffer_element, boost::lockfree::capacity
 
 class udp_rx {
   public:
-    udp_rx(boost::asio::io_service &io_service, const boost::asio::ip::udp::endpoint &local_endpoint)
-      : socket(io_service, local_endpoint) {
+    udp_rx(boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint)
+      : socket(io_context, local_endpoint) {
       socket.set_option(boost::asio::ip::udp::socket::reuse_address(true));
       socket.set_option(boost::asio::socket_base::receive_buffer_size(packets_per_network_buffer * data_buffer_max_bytes));
       if(!rx_stop_flag)
         start_receive();
     }
-    udp_rx(boost::asio::io_service &io_service, const boost::asio::ip::udp::endpoint &local_endpoint,
+    udp_rx(boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint,
                const boost::asio::ip::address_v4 &multicast_ip)
-      : socket(io_service, local_endpoint.protocol()) {
+      : socket(io_context, local_endpoint.protocol()) {
       socket.set_option(boost::asio::ip::udp::socket::reuse_address(true));
       socket.bind(local_endpoint);
       socket.set_option(boost::asio::ip::multicast::join_group(multicast_ip));
@@ -117,9 +117,9 @@ class udp_rx {
 
 class udp_tx {
   public:
-    udp_tx(boost::asio::io_service &io_service, const boost::asio::ip::udp::endpoint &local_endpoint,
+    udp_tx(boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint,
       const boost::asio::ip::udp::endpoint &destination_endpoint,
-      const bool broadcast) : socket(io_service, local_endpoint) {
+      const bool broadcast) : socket(io_context, local_endpoint) {
       destination = destination_endpoint;
       socket.set_option(boost::asio::socket_base::broadcast(broadcast));
       socket.set_option(boost::asio::socket_base::send_buffer_size(packets_per_network_buffer * data_buffer_max_bytes));
@@ -252,7 +252,7 @@ void sequence_checker(const size_t max_packets, const size_t packet_size) {
   LOGGER(info) << "sequence checker thread finished";
 }
 
-void receiver(boost::asio::io_service &io_service, const boost::asio::ip::udp::endpoint &local_endpoint)
+void receiver(boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint)
 {
   LOGGER(info) << "receiver thread started";
 
@@ -262,12 +262,12 @@ void receiver(boost::asio::io_service &io_service, const boost::asio::ip::udp::e
   if(set_current_thread_affinity(0))
     LOGGER(error) << "unable to set thread CPU affinity";
 
-  udp_rx server(io_service, local_endpoint);
-  io_service.run();
+  udp_rx server(io_context, local_endpoint);
+  io_context.run();
   LOGGER(info) << "receiver thread finished";
 }
 
-void multicast_receiver(boost::asio::io_service &io_service, const boost::asio::ip::udp::endpoint &local_endpoint, const boost::asio::ip::address_v4 &multicast_ip)
+void multicast_receiver(boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint, const boost::asio::ip::address_v4 &multicast_ip)
 {
   LOGGER(info) << "multicast receiver thread started";
 
@@ -277,8 +277,8 @@ void multicast_receiver(boost::asio::io_service &io_service, const boost::asio::
   if(set_current_thread_affinity(0))
     LOGGER(error) << "unable to set thread CPU affinity";
 
-  udp_rx server(io_service, local_endpoint, multicast_ip);
-  io_service.run();
+  udp_rx server(io_context, local_endpoint, multicast_ip);
+  io_context.run();
   LOGGER(info) << "multicast receiver thread finished";
 }
 
@@ -332,7 +332,7 @@ void generator(const size_t max_packets, const size_t requested_packet_size, con
   LOGGER(info) << "generator thread finished";
 }
 
-void sender(boost::asio::io_service &io_service, const boost::asio::ip::udp::endpoint &local_endpoint,
+void sender(boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint,
       const boost::asio::ip::udp::endpoint &destination_endpoint,
       const bool broadcast)
 {
@@ -341,7 +341,7 @@ void sender(boost::asio::io_service &io_service, const boost::asio::ip::udp::end
   //if(set_current_thread_priority_realtime(10))
   //  LOGGER(error) << "unable to set realtime thread priority";
 
-  udp_tx server(io_service, local_endpoint, destination_endpoint, broadcast);
-  io_service.run();
+  udp_tx server(io_context, local_endpoint, destination_endpoint, broadcast);
+  io_context.run();
   LOGGER(info) << "sender thread finished";
 }

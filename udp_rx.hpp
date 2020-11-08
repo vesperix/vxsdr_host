@@ -44,15 +44,15 @@ static boost::lockfree::spsc_queue<rx_buffer_element, boost::lockfree::capacity<
 
 class udp_rx {
   public:
-    udp_rx(boost::asio::io_service &io_service, const boost::asio::ip::udp::endpoint &local_endpoint)
-      : socket(io_service, local_endpoint) {
+    udp_rx(boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint)
+      : socket(io_context, local_endpoint) {
       socket.set_option(boost::asio::socket_base::receive_buffer_size(packets_per_network_buffer * rx_buffer_max_bytes));
       if(!rx_stop_flag)
         start_receive();
     }
-    udp_rx(boost::asio::io_service &io_service, const boost::asio::ip::udp::endpoint &local_endpoint,
+    udp_rx(boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint,
                const boost::asio::ip::address_v4 &multicast_ip)
-      : socket(io_service, local_endpoint.protocol()) {
+      : socket(io_context, local_endpoint.protocol()) {
       socket.set_option(boost::asio::ip::udp::socket::reuse_address(true));
       socket.bind(local_endpoint);
       socket.set_option(boost::asio::ip::multicast::join_group(multicast_ip));
@@ -277,9 +277,9 @@ void receiver(const boost::asio::ip::udp::endpoint &local_endpoint)
   if(set_current_thread_affinity(0))
     LOGGER(error) << "unable to set thread CPU affinity";
 
-  boost::asio::io_service io_service;
-  udp_rx server(io_service, local_endpoint);
-  io_service.run();
+  boost::asio::io_context io_context;
+  udp_rx server(io_context, local_endpoint);
+  io_context.run();
   LOGGER(info) << "receiver thread finished";
 }
 
@@ -293,8 +293,8 @@ void multicast_receiver(const boost::asio::ip::udp::endpoint &local_endpoint, co
   if(set_current_thread_affinity(0))
     LOGGER(error) << "unable to set thread CPU affinity";
 
-  boost::asio::io_service io_service;
-  udp_rx server(io_service, local_endpoint, multicast_ip);
-  io_service.run();
+  boost::asio::io_context io_context;
+  udp_rx server(io_context, local_endpoint, multicast_ip);
+  io_context.run();
   LOGGER(info) << "multicast receiver thread finished";
 }

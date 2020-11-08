@@ -40,9 +40,9 @@ static boost::lockfree::spsc_queue<tx_buffer_element, boost::lockfree::capacity<
 
 class udp_tx {
   public:
-    udp_tx(boost::asio::io_service &io_service, const boost::asio::ip::udp::endpoint &local_endpoint,
+    udp_tx(boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint,
       const boost::asio::ip::udp::endpoint &destination_endpoint,
-      const bool broadcast) : socket(io_service, local_endpoint) {
+      const bool broadcast) : socket(io_context, local_endpoint) {
       destination = destination_endpoint;
       socket.set_option(boost::asio::socket_base::broadcast(broadcast));
       socket.set_option(boost::asio::socket_base::send_buffer_size(packets_per_network_buffer * tx_buffer_max_bytes));
@@ -115,8 +115,8 @@ void sender(const boost::asio::ip::udp::endpoint &local_endpoint,
   //if(set_current_thread_priority_realtime(10))
   //  LOGGER(error) << "unable to set realtime thread priority";
 
-  boost::asio::io_service io_service;
-  udp_tx server(io_service, local_endpoint, destination_endpoint, broadcast);
-  io_service.run();
+  boost::asio::io_context io_context;
+  udp_tx server(io_context, local_endpoint, destination_endpoint, broadcast);
+  io_context.run();
   LOGGER(info) << "sender thread finished";
 }
