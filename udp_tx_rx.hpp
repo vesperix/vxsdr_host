@@ -10,25 +10,25 @@
 #define SINGLE_CHANNEL
 
 // packet type ids
-static const int TX_DATA_ID                      = 0xDACD;
-static const int RX_DATA_ID                      = 0xADCD;
-static const int TX_DATA_ACK_ID                  = 0xDACA;
+static constexpr uint16_t TX_SIGNAL_ID             = 0xDACD;
+static constexpr uint16_t RX_SIGNAL_ID             = 0xADCD;
+static constexpr uint16_t TX_ACK_ID                = 0xDACA;
 
 // parameters of the internal ring buffers
-static const size_t msg_buffer_max_bytes           =   256;    // size of largest command/status message packet
-static const size_t data_buffer_max_bytes          =  4104;    // size of largest data packet
-static const size_t rx_data_queue_length           = 65536;    // slots in rx data queue
-static const size_t tx_data_queue_length           =  1024;    // slots in tx data queue
-static const size_t rx_msg_queue_length            =   256;    // slots in rx msg queue
-static const size_t tx_msg_queue_length            =   256;    // slots in tx msg queue
+static const size_t msg_buffer_max_bytes           =    256;    // size of largest command/status message packet
+static const size_t data_buffer_max_bytes          =   4104;    // size of largest data packet
+static const size_t rx_data_queue_length           =  65536;    // slots in rx data queue
+static const size_t tx_data_queue_length           =   1024;    // slots in tx data queue
+static const size_t rx_msg_queue_length            =    256;    // slots in rx msg queue
+static const size_t tx_msg_queue_length            =    256;    // slots in tx msg queue
 
 // parameters of the writer thread's buffers
-static const size_t rx_write_buffer_size           =    16;     // rx_buffers
-static const int    rx_write_thread_sleep_us       =   100;
-static const int    rx_data_queue_clear_sleep_us   = 10000;
+static const size_t rx_write_buffer_size           =     16;     // rx_buffers
+static const int    rx_write_thread_sleep_us       =    100;
+static const int    rx_data_queue_clear_sleep_us   =  10000;
 
 // parameters used to set the OS's network buffer
-static const unsigned packets_per_network_buffer   =  1024;
+static const unsigned packets_per_network_buffer   =   1024;
 
 static std::atomic<bool> rx_stop_flag, tx_stop_flag;
 static std::atomic<unsigned> radio_buffer_fill_percent;
