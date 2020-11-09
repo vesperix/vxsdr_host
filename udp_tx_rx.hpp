@@ -99,7 +99,7 @@ class udp_rx {
     boost::asio::ip::udp::socket socket;
     boost::asio::ip::udp::endpoint remote;
     data_buffer_element recv_buffer;
-
+    ack_buffer_element ack_buffer;
     void start_receive() {
       // FIXME: need to add timeout if no packets are coming in
       while(!rx_stop_flag) {
@@ -107,9 +107,8 @@ class udp_rx {
         if(recv_buffer.id == RX_DATA_ID and bytes_received == sizeof(data_buffer_element))
           rx_data_queue.push(recv_buffer);
         else if(recv_buffer.id == TX_DATA_ACK_ID and bytes_received == sizeof(ack_buffer_element)) {
-          ack_buffer_element ack;
-          memcpy(&ack, &recv_buffer, sizeof(ack));
-          radio_buffer_fill_percent = (100 * ack.dac_ddr_used) / ack.dac_ddr_size;
+          memcpy(&ack_buffer, &recv_buffer, sizeof(ack_buffer));
+          radio_buffer_fill_percent = (100 * ack_buffer.dac_ddr_used) / ack_buffer.dac_ddr_size;
         }
       }
     }
@@ -295,7 +294,7 @@ void generator(const size_t max_packets, const size_t requested_packet_size, con
   memset(&buf, 0, sizeof(buf));
   buf.id = TX_DATA_ID;
   constexpr double a = 800;
-  constexpr int ncycles = 80;  // must be a whole number of cycles in bufer to avoid jumps on repeat
+  constexpr int ncycles = 200;  // must be a whole number of cycles in bufer to avoid jumps on repeat
   constexpr double w = (2 * M_PI * ncycles) / buf.data.size(); 
 
   for(unsigned i = 0; i < buf.data.size(); i++) {

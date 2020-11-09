@@ -26,6 +26,7 @@ void define_options(boost::program_options::options_description &desc)
     ("local_address,A", boost::program_options::value<std::string>()->default_value(""), "IPv4 address of local interface")
     ("local_port,L", boost::program_options::value<unsigned>()->default_value(1030), "port to use on local interface")
     ("destination_address,D", boost::program_options::value<std::string>()->default_value(""), "IPv4 address of destination (including broadcast/multicast)")
+    ("netmask,M", boost::program_options::value<std::string>()->default_value("255.255.255.0"), "IPv4 netmask of local interface")
     ("broadcast,B", boost::program_options::bool_switch()->default_value(false), "flag to enable broadcast")
     ("destination_port,P", boost::program_options::value<unsigned>()->default_value(1030), "port to use on destination")
     ("packet_size,S", boost::program_options::value<size_t>()->default_value(1024), "packet size in bytes")
@@ -92,8 +93,10 @@ int main(int argc, char *argv[])
 
     boost::asio::ip::address_v4 local_ip = boost::asio::ip::address_v4::from_string(vm["local_address"].as<std::string>());
     boost::asio::ip::address_v4 destination_ip = boost::asio::ip::address_v4::from_string(vm["destination_address"].as<std::string>());
+    boost::asio::ip::address_v4 netmask = boost::asio::ip::address_v4::from_string(vm["netmask"].as<std::string>());
+    boost::asio::ip::address_v4 broadcast_ip = boost::asio::ip::address_v4::broadcast(local_ip, netmask);
     boost::asio::ip::udp::endpoint local_tx_endpoint(local_ip, 0);
-    boost::asio::ip::udp::endpoint local_rx_endpoint(local_ip, vm["local_port"].as<unsigned>());
+    boost::asio::ip::udp::endpoint local_rx_endpoint(broadcast_ip, vm["local_port"].as<unsigned>());
     LOGGER(info) << "using local IP " << local_ip.to_string();
     boost::asio::ip::udp::endpoint destination_endpoint(destination_ip, vm["destination_port"].as<unsigned>());
     LOGGER(info) << "using destination IP " << destination_endpoint.address().to_string() << " and port " << destination_endpoint.port();
