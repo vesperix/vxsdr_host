@@ -4,7 +4,7 @@ CC_DEFINES =
 CC_BASEFLAGS = -Wall -pedantic -std=gnu11
 CC_OPTFLAGS = -O3
 CC_DBGFLAGS = -g -Og
-CC_LDFLAGS = -lpthread
+CC_LDFLAGS = -lpthread -lm
 
 CXX = g++
 

@@ -4,6 +4,7 @@
 #include <stdatomic.h>
 #include <unistd.h>
 #include <string.h>
+#include <math.h>
 #include <stdbool.h>
 #include <stdarg.h>
 #include <limits.h>
@@ -16,6 +17,7 @@
 
 // parameters of the internal ring buffer
 #define BUFFER_ELEMENT_SIZE         9000
+#define BUFFER_DATA_SIZE            2048
 #define RING_BUFFER_SIZE            1024
 
 // parameters used to set the OS's network buffer
@@ -32,8 +34,11 @@
                      "   -W <wait_us>\n"
 
 typedef struct {
-  char data[BUFFER_ELEMENT_SIZE];
-  size_t bytes_used;
+  uint16_t seq_lo;
+  uint16_t seq_hi;
+  uint16_t data_id;
+  uint16_t pad;
+  int16_t data[BUFFER_DATA_SIZE];
 } buffer_element;
 
 typedef struct {
@@ -52,13 +57,11 @@ static bool done;
 static ring_buffer tx_ring;
 
 void init_buffer_element(buffer_element *b) {
-  memset(b->data, 0, BUFFER_ELEMENT_SIZE);
-  b->bytes_used = 0;
+  memset(b, 0, sizeof(buffer_element));
 }
 
 inline void copy_buffer_element(buffer_element *copy, buffer_element *orig) {
-  memcpy(copy->data, orig->data, orig->bytes_used);
-  copy->bytes_used = orig->bytes_used;
+  memcpy(copy, orig, sizeof(buffer_element));
 }
 
 void init_ring_buffer(ring_buffer *r) {
@@ -112,13 +115,19 @@ int filler(void *args) {
   static buffer_element b;
 
   init_buffer_element(&b);
-  b.bytes_used = (a->packet_size <= BUFFER_ELEMENT_SIZE ? a->packet_size : BUFFER_ELEMENT_SIZE);
 
-  while(!done) {
-    while(has_space(&tx_ring) && !done) {
-      memset(&b.data, 0, b.bytes_used);
-      unsigned seq = n_pushed % UINT_MAX;
-      memcpy(&b.data, &seq, sizeof(seq));
+  const double amp = 800;
+  const int ncycles = 200;
+  const double w = (2 * M_PI * ncycles) / BUFFER_DATA_SIZE; 
+
+  b.data_id = 0xDACD;
+  for(unsigned i = 0; i < BUFFER_DATA_SIZE; i++)
+    b.data[i] = round(amp * sin(w * i));
+
+  while(n_pushed < a->n_packets && !done) {
+    while(n_pushed < a->n_packets && has_space(&tx_ring) && !done) {
+      b.seq_lo = n_pushed % 65536;
+      b.seq_hi = n_pushed >> 16;
       push(&tx_ring, &b);
       n_pushed++;
     }
@@ -247,10 +256,10 @@ int main(int argc, char *argv[])
   while(!done) {
     while(has_data(&tx_ring) && !done) {
       pop(&tx_ring, &b);
-      ssize_t ns = sendto(tx_sock, b.data, b.bytes_used, 0,
+      ssize_t ns = sendto(tx_sock, &b, sizeof(b), 0,
                       (struct sockaddr *)&destination_addr, sizeof(struct sockaddr_in));
       ntry++;
-      if(ns != b.bytes_used) {
+      if(ns != sizeof(b)) {
         nerr++;
         if(ns < 0) {
           fprintf(stderr, "Send error (%s)\n", strerror(errno));
