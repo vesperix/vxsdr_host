@@ -294,15 +294,16 @@ void generator(const size_t max_packets, const size_t requested_packet_size, con
 
   memset(&buf, 0, sizeof(buf));
   buf.id = TX_DATA_ID;
-  const double a = 800;
-  const int ncycles = 80;  // must be a whole number of cycles in bufer to avoid jumps on repeat
+  constexpr double a = 800;
+  constexpr int ncycles = 80;  // must be a whole number of cycles in bufer to avoid jumps on repeat
+  constexpr double w = (2 * M_PI * ncycles) / buf.data.size(); 
 
   for(unsigned i = 0; i < buf.data.size(); i++) {
 #ifdef SINGLE_CHANNEL
-    buf.data[i] = std::round(a * sin(2 * M_PI * ncycles * i / ((double)buf.data.size())));
+    buf.data[i] = std::round(a * sin(w * i));
 #else
-    buf.data[i].real = std::round(a * cos(2 * M_PI * ncycles * i / ((double)buf.data.size())));
-    buf.data[i].imag = std::round(a * sin(2 * M_PI * ncycles * i / ((double)buf.data.size())));
+    buf.data[i].real = std::round(a * cos(w * i));
+    buf.data[i].imag = std::round(a * sin(w * i));
 #endif
   }
 

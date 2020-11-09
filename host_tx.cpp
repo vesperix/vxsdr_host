@@ -16,7 +16,11 @@
 
 #include "logging.hpp"
 #include "errors.hpp"
+#ifndef SYNC
+#include "udp_tx.hpp"
+#else
 #include "udp_tx_sync.hpp"
+#endif
 
 void define_options(boost::program_options::options_description &desc)
 {

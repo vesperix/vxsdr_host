@@ -24,7 +24,7 @@ else
 	CXX_FLAGS = $(CXX_BASEFLAGS) $(CXX_OPTFLAGS) $(CXX_DEFINES)
 endif
 
-PROGS = host_tx host_rx host_tx_throttle minimal_tx minimal_rx
+PROGS = host_tx host_rx host_tx_sync host_rx_sync host_tx_throttle minimal_tx minimal_rx
 
 all: $(PROGS) Makefile
 
@@ -33,11 +33,17 @@ all: $(PROGS) Makefile
 host_tx: host_tx.cpp udp_tx.hpp
 	$(CXX) $(CXX_FLAGS) -o $@ $< $(CXX_LDFLAGS)
 
+host_tx_sync: host_tx.cpp udp_tx_sync.hpp
+	$(CXX) $(CXX_FLAGS) -DSYNC -o $@ $< $(CXX_LDFLAGS)
+
 host_tx_throttle: host_tx_throttle.cpp udp_tx_rx.hpp
 	$(CXX) $(CXX_FLAGS) -o $@ $< $(CXX_LDFLAGS)
 
-host_rx: host_rx.cpp udp_rx_sync.hpp
+host_rx: host_rx.cpp udp_rx.hpp
 	$(CXX) $(CXX_FLAGS) -o $@ $< $(CXX_LDFLAGS)
+
+host_rx_sync: host_rx.cpp udp_rx_sync.hpp
+	$(CXX) $(CXX_FLAGS) -DSYNC -o $@ $< $(CXX_LDFLAGS)
 
 minimal_tx: minimal_tx.c
 	$(CC) $(CC_FLAGS) -o $@ $< $(CC_LDFLAGS)
