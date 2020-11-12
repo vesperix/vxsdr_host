@@ -22,13 +22,16 @@ static const size_t tx_data_queue_length           =   1024;    // slots in tx d
 static const size_t rx_msg_queue_length            =    256;    // slots in rx msg queue
 static const size_t tx_msg_queue_length            =    256;    // slots in tx msg queue
 
-// parameters of the writer thread's buffers
+// parameters of the writer thread
 static const size_t rx_write_buffer_size           =     16;     // rx_buffers
-static const int    rx_write_thread_sleep_us       =      0;
+static const int    rx_write_thread_sleep_us       =      1;
 static const int    rx_data_queue_clear_sleep_us   =  10000;
 
 // parameters for the send thread
-static const int    tx_send_thread_sleep_us        =      0;
+static const int    tx_send_thread_sleep_us        =      1;
+
+// parameters for the generator thread
+static const int    tx_generator_thread_sleep_us   =      1;
 
 // parameters used to set the OS's network buffer
 static const unsigned packets_per_network_buffer   =   1024;
@@ -171,7 +174,7 @@ void writer(const std::string &outfilename, const size_t max_packets) {
 
   auto t0 = std::chrono::steady_clock::now();
 
-  while(packets < max_packets and !rx_stop_flag) {
+  while(packets < max_packets) {
     if(packets == 0)
       t0 = std::chrono::steady_clock::now();
     while(rx_data_queue.read_available() >= rx_write_buffer_size) {
@@ -192,6 +195,10 @@ void writer(const std::string &outfilename, const size_t max_packets) {
     }
     if(rx_write_thread_sleep_us > 0)
       std::this_thread::sleep_for(std::chrono::microseconds(rx_write_thread_sleep_us));
+    if(tx_stop_flag or rx_stop_flag) {
+      LOGGER(info) << "writer loop exit: " << tx_stop_flag << " " << rx_stop_flag;
+      break;
+    }
   }
 
   outfile.close();
@@ -203,8 +210,8 @@ void writer(const std::string &outfilename, const size_t max_packets) {
   LOGGER(info) << (packets * sizeof(data_buffer_element) / dt.count()) << " bytes/s, " << (8 * packets * sizeof(data_buffer_element) / dt.count()) << " bits/s";
 
   // set stop flag so pushing stops
-  if(!rx_stop_flag)
-    set_rx_stop_flag();
+  set_tx_stop_flag();
+  set_rx_stop_flag();
   std::this_thread::sleep_for(std::chrono::microseconds(rx_data_queue_clear_sleep_us));
   // empty the queue
   while(rx_data_queue.read_available())
@@ -216,6 +223,12 @@ void writer(const std::string &outfilename, const size_t max_packets) {
 void sequence_checker(const size_t max_packets, const size_t packet_size) {
   LOGGER(info) << "sequence checker thread started";
 
+  //if(set_current_thread_priority_realtime(10))
+  //  LOGGER(error) << "unable to set sequence checker thread realtime priority";
+
+  //if(set_current_thread_affinity(1))
+  //  LOGGER(error) << "unable to set sequence checker thread CPU affinity";
+
   const unsigned buffer_max_packets = 256;
   static std::array<data_buffer_element, buffer_max_packets> buffer;
   size_t packets = 0, errors = 0;
@@ -223,7 +236,7 @@ void sequence_checker(const size_t max_packets, const size_t packet_size) {
 
   auto t0 = std::chrono::steady_clock::now();
 
-  while(packets < max_packets and !rx_stop_flag) {
+  while(packets < max_packets) {
     if(packets == 0)
       t0 = std::chrono::steady_clock::now();
     while(rx_data_queue.read_available()) {
@@ -238,6 +251,11 @@ void sequence_checker(const size_t max_packets, const size_t packet_size) {
     }
     if(rx_write_thread_sleep_us > 0)
       std::this_thread::sleep_for(std::chrono::microseconds(rx_write_thread_sleep_us));
+
+    if(tx_stop_flag or rx_stop_flag) {
+      LOGGER(info) << "sequence checker loop exit: " << tx_stop_flag << " " << rx_stop_flag;
+      break;
+    }
   }
 
   auto t1 = std::chrono::steady_clock::now();
@@ -246,8 +264,8 @@ void sequence_checker(const size_t max_packets, const size_t packet_size) {
   LOGGER(info) << (packets * packet_size / dt.count()) << " bytes/s, " << (8 * packets * packet_size / dt.count()) << " bits/s";
 
   // set stop flag so pushing stops
-  if(!rx_stop_flag)
-    set_rx_stop_flag();
+  set_tx_stop_flag();
+  set_rx_stop_flag();
   std::this_thread::sleep_for(std::chrono::microseconds(rx_data_queue_clear_sleep_us));
   // empty the queue
   while(rx_data_queue.read_available())
@@ -260,11 +278,11 @@ void receiver(boost::asio::io_context &io_context, const boost::asio::ip::udp::e
 {
   LOGGER(info) << "receiver thread started";
 
-  if(set_current_thread_priority_realtime(50))
-    LOGGER(error) << "unable to set realtime thread priority";
+  if(set_current_thread_priority_realtime(20))
+    LOGGER(error) << "unable to set receiver thread realtime priority";
 
   if(set_current_thread_affinity(0))
-    LOGGER(error) << "unable to set thread CPU affinity";
+    LOGGER(error) << "unable to set receiver thread CPU affinity";
 
   udp_rx server(io_context, local_endpoint);
   io_context.run();
@@ -275,7 +293,7 @@ void multicast_receiver(boost::asio::io_context &io_context, const boost::asio::
 {
   LOGGER(info) << "multicast receiver thread started";
 
-  if(set_current_thread_priority_realtime(50))
+  if(set_current_thread_priority_realtime(20))
     LOGGER(error) << "unable to set realtime thread priority";
 
   if(set_current_thread_affinity(0))
@@ -287,8 +305,14 @@ void multicast_receiver(boost::asio::io_context &io_context, const boost::asio::
 }
 
 void generator(const size_t max_packets, const size_t requested_packet_size, const unsigned packet_wait_us) {
-  data_buffer_element buf;
+  std::array<data_buffer_element, 17> buf;
   LOGGER(info) << "generator thread started";
+
+  if(set_current_thread_priority_realtime(10))
+    LOGGER(error) << "unable to set generator thread realtime priority";
+
+  if(set_current_thread_affinity(3))
+    LOGGER(error) << "unable to set generator thread CPU affinity";
 
   size_t packet_size = requested_packet_size;
   if(requested_packet_size > data_buffer_max_bytes) {
@@ -296,40 +320,47 @@ void generator(const size_t max_packets, const size_t requested_packet_size, con
     packet_size = data_buffer_max_bytes;
   }
 
-  buf.id = TX_DATA_ID;
-  buf.pad = 0;
-  constexpr double a = 800;
-  constexpr int ncycles = 200;  // must be a whole number of cycles in bufer to avoid jumps on repeat
-  constexpr double w = (2 * M_PI * ncycles) / buf.data.size(); 
+  const double a = 800;
+  const float ncycles = 9117.; // number of cycles in buf.size() buffers; must be integer to avoid skips
+  const double w = (2 * M_PI * ncycles) / (buf.size() * buf[0].data.size()); 
 
-  for(unsigned i = 0; i < buf.data.size(); i++) {
-    buf.data[i].real(std::round(a * cos(w * i)));
-    buf.data[i].imag(std::round(a * sin(w * i)));
+  for(unsigned i = 0; i < buf.size(); i++) {
+    buf[i].id = TX_DATA_ID;
+    buf[i].pad = 0;
+    for(unsigned j = 0; j < buf[i].data.size(); j++) {
+      buf[i].data[j].real(std::round(a * cos(w * (buf[i].data.size() * i + j))));
+      buf[i].data[j].imag(std::round(a * sin(w * (buf[i].data.size() * i + j))));
+    }
   }
 
   auto t0 = std::chrono::steady_clock::now();
 
-  for(size_t i = 1; i <= max_packets and !tx_stop_flag; i++) {
+  for(size_t i = 1; i <= max_packets; i++) {
+    unsigned idx = i % buf.size();
 
-    buf.seq_lo = i % 65536;
-    buf.seq_hi = i >> 16;
+    buf[idx].seq_lo = i % 65536;
+    buf[idx].seq_hi = i >> 16;
 
     // wait for room in the tx queue
     while(!tx_data_queue.write_available()) {}
 
-    tx_data_queue.push(buf);
-    if(packet_wait_us > 0)
-      std::this_thread::sleep_for(std::chrono::microseconds(packet_wait_us));
+    tx_data_queue.push(buf[idx]);
+    if(tx_generator_thread_sleep_us > 0)
+      std::this_thread::sleep_for(std::chrono::microseconds(tx_generator_thread_sleep_us));
+
+    if(tx_stop_flag or rx_stop_flag) {
+      LOGGER(info) << "generator loop exit: " << tx_stop_flag << " " << rx_stop_flag;
+      break;
+    }
   }
 
   auto t1 = std::chrono::steady_clock::now();
   std::chrono::duration<double> dt = t1 - t0;
   LOGGER(info) << max_packets << " packets (" << (max_packets * packet_size) << " bytes) sent in " << dt.count() << " seconds";
 
-  if(!tx_stop_flag) {
-    set_tx_stop_flag();
-    set_rx_stop_flag();
-  }
+  set_tx_stop_flag();
+  set_rx_stop_flag();
+ 
   LOGGER(info) << "generator thread finished";
 }
 
@@ -339,8 +370,11 @@ void sender(boost::asio::io_context &io_context, const boost::asio::ip::udp::end
 {
   LOGGER(info) << "sender thread started";
 
-  //if(set_current_thread_priority_realtime(10))
-  //  LOGGER(error) << "unable to set realtime thread priority";
+  if(set_current_thread_priority_realtime(20))
+    LOGGER(error) << "unable to set sender thread realtime priority";
+
+  if(set_current_thread_affinity(2))
+    LOGGER(error) << "unable to set sender thread CPU affinity";
 
   udp_tx server(io_context, local_endpoint, destination_endpoint, broadcast);
   io_context.run();
