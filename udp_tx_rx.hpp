@@ -24,14 +24,14 @@ static const size_t tx_msg_queue_length            =    256;    // slots in tx m
 
 // parameters of the writer thread
 static const size_t rx_write_buffer_size           =     16;     // rx_buffers
-static const int    rx_write_thread_sleep_us       =      1;
+static const int    rx_write_thread_sleep_us       =      0;
 static const int    rx_data_queue_clear_sleep_us   =  10000;
 
 // parameters for the send thread
 static const int    tx_send_thread_sleep_us        =      1;
 
 // parameters for the generator thread
-static const int    tx_generator_thread_sleep_us   =      1;
+static const int    tx_generator_thread_sleep_us   =      0;
 
 // parameters used to set the OS's network buffer
 static const unsigned packets_per_network_buffer   =   1024;
@@ -308,11 +308,11 @@ void generator(const size_t max_packets, const size_t requested_packet_size, con
   std::array<data_buffer_element, 17> buf;
   LOGGER(info) << "generator thread started";
 
-  if(set_current_thread_priority_realtime(10))
-    LOGGER(error) << "unable to set generator thread realtime priority";
+  //if(set_current_thread_priority_realtime(10))
+  //  LOGGER(error) << "unable to set generator thread realtime priority";
 
-  if(set_current_thread_affinity(3))
-    LOGGER(error) << "unable to set generator thread CPU affinity";
+  //if(set_current_thread_affinity(3))
+  //  LOGGER(error) << "unable to set generator thread CPU affinity";
 
   size_t packet_size = requested_packet_size;
   if(requested_packet_size > data_buffer_max_bytes) {
