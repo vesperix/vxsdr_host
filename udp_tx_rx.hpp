@@ -7,7 +7,7 @@
 #include "cycle_counter.h"
 #include "thread_utils.h"
 
-#define SINGLE_CHANNEL
+//#define SINGLE_CHANNEL
 
 // packet type ids
 static constexpr uint16_t TX_DATA_ID               = 0xDACD;
@@ -291,8 +291,9 @@ void generator(const size_t max_packets, const size_t requested_packet_size, con
     packet_size = data_buffer_max_bytes;
   }
 
-  memset(&buf, 0, sizeof(buf));
+  //memset(&buf, 0, sizeof(buf));
   buf.id = TX_DATA_ID;
+  buf.pad = 0;
   constexpr double a = 800;
   constexpr int ncycles = 200;  // must be a whole number of cycles in bufer to avoid jumps on repeat
   constexpr double w = (2 * M_PI * ncycles) / buf.data.size(); 
@@ -301,8 +302,8 @@ void generator(const size_t max_packets, const size_t requested_packet_size, con
 #ifdef SINGLE_CHANNEL
     buf.data[i] = std::round(a * sin(w * i));
 #else
-    buf.data[i].real = std::round(a * cos(w * i));
-    buf.data[i].imag = std::round(a * sin(w * i));
+    buf.data[i].real(std::round(a * cos(w * i)));
+    buf.data[i].imag(std::round(a * sin(w * i)));
 #endif
   }
 
