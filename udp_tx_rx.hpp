@@ -48,24 +48,21 @@ void set_tx_stop_flag() {
 }
 
 typedef struct {
-  uint16_t seq_lo;
-  uint16_t seq_hi;
+  uint32_t seq;
   uint16_t id;
   uint16_t pad;
   std::array<std::complex<int16_t>, 2048> data;
 } data_buffer_element;
 
 typedef struct {
-  uint16_t seq_lo;
-  uint16_t seq_hi;
+  uint32_t seq;
   uint16_t id;
   uint16_t pad;
   std::array<int16_t, 124> data;
 } msg_buffer_element;
 
 typedef struct {
-  uint16_t seq_lo;
-  uint16_t seq_hi;
+  uint32_t seq;
   uint16_t id;
   uint16_t pad;
   uint32_t dac_ddr_used;
@@ -102,17 +99,38 @@ class udp_rx {
     boost::asio::ip::udp::endpoint remote;
     data_buffer_element recv_buffer;
     ack_buffer_element ack_buffer;
+    size_t data_received = 0, acks_received = 0, buffers_received = 0;
+    size_t seq = 0, last_seq = 0, seq_errors = 0, data_size_errors = 0, ack_size_errors = 0;
+    unsigned percent, min_buffer_percent = 100, max_buffer_percent = 0;
     void start_receive() {
       // FIXME: need to add timeout if no packets are coming in
       while(!rx_stop_flag) {
         size_t bytes_received = socket.receive_from(boost::asio::buffer(&recv_buffer, sizeof(recv_buffer)), remote);
-        if(recv_buffer.id == RX_DATA_ID and bytes_received == sizeof(data_buffer_element))
+        buffers_received++;
+        if(buffers_received > 1 and recv_buffer.seq != last_seq + 1 and last_seq != UINT32_MAX)
+          seq_errors++;
+        last_seq = recv_buffer.seq;
+        if(recv_buffer.id == RX_DATA_ID) {
+          data_received++;
+          if(bytes_received != sizeof(data_buffer_element))
+            data_size_errors++;
           rx_data_queue.push(recv_buffer);
-        else if(recv_buffer.id == TX_DATA_ACK_ID and bytes_received == sizeof(ack_buffer_element)) {
+        }
+        else if(recv_buffer.id == TX_DATA_ACK_ID) {
+          if(bytes_received != sizeof(ack_buffer_element))
+            ack_size_errors++;
           memcpy(&ack_buffer, &recv_buffer, sizeof(ack_buffer));
-          radio_buffer_fill_percent = (100 * ack_buffer.dac_ddr_used) / ack_buffer.dac_ddr_size;
+          unsigned percent = (100 * ack_buffer.dac_ddr_used) / ack_buffer.dac_ddr_size;
+          radio_buffer_fill_percent = percent;
+          min_buffer_percent = std::min(min_buffer_percent, percent);
+          max_buffer_percent = std::max(max_buffer_percent, percent);
+          acks_received++;
         }
       }
+      LOGGER(info) << "start_receive exiting";
+      LOGGER(info) << buffers_received << " buffers received (" << acks_received << " acks, " << data_received << " data)";
+      LOGGER(info) << seq_errors << " sequence errors, " << ack_size_errors << " ack size errors, " << data_size_errors << " data size errors";
+      LOGGER(info) << "min buffer fill = " << min_buffer_percent << ", max buffer_fill = " << max_buffer_percent;
     }
 };
 
@@ -131,7 +149,7 @@ class udp_tx {
     boost::asio::ip::udp::endpoint destination;
     static constexpr size_t tx_buffer_size_ = 256;
     std::array<data_buffer_element, tx_buffer_size_> send_buffer_;
-    unsigned send_errors_ = 0;
+    unsigned send_errors = 0, buffers_sent = 0;
 
     void start_send() {
       LOGGER(info) << "send started";
@@ -146,7 +164,9 @@ class udp_tx {
           for(size_t i = 0; i < n_popped; i++) {
             size_t bytes_sent = socket.send_to(boost::asio::buffer(&send_buffer_[i], sizeof(data_buffer_element)), destination);
             if(bytes_sent != sizeof(data_buffer_element))
-              send_errors_++;
+              send_errors++;
+            else
+              buffers_sent++;
             if(tx_throttle_wait_us > 0)
               std::this_thread::sleep_for(std::chrono::microseconds(tx_throttle_wait_us));
           }
@@ -161,6 +181,7 @@ class udp_tx {
             std::this_thread::sleep_for(std::chrono::microseconds(tx_send_thread_sleep_us));
         }
       }
+      LOGGER(info) << "start_send exiting; " << buffers_sent << " buffers sent, " << send_errors << " send errors";
     }
 };
 
@@ -170,7 +191,6 @@ void writer(const std::string &outfilename, const size_t max_packets) {
   std::array<data_buffer_element, rx_write_buffer_size> buffer;
   std::ofstream outfile(outfilename.c_str(), std::ofstream::binary);
   size_t packets = 0, seq_errors = 0, write_errors = 0;
-  size_t last_seq = 0;
 
   auto t0 = std::chrono::steady_clock::now();
 
@@ -182,11 +202,7 @@ void writer(const std::string &outfilename, const size_t max_packets) {
       if(nwrite > max_packets - packets)
         nwrite = max_packets - packets;
       for(size_t i = 0; i < nwrite; i++) {
-        size_t seq = (((size_t)buffer[i].seq_hi) << 16) + buffer[i].seq_lo;
-        if(packets > 0 and seq != last_seq + 1 and last_seq != UINT32_MAX)
-          seq_errors++;
         packets++;
-        last_seq = seq;
         outfile.write((const char*)&buffer[i].data.front(), buffer[i].data.size());
         if(outfile.bad())
           write_errors++;
@@ -220,8 +236,8 @@ void writer(const std::string &outfilename, const size_t max_packets) {
   LOGGER(info) << "writer thread finished";
 }
 
-void sequence_checker(const size_t max_packets, const size_t packet_size) {
-  LOGGER(info) << "sequence checker thread started";
+void packet_counter(const size_t max_packets, const size_t packet_size) {
+  LOGGER(info) << "packet counter thread started";
 
   //if(set_current_thread_priority_realtime(10))
   //  LOGGER(error) << "unable to set sequence checker thread realtime priority";
@@ -231,8 +247,7 @@ void sequence_checker(const size_t max_packets, const size_t packet_size) {
 
   const unsigned buffer_max_packets = 256;
   static std::array<data_buffer_element, buffer_max_packets> buffer;
-  size_t packets = 0, errors = 0;
-  size_t last_seq = 0;
+  size_t packets = 0;
 
   auto t0 = std::chrono::steady_clock::now();
 
@@ -242,25 +257,20 @@ void sequence_checker(const size_t max_packets, const size_t packet_size) {
     while(rx_data_queue.read_available()) {
       size_t n_popped = rx_data_queue.pop(&buffer.front(), buffer_max_packets);
       for(size_t i = 0; i < n_popped; i++) {
-        size_t seq = (((size_t)buffer[i].seq_hi) << 16) + buffer[i].seq_lo;
-        if(packets > 0 and seq != last_seq + 1 and last_seq != UINT32_MAX)
-          errors++;
         packets++;
-        last_seq = seq;
       }
     }
     if(rx_write_thread_sleep_us > 0)
       std::this_thread::sleep_for(std::chrono::microseconds(rx_write_thread_sleep_us));
 
     if(tx_stop_flag or rx_stop_flag) {
-      LOGGER(info) << "sequence checker loop exit: " << tx_stop_flag << " " << rx_stop_flag;
       break;
     }
   }
 
   auto t1 = std::chrono::steady_clock::now();
   std::chrono::duration<double> dt = t1 - t0;
-  LOGGER(info) << packets << " packets recieved in " << dt.count() << " sec; " << errors << " out of sequence";
+  LOGGER(info) << packets << " packets recieved in " << dt.count() << " sec";
   LOGGER(info) << (packets * packet_size / dt.count()) << " bytes/s, " << (8 * packets * packet_size / dt.count()) << " bits/s";
 
   // set stop flag so pushing stops
@@ -271,7 +281,7 @@ void sequence_checker(const size_t max_packets, const size_t packet_size) {
   while(rx_data_queue.read_available())
     rx_data_queue.pop(&buffer.front(), rx_write_buffer_size);
 
-  LOGGER(info) << "sequence checker thread finished";
+  LOGGER(info) << "packet counter thread finished";
 }
 
 void receiver(boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint)
@@ -338,8 +348,7 @@ void generator(const size_t max_packets, const size_t requested_packet_size, con
   for(size_t i = 1; i <= max_packets; i++) {
     unsigned idx = i % buf.size();
 
-    buf[idx].seq_lo = i % 65536;
-    buf[idx].seq_hi = i >> 16;
+    buf[idx].seq = i;
 
     // wait for room in the tx queue
     while(!tx_data_queue.write_available()) {}
