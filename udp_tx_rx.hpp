@@ -24,8 +24,11 @@ static const size_t tx_msg_queue_length            =    256;    // slots in tx m
 
 // parameters of the writer thread's buffers
 static const size_t rx_write_buffer_size           =     16;     // rx_buffers
-static const int    rx_write_thread_sleep_us       =    100;
+static const int    rx_write_thread_sleep_us       =      0;
 static const int    rx_data_queue_clear_sleep_us   =  10000;
+
+// parameters for the send thread
+static const int    tx_send_thread_sleep_us        =      0;
 
 // parameters used to set the OS's network buffer
 static const unsigned packets_per_network_buffer   =   1024;
@@ -150,6 +153,10 @@ class udp_tx {
           else if (radio_buffer_fill_percent < throttle_stop_percent)
             tx_throttle_wait_us = 0;
         }
+        else {
+          if(tx_send_thread_sleep_us > 0)
+            std::this_thread::sleep_for(std::chrono::microseconds(tx_send_thread_sleep_us));
+        }
       }
     }
 };
@@ -177,13 +184,14 @@ void writer(const std::string &outfilename, const size_t max_packets) {
           seq_errors++;
         packets++;
         last_seq = seq;
-        outfile.write((const char*)&buffer[i].data.front(), sizeof(buffer[i].data));
+        outfile.write((const char*)&buffer[i].data.front(), buffer[i].data.size());
         if(outfile.bad())
           write_errors++;
       }
       packets += nwrite;
     }
-    //std::this_thread::sleep_for(std::chrono::microseconds(rx_write_thread_sleep_us));
+    if(rx_write_thread_sleep_us > 0)
+      std::this_thread::sleep_for(std::chrono::microseconds(rx_write_thread_sleep_us));
   }
 
   outfile.close();
@@ -228,7 +236,8 @@ void sequence_checker(const size_t max_packets, const size_t packet_size) {
         last_seq = seq;
       }
     }
-    //std::this_thread::sleep_for(std::chrono::microseconds(rx_write_thread_sleep_us));
+    if(rx_write_thread_sleep_us > 0)
+      std::this_thread::sleep_for(std::chrono::microseconds(rx_write_thread_sleep_us));
   }
 
   auto t1 = std::chrono::steady_clock::now();
