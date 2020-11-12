@@ -99,7 +99,7 @@ class udp_rx {
     boost::asio::ip::udp::endpoint remote;
     data_buffer_element recv_buffer;
     ack_buffer_element ack_buffer;
-    size_t data_received = 0, acks_received = 0, buffers_received = 0;
+    size_t tx_data_received = 0, rx_data_received = 0, acks_received = 0, buffers_received = 0, unknowns_received = 0;
     size_t seq = 0, last_seq = 0, seq_errors = 0, data_size_errors = 0, ack_size_errors = 0;
     unsigned percent, min_buffer_percent = 100, max_buffer_percent = 0;
     void start_receive() {
@@ -111,12 +111,13 @@ class udp_rx {
           seq_errors++;
         last_seq = recv_buffer.seq;
         if(recv_buffer.id == RX_DATA_ID) {
-          data_received++;
+          rx_data_received++;
           if(bytes_received != sizeof(data_buffer_element))
             data_size_errors++;
           rx_data_queue.push(recv_buffer);
         }
         else if(recv_buffer.id == TX_DATA_ACK_ID) {
+          acks_received++;
           if(bytes_received != sizeof(ack_buffer_element))
             ack_size_errors++;
           memcpy(&ack_buffer, &recv_buffer, sizeof(ack_buffer));
@@ -124,11 +125,14 @@ class udp_rx {
           radio_buffer_fill_percent = percent;
           min_buffer_percent = std::min(min_buffer_percent, percent);
           max_buffer_percent = std::max(max_buffer_percent, percent);
-          acks_received++;
         }
+        else if(recv_buffer.id == TX_DATA_ID)
+          tx_data_received++;
+        else
+          unknowns_received++;
       }
       LOGGER(info) << "start_receive exiting";
-      LOGGER(info) << buffers_received << " buffers received (" << acks_received << " acks, " << data_received << " data)";
+      LOGGER(info) << buffers_received << " buffers received (" << acks_received << " acks, " << rx_data_received << " rx data, " << tx_data_received << " tx data, " << unknowns_received << " unknown)";
       LOGGER(info) << seq_errors << " sequence errors, " << ack_size_errors << " ack size errors, " << data_size_errors << " data size errors";
       LOGGER(info) << "min buffer fill = " << min_buffer_percent << ", max buffer_fill = " << max_buffer_percent;
     }
