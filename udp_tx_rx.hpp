@@ -132,7 +132,11 @@ class udp_rx {
           unknowns_received++;
       }
       LOGGER(info) << "start_receive exiting";
-      LOGGER(info) << buffers_received << " buffers received (" << acks_received << " acks, " << rx_data_received << " rx data, " << tx_data_received << " tx data, " << unknowns_received << " unknown)";
+      LOGGER(info) << buffers_received << " buffers received:";
+      LOGGER(info) << "   " << acks_received << " acks";
+      LOGGER(info) << "   " << rx_data_received << " rx data";
+      LOGGER(info) << "   " << tx_data_received << " tx data";
+      LOGGER(info) << "   " << unknowns_received << " unknown";
       LOGGER(info) << seq_errors << " sequence errors, " << ack_size_errors << " ack size errors, " << data_size_errors << " data size errors";
       LOGGER(info) << "min buffer fill = " << min_buffer_percent << ", max buffer_fill = " << max_buffer_percent;
     }
@@ -158,8 +162,8 @@ class udp_tx {
     void start_send() {
       LOGGER(info) << "send started";
       unsigned tx_throttle_wait_us = 0;
-      constexpr unsigned throttle_start_percent = 75;
-      constexpr unsigned throttle_stop_percent  = 50;
+      constexpr unsigned throttle_start_percent = 90;
+      constexpr unsigned throttle_stop_percent  = 60;
       constexpr unsigned throttle_amount_us =     10;
       radio_buffer_fill_percent = 0;
       while(!tx_stop_flag) {
