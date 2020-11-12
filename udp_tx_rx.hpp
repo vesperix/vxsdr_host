@@ -46,11 +46,7 @@ typedef struct {
   uint16_t seq_hi;
   uint16_t id;
   uint16_t pad;
-#ifdef SINGLE_CHANNEL
-  std::array<int16_t, 2048> data;
-#else
   std::array<std::complex<int16_t>, 2048> data;
-#endif
 } data_buffer_element;
 
 typedef struct {
@@ -291,7 +287,6 @@ void generator(const size_t max_packets, const size_t requested_packet_size, con
     packet_size = data_buffer_max_bytes;
   }
 
-  //memset(&buf, 0, sizeof(buf));
   buf.id = TX_DATA_ID;
   buf.pad = 0;
   constexpr double a = 800;
@@ -299,12 +294,8 @@ void generator(const size_t max_packets, const size_t requested_packet_size, con
   constexpr double w = (2 * M_PI * ncycles) / buf.data.size(); 
 
   for(unsigned i = 0; i < buf.data.size(); i++) {
-#ifdef SINGLE_CHANNEL
-    buf.data[i] = std::round(a * sin(w * i));
-#else
     buf.data[i].real(std::round(a * cos(w * i)));
     buf.data[i].imag(std::round(a * sin(w * i)));
-#endif
   }
 
   auto t0 = std::chrono::steady_clock::now();
