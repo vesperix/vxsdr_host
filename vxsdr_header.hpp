@@ -21,10 +21,14 @@ static constexpr uint8_t FPGA_CMD_ACK       =  15;
 static constexpr uint8_t MCU_CMD_ACK        =  16;
 static constexpr uint8_t TX_RADIO_CMD_ACK   =  17;
 static constexpr uint8_t RX_RADIO_CMD_ACK   =  18;
-static constexpr uint8_t FPGA_ENQ_RSP       =  19;
-static constexpr uint8_t CPU_ENQ_RSP        =  20;
-static constexpr uint8_t TX_RADIO_ENQ_RSP   =  21;
-static constexpr uint8_t RX_RADIO_ENQ_RSP   =  22;
+static constexpr uint8_t FPGA_CMD_ERR       =  19;
+static constexpr uint8_t MCU_CMD_ERR        =  20;
+static constexpr uint8_t TX_RADIO_CMD_ERR   =  21;
+static constexpr uint8_t RX_RADIO_CMD_ERR   =  22;
+static constexpr uint8_t FPGA_ENQ_RSP       =  23;
+static constexpr uint8_t CPU_ENQ_RSP        =  24;
+static constexpr uint8_t TX_RADIO_ENQ_RSP   =  25;
+static constexpr uint8_t RX_RADIO_ENQ_RSP   =  26;
 
 
 static constexpr size_t   DATA_LENGTH = 2048;
@@ -32,9 +36,9 @@ static constexpr size_t   DATA_LENGTH = 2048;
 typedef struct {
   uint8_t                 packet_type;
   uint8_t                 target_subdevice;  // for cases where multiple devices share a connection (e.g. multichannel TX/RX)
-  uint16_t                flags;             //
+  uint16_t                flags;             // some meanings will be fixed (e.g. request ACK), some depend on packet type
   uint32_t                packet_size;       // length of packet including header in bytes
-  uint32_t                sequence_counter;  // need to figure out when this resets (every new TX data stream, power up, ?)
+  uint32_t                sequence_counter;  // need to figure out when this resets (every new data stream, power up, ?)
 } packet_header;
 
 typedef struct {
@@ -45,7 +49,7 @@ typedef struct {
 
 typedef struct {
   packet_header           hdr;
-  std::complex<int16_t>   data[DATA_LENGTH];
+  std::complex<int16_t>   data[(hdr.packet_size - sizeof(packet_header)) / sizeof(std::complex<int16_t>)]; // this won't compile, but indicates how big the data array is
 } data_packet;
 
 #endif /* VXSDR_HEADER_HPP */
