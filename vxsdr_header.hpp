@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <complex>
 
-namespace PACKET_TYPES {}
+namespace PACKET_TYPES {
   // packet types
   static constexpr uint8_t TX_SIGNAL_DATA     =   1;
   static constexpr uint8_t RX_SIGNAL_DATA     =   2;
