@@ -32,7 +32,7 @@ namespace PACKET_TYPES {}
   static constexpr uint8_t RX_RADIO_ENQ_RSP   =  26;
 };
 
-static constexpr size_t   DATA_LENGTH = 2048;
+static constexpr size_t   MAX_DATA_LENGTH = 2048;
 
 typedef struct {
   uint8_t                 packet_type;
@@ -43,9 +43,9 @@ typedef struct {
 } packet_header;
 
 namespace FLAGS {
-  static constexpr uint16_t REQUEST_ACQ       = 0x0001;
-  static constexpr uint16_t TIME_PRESENT      = 0x0002;
-  static constexpr uint16_t STREAM_ID_PRESENT = 0x0004;
+  static constexpr uint16_t REQUEST_ACQ       = 0x0001;  // bit 0
+  static constexpr uint16_t TIME_PRESENT      = 0x0002;  // bit 1
+  static constexpr uint16_t STREAM_ID_PRESENT = 0x0004;  // bit 2
 //     bits 3-7: reserved for additional generally applicable settings
 //     bits 8-15: reserved for settings specific to each packet type
 };
@@ -58,7 +58,7 @@ typedef struct {
 
 typedef struct {
   packet_header           hdr;
-  std::complex<int16_t>   data[(hdr.packet_size - sizeof(packet_header)) / sizeof(std::complex<int16_t>)]; // this won't compile, but indicates how big the data array is
+  std::complex<int16_t>   data[(hdr.packet_size - sizeof(packet_header)) / sizeof(std::complex<int16_t>)]; // FIXME: find proper way to represent variable-mength data in struct
 } data_packet;
 
-#endif /* VXSDR_HEADER_HPP */
+#endif // VXSDR_HEADER_HPP
