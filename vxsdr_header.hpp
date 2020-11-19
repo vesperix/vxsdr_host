@@ -45,7 +45,7 @@ namespace FLAGS {
 //     bits 8-15: reserved for settings specific to each packet type
   namespace RADIO_CMD {
     // bits 8-10 of TX_RADIO_CMD and RX_RADIO_CMD
-    // NOTE that the values below make bit 8 a N_SAMPLES_PRESENT flag
+    // NOTE: the values below make bit 8 a N_SAMPLES_PRESENT flag
     static constexpr uint16_t START_NOW_UNTIL_STOP         = (0u <<  8);  // bits 8-10 = 000
     static constexpr uint16_t START_AT_TIME_UNTIL_STOP     = (1u <<  8);  // bits 8-10 = 001; error if TIME_PRESENT is 0
     static constexpr uint16_t STOP_NOW                     = (3u <<  8);  // bits 8-10 = 011; stops anything going on 
