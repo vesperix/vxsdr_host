@@ -366,7 +366,6 @@ void generator(const size_t max_packets, const size_t requested_packet_size, con
       std::this_thread::sleep_for(std::chrono::microseconds(tx_generator_thread_sleep_us));
 
     if(tx_stop_flag or rx_stop_flag) {
-      LOGGER(info) << "generator loop exit: " << tx_stop_flag << " " << rx_stop_flag;
       break;
     }
   }
