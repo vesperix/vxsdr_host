@@ -162,8 +162,8 @@ class udp_tx {
     void start_send() {
       LOGGER(info) << "send started";
       unsigned tx_throttle_wait_us = 0;
-      constexpr unsigned throttle_start_percent = 90;
-      constexpr unsigned throttle_stop_percent  = 60;
+      constexpr unsigned throttle_start_percent = 75;
+      constexpr unsigned throttle_stop_percent  = 50;
       constexpr unsigned throttle_amount_us =     10;
       radio_buffer_fill_percent = 0;
       while(!tx_stop_flag) {
@@ -189,7 +189,7 @@ class udp_tx {
             std::this_thread::sleep_for(std::chrono::microseconds(tx_send_thread_sleep_us));
         }
       }
-      LOGGER(info) << "start_send exiting; " << buffers_sent << " buffers sent, " << send_errors << " send errors";
+      LOGGER(info) << "send finished: " << send_errors << " packet send errors";
     }
 };
 
@@ -220,7 +220,6 @@ void writer(const std::string &outfilename, const size_t max_packets) {
     if(rx_write_thread_sleep_us > 0)
       std::this_thread::sleep_for(std::chrono::microseconds(rx_write_thread_sleep_us));
     if(tx_stop_flag or rx_stop_flag) {
-      LOGGER(info) << "writer loop exit: " << tx_stop_flag << " " << rx_stop_flag;
       break;
     }
   }
