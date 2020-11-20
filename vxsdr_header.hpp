@@ -58,7 +58,7 @@ namespace FLAGS {
     static constexpr uint8_t GET_TIME                     = 0x03;
     static constexpr uint8_t GET_STATUS                   = 0x04;
     static constexpr uint8_t CLEAR_STATUS                 = 0x05;  // resets error flags and counters
-    static constexpr uint8_t GET_BUFFER_USE               = 0x07;
+    static constexpr uint8_t GET_BUFFER_USE               = 0x07;  // asks for buffer info
     static constexpr uint8_t OPEN_SESSION                 = 0x08;
     static constexpr uint8_t CLOSE_SESSION                = 0x09;
     static constexpr uint8_t RESET                        = 0xFF;  // do a power on reset
