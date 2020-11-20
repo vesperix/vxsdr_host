@@ -1,6 +1,12 @@
 #ifndef VXSDR_HEADER_HPP
 #define VXSDR_HEADER_HPP
 
+/*
+  SDR packet headers
+  Version 0,1 20 Nov 2020
+  FROZEN UNTIL INITIAL IMPLEMENTATION COMPLETE AND TESTED
+*/
+
 #include <cstdint>
 #include <complex>
 
