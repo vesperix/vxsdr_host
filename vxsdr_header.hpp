@@ -65,7 +65,7 @@ namespace DEVICE_CMD {
   static constexpr uint8_t OPEN_SESSION                 = 0x08;
   static constexpr uint8_t CLOSE_SESSION                = 0x09;
   static constexpr uint8_t GET_TRANSPORT_INFO           = 0x0A;  // how many interfaces, what kind
-  static constexpr uint8_t GET_TRANSPORT_ADDR           = 0x10;
+  static constexpr uint8_t GET_TRANSPORT_ADDR           = 0x10;  // we'll use this for IP addresses
   static constexpr uint8_t GET_TRANSPORT_PKTSIZ         = 0x11;
   // 0x12-0x1F reserved for more get_transport stuff as needed
   static constexpr uint8_t SET_TRANSPORT_ADDR           = 0x20;
