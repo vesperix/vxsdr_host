@@ -121,8 +121,8 @@ namespace RADIO_CMD {
   // 0x16-0x20 reserved
   static constexpr uint8_t SET_RF_FREQ                  = 0x21;
   static constexpr uint8_t SET_RF_GAIN                  = 0x22;
-  static constexpr uint8_t SET_RF_BW                    = 0x23;
-  static constexpr uint8_t SET_SAMPLE_RATE              = 0x24;
+  static constexpr uint8_t SET_SAMPLE_RATE              = 0x23;
+  static constexpr uint8_t SET_RF_BW                    = 0x24;
   static constexpr uint8_t SET_RF_IO                    = 0x25;
   // 0x26-0xFF reserved
 };
