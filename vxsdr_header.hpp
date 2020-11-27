@@ -3,7 +3,7 @@
 
 /*
   SDR packet headers
-  Version 0.1.2 20 Nov 2020
+  Version 0.1.3 27 Nov 2020
   FROZEN EXCEPT FOR ADDITIONS UNTIL INITIAL IMPLEMENTATION COMPLETE AND TESTED
 */
 
@@ -144,8 +144,8 @@ namespace RADIO_CMD_ERR {
 
 
 typedef struct {
-  uint32_t                seconds;
   uint32_t                nanoseconds;
+  uint32_t                seconds;
 } time_spec;
 
 typedef struct {
@@ -178,5 +178,23 @@ typedef struct {
   packet_header           hdr;
   std::complex<int16_t>   data[(hdr.packet_size - sizeof(packet_header)) / sizeof(std::complex<int16_t>)]; // FIXME: find proper way to represent variable-mength data in struct
 } data_packet;
+
+typedef struct {
+  packet_header           hdr;
+  uint32_t                proc_rev;
+  uint32_t                fpga_rev;
+} hello_rsp_packet;
+
+typedef struct {
+  packet_header           hdr;
+  uint16_t                fpga_temp;
+  uint16_t                dac_temp;
+  uint32_t                reserved;
+  uint16_t                tx_data_oos_cnt;
+  uint16_t                tx_ctrl_oos_cnt;
+  uint32_t                datapath_fifo_flow_status;
+  uint32_t                ddr_arbiter_status;
+  uint32_t                tgbe_status;
+} status_rsp_packet;
 
 #endif // VXSDR_HEADER_HPP
