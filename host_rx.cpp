@@ -16,11 +16,7 @@
 
 #include "logging.hpp"
 #include "errors.hpp"
-#ifndef SYNC
-#include "udp_rx.hpp"
-#else
-#include "udp_rx_sync.hpp"
-#endif
+#include "udp_tx_rx.hpp"
 
 void define_options(boost::program_options::options_description &desc)
 {
@@ -111,19 +107,19 @@ int main(int argc, char *argv[])
     std::thread handler_thread, receiver_thread;
     if(vm.count("sequence_check") > 0) {
       // only perform a sequence check
-      handler_thread = std::thread(std::ref(sequence_checker), vm["num_packets"].as<size_t>(), vm["packet_size"].as<size_t>());
+      handler_thread = std::thread(std::ref(packet_counter), vm["num_packets"].as<size_t>(), vm["packet_size"].as<size_t>());
     }
     else {
       // sequence check and write the data
       std::string outfile_name = vm["output_filename"].as<std::string>();
       handler_thread = std::thread(std::ref(writer), std::cref(outfile_name), vm["num_packets"].as<size_t>());
     }
-
+    boost::asio::io_context io_context;
     if(use_multicast) {
-      receiver_thread = std::thread(std::ref(multicast_receiver), std::cref(local_endpoint), std::cref(multicast_ip));
+      receiver_thread = std::thread(std::ref(multicast_receiver), std::ref(io_context), std::cref(local_endpoint), std::cref(multicast_ip));
     }
     else {
-      receiver_thread = std::thread(std::ref(receiver), std::cref(local_endpoint));
+      receiver_thread = std::thread(std::ref(receiver), std::ref(io_context), std::cref(local_endpoint));
     }
     receiver_thread.join();
     handler_thread.join();

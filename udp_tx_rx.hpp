@@ -196,7 +196,7 @@ void writer(const std::string &outfilename, const size_t max_packets) {
       for(size_t i = 0; i < nwrite; i++) {
         packets++;
         size_t data_bytes = (buffer[i].hdr.packet_size - sizeof(packet_header));
-        outfile.write((const char*)&buffer[i].data[0], data_bytes);
+        outfile.write(reinterpret_cast<const char*>(&buffer[i].data[0]), data_bytes);
         if(outfile.bad())
           write_errors++;
         else
