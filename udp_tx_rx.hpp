@@ -48,29 +48,7 @@ void set_rx_stop_flag() {
 void set_tx_stop_flag() {
   tx_stop_flag = true;
 }
-/*
-typedef struct {
-  uint32_t seq;
-  uint16_t id;
-  uint16_t pad;
-  std::array<std::complex<int16_t>, 2048> data;
-} data_buffer_element;
 
-typedef struct {
-  uint32_t seq;
-  uint16_t id;
-  uint16_t pad;
-  std::array<int16_t, 124> data;
-} msg_buffer_element;
-
-typedef struct {
-  uint32_t seq;
-  uint16_t id;
-  uint16_t pad;
-  uint32_t dac_ddr_used;
-  uint32_t dac_ddr_size;
-} ack_buffer_element;
-*/
 static boost::lockfree::spsc_queue<data_packet, boost::lockfree::capacity<rx_data_queue_length> > rx_data_queue;
 static boost::lockfree::spsc_queue<data_packet, boost::lockfree::capacity<tx_data_queue_length> > tx_data_queue;
 
@@ -116,6 +94,11 @@ class udp_rx {
           rx_data_received++;
           rx_data_queue.push(recv_buffer);
         }
+        else if(recv_buffer.hdr.packet_type == PACKET_TYPES::DEVICE_CMD_RSP && 
+          recv_buffer.hdr.command == DEVICE_CMD_RSP::GET_BUFFER_USE_RSP) {
+          get_buffer_use_rsp_packet *r = reinterpret_cast<get_buffer_use_rsp_packet *>(&recv_buffer);
+          radio_buffer_fill_percent = (100 * r->buffer_used_bytes) / r->buffer_size_bytes;
+        }
         else {
           cmds_received++;
           memcpy(&cmd_buffer, &recv_buffer, sizeof(cmd_buffer));
@@ -140,7 +123,7 @@ class udp_tx {
     boost::asio::ip::udp::socket socket;
     boost::asio::ip::udp::endpoint destination;
     static constexpr size_t tx_buffer_size_ = 256;
-    std::array<data_packet, tx_buffer_size_> send_buffer_;
+    std::array<data_packet, tx_buffer_size_> send_buffer;
     unsigned send_errors = 0, buffers_sent = 0;
 
     void start_send() {
@@ -152,15 +135,31 @@ class udp_tx {
       radio_buffer_fill_percent = 0;
       while(!tx_stop_flag) {
         if(tx_data_queue.read_available()) {
-          size_t n_popped = tx_data_queue.pop(&send_buffer_.front(), send_buffer_.size());
+          size_t n_popped = tx_data_queue.pop(&send_buffer.front(), send_buffer.size());
           for(size_t i = 0; i < n_popped; i++) {
-            size_t bytes_sent = socket.send_to(boost::asio::buffer(&send_buffer_[i], send_buffer_[i].hdr.packet_size), destination);
-            if(bytes_sent != send_buffer_[i].hdr.packet_size)
+            send_buffer[i].hdr.sequence_counter = buffers_sent % UINT16_MAX;
+            size_t bytes_sent = socket.send_to(boost::asio::buffer(&send_buffer[i], send_buffer[i].hdr.packet_size), destination);
+            if(bytes_sent != send_buffer[i].hdr.packet_size)
               send_errors++;
             else
               buffers_sent++;
             if(tx_throttle_wait_us > 0)
               std::this_thread::sleep_for(std::chrono::microseconds(tx_throttle_wait_us));
+          }
+          // ask for buffer use every every 10 data packets
+          if(buffers_sent % 10 == 0) {
+            packet_header hdr;
+            hdr.packet_type = PACKET_TYPES::DEVICE_CMD;
+            hdr.target_subdevice = 0;
+            hdr.command = DEVICE_CMD::GET_BUFFER_INFO;
+            hdr.flags = 0;
+            hdr.packet_size = sizeof(hdr);
+            hdr.sequence_counter = buffers_sent % UINT16_MAX;
+            size_t bytes_sent = socket.send_to(boost::asio::buffer(&hdr, hdr.packet_size), destination);
+            if(bytes_sent != hdr.packet_size)
+              send_errors++;
+            else
+              buffers_sent++;
           }
           // update throttling
           if(radio_buffer_fill_percent > throttle_start_percent)
@@ -341,8 +340,6 @@ void generator(const size_t max_packets, const size_t requested_packet_size, con
 
   for(size_t i = 1; i <= max_packets; i++) {
     unsigned idx = i % buf.size();
-
-    buf[idx].hdr.sequence_counter = i % UINT16_MAX;
 
     // wait for room in the tx queue
     while(!tx_data_queue.write_available()) {}

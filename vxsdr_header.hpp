@@ -175,8 +175,8 @@ typedef struct {
 
 typedef struct {
   packet_header           hdr;
-  uint32_t                dac_ddr_used;
-  uint32_t                dac_ddr_size;
+  uint32_t                buffer_used_bytes;
+  uint32_t                buffer_size_bytes;
 } get_buffer_use_rsp_packet;
 
 typedef struct {
