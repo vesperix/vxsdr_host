@@ -28,6 +28,23 @@ namespace PACKET_TYPES {
   static constexpr uint8_t DEVICE_CMD_RSP     = 0x0D;
   static constexpr uint8_t TX_RADIO_CMD_RSP   = 0x0E;
   static constexpr uint8_t RX_RADIO_CMD_RSP   = 0x0F;
+  static std::array<std::string, 16> NAMES = {
+    "TX_SIGNAL_DATA",
+    "RX_SIGNAL_DATA",
+    "DEVICE_CMD",
+    "RX_RADIO_CMD",
+    "TX_SIGNAL_DATA_ACK",
+    "RX_SIGNAL_DATA_ACK",
+    "DEVICE_CMD_ACK",
+    "TX_RADIO_CMD_ACK",
+    "RX_RADIO_CMD_ACK",
+    "DEVICE_CMD_ERR",
+    "TX_RADIO_CMD_ERR",
+    "RX_RADIO_CMD_ERR",
+    "DEVICE_CMD_RSP",
+    "TX_RADIO_CMD_RSP",
+    "RX_RADIO_CMD_RSP"
+  };
 }
 
 static constexpr size_t   MAX_DATA_LENGTH_SAMPLES  = 2048;
