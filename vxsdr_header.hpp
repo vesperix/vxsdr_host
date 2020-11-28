@@ -28,9 +28,10 @@ namespace PACKET_TYPES {
   static constexpr uint8_t DEVICE_CMD_RSP     = 0x0D;
   static constexpr uint8_t TX_RADIO_CMD_RSP   = 0x0E;
   static constexpr uint8_t RX_RADIO_CMD_RSP   = 0x0F;
-};
+}
 
-static constexpr size_t   MAX_DATA_LENGTH = 2048;
+static constexpr size_t   MAX_DATA_LENGTH_SAMPLES  = 2048;
+static constexpr size_t   MAX_PAYLOAD_LENGTH_BYTES = 256;  // maximum length of a CMD or RSP packet, excluding header
 
 typedef struct {
   uint8_t                 packet_type;
@@ -51,7 +52,7 @@ namespace FLAGS {
   static constexpr uint8_t RESERVED_BIT_5    = 0x04;
   static constexpr uint8_t RESERVED_BIT_6    = 0x02;
   static constexpr uint8_t RESERVED_BIT_7    = 0x01;
-};
+}
 
 namespace DEVICE_CMD {
   static constexpr uint8_t HELLO                        = 0x00;
@@ -82,7 +83,8 @@ namespace DEVICE_CMD {
   // 0x50-0xFD reserved for stuff we haven't thought of yet
   static constexpr uint8_t STOP                         = 0xFE;  // stop all streaaming and return to wait state within session
   static constexpr uint8_t RESET                        = 0xFF;  // do a power on reset (closing session and returning to idle)
-};
+}
+
 namespace DEVICE_CMD_RSP {
   static constexpr uint8_t HELLO_RSP                    = 0x00;  
   static constexpr uint8_t GET_TIME_RSP                 = 0x03;
@@ -97,14 +99,16 @@ namespace DEVICE_CMD_RSP {
   static constexpr uint8_t GET_TIMING_INFO_RSP          = 0x50;
   static constexpr uint8_t GET_TIMING_STATUS_RSP        = 0x51;
   static constexpr uint8_t GET_TIMING_REF_RSP           = 0x52;
-};
+}
+
 namespace DEVICE_CMD_ERR {
   static constexpr uint8_t BAD_CMD                      = 0x01;  // generic bad stuff happened; can substitute for more detailed ones until they're implemented
   static constexpr uint8_t BUSY                         = 0x02;  // can't accept that command because we're running
   static constexpr uint8_t NO_SUCH_SUBDEVICE            = 0x03;  // the specified subdevice doesn't exist
   static constexpr uint8_t TIMEOUT                      = 0x04;  // tried to do command but something didn't answer
   static constexpr uint8_t BAD_PARAMETER                = 0x05;  // command parameter is out of allowed range
-};
+}
+
 namespace RADIO_CMD {
   static constexpr uint8_t START_NOW_UNTIL_STOP         = 0x01;
   static constexpr uint8_t START_AT_TIME_UNTIL_STOP     = 0x02;  // error if TIME_PRESENT is 0
@@ -125,7 +129,8 @@ namespace RADIO_CMD {
   static constexpr uint8_t SET_RF_BW                    = 0x24;
   static constexpr uint8_t SET_RF_IO                    = 0x25;
   // 0x26-0xFF reserved
-};
+}
+
 namespace RADIO_CMD_RSP {
   static constexpr uint8_t GET_RF_INFO_RSP              = 0x10;
   static constexpr uint8_t GET_RF_FREQ_RSP              = 0x11;
@@ -133,15 +138,15 @@ namespace RADIO_CMD_RSP {
   static constexpr uint8_t GET_SAMPLE_RATE_RSP          = 0x13;
   static constexpr uint8_t GET_RF_BW_RSP                = 0x14;
   static constexpr uint8_t GET_RF_IO_RSP                = 0x15;
-};
+}
+
 namespace RADIO_CMD_ERR {
   static constexpr uint8_t BAD_CMD                      = 0x01;
   static constexpr uint8_t BUSY                         = 0x02;
   static constexpr uint8_t NO_SUCH_SUBDEVICE            = 0x03;
   static constexpr uint8_t TIMEOUT                      = 0x04;
   static constexpr uint8_t BAD_PARAMETER                = 0x05;
-};
-
+}
 
 typedef struct {
   uint32_t                nanoseconds;
@@ -176,8 +181,13 @@ typedef struct {
 
 typedef struct {
   packet_header           hdr;
-  std::complex<int16_t>   data[(hdr.packet_size - sizeof(packet_header)) / sizeof(std::complex<int16_t>)]; // FIXME: find proper way to represent variable-mength data in struct
+  std::complex<int16_t>   data[MAX_DATA_LENGTH_SAMPLES]; // FIXME: find proper way to represent variable-mength data in struct
 } data_packet;
+
+typedef struct {
+  packet_header           hdr;
+  uint8_t                 payload[MAX_PAYLOAD_LENGTH_BYTES];
+} generic_cmd_rsp_packet;
 
 typedef struct {
   packet_header           hdr;

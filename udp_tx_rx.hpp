@@ -7,6 +7,8 @@
 #include "cycle_counter.h"
 #include "thread_utils.h"
 
+#include "vxsdr_header.hpp"
+
 //#define SINGLE_CHANNEL
 
 // packet type ids
@@ -46,7 +48,7 @@ void set_rx_stop_flag() {
 void set_tx_stop_flag() {
   tx_stop_flag = true;
 }
-
+/*
 typedef struct {
   uint32_t seq;
   uint16_t id;
@@ -68,12 +70,12 @@ typedef struct {
   uint32_t dac_ddr_used;
   uint32_t dac_ddr_size;
 } ack_buffer_element;
+*/
+static boost::lockfree::spsc_queue<data_packet, boost::lockfree::capacity<rx_data_queue_length> > rx_data_queue;
+static boost::lockfree::spsc_queue<data_packet, boost::lockfree::capacity<tx_data_queue_length> > tx_data_queue;
 
-static boost::lockfree::spsc_queue<data_buffer_element, boost::lockfree::capacity<rx_data_queue_length> > rx_data_queue;
-static boost::lockfree::spsc_queue<data_buffer_element, boost::lockfree::capacity<tx_data_queue_length> > tx_data_queue;
-
-static boost::lockfree::spsc_queue<msg_buffer_element, boost::lockfree::capacity<rx_msg_queue_length> > rx_msg_queue;
-static boost::lockfree::spsc_queue<msg_buffer_element, boost::lockfree::capacity<tx_msg_queue_length> > tx_msg_queue;
+static boost::lockfree::spsc_queue<generic_cmd_rsp_packet, boost::lockfree::capacity<rx_msg_queue_length> > rx_msg_queue;
+static boost::lockfree::spsc_queue<generic_cmd_rsp_packet, boost::lockfree::capacity<tx_msg_queue_length> > tx_msg_queue;
 
 class udp_rx {
   public:
@@ -97,48 +99,30 @@ class udp_rx {
   private:
     boost::asio::ip::udp::socket socket;
     boost::asio::ip::udp::endpoint remote;
-    data_buffer_element recv_buffer;
-    ack_buffer_element ack_buffer;
-    size_t tx_data_received = 0, rx_data_received = 0, acks_received = 0, buffers_received = 0, unknowns_received = 0;
-    size_t seq = 0, last_seq = 0, seq_errors = 0, data_size_errors = 0, ack_size_errors = 0;
+    data_packet recv_buffer;
+    generic_cmd_rsp_packet cmd_buffer;
+    size_t tx_data_received = 0, rx_data_received = 0, cmds_received = 0, buffers_received = 0, unknowns_received = 0;
+    size_t seq = 0, last_seq = 0, seq_errors = 0;
     unsigned percent, min_buffer_percent = 100, max_buffer_percent = 0;
     void start_receive() {
       // FIXME: need to add timeout if no packets are coming in
       while(!rx_stop_flag) {
-        size_t bytes_received = socket.receive_from(boost::asio::buffer(&recv_buffer, sizeof(recv_buffer)), remote);
+        socket.receive_from(boost::asio::buffer(&recv_buffer, sizeof(recv_buffer)), remote);
         buffers_received++;
-        if(buffers_received > 1 and recv_buffer.seq != last_seq + 1 and last_seq != UINT32_MAX)
+        if(buffers_received > 1 and recv_buffer.hdr.sequence_counter != last_seq + 1 and last_seq != UINT16_MAX)
           seq_errors++;
-        last_seq = recv_buffer.seq;
-        if(recv_buffer.id == RX_DATA_ID) {
+        last_seq = recv_buffer.hdr.sequence_counter;
+        if(recv_buffer.hdr.packet_type == PACKET_TYPES::RX_SIGNAL_DATA) {
           rx_data_received++;
-          if(bytes_received != sizeof(data_buffer_element))
-            data_size_errors++;
           rx_data_queue.push(recv_buffer);
         }
-        else if(recv_buffer.id == TX_DATA_ACK_ID) {
-          acks_received++;
-          if(bytes_received != sizeof(ack_buffer_element))
-            ack_size_errors++;
-          memcpy(&ack_buffer, &recv_buffer, sizeof(ack_buffer));
-          unsigned percent = (100 * ack_buffer.dac_ddr_used) / ack_buffer.dac_ddr_size;
-          radio_buffer_fill_percent = percent;
-          min_buffer_percent = std::min(min_buffer_percent, percent);
-          max_buffer_percent = std::max(max_buffer_percent, percent);
+        else {
+          cmds_received++;
+          memcpy(&cmd_buffer, &recv_buffer, sizeof(cmd_buffer));
+          rx_msg_queue.push(cmd_buffer);
         }
-        else if(recv_buffer.id == TX_DATA_ID)
-          tx_data_received++;
-        else
-          unknowns_received++;
       }
       LOGGER(info) << "start_receive exiting";
-      LOGGER(info) << buffers_received << " buffers received:";
-      LOGGER(info) << "   " << acks_received << " acks";
-      LOGGER(info) << "   " << rx_data_received << " rx data";
-      LOGGER(info) << "   " << tx_data_received << " tx data";
-      LOGGER(info) << "   " << unknowns_received << " unknown";
-      LOGGER(info) << seq_errors << " sequence errors, " << ack_size_errors << " ack size errors, " << data_size_errors << " data size errors";
-      LOGGER(info) << "min buffer fill = " << min_buffer_percent << ", max buffer_fill = " << max_buffer_percent;
     }
 };
 
@@ -156,7 +140,7 @@ class udp_tx {
     boost::asio::ip::udp::socket socket;
     boost::asio::ip::udp::endpoint destination;
     static constexpr size_t tx_buffer_size_ = 256;
-    std::array<data_buffer_element, tx_buffer_size_> send_buffer_;
+    std::array<data_packet, tx_buffer_size_> send_buffer_;
     unsigned send_errors = 0, buffers_sent = 0;
 
     void start_send() {
@@ -170,8 +154,8 @@ class udp_tx {
         if(tx_data_queue.read_available()) {
           size_t n_popped = tx_data_queue.pop(&send_buffer_.front(), send_buffer_.size());
           for(size_t i = 0; i < n_popped; i++) {
-            size_t bytes_sent = socket.send_to(boost::asio::buffer(&send_buffer_[i], sizeof(data_buffer_element)), destination);
-            if(bytes_sent != sizeof(data_buffer_element))
+            size_t bytes_sent = socket.send_to(boost::asio::buffer(&send_buffer_[i], send_buffer_[i].hdr.packet_size), destination);
+            if(bytes_sent != send_buffer_[i].hdr.packet_size)
               send_errors++;
             else
               buffers_sent++;
@@ -196,9 +180,9 @@ class udp_tx {
 void writer(const std::string &outfilename, const size_t max_packets) {
   LOGGER(info) << "writer thread started";
 
-  std::array<data_buffer_element, rx_write_buffer_size> buffer;
+  std::array<data_packet, rx_write_buffer_size> buffer;
   std::ofstream outfile(outfilename.c_str(), std::ofstream::binary);
-  size_t packets = 0, seq_errors = 0, write_errors = 0;
+  size_t packets = 0, seq_errors = 0, write_errors = 0, bytes_written = 0;
 
   auto t0 = std::chrono::steady_clock::now();
 
@@ -211,9 +195,12 @@ void writer(const std::string &outfilename, const size_t max_packets) {
         nwrite = max_packets - packets;
       for(size_t i = 0; i < nwrite; i++) {
         packets++;
-        outfile.write((const char*)&buffer[i].data.front(), buffer[i].data.size());
+        size_t data_bytes = (buffer[i].hdr.packet_size - sizeof(packet_header));
+        outfile.write((const char*)&buffer[i].data[0], data_bytes);
         if(outfile.bad())
           write_errors++;
+        else
+          bytes_written += data_bytes;        
       }
       packets += nwrite;
     }
@@ -230,7 +217,7 @@ void writer(const std::string &outfilename, const size_t max_packets) {
   std::chrono::duration<double> dt = t1 - t0;
   LOGGER(info) << packets << " packets recieved in " << dt.count() << " sec";
   LOGGER(info) << seq_errors << " sequence errors, " << write_errors << " write errors";
-  LOGGER(info) << (packets * sizeof(data_buffer_element) / dt.count()) << " bytes/s, " << (8 * packets * sizeof(data_buffer_element) / dt.count()) << " bits/s";
+  LOGGER(info) << (bytes_written / dt.count()) << " bytes/s";
 
   // set stop flag so pushing stops
   set_tx_stop_flag();
@@ -253,7 +240,7 @@ void packet_counter(const size_t max_packets, const size_t packet_size) {
   //  LOGGER(error) << "unable to set sequence checker thread CPU affinity";
 
   const unsigned buffer_max_packets = 256;
-  static std::array<data_buffer_element, buffer_max_packets> buffer;
+  static std::array<data_packet, buffer_max_packets> buffer;
   size_t packets = 0;
 
   auto t0 = std::chrono::steady_clock::now();
@@ -322,7 +309,7 @@ void multicast_receiver(boost::asio::io_context &io_context, const boost::asio::
 }
 
 void generator(const size_t max_packets, const size_t requested_packet_size, const unsigned packet_wait_us) {
-  std::array<data_buffer_element, 17> buf;
+  std::array<data_packet, 17> buf;
   LOGGER(info) << "generator thread started";
 
   //if(set_current_thread_priority_realtime(10))
@@ -339,14 +326,14 @@ void generator(const size_t max_packets, const size_t requested_packet_size, con
 
   const double a = 800;
   const float ncycles = 9117.; // number of cycles in buf.size() buffers; must be integer to avoid skips
-  const double w = (2 * M_PI * ncycles) / (buf.size() * buf[0].data.size()); 
+  const double w = (2 * M_PI * ncycles) / (buf.size() * MAX_DATA_LENGTH_SAMPLES); 
 
   for(unsigned i = 0; i < buf.size(); i++) {
-    buf[i].id = TX_DATA_ID;
-    buf[i].pad = 0;
-    for(unsigned j = 0; j < buf[i].data.size(); j++) {
-      buf[i].data[j].real(std::round(a * cos(w * (buf[i].data.size() * i + j))));
-      buf[i].data[j].imag(std::round(a * sin(w * (buf[i].data.size() * i + j))));
+    buf[i].hdr.packet_type = PACKET_TYPES::TX_SIGNAL_DATA;
+    size_t n_samples = (buf[i].hdr.packet_size - sizeof(packet_header)) / sizeof(std::complex<int16_t>);
+    for(unsigned j = 0; j < n_samples; j++) {
+      buf[i].data[j].real(std::round(a * cos(w * (MAX_DATA_LENGTH_SAMPLES * i + j))));
+      buf[i].data[j].imag(std::round(a * sin(w * (MAX_DATA_LENGTH_SAMPLES * i + j))));
     }
   }
 
@@ -355,7 +342,7 @@ void generator(const size_t max_packets, const size_t requested_packet_size, con
   for(size_t i = 1; i <= max_packets; i++) {
     unsigned idx = i % buf.size();
 
-    buf[idx].seq = i;
+    buf[idx].hdr.sequence_counter = i % UINT16_MAX;
 
     // wait for room in the tx queue
     while(!tx_data_queue.write_available()) {}
