@@ -18,7 +18,7 @@ static constexpr uint16_t TX_DATA_ACK_ID           = 0xDACA;
 
 // parameters of the internal ring buffers
 static const size_t msg_buffer_max_bytes           =    256;    // size of largest command/status message packet
-static const size_t data_buffer_max_bytes          =   4104;    // size of largest data packet
+static const size_t data_buffer_max_bytes          =   8200;    // size of largest data packet
 static const size_t rx_data_queue_length           =  65536;    // slots in rx data queue
 static const size_t tx_data_queue_length           =   1024;    // slots in tx data queue
 static const size_t rx_msg_queue_length            =    256;    // slots in rx msg queue
@@ -98,6 +98,7 @@ class udp_rx {
           recv_buffer.hdr.command == DEVICE_CMD_RSP::GET_BUFFER_USE_RSP) {
           get_buffer_use_rsp_packet *r = reinterpret_cast<get_buffer_use_rsp_packet *>(&recv_buffer);
           radio_buffer_fill_percent = (100 * r->buffer_used_bytes) / r->buffer_size_bytes;
+          LOGGER(info) << "updated fill percent: " << radio_buffer_fill_percent;
         }
         else {
           cmds_received++;
@@ -329,7 +330,11 @@ void generator(const size_t max_packets, const size_t requested_packet_size, con
 
   for(unsigned i = 0; i < buf.size(); i++) {
     buf[i].hdr.packet_type = PACKET_TYPES::TX_SIGNAL_DATA;
-    size_t n_samples = (buf[i].hdr.packet_size - sizeof(packet_header)) / sizeof(std::complex<int16_t>);
+    buf[i].hdr.command = 0;
+    buf[i].hdr.target_subdevice = 0;
+    buf[i].hdr.flags = 0;
+    buf[i].hdr.packet_size = packet_size;
+    size_t n_samples = (packet_size - sizeof(packet_header)) / sizeof(std::complex<int16_t>);
     for(unsigned j = 0; j < n_samples; j++) {
       buf[i].data[j].real(std::round(a * cos(w * (MAX_DATA_LENGTH_SAMPLES * i + j))));
       buf[i].data[j].imag(std::round(a * sin(w * (MAX_DATA_LENGTH_SAMPLES * i + j))));
@@ -340,14 +345,12 @@ void generator(const size_t max_packets, const size_t requested_packet_size, con
 
   for(size_t i = 1; i <= max_packets; i++) {
     unsigned idx = i % buf.size();
-
     // wait for room in the tx queue
     while(!tx_data_queue.write_available()) {}
 
     tx_data_queue.push(buf[idx]);
     if(tx_generator_thread_sleep_us > 0)
       std::this_thread::sleep_for(std::chrono::microseconds(tx_generator_thread_sleep_us));
-
     if(tx_stop_flag or rx_stop_flag) {
       break;
     }
