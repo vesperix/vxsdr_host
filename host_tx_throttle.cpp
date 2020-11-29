@@ -24,7 +24,8 @@ void define_options(boost::program_options::options_description &desc)
     ("help,H", "show help message")
     ("config_file,C", boost::program_options::value<std::string>(), "configuration file giving command line options")
     ("local_address,A", boost::program_options::value<std::string>()->default_value(""), "IPv4 address of local interface")
-    ("local_port,L", boost::program_options::value<unsigned>()->default_value(1030), "port to use on local interface")
+    ("local_receive_port,L", boost::program_options::value<unsigned>()->default_value(1030), "port to receive on local interface")
+    ("local_send_port,M", boost::program_options::value<unsigned>()->default_value(55123), "port to send on local interface")
     ("destination_address,D", boost::program_options::value<std::string>()->default_value(""), "IPv4 address of destination (including broadcast/multicast)")
     ("netmask,M", boost::program_options::value<std::string>()->default_value("255.255.255.0"), "IPv4 netmask of local interface")
     ("broadcast,B", boost::program_options::bool_switch()->default_value(false), "flag to enable broadcast")
@@ -95,17 +96,18 @@ int main(int argc, char *argv[])
     boost::asio::ip::address_v4 destination_ip = boost::asio::ip::address_v4::from_string(vm["destination_address"].as<std::string>());
     boost::asio::ip::address_v4 netmask = boost::asio::ip::address_v4::from_string(vm["netmask"].as<std::string>());
     boost::asio::ip::address_v4 broadcast_ip = boost::asio::ip::address_v4::broadcast(local_ip, netmask);
-    boost::asio::ip::udp::endpoint local_tx_endpoint(local_ip, 0);
-    boost::asio::ip::udp::endpoint local_rx_endpoint(broadcast_ip, vm["local_port"].as<unsigned>());
-    LOGGER(info) << "using local IP " << local_ip.to_string();
-    boost::asio::ip::udp::endpoint destination_endpoint(destination_ip, vm["destination_port"].as<unsigned>());
+    boost::asio::ip::udp::endpoint local_send_endpoint(local_ip, vm["local_send_port"].as<unsigned>());
+    LOGGER(info) << "using local send IP " << local_send_endpoint.address().to_string() << " and port " << local_send_endpoint.port();
+    boost::asio::ip::udp::endpoint local_receive_endpoint(local_ip, vm["local_receive_port"].as<unsigned>());
+    LOGGER(info) << "using local receive IP " << local_receive_endpoint.address().to_string() << " and port " << local_receive_endpoint.port();
+     boost::asio::ip::udp::endpoint destination_endpoint(destination_ip, vm["destination_port"].as<unsigned>());
     LOGGER(info) << "using destination IP " << destination_endpoint.address().to_string() << " and port " << destination_endpoint.port();
 
     std::thread generator_thread(std::ref(generator), vm["num_packets"].as<size_t>(), vm["packet_size"].as<size_t>(), vm["wait_us"].as<unsigned>());
 
     boost::asio::io_context io_context;
-    std::thread sender_thread(std::ref(sender), std::ref(io_context), std::cref(local_tx_endpoint), std::cref(destination_endpoint), vm["broadcast"].as<bool>());
-    std::thread receiver_thread(std::ref(receiver), std::ref(io_context), std::cref(local_rx_endpoint));
+    std::thread sender_thread(std::ref(sender), std::ref(io_context), std::cref(local_send_endpoint), std::cref(destination_endpoint), vm["broadcast"].as<bool>());
+    std::thread receiver_thread(std::ref(receiver), std::ref(io_context), std::cref(local_receive_endpoint));
     std::thread packet_counter_thread(std::ref(packet_counter), vm["num_packets"].as<size_t>(), vm["packet_size"].as<size_t>());
     generator_thread.join();
     sender_thread.join();

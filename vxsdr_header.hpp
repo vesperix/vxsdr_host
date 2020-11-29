@@ -32,6 +32,7 @@ namespace PACKET_TYPES {
     "TX_SIGNAL_DATA",
     "RX_SIGNAL_DATA",
     "DEVICE_CMD",
+    "TX_RADIO_CMD",
     "RX_RADIO_CMD",
     "TX_SIGNAL_DATA_ACK",
     "RX_SIGNAL_DATA_ACK",
