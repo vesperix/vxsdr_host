@@ -92,18 +92,44 @@ class udp_rx {
         if(packets_received > 1 and recv_buffer.hdr.sequence_counter != last_seq + 1 and last_seq != UINT16_MAX)
           seq_errors++;
         last_seq = recv_buffer.hdr.sequence_counter;
-        if(recv_buffer.hdr.packet_type == PACKET_TYPES::RX_SIGNAL_DATA) {
-          rx_data_queue.push(recv_buffer);
-        }
-        else if(recv_buffer.hdr.packet_type == PACKET_TYPES::DEVICE_CMD_RSP && 
-          recv_buffer.hdr.command == DEVICE_CMD_RSP::GET_BUFFER_USE_RSP) {
-          get_buffer_use_rsp_packet *r = reinterpret_cast<get_buffer_use_rsp_packet *>(&recv_buffer);
-          radio_buffer_fill_percent = (100 * r->buffer_used_bytes) / r->buffer_size_bytes;
-          LOGGER(info) << "updated fill percent: " << radio_buffer_fill_percent;
-        }
-        else {
-          memcpy(&cmd_buffer, &recv_buffer, sizeof(cmd_buffer));
-          rx_msg_queue.push(cmd_buffer);
+        switch(recv_buffer.hdr.packet_type) {
+          case PACKET_TYPES::RX_SIGNAL_DATA:
+            rx_data_queue.push(recv_buffer);
+            break;
+          case PACKET_TYPES::TX_SIGNAL_DATA:
+            break;
+          case PACKET_TYPES::DEVICE_CMD_RSP:
+            if(recv_buffer.hdr.command == DEVICE_CMD_RSP::GET_BUFFER_USE_RSP) {
+              get_buffer_use_rsp_packet *r = reinterpret_cast<get_buffer_use_rsp_packet *>(&recv_buffer);
+              LOGGER(info) << "BUFFER USE: " << r->buffer_used_bytes << "  " << r->buffer_size_bytes;
+              //radio_buffer_fill_percent = (100 * r->buffer_used_bytes) / r->buffer_size_bytes;
+
+            }
+            else {
+              LOGGER(info) << "DEVICE_CMD_RSP: " << (int)recv_buffer.hdr.command;
+            }
+            break;
+          case PACKET_TYPES::RX_RADIO_CMD_RSP:
+            LOGGER(info) << "RX_RADIO_CMD_RSP: " << (int)recv_buffer.hdr.command;
+            break;
+          case PACKET_TYPES::RX_RADIO_CMD_ERR:
+            LOGGER(info) << "RX_RADIO_CMD_ERR: " << (int)recv_buffer.hdr.command;
+            break;
+          case PACKET_TYPES::RX_RADIO_CMD_ACK:
+            LOGGER(info) << "RX_RADIO_CMD_ACK: " << (int)recv_buffer.hdr.command;
+            break;
+          case PACKET_TYPES::TX_RADIO_CMD_RSP:
+            LOGGER(info) << "RX_RADIO_CMD_RSP: " << (int)recv_buffer.hdr.command;
+            break;
+          case PACKET_TYPES::TX_RADIO_CMD_ERR:
+            LOGGER(info) << "TX_RADIO_CMD_ERR: " << (int)recv_buffer.hdr.command;
+            break;
+          case PACKET_TYPES::TX_RADIO_CMD_ACK:
+            LOGGER(info) << "TX_RADIO_CMD_ACK: " << (int)recv_buffer.hdr.command;
+            break;
+          default:
+            LOGGER(info) << "PACKET_TYPE: " << (int)recv_buffer.hdr.packet_type << " COMMAND " << (int)recv_buffer.hdr.command;
+            break;
         }
       }
       LOGGER(info) << "start_receive exiting; " << packets_received << " packets received:";
@@ -136,19 +162,8 @@ class udp_tx {
       constexpr unsigned throttle_stop_percent  = 50;
       constexpr unsigned throttle_amount_us =     10;
       radio_buffer_fill_percent = 0;
-      // send a HELLO
+  
       packet_header hdr;
-      hdr.packet_type = PACKET_TYPES::DEVICE_CMD;
-      hdr.target_subdevice = 0;
-      hdr.command = DEVICE_CMD::HELLO;
-      hdr.flags = 0;
-      hdr.packet_size = sizeof(hdr);
-      hdr.sequence_counter = (cmds_sent + buffers_sent) % UINT16_MAX;
-      size_t bytes_sent = socket.send_to(boost::asio::buffer(&hdr, hdr.packet_size), destination);
-      if(bytes_sent != hdr.packet_size)
-        send_errors++;
-      else
-        cmds_sent++;
       // send a START_NOW_UNTIL_STOP
       hdr.packet_type = PACKET_TYPES::TX_RADIO_CMD;
       hdr.target_subdevice = 0;
@@ -156,7 +171,7 @@ class udp_tx {
       hdr.flags = 0;
       hdr.packet_size = sizeof(hdr);
       hdr.sequence_counter = (cmds_sent + buffers_sent) % UINT16_MAX;
-      bytes_sent = socket.send_to(boost::asio::buffer(&hdr, hdr.packet_size), destination);
+      size_t bytes_sent = socket.send_to(boost::asio::buffer(&hdr, hdr.packet_size), destination);
       if(bytes_sent != hdr.packet_size)
         send_errors++;
       else
@@ -179,7 +194,7 @@ class udp_tx {
           if(buffers_sent % 10 == 0) {
             hdr.packet_type = PACKET_TYPES::DEVICE_CMD;
             hdr.target_subdevice = 0;
-            hdr.command = DEVICE_CMD::GET_BUFFER_INFO;
+            hdr.command = DEVICE_CMD::GET_BUFFER_USE;
             hdr.flags = 0;
             hdr.packet_size = sizeof(hdr);
             hdr.sequence_counter = (cmds_sent + buffers_sent) % UINT16_MAX;
@@ -399,6 +414,7 @@ void generator(const size_t max_packets, const size_t requested_packet_size, con
   std::chrono::duration<double> dt = t1 - t0;
   LOGGER(info) << max_packets << " buffers (" << (max_packets * packet_size) << " bytes) generated in " << dt.count() << " seconds";
 
+  std::this_thread::sleep_for(std::chrono::seconds(5));
   set_tx_stop_flag();
   set_rx_stop_flag();
  

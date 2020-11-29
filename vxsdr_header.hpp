@@ -3,7 +3,7 @@
 
 /*
   SDR packet headers
-  Version 0.1.4 28 Nov 2020
+  Version 0.1.5 29 Nov 2020
   FROZEN EXCEPT FOR ADDITIONS UNTIL INITIAL IMPLEMENTATION COMPLETE AND TESTED
 */
 
@@ -99,7 +99,7 @@ namespace DEVICE_CMD {
   static constexpr uint8_t SET_TIMING_REF               = 0x53;  // set sources of 10 MHz and PPS
 
   // 0x50-0xFD reserved for stuff we haven't thought of yet
-  static constexpr uint8_t STOP                         = 0xFE;  // stop all streaaming and return to wait state within session
+  static constexpr uint8_t STOP                         = 0xFE;  // stop all streaming and return to wait state within session
   static constexpr uint8_t RESET                        = 0xFF;  // do a power on reset (closing session and returning to idle)
 }
 
