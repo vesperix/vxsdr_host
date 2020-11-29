@@ -101,9 +101,11 @@ class udp_rx {
           case PACKET_TYPES::DEVICE_CMD_RSP:
             if(recv_buffer.hdr.command == DEVICE_CMD_RSP::GET_BUFFER_USE_RSP) {
               get_buffer_use_rsp_packet *r = reinterpret_cast<get_buffer_use_rsp_packet *>(&recv_buffer);
-              LOGGER(info) << "BUFFER USE: " << r->buffer_used_bytes << "  " << r->buffer_size_bytes;
-              //radio_buffer_fill_percent = (100 * r->buffer_used_bytes) / r->buffer_size_bytes;
-
+              //LOGGER(info) << "BUFFER USE: " << r->buffer_used_bytes << "  " << r->buffer_size_bytes;
+              if(r->buffer_used_bytes > 2147483648)
+                radio_buffer_fill_percent = floor((100. * (2147483648 - r->buffer_used_bytes)) / 2147483648.);
+              else
+                radio_buffer_fill_percent = floor((100. * r->buffer_used_bytes) / 2147483648.);
             }
             else {
               LOGGER(info) << "DEVICE_CMD_RSP: " << (int)recv_buffer.hdr.command;
@@ -192,8 +194,8 @@ class udp_tx {
             if(tx_throttle_wait_us > 0)
               std::this_thread::sleep_for(std::chrono::microseconds(tx_throttle_wait_us));
           }
-          // ask for buffer use every every 1000 data packets
-          if(buffers_sent - last_buffer_use_sent > 1000) {
+          // ask for buffer use every every 10000 data packets
+          if(buffers_sent - last_buffer_use_sent > 10000) {
             last_buffer_use_sent = buffers_sent;
             hdr.packet_type = PACKET_TYPES::DEVICE_CMD;
             hdr.target_subdevice = 0;
