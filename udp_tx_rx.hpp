@@ -177,6 +177,8 @@ class udp_tx {
       else
         cmds_sent++;
 
+      size_t last_buffer_use_sent = 0;
+
       while(!tx_stop_flag) {
         if(tx_data_queue.read_available()) {
           size_t n_popped = tx_data_queue.pop(&send_buffer.front(), send_buffer.size());
@@ -190,8 +192,9 @@ class udp_tx {
             if(tx_throttle_wait_us > 0)
               std::this_thread::sleep_for(std::chrono::microseconds(tx_throttle_wait_us));
           }
-          // ask for buffer use every every 10 data packets
-          if(buffers_sent % 10 == 0) {
+          // ask for buffer use every every 1000 data packets
+          if(buffers_sent - last_buffer_use_sent > 1000) {
+            last_buffer_use_sent = buffers_sent;
             hdr.packet_type = PACKET_TYPES::DEVICE_CMD;
             hdr.target_subdevice = 0;
             hdr.command = DEVICE_CMD::GET_BUFFER_USE;

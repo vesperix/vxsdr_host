@@ -114,6 +114,14 @@ class udp_rx {
                   LOGGER(info) << "   tgbe_status               = " << sr->tgbe_status;
                 }
                 break;
+              case DEVICE_CMD::GET_BUFFER_USE:
+                {
+                  LOGGER(info) << "DEVICE_CMD_RSP: GET_BUFFER_USE";
+                  get_buffer_use_rsp_packet *br = reinterpret_cast<get_buffer_use_rsp_packet *>(&recv_buffer);
+                  LOGGER(info) << "   buffer_used_bytes         = " << (uint32_t)br->buffer_used_bytes;
+                  LOGGER(info) << "   buffer_size_bytes         = " << (uint32_t)br->buffer_size_bytes;
+                }
+                break;
             }
            break;
           case PACKET_TYPES::RX_RADIO_CMD_RSP:
@@ -190,15 +198,18 @@ class udp_tx {
       packets_sent++;
       total_bytes += bytes_sent;
       std::this_thread::sleep_for(std::chrono::seconds(1));
-      hdr.packet_type = PACKET_TYPES::RX_RADIO_CMD;
+      hdr.packet_type = PACKET_TYPES::DEVICE_CMD;
       hdr.target_subdevice = 0;
-      hdr.command = RADIO_CMD::STOP_NOW;
-      hdr.flags = FLAGS::REQUEST_ACK;
+      hdr.command = DEVICE_CMD::GET_BUFFER_USE;
+      hdr.flags = 0;
       hdr.packet_size = sizeof(hdr);
-      hdr.sequence_counter = packets_sent % UINT16_MAX;
-      bytes_sent = socket.send_to(boost::asio::buffer(&hdr, hdr.packet_size), destination);
-      packets_sent++;
-      total_bytes += bytes_sent;
+      for(unsigned i = 0; i < 10; i++) {
+        hdr.sequence_counter = packets_sent % UINT16_MAX;
+        bytes_sent = socket.send_to(boost::asio::buffer(&hdr, hdr.packet_size), destination);
+        packets_sent++;
+        total_bytes += bytes_sent;
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      }
 
       // now set stop flag and then send a HELLO to get the RX to quit
       set_rx_stop_flag();
