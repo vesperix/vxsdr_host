@@ -3,7 +3,7 @@
 
 /*
   SDR packet headers
-  Version 0.1.6 30 Nov 2020
+  Version 0.1.7 01 Dec 2020
   FROZEN EXCEPT FOR ADDITIONS UNTIL INITIAL IMPLEMENTATION COMPLETE AND TESTED
 */
 
@@ -194,7 +194,7 @@ typedef struct {
 typedef struct {
   packet_header           hdr;
   uint32_t                buffer_used_bytes;
-  uint32_t                oos_err_and_buffer_size_bytes;
+  uint32_t                oos_err_count;
 } tx_signal_data_ack_packet;
 
 typedef struct {
@@ -230,8 +230,7 @@ typedef struct {
   uint16_t                fpga_temp;
   uint16_t                dac_temp;
   uint32_t                reserved;
-  uint16_t                tx_data_oos_cnt;
-  uint16_t                tx_ctrl_oos_cnt;
+  uint32_t                oos_err_count;
   uint32_t                datapath_fifo_flow_status;
   uint32_t                ddr_arbiter_status;
   uint32_t                tgbe_status;
