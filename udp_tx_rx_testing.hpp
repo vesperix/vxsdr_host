@@ -71,7 +71,9 @@ class udp_rx {
     boost::asio::ip::udp::endpoint remote;
     data_packet recv_buffer;
     generic_cmd_rsp_packet cmd_buffer;
-    size_t packets_received = 0, packet_types_received[16] = { 0 };
+    size_t packets_received = 0;
+    std::array<size_t, 21> packet_types_received;
+    //packet_types_received.reserve(PACKET_TYPES.NAMES.size());
     size_t seq = 0, last_seq = 0, seq_errors = 0;
     unsigned percent, min_buffer_percent = 100, max_buffer_percent = 0;
     void start_receive() {
@@ -81,6 +83,8 @@ class udp_rx {
         packets_received++;
         if(recv_buffer.hdr.packet_type < 16)
           packet_types_received[recv_buffer.hdr.packet_type]++;
+        else
+          packet_types_received[16 + (recv_buffer.hdr.packet_type % 128)]++;
         if(packets_received > 1 and recv_buffer.hdr.sequence_counter != last_seq + 1 and last_seq != UINT16_MAX)
           seq_errors++;
         last_seq = recv_buffer.hdr.sequence_counter;
@@ -107,19 +111,26 @@ class udp_rx {
                   status_rsp_packet *sr = reinterpret_cast<status_rsp_packet *>(&recv_buffer);
                   LOGGER(info) << "   fpga_temp                 = " << sr->fpga_temp;
                   LOGGER(info) << "   dac_temp                  = " << sr->dac_temp;
-                  LOGGER(info) << "   tx_data_oos_cnt           = " << sr->tx_data_oos_cnt;
-                  LOGGER(info) << "   tx_ctrl_oos_cnt           = " << sr->tx_ctrl_oos_cnt;
+                  LOGGER(info) << "   oos_err_count             = " << sr->oos_err_count;
                   LOGGER(info) << "   datapath_fifo_flow_status = " << sr->datapath_fifo_flow_status;
                   LOGGER(info) << "   ddr_arbiter_status        = " << sr->ddr_arbiter_status;
                   LOGGER(info) << "   tgbe_status               = " << sr->tgbe_status;
+                }
+                break;
+              case DEVICE_CMD::GET_BUFFER_INFO:
+                {
+                  LOGGER(info) << "DEVICE_CMD_RSP: GET_BUFFER_INFO";
+                  get_buffer_info_rsp_packet *br = reinterpret_cast<get_buffer_info_rsp_packet *>(&recv_buffer);
+                  LOGGER(info) << "   RX_buffer_size_bytes         = " << (uint32_t)br->RX_buffer_size_bytes;
+                  LOGGER(info) << "   TX_buffer_size_bytes         = " << (uint32_t)br->TX_buffer_size_bytes;
                 }
                 break;
               case DEVICE_CMD::GET_BUFFER_USE:
                 {
                   LOGGER(info) << "DEVICE_CMD_RSP: GET_BUFFER_USE";
                   get_buffer_use_rsp_packet *br = reinterpret_cast<get_buffer_use_rsp_packet *>(&recv_buffer);
-                  LOGGER(info) << "   buffer_used_bytes         = " << (uint32_t)br->buffer_used_bytes;
-                  LOGGER(info) << "   buffer_size_bytes         = " << (uint32_t)br->buffer_size_bytes;
+                  LOGGER(info) << "   RX_buffer_used_bytes         = " << (uint32_t)br->RX_buffer_used_bytes;
+                  LOGGER(info) << "   TX_buffer_used_bytes         = " << (uint32_t)br->TX_buffer_used_bytes;
                 }
                 break;
             }
@@ -150,7 +161,7 @@ class udp_rx {
         }
       }
       LOGGER(info) << packets_received << " packets received:";
-      for(unsigned i = 0; i < 16; i++)
+      for(unsigned i = 0; i < PACKET_TYPES::NAMES.size(); i++)
         LOGGER(info) << (boost::format("   %12d %s") % packet_types_received[i] % PACKET_TYPES::NAMES[i]);
 
       LOGGER(info) << "receive finished";
@@ -198,7 +209,16 @@ class udp_tx {
       packets_sent++;
       total_bytes += bytes_sent;
       std::this_thread::sleep_for(std::chrono::seconds(1));
-      /*
+      hdr.packet_type = PACKET_TYPES::DEVICE_CMD;
+      hdr.target_subdevice = 0;
+      hdr.command = DEVICE_CMD::GET_BUFFER_INFO;
+      hdr.flags = FLAGS::REQUEST_ACK;
+      hdr.packet_size = sizeof(hdr);
+      hdr.sequence_counter = packets_sent % UINT16_MAX;
+      bytes_sent = socket.send_to(boost::asio::buffer(&hdr, hdr.packet_size), destination);
+      packets_sent++;
+      total_bytes += bytes_sent;
+      std::this_thread::sleep_for(std::chrono::seconds(1));
       hdr.packet_type = PACKET_TYPES::DEVICE_CMD;
       hdr.target_subdevice = 0;
       hdr.command = DEVICE_CMD::GET_BUFFER_USE;
@@ -212,7 +232,6 @@ class udp_tx {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
       }
       std::this_thread::sleep_for(std::chrono::seconds(1));
-      */
       hdr.packet_type = PACKET_TYPES::RX_RADIO_CMD;
       hdr.target_subdevice = 0;
       hdr.command = RADIO_CMD::STOP_NOW;

@@ -3,7 +3,7 @@
 
 /*
   SDR packet headers
-  Version 0.1.7 01 Dec 2020
+  Version 0.1.8 06 Dec 2020
   FROZEN EXCEPT FOR ADDITIONS UNTIL INITIAL IMPLEMENTATION COMPLETE AND TESTED
 */
 
@@ -28,23 +28,28 @@ namespace PACKET_TYPES {
   static constexpr uint8_t DEVICE_CMD_ACK     = 0x82;
   static constexpr uint8_t TX_RADIO_CMD_ACK   = 0x83;
   static constexpr uint8_t RX_RADIO_CMD_ACK   = 0x84;
-  static std::array<std::string, 16> NAMES = {
+  static std::vector<std::string> NAMES = {
     "TX_SIGNAL_DATA",
     "RX_SIGNAL_DATA",
     "DEVICE_CMD",
     "TX_RADIO_CMD",
     "RX_RADIO_CMD",
-    "TX_SIGNAL_DATA_ACK",
-    "RX_SIGNAL_DATA_ACK",
-    "DEVICE_CMD_ACK",
-    "TX_RADIO_CMD_ACK",
-    "RX_RADIO_CMD_ACK",
+    "RESERVED (0x05)",
+    "RESERVED (0x06)",
+    "RESERVED (0x07)",
+    "RESERVED (0x08)",
+    "RESERVED (0x09)",
     "DEVICE_CMD_ERR",
     "TX_RADIO_CMD_ERR",
     "RX_RADIO_CMD_ERR",
     "DEVICE_CMD_RSP",
     "TX_RADIO_CMD_RSP",
-    "RX_RADIO_CMD_RSP"
+    "RX_RADIO_CMD_RSP",
+    "TX_SIGNAL_DATA_ACK",
+    "RX_SIGNAL_DATA_ACK",
+    "DEVICE_CMD_ACK",
+    "TX_RADIO_CMD_ACK",
+    "RX_RADIO_CMD_ACK",
   };
 }
 
@@ -107,6 +112,7 @@ namespace DEVICE_CMD_RSP {
   static constexpr uint8_t HELLO_RSP                    = 0x00;  
   static constexpr uint8_t GET_TIME_RSP                 = 0x03;
   static constexpr uint8_t GET_STATUS_RSP               = 0x04;
+  static constexpr uint8_t GET_BUFFER_INFO_RSP          = 0x06;
   static constexpr uint8_t GET_BUFFER_USE_RSP           = 0x07;
   static constexpr uint8_t OPEN_SESSION_RSP             = 0x08;
   static constexpr uint8_t CLOSE_SESSION_RSP            = 0x09;

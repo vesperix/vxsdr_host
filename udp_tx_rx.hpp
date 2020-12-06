@@ -39,7 +39,9 @@ static const int    tx_generator_thread_sleep_us   =      0;
 static const unsigned packets_per_network_buffer   =   1024;
 
 static std::atomic<bool> rx_stop_flag, tx_stop_flag;
-static std::atomic<unsigned> radio_buffer_fill_percent;
+static std::atomic<unsigned> tx_buffer_size, tx_buffer_used;
+static std::atomic<unsigned> rx_buffer_size, rx_buffer_used;
+static std::atomic<unsigned> tx_buffer_fill_percent, rx_buffer_fill_percent;
 
 void set_rx_stop_flag() {
   rx_stop_flag = true;
@@ -101,11 +103,16 @@ class udp_rx {
           case PACKET_TYPES::DEVICE_CMD_RSP:
             if(recv_buffer.hdr.command == DEVICE_CMD_RSP::GET_BUFFER_USE_RSP) {
               get_buffer_use_rsp_packet *r = reinterpret_cast<get_buffer_use_rsp_packet *>(&recv_buffer);
+              tx_buffer_used = r->TX_buffer_used_bytes;
+              rx_buffer_used = r->RX_buffer_used_bytes;
               //LOGGER(info) << "BUFFER USE: " << r->buffer_used_bytes << "  " << r->buffer_size_bytes;
-              if(r->buffer_used_bytes > 2147483648)
-                radio_buffer_fill_percent = std::min(100., floor((100. * (2147483648 - r->buffer_used_bytes)) / 67108864.));
-              else
-                radio_buffer_fill_percent = std::min(100., floor((100. * r->buffer_used_bytes) / 67108864.));
+                tx_buffer_fill_percent = std::min(100., floor((100. * tx_buffer_used) / tx_buffer_size));
+                rx_buffer_fill_percent = std::min(100., floor((100. * rx_buffer_used) / rx_buffer_size));
+            }
+            else if(recv_buffer.hdr.command == DEVICE_CMD_RSP::GET_BUFFER_INFO_RSP) {
+              get_buffer_info_rsp_packet *r = reinterpret_cast<get_buffer_info_rsp_packet *>(&recv_buffer);
+              tx_buffer_size = r->TX_buffer_size_bytes;
+              rx_buffer_size = r->RX_buffer_size_bytes;
             }
             else {
               LOGGER(info) << "DEVICE_CMD_RSP: " << (int)recv_buffer.hdr.command;
@@ -153,8 +160,8 @@ class udp_tx {
   private:
     boost::asio::ip::udp::socket socket;
     boost::asio::ip::udp::endpoint destination;
-    static constexpr size_t tx_buffer_size_ = 256;
-    std::array<data_packet, tx_buffer_size_> send_buffer;
+    static constexpr size_t send_buffer_size = 16;
+    std::array<data_packet, send_buffer_size> send_buffer;
     unsigned send_errors = 0, cmds_sent = 0, buffers_sent = 0, packets_sent = 0;
 
     void start_send() {
@@ -163,9 +170,19 @@ class udp_tx {
       constexpr unsigned throttle_start_percent = 75;
       constexpr unsigned throttle_stop_percent  = 50;
       constexpr unsigned throttle_amount_us =     10;
-      radio_buffer_fill_percent = 0;
-  
+
       packet_header hdr;
+      // get TX buffer size
+      hdr.packet_type = PACKET_TYPES::DEVICE_CMD;
+      hdr.target_subdevice = 0;
+      hdr.command = DEVICE_CMD::GET_BUFFER_INFO;
+      hdr.flags = 0;
+      hdr.packet_size = sizeof(hdr);
+      hdr.sequence_counter = (cmds_sent + buffers_sent) % UINT16_MAX;
+      size_t bytes_sent = socket.send_to(boost::asio::buffer(&hdr, hdr.packet_size), destination);
+
+      tx_buffer_fill_percent = 0;
+
       // send a START_NOW_UNTIL_STOP
       hdr.packet_type = PACKET_TYPES::TX_RADIO_CMD;
       hdr.target_subdevice = 0;
@@ -173,7 +190,7 @@ class udp_tx {
       hdr.flags = 0;
       hdr.packet_size = sizeof(hdr);
       hdr.sequence_counter = (cmds_sent + buffers_sent) % UINT16_MAX;
-      size_t bytes_sent = socket.send_to(boost::asio::buffer(&hdr, hdr.packet_size), destination);
+      bytes_sent = socket.send_to(boost::asio::buffer(&hdr, hdr.packet_size), destination);
       if(bytes_sent != hdr.packet_size)
         send_errors++;
       else
@@ -194,8 +211,8 @@ class udp_tx {
             if(tx_throttle_wait_us > 0)
               std::this_thread::sleep_for(std::chrono::microseconds(tx_throttle_wait_us));
           }
-          // ask for buffer use every every 10000 data packets
-          if(buffers_sent - last_buffer_use_sent > 10000) {
+          // ask for buffer use every every 1000 data packets
+          if(buffers_sent - last_buffer_use_sent > 1000) {
             last_buffer_use_sent = buffers_sent;
             hdr.packet_type = PACKET_TYPES::DEVICE_CMD;
             hdr.target_subdevice = 0;
@@ -210,9 +227,9 @@ class udp_tx {
               cmds_sent++;
           }
           // update throttling
-          if(radio_buffer_fill_percent > throttle_start_percent)
+          if(tx_buffer_fill_percent > throttle_start_percent)
             tx_throttle_wait_us = throttle_amount_us;
-          else if (radio_buffer_fill_percent < throttle_stop_percent)
+          else if (tx_buffer_fill_percent < throttle_stop_percent)
             tx_throttle_wait_us = 0;
         }
         else {
