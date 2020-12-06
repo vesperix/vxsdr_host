@@ -181,7 +181,7 @@ class udp_tx {
       hdr.packet_type = PACKET_TYPES::DEVICE_CMD;
       hdr.target_subdevice = 0;
       hdr.command = DEVICE_CMD::HELLO;
-      hdr.flags = 0;
+      hdr.flags = FLAGS::REQUEST_ACK;
       hdr.packet_size = sizeof(hdr);
       hdr.sequence_counter = packets_sent % UINT16_MAX;
       size_t bytes_sent = socket.send_to(boost::asio::buffer(&hdr, hdr.packet_size), destination);
@@ -191,17 +191,18 @@ class udp_tx {
       hdr.packet_type = PACKET_TYPES::DEVICE_CMD;
       hdr.target_subdevice = 0;
       hdr.command = DEVICE_CMD::GET_STATUS;
-      hdr.flags = 0;
+      hdr.flags = FLAGS::REQUEST_ACK;
       hdr.packet_size = sizeof(hdr);
       hdr.sequence_counter = packets_sent % UINT16_MAX;
       bytes_sent = socket.send_to(boost::asio::buffer(&hdr, hdr.packet_size), destination);
       packets_sent++;
       total_bytes += bytes_sent;
       std::this_thread::sleep_for(std::chrono::seconds(1));
+      /*
       hdr.packet_type = PACKET_TYPES::DEVICE_CMD;
       hdr.target_subdevice = 0;
       hdr.command = DEVICE_CMD::GET_BUFFER_USE;
-      hdr.flags = 0;
+      hdr.flags = FLAGS::REQUEST_ACK;
       hdr.packet_size = sizeof(hdr);
       for(unsigned i = 0; i < 10; i++) {
         hdr.sequence_counter = packets_sent % UINT16_MAX;
@@ -211,18 +212,17 @@ class udp_tx {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
       }
       std::this_thread::sleep_for(std::chrono::seconds(1));
+      */
       hdr.packet_type = PACKET_TYPES::RX_RADIO_CMD;
       hdr.target_subdevice = 0;
       hdr.command = RADIO_CMD::STOP_NOW;
-      hdr.flags = 0;
+      hdr.flags = FLAGS::REQUEST_ACK;
       hdr.packet_size = sizeof(hdr);
-      for(unsigned i = 0; i < 10; i++) {
-        hdr.sequence_counter = packets_sent % UINT16_MAX;
-        bytes_sent = socket.send_to(boost::asio::buffer(&hdr, hdr.packet_size), destination);
-        packets_sent++;
-        total_bytes += bytes_sent;
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
-      }
+      hdr.sequence_counter = packets_sent % UINT16_MAX;
+      bytes_sent = socket.send_to(boost::asio::buffer(&hdr, hdr.packet_size), destination);
+      packets_sent++;
+      total_bytes += bytes_sent;
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
       // now set stop flag and then send a HELLO to get the RX to quit
       set_rx_stop_flag();
       std::this_thread::sleep_for(std::chrono::seconds(1));

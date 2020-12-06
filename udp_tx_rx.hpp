@@ -103,9 +103,9 @@ class udp_rx {
               get_buffer_use_rsp_packet *r = reinterpret_cast<get_buffer_use_rsp_packet *>(&recv_buffer);
               //LOGGER(info) << "BUFFER USE: " << r->buffer_used_bytes << "  " << r->buffer_size_bytes;
               if(r->buffer_used_bytes > 2147483648)
-                radio_buffer_fill_percent = floor((100. * (2147483648 - r->buffer_used_bytes)) / 2147483648.);
+                radio_buffer_fill_percent = std::min(100., floor((100. * (2147483648 - r->buffer_used_bytes)) / 67108864.));
               else
-                radio_buffer_fill_percent = floor((100. * r->buffer_used_bytes) / 2147483648.);
+                radio_buffer_fill_percent = std::min(100., floor((100. * r->buffer_used_bytes) / 67108864.));
             }
             else {
               LOGGER(info) << "DEVICE_CMD_RSP: " << (int)recv_buffer.hdr.command;
