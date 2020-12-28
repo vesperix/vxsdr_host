@@ -400,7 +400,7 @@ void generator(const size_t max_packets, const size_t requested_packet_size, con
     packet_size = data_buffer_max_bytes;
   }
 
-  const double a = 800;
+  const double a = 16000;
   const float ncycles = 9117.; // number of cycles in buf.size() buffers; must be integer to avoid skips
   const double w = (2 * M_PI * ncycles) / (buf.size() * MAX_DATA_LENGTH_SAMPLES); 
 
@@ -419,10 +419,19 @@ void generator(const size_t max_packets, const size_t requested_packet_size, con
 
   auto t0 = std::chrono::steady_clock::now();
 
+  unsigned max_wait = 1000000;
+  if(tx_generator_thread_sleep_us > 0)
+    max_wait = 1000000 / tx_generator_thread_sleep_us;
+
   for(size_t i = 1; i <= max_packets; i++) {
     unsigned idx = i % buf.size();
+    unsigned nwait = 0;
     // wait for room in the tx queue
-    while(!tx_data_queue.write_available()) {}
+    while(!tx_data_queue.write_available() and nwait < max_wait) {
+      nwait++;
+      if(tx_generator_thread_sleep_us > 0)
+        std::this_thread::sleep_for(std::chrono::microseconds(tx_generator_thread_sleep_us));
+    }
 
     tx_data_queue.push(buf[idx]);
     if(tx_generator_thread_sleep_us > 0)
