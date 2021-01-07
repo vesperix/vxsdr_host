@@ -3,7 +3,7 @@
 
 /*
   SDR packet headers
-  Version 0.1.8 06 Dec 2020
+  Version 0.1.9 07 Jan 2021
   FROZEN EXCEPT FOR ADDITIONS UNTIL INITIAL IMPLEMENTATION COMPLETE AND TESTED
 */
 
@@ -102,7 +102,11 @@ namespace DEVICE_CMD {
   static constexpr uint8_t GET_TIMING_STATUS            = 0x51;  // PPS present/absent; 10 MHz locked/unlocked
   static constexpr uint8_t GET_TIMING_REF               = 0x52;  // current sources of 10 MHz and PPS
   static constexpr uint8_t SET_TIMING_REF               = 0x53;  // set sources of 10 MHz and PPS
-
+  static constexpr uint8_t READ_DAC_REG                 = 0x60;
+  static constexpr uint8_t WRITE_DAC_REG                = 0x61;
+  static constexpr uint8_t READ_ADC_REG                 = 0x62;
+  static constexpr uint8_t WRITE_ADC_REG                = 0x63;
+  
   // 0x50-0xFD reserved for stuff we haven't thought of yet
   static constexpr uint8_t STOP                         = 0xFE;  // stop all streaming and return to wait state within session
   static constexpr uint8_t RESET                        = 0xFF;  // do a power on reset (closing session and returning to idle)
@@ -123,6 +127,8 @@ namespace DEVICE_CMD_RSP {
   static constexpr uint8_t GET_TIMING_INFO_RSP          = 0x50;
   static constexpr uint8_t GET_TIMING_STATUS_RSP        = 0x51;
   static constexpr uint8_t GET_TIMING_REF_RSP           = 0x52;
+  static constexpr uint8_t READ_DAC_REG_RSP             = 0x60;
+  static constexpr uint8_t READ_ADC_REG_RSP             = 0x62;
 }
 
 namespace DEVICE_CMD_ERR {
@@ -241,5 +247,23 @@ typedef struct {
   uint32_t                ddr_arbiter_status;
   uint32_t                tgbe_status;
 } status_rsp_packet;
+
+typedef struct {
+  packet_header           hdr;
+  uint32_t                reg_num;
+  uint32_t                reserved;
+} dev_read_reg_packet;
+
+typedef struct {
+  packet_header           hdr;
+  uint32_t                value;
+  uint32_t                reserved;
+} dev_read_reg_rsp_packet;
+
+typedef struct {
+  packet_header           hdr;
+  uint32_t                reg_num;
+  uint32_t                value;
+} dev_write_reg_packet;
 
 #endif // VXSDR_HEADER_HPP
