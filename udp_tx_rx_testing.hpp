@@ -133,6 +133,20 @@ class udp_rx {
                   LOGGER(info) << "   TX_buffer_used_bytes         = " << (uint32_t)br->TX_buffer_used_bytes;
                 }
                 break;
+              case DEVICE_CMD::READ_ADC_REG:
+                {
+                  LOGGER(info) << "DEVICE_CMD_RSP: READ_ADC_REG";
+                  dev_read_reg_rsp_packet *br = reinterpret_cast<dev_read_reg_rsp_packet *>(&recv_buffer);
+                  LOGGER(info) << "   value                        = " << boost::format("%08x") % (uint32_t)br->value;
+                }
+                break;
+              case DEVICE_CMD::READ_DAC_REG:
+                {
+                  LOGGER(info) << "DEVICE_CMD_RSP: READ_DAC_REG";
+                  dev_read_reg_rsp_packet *br = reinterpret_cast<dev_read_reg_rsp_packet *>(&recv_buffer);
+                  LOGGER(info) << "   value                        = " << boost::format("%04x") % (uint16_t)br->value;
+                }
+                break;
             }
            break;
           case PACKET_TYPES::RX_RADIO_CMD_RSP:
@@ -198,7 +212,8 @@ class udp_tx {
       size_t bytes_sent = socket.send_to(boost::asio::buffer(&hdr, hdr.packet_size), destination);
       packets_sent++;
       total_bytes += bytes_sent;
-      std::this_thread::sleep_for(std::chrono::seconds(1));
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  
       hdr.packet_type = PACKET_TYPES::DEVICE_CMD;
       hdr.target_subdevice = 0;
       hdr.command = DEVICE_CMD::GET_STATUS;
@@ -208,30 +223,8 @@ class udp_tx {
       bytes_sent = socket.send_to(boost::asio::buffer(&hdr, hdr.packet_size), destination);
       packets_sent++;
       total_bytes += bytes_sent;
-      std::this_thread::sleep_for(std::chrono::seconds(1));
-      hdr.packet_type = PACKET_TYPES::DEVICE_CMD;
-      hdr.target_subdevice = 0;
-      hdr.command = DEVICE_CMD::GET_BUFFER_INFO;
-      hdr.flags = FLAGS::REQUEST_ACK;
-      hdr.packet_size = sizeof(hdr);
-      hdr.sequence_counter = packets_sent % UINT16_MAX;
-      bytes_sent = socket.send_to(boost::asio::buffer(&hdr, hdr.packet_size), destination);
-      packets_sent++;
-      total_bytes += bytes_sent;
-      std::this_thread::sleep_for(std::chrono::seconds(1));
-      hdr.packet_type = PACKET_TYPES::DEVICE_CMD;
-      hdr.target_subdevice = 0;
-      hdr.command = DEVICE_CMD::GET_BUFFER_USE;
-      hdr.flags = FLAGS::REQUEST_ACK;
-      hdr.packet_size = sizeof(hdr);
-      for(unsigned i = 0; i < 10; i++) {
-        hdr.sequence_counter = packets_sent % UINT16_MAX;
-        bytes_sent = socket.send_to(boost::asio::buffer(&hdr, hdr.packet_size), destination);
-        packets_sent++;
-        total_bytes += bytes_sent;
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
-      }
-      std::this_thread::sleep_for(std::chrono::seconds(1));
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
       hdr.packet_type = PACKET_TYPES::RX_RADIO_CMD;
       hdr.target_subdevice = 0;
       hdr.command = RADIO_CMD::STOP_NOW;
@@ -242,6 +235,87 @@ class udp_tx {
       packets_sent++;
       total_bytes += bytes_sent;
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
+ 
+      dev_read_reg_packet p;
+      p.hdr.packet_type = PACKET_TYPES::DEVICE_CMD;
+      p.hdr.target_subdevice = 0;
+      p.hdr.command = DEVICE_CMD::READ_DAC_REG;
+      p.hdr.flags = FLAGS::REQUEST_ACK;
+      p.hdr.packet_size = sizeof(hdr) + 8;
+      p.hdr.sequence_counter = packets_sent % UINT16_MAX;
+      p.reg_num = 0x2;
+      p.reserved = 0;
+      bytes_sent = socket.send_to(boost::asio::buffer(&p, sizeof(p)), destination);
+      packets_sent++;
+      total_bytes += bytes_sent;
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+      p.hdr.packet_type = PACKET_TYPES::DEVICE_CMD;
+      p.hdr.target_subdevice = 0;
+      p.hdr.command = DEVICE_CMD::READ_DAC_REG;
+      p.hdr.flags = FLAGS::REQUEST_ACK;
+      p.hdr.packet_size = sizeof(hdr) + 8;
+      p.hdr.sequence_counter = packets_sent % UINT16_MAX;
+      p.reg_num = 0xD;
+      p.reserved = 0;
+      bytes_sent = socket.send_to(boost::asio::buffer(&p, sizeof(p)), destination);
+      packets_sent++;
+      total_bytes += bytes_sent;
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+      dev_write_reg_packet q;
+      q.hdr.packet_type = PACKET_TYPES::DEVICE_CMD;
+      q.hdr.target_subdevice = 0;
+      q.hdr.command = DEVICE_CMD::WRITE_DAC_REG;
+      q.hdr.flags = FLAGS::REQUEST_ACK;
+      q.hdr.packet_size = sizeof(hdr) + 8;
+      q.hdr.sequence_counter = packets_sent % UINT16_MAX;
+      q.reg_num = 0x2;
+      q.value = 0x2042;
+      bytes_sent = socket.send_to(boost::asio::buffer(&q, sizeof(q)), destination);
+      packets_sent++;
+      total_bytes += bytes_sent;
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+      q.hdr.packet_type = PACKET_TYPES::DEVICE_CMD;
+      q.hdr.target_subdevice = 0;
+      q.hdr.command = DEVICE_CMD::WRITE_DAC_REG;
+      q.hdr.flags = FLAGS::REQUEST_ACK;
+      q.hdr.packet_size = sizeof(hdr) + 8;
+      q.hdr.sequence_counter = packets_sent % UINT16_MAX;
+      q.reg_num = 0xD;
+      q.value = 0x4400;
+      bytes_sent = socket.send_to(boost::asio::buffer(&q, sizeof(q)), destination);
+      packets_sent++;
+      total_bytes += bytes_sent;
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+      p.hdr.packet_type = PACKET_TYPES::DEVICE_CMD;
+      p.hdr.target_subdevice = 0;
+      p.hdr.command = DEVICE_CMD::READ_DAC_REG;
+      p.hdr.flags = FLAGS::REQUEST_ACK;
+      p.hdr.packet_size = sizeof(hdr) + 8;
+      p.hdr.sequence_counter = packets_sent % UINT16_MAX;
+      p.reg_num = 0x2;
+      p.reserved = 0;
+      bytes_sent = socket.send_to(boost::asio::buffer(&p, sizeof(p)), destination);
+      packets_sent++;
+      total_bytes += bytes_sent;
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+      p.hdr.packet_type = PACKET_TYPES::DEVICE_CMD;
+      p.hdr.target_subdevice = 0;
+      p.hdr.command = DEVICE_CMD::READ_DAC_REG;
+      p.hdr.flags = FLAGS::REQUEST_ACK;
+      p.hdr.packet_size = sizeof(hdr) + 8;
+      p.hdr.sequence_counter = packets_sent % UINT16_MAX;
+      p.reg_num = 0xD;
+      p.reserved = 0;
+      bytes_sent = socket.send_to(boost::asio::buffer(&p, sizeof(p)), destination);
+      packets_sent++;
+      total_bytes += bytes_sent;
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
       // now set stop flag and then send a HELLO to get the RX to quit
       set_rx_stop_flag();
       std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -255,6 +329,7 @@ class udp_tx {
       packets_sent++;
       total_bytes += bytes_sent;
       std::this_thread::sleep_for(std::chrono::seconds(1));
+
       LOGGER(info) << "send finished: " << packets_sent << " packets, " << total_bytes << " bytes sent";
     }
 };

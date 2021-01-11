@@ -107,7 +107,7 @@ namespace DEVICE_CMD {
   static constexpr uint8_t READ_ADC_REG                 = 0x62;
   static constexpr uint8_t WRITE_ADC_REG                = 0x63;
   
-  // 0x50-0xFD reserved for stuff we haven't thought of yet
+  // 0x64-0xFD reserved for stuff we haven't thought of yet
   static constexpr uint8_t STOP                         = 0xFE;  // stop all streaming and return to wait state within session
   static constexpr uint8_t RESET                        = 0xFF;  // do a power on reset (closing session and returning to idle)
 }
