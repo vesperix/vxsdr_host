@@ -212,7 +212,7 @@ class udp_tx {
               std::this_thread::sleep_for(std::chrono::microseconds(tx_throttle_wait_us));
           }
           // ask for buffer use every every 1000 data packets
-          if(buffers_sent - last_buffer_use_sent > 1000) {
+          if(buffers_sent - last_buffer_use_sent > 100) {
             last_buffer_use_sent = buffers_sent;
             hdr.packet_type = PACKET_TYPES::DEVICE_CMD;
             hdr.target_subdevice = 0;
