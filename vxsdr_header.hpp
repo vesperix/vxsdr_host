@@ -54,7 +54,7 @@ namespace PACKET_TYPES {
 }
 
 static constexpr size_t   MAX_DATA_LENGTH_SAMPLES  = 2048;
-static constexpr size_t   MAX_PAYLOAD_LENGTH_BYTES = 256;  // maximum length of a CMD or RSP packet, excluding header
+static constexpr size_t   MAX_PAYLOAD_LENGTH_BYTES = 32;  // maximum length of a CMD or RSP packet, excluding header
 
 typedef struct {
   uint8_t                 packet_type;
@@ -106,14 +106,14 @@ namespace DEVICE_CMD {
   static constexpr uint8_t WRITE_DAC_REG                = 0x61;
   static constexpr uint8_t READ_ADC_REG                 = 0x62;
   static constexpr uint8_t WRITE_ADC_REG                = 0x63;
-  
+
   // 0x64-0xFD reserved for stuff we haven't thought of yet
   static constexpr uint8_t STOP                         = 0xFE;  // stop all streaming and return to wait state within session
   static constexpr uint8_t RESET                        = 0xFF;  // do a power on reset (closing session and returning to idle)
 }
 
 namespace DEVICE_CMD_RSP {
-  static constexpr uint8_t HELLO_RSP                    = 0x00;  
+  static constexpr uint8_t HELLO_RSP                    = 0x00;
   static constexpr uint8_t GET_TIME_RSP                 = 0x03;
   static constexpr uint8_t GET_STATUS_RSP               = 0x04;
   static constexpr uint8_t GET_BUFFER_INFO_RSP          = 0x06;
@@ -229,7 +229,7 @@ typedef struct {
 typedef struct {
   packet_header           hdr;
   uint8_t                 payload[MAX_PAYLOAD_LENGTH_BYTES];
-} generic_cmd_rsp_packet;
+} generic_cmd_or_rsp_packet;
 
 typedef struct {
   packet_header           hdr;

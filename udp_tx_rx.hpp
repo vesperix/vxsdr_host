@@ -54,8 +54,8 @@ void set_tx_stop_flag() {
 static boost::lockfree::spsc_queue<data_packet, boost::lockfree::capacity<rx_data_queue_length> > rx_data_queue;
 static boost::lockfree::spsc_queue<data_packet, boost::lockfree::capacity<tx_data_queue_length> > tx_data_queue;
 
-static boost::lockfree::spsc_queue<generic_cmd_rsp_packet, boost::lockfree::capacity<rx_msg_queue_length> > rx_msg_queue;
-static boost::lockfree::spsc_queue<generic_cmd_rsp_packet, boost::lockfree::capacity<tx_msg_queue_length> > tx_msg_queue;
+static boost::lockfree::spsc_queue<generic_cmd_or_rsp_packet, boost::lockfree::capacity<rx_msg_queue_length> > rx_msg_queue;
+static boost::lockfree::spsc_queue<generic_cmd_or_rsp_packet, boost::lockfree::capacity<tx_msg_queue_length> > tx_msg_queue;
 
 class udp_rx {
   public:
@@ -80,7 +80,7 @@ class udp_rx {
     boost::asio::ip::udp::socket socket;
     boost::asio::ip::udp::endpoint remote;
     data_packet recv_buffer;
-    generic_cmd_rsp_packet cmd_buffer;
+    generic_cmd_or_rsp_packet cmd_buffer;
     size_t packets_received = 0, packet_types_received[16] = { 0 };
     size_t seq = 0, last_seq = 0, seq_errors = 0;
     unsigned percent, min_buffer_percent = 100, max_buffer_percent = 0;
@@ -99,23 +99,41 @@ class udp_rx {
             rx_data_queue.push(recv_buffer);
             break;
           case PACKET_TYPES::TX_SIGNAL_DATA:
+            LOGGER(error) << "Received a TX signal data packet";
             break;
           case PACKET_TYPES::DEVICE_CMD_RSP:
-            if(recv_buffer.hdr.command == DEVICE_CMD_RSP::GET_BUFFER_USE_RSP) {
-              get_buffer_use_rsp_packet *r = reinterpret_cast<get_buffer_use_rsp_packet *>(&recv_buffer);
-              tx_buffer_used = r->TX_buffer_used_bytes;
-              rx_buffer_used = r->RX_buffer_used_bytes;
-              //LOGGER(info) << "BUFFER USE: " << r->buffer_used_bytes << "  " << r->buffer_size_bytes;
-                tx_buffer_fill_percent = std::min(100., floor((100. * tx_buffer_used) / tx_buffer_size));
-                rx_buffer_fill_percent = std::min(100., floor((100. * rx_buffer_used) / rx_buffer_size));
-            }
-            else if(recv_buffer.hdr.command == DEVICE_CMD_RSP::GET_BUFFER_INFO_RSP) {
-              get_buffer_info_rsp_packet *r = reinterpret_cast<get_buffer_info_rsp_packet *>(&recv_buffer);
-              tx_buffer_size = r->TX_buffer_size_bytes;
-              rx_buffer_size = r->RX_buffer_size_bytes;
-            }
-            else {
-              LOGGER(info) << "DEVICE_CMD_RSP: " << (int)recv_buffer.hdr.command;
+            switch(recv_buffer.hdr.command) {
+              case DEVICE_CMD_RSP::GET_BUFFER_USE_RSP:
+                {
+                  get_buffer_use_rsp_packet *r = reinterpret_cast<get_buffer_use_rsp_packet *>(&recv_buffer);
+                  tx_buffer_used = r->TX_buffer_used_bytes;
+                  rx_buffer_used = r->RX_buffer_used_bytes;
+                  tx_buffer_fill_percent = std::min(100., floor((100. * tx_buffer_used) / tx_buffer_size));
+                  rx_buffer_fill_percent = std::min(100., floor((100. * rx_buffer_used) / rx_buffer_size));
+                }
+                break;
+              case DEVICE_CMD_RSP::GET_BUFFER_INFO_RSP:
+                {
+                  get_buffer_info_rsp_packet *r = reinterpret_cast<get_buffer_info_rsp_packet *>(&recv_buffer);
+                  tx_buffer_size = r->TX_buffer_size_bytes;
+                  rx_buffer_size = r->RX_buffer_size_bytes;
+                }
+                break;
+              case DEVICE_CMD::GET_STATUS:
+                {
+                  LOGGER(info) << "DEVICE_CMD_RSP: GET_STATUS";
+                  status_rsp_packet *sr = reinterpret_cast<status_rsp_packet *>(&recv_buffer);
+                  LOGGER(info) << "   fpga_temp                 = " << sr->fpga_temp;
+                  LOGGER(info) << "   dac_temp                  = " << sr->dac_temp;
+                  LOGGER(info) << "   oos_err_count             = " << sr->oos_err_count;
+                  LOGGER(info) << "   datapath_fifo_flow_status = " << sr->datapath_fifo_flow_status;
+                  LOGGER(info) << "   ddr_arbiter_status        = " << sr->ddr_arbiter_status;
+                  LOGGER(info) << "   tgbe_status               = " << sr->tgbe_status;
+                }
+                break;
+              default:
+                LOGGER(info) << "DEVICE_CMD_RSP: " << (int)recv_buffer.hdr.command;
+                break;
             }
             break;
           case PACKET_TYPES::RX_RADIO_CMD_RSP:
@@ -237,11 +255,13 @@ class udp_tx {
             std::this_thread::sleep_for(std::chrono::microseconds(tx_send_thread_sleep_us));
         }
       }
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
       // send a STOP_NOW
       hdr.packet_type = PACKET_TYPES::TX_RADIO_CMD;
       hdr.target_subdevice = 0;
       hdr.command = RADIO_CMD::STOP_NOW;
-      hdr.flags = 0;
+      // request an ACK so there will be an RX to trigger RX stop
+      hdr.flags = FLAGS::REQUEST_ACK;
       hdr.packet_size = sizeof(hdr);
       hdr.sequence_counter = buffers_sent % UINT16_MAX;
       bytes_sent = socket.send_to(boost::asio::buffer(&hdr, hdr.packet_size), destination);
@@ -276,7 +296,7 @@ void writer(const std::string &outfilename, const size_t max_packets) {
         if(outfile.bad())
           write_errors++;
         else
-          bytes_written += data_bytes;        
+          bytes_written += data_bytes;
       }
       packets += nwrite;
     }
@@ -402,7 +422,7 @@ void generator(const size_t max_packets, const size_t requested_packet_size, con
 
   const double a = 16000;
   const float ncycles = 9117.; // number of cycles in buf.size() buffers; must be integer to avoid skips
-  const double w = (2 * M_PI * ncycles) / (buf.size() * MAX_DATA_LENGTH_SAMPLES); 
+  const double w = (2 * M_PI * ncycles) / (buf.size() * MAX_DATA_LENGTH_SAMPLES);
 
   for(unsigned i = 0; i < buf.size(); i++) {
     buf[i].hdr.packet_type = PACKET_TYPES::TX_SIGNAL_DATA;
@@ -448,7 +468,7 @@ void generator(const size_t max_packets, const size_t requested_packet_size, con
   std::this_thread::sleep_for(std::chrono::seconds(5));
   set_tx_stop_flag();
   set_rx_stop_flag();
- 
+
   LOGGER(info) << "generator thread finished";
 }
 
