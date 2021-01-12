@@ -82,7 +82,8 @@ class udp_rx {
     data_packet recv_buffer;
     generic_cmd_or_rsp_packet cmd_buffer;
     size_t packets_received = 0, packet_types_received[16] = { 0 };
-    size_t seq = 0, last_seq = 0, seq_errors = 0;
+    uint16_t seq = 0, last_seq = 0;
+    size_t seq_errors = 0;
     unsigned percent, min_buffer_percent = 100, max_buffer_percent = 0;
     void start_receive() {
       // FIXME: need to add timeout if no packets are coming in
@@ -91,7 +92,7 @@ class udp_rx {
         packets_received++;
         if(recv_buffer.hdr.packet_type < 16)
           packet_types_received[recv_buffer.hdr.packet_type]++;
-        if(packets_received > 1 and recv_buffer.hdr.sequence_counter != last_seq + 1 and last_seq != UINT16_MAX)
+        if(packets_received > 1 and recv_buffer.hdr.sequence_counter != last_seq++)
           seq_errors++;
         last_seq = recv_buffer.hdr.sequence_counter;
         switch(recv_buffer.hdr.packet_type) {
@@ -162,6 +163,7 @@ class udp_rx {
       LOGGER(info) << "start_receive exiting; " << packets_received << " packets received:";
       for(unsigned i = 0; i < 16; i++)
         LOGGER(info) << (boost::format("   %12d %s") % packet_types_received[i] % PACKET_TYPES::NAMES[i]);
+      LOGGER(info) << seq_errors << " sequence errors found";
     }
 };
 
