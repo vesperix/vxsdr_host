@@ -9,16 +9,11 @@
 
 #include "vxsdr_header.hpp"
 
-//#define SINGLE_CHANNEL
-
-// packet type ids
-static constexpr uint16_t TX_DATA_ID               = 0xDACD;
-static constexpr uint16_t RX_DATA_ID               = 0xADCD;
-static constexpr uint16_t TX_DATA_ACK_ID           = 0xDACA;
-
 // parameters of the internal ring buffers
-static const size_t msg_buffer_max_bytes           =    256;    // size of largest command/status message packet
-static const size_t data_buffer_max_bytes          =   8200;    // size of largest data packet
+ // size of largest command/status message packet
+static const size_t msg_buffer_max_bytes           = sizeof(packet_header) + MAX_PAYLOAD_LENGTH_BYTES;
+// size of largest data packet
+static const size_t data_buffer_max_bytes          = sizeof(packet_header) + sizeof(std::complex<int16_t>) * MAX_DATA_LENGTH_SAMPLES;
 static const size_t rx_data_queue_length           =  65536;    // slots in rx data queue
 static const size_t tx_data_queue_length           =   1024;    // slots in tx data queue
 static const size_t rx_msg_queue_length            =    256;    // slots in rx msg queue
@@ -484,11 +479,8 @@ void generator(const size_t max_packets, const size_t requested_packet_size, con
   auto t0 = std::chrono::steady_clock::now();
 
   unsigned max_wait = 1000000;
-  if(tx_generator_thread_sleep_us > 0)
-    max_wait = 1000000 / tx_generator_thread_sleep_us;
 
   for(size_t i = 1; i <= max_packets; i++) {
-    unsigned idx = i % buf.size();
     unsigned nwait = 0;
     // wait for room in the tx queue
     while(!tx_data_queue.write_available() and nwait < max_wait) {
@@ -497,7 +489,14 @@ void generator(const size_t max_packets, const size_t requested_packet_size, con
         std::this_thread::sleep_for(std::chrono::microseconds(tx_generator_thread_sleep_us));
     }
 
-    tx_data_queue.push(buf[idx]);
+    if(nwait < max_wait) {
+      // loop through stored data
+      tx_data_queue.push(buf[i % buf.size()]);
+    }
+    else {
+      LOGGER(error) << "Timeout waiting for space in TX data queue";
+    }
+
     if(tx_generator_thread_sleep_us > 0)
       std::this_thread::sleep_for(std::chrono::microseconds(tx_generator_thread_sleep_us));
     if(tx_stop_flag or rx_stop_flag) {
