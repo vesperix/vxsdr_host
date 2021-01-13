@@ -94,8 +94,8 @@ int main(int argc, char *argv[])
 
     boost::asio::ip::address_v4 local_ip = boost::asio::ip::address_v4::from_string(vm["local_address"].as<std::string>());
     boost::asio::ip::address_v4 destination_ip = boost::asio::ip::address_v4::from_string(vm["destination_address"].as<std::string>());
-    boost::asio::ip::address_v4 netmask = boost::asio::ip::address_v4::from_string(vm["netmask"].as<std::string>());
-    boost::asio::ip::address_v4 broadcast_ip = boost::asio::ip::address_v4::broadcast(local_ip, netmask);
+    //boost::asio::ip::address_v4 netmask = boost::asio::ip::address_v4::from_string(vm["netmask"].as<std::string>());
+    //boost::asio::ip::address_v4 broadcast_ip = boost::asio::ip::address_v4::broadcast(local_ip, netmask);
     boost::asio::ip::udp::endpoint local_send_endpoint(local_ip, vm["local_send_port"].as<unsigned>());
     LOGGER(info) << "using local send IP " << local_send_endpoint.address().to_string() << " and port " << local_send_endpoint.port();
     boost::asio::ip::udp::endpoint local_receive_endpoint(local_ip, vm["local_receive_port"].as<unsigned>());
