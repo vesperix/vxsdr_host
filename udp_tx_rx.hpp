@@ -37,7 +37,7 @@ static constexpr int    response_thread_sleep_us     =   1000;
 // parameters used to set the OS's network buffer
 static constexpr unsigned packets_per_network_buffer =   1024;
 
-static std::atomic<bool> rx_stop_flag, tx_stop_flag;
+static std::atomic<bool> rx_stop_flag, tx_stop_flag, complete_flag;
 static std::atomic<unsigned> tx_buffer_size, tx_buffer_used;
 static std::atomic<unsigned> rx_buffer_size, rx_buffer_used;
 static std::atomic<unsigned> tx_buffer_fill_percent, rx_buffer_fill_percent;
@@ -48,6 +48,10 @@ void set_rx_stop_flag() {
 
 void set_tx_stop_flag() {
   tx_stop_flag = true;
+}
+
+void set_complete_flag() {
+  complete_flag = true;
 }
 
 static boost::lockfree::spsc_queue<data_packet, boost::lockfree::capacity<rx_data_queue_length> > rx_data_queue;
@@ -87,7 +91,7 @@ class udp_rx {
     unsigned percent, min_buffer_percent = 100, max_buffer_percent = 0;
     void start_receive() {
       // FIXME: need to add timeout if no packets are coming in
-      while(!rx_stop_flag) {
+      while(not rx_stop_flag) {
         socket.receive_from(boost::asio::buffer(&recv_buffer, sizeof(recv_buffer)), remote);
         packets_received++;
         if(recv_buffer.hdr.packet_type < 16)
@@ -168,6 +172,7 @@ class udp_rx {
             break;
         }
       }
+
       LOGGER(info) << "start_receive exiting; " << packets_received << " packets received:";
       for(unsigned i = 0; i < 16; i++)
         LOGGER(info) << (boost::format("   %12d %s") % packet_types_received[i] % PACKET_TYPES::NAMES[i]);
@@ -269,7 +274,7 @@ class udp_tx {
             if(tx_throttle_wait_us > 0)
               std::this_thread::sleep_for(std::chrono::microseconds(tx_throttle_wait_us));
           }
-          // ask for buffer use every every 1000 data packets
+          // ask for buffer use every every 100 data packets
           if(buffers_sent - last_buffer_use_sent > 100) {
             last_buffer_use_sent = buffers_sent;
             hdr.packet_type = PACKET_TYPES::DEVICE_CMD;
@@ -283,6 +288,20 @@ class udp_tx {
               send_errors++;
             else
               cmds_sent++;
+
+            // get the error status exery 100 packets
+            hdr.packet_type = PACKET_TYPES::DEVICE_CMD;
+            hdr.target_subdevice = 0;
+            hdr.command = DEVICE_CMD::GET_STATUS;
+            hdr.flags = 0;
+            hdr.packet_size = sizeof(hdr);
+            hdr.sequence_counter = buffers_sent % UINT16_MAX;
+            bytes_sent = socket.send_to(boost::asio::buffer(&hdr, hdr.packet_size), destination);
+            if(bytes_sent != hdr.packet_size)
+              send_errors++;
+            else
+              cmds_sent++;
+
           }
           // update throttling
           if(tx_buffer_fill_percent > throttle_start_percent)
@@ -321,6 +340,7 @@ class udp_tx {
         send_errors++;
       else
         cmds_sent++;
+
       LOGGER(info) << "send finished: " << buffers_sent << " buffers, " << cmds_sent << " commands, " << send_errors << " send errors";
     }
 };
@@ -367,9 +387,6 @@ void writer(const std::string &outfilename, const size_t max_packets) {
   LOGGER(info) << seq_errors << " sequence errors, " << write_errors << " write errors";
   LOGGER(info) << (bytes_written / dt.count()) << " bytes/s";
 
-  // set stop flag so pushing stops
-  set_tx_stop_flag();
-  set_rx_stop_flag();
   std::this_thread::sleep_for(std::chrono::microseconds(rx_data_queue_clear_sleep_us));
   // empty the queue
   while(rx_data_queue.read_available())
@@ -405,7 +422,7 @@ void data_packet_counter(const size_t max_packets, const size_t packet_size) {
     if(rx_write_thread_sleep_us > 0)
       std::this_thread::sleep_for(std::chrono::microseconds(rx_write_thread_sleep_us));
 
-    if(tx_stop_flag or rx_stop_flag) {
+    if(rx_stop_flag) {
       break;
     }
   }
@@ -415,9 +432,6 @@ void data_packet_counter(const size_t max_packets, const size_t packet_size) {
   LOGGER(info) << packets << " packets recieved in " << dt.count() << " sec";
   LOGGER(info) << (packets * packet_size / dt.count()) << " bytes/s, " << (8 * packets * packet_size / dt.count()) << " bits/s";
 
-  // set stop flag so pushing stops
-  set_tx_stop_flag();
-  set_rx_stop_flag();
   std::this_thread::sleep_for(std::chrono::microseconds(rx_data_queue_clear_sleep_us));
   // empty the queue
   while(rx_data_queue.read_available())
@@ -433,13 +447,13 @@ void response_packet_printer() {
   static std::array<generic_cmd_or_rsp_packet, buffer_max_packets> buffer;
   size_t packets = 0;
 
-  while(not(tx_stop_flag or rx_stop_flag)) {
-    while(rx_data_queue.read_available()) {
+  while(not complete_flag) { 
+    if(rx_data_queue.read_available()) {
       size_t n_popped = response_queue.pop(&buffer.front(), buffer_max_packets);
       for(size_t i = 0; i < n_popped; i++) {
         packets++;
         log_packet_info(buffer[i]);
-      }      
+      }
     }
     if(response_thread_sleep_us > 0)
       std::this_thread::sleep_for(std::chrono::microseconds(response_thread_sleep_us));
@@ -533,7 +547,8 @@ void generator(const size_t max_packets, const size_t requested_packet_size, con
   std::chrono::duration<double> dt = t1 - t0;
   LOGGER(info) << (nsent - 1) << " buffers (" << ((nsent - 1) * packet_size) << " bytes) generated in " << dt.count() << " seconds";
 
-  std::this_thread::sleep_for(std::chrono::seconds(5));
+  LOGGER(info) << "generator waiting 10 seconds for completion";
+  std::this_thread::sleep_for(std::chrono::seconds(10));
   set_tx_stop_flag();
   set_rx_stop_flag();
 

@@ -114,6 +114,8 @@ int main(int argc, char *argv[])
     sender_thread.join();
     receiver_thread.join();
     packet_counter_thread.join();
+    std::this_thread::sleep_for(std::chrono::seconds(5));
+    set_complete_flag();
     response_logger_thread.join();
   }
   catch (std::exception& e) {
