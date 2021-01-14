@@ -107,7 +107,7 @@ int main(int argc, char *argv[])
     std::thread handler_thread, receiver_thread;
     if(vm.count("sequence_check") > 0) {
       // only perform a sequence check
-      handler_thread = std::thread(std::ref(packet_counter), vm["num_packets"].as<size_t>(), vm["packet_size"].as<size_t>());
+      handler_thread = std::thread(std::ref(data_packet_counter), vm["num_packets"].as<size_t>(), vm["packet_size"].as<size_t>());
     }
     else {
       // sequence check and write the data

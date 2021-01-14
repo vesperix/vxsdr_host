@@ -45,10 +45,10 @@ host_tester: host_tester.cpp udp_tx_rx_testing.hpp packet_proc.cpp
 	$(CXX) $(CXX_FLAGS) -o $@ $< $(COMMON_SRC) $(CXX_LDFLAGS)
 
 host_rx: host_rx.cpp udp_rx.hpp
-	$(CXX) $(CXX_FLAGS) -o $@ $< $(CXX_LDFLAGS)
+	$(CXX) $(CXX_FLAGS) -o $@ $< $(COMMON_SRC) $(CXX_LDFLAGS)
 
 host_rx_sync: host_rx.cpp udp_rx_sync.hpp
-	$(CXX) $(CXX_FLAGS) -DSYNC -o $@ $< $(CXX_LDFLAGS)
+	$(CXX) $(CXX_FLAGS) -DSYNC -o $@ $< $(COMMON_SRC) $(CXX_LDFLAGS)
 
 minimal_tx: minimal_tx.c
 	$(CC) $(CC_FLAGS) -o $@ $< $(CC_LDFLAGS)
