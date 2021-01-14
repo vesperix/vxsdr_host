@@ -354,7 +354,7 @@ void writer(const std::string &outfilename, const size_t max_packets) {
     }
     if(rx_write_thread_sleep_us > 0)
       std::this_thread::sleep_for(std::chrono::microseconds(rx_write_thread_sleep_us));
-    if(tx_stop_flag or rx_stop_flag) {
+    if(rx_stop_flag) {
       break;
     }
   }
@@ -513,35 +513,25 @@ void generator(const size_t max_packets, const size_t requested_packet_size, con
 
   auto t0 = std::chrono::steady_clock::now();
 
-  unsigned max_wait = 1000000;
+  size_t nsent = 0;
 
-  for(size_t i = 1; i <= max_packets; i++) {
-    unsigned nwait = 0;
+  while(true) {
     // wait for room in the tx queue
-    while(!tx_data_queue.write_available() and nwait < max_wait) {
-      nwait++;
+    while(!tx_data_queue.write_available()) {
       if(tx_generator_thread_sleep_us > 0)
         std::this_thread::sleep_for(std::chrono::microseconds(tx_generator_thread_sleep_us));
     }
-
-    if(nwait < max_wait) {
-      // loop through stored data
-      tx_data_queue.push(buf[i % buf.size()]);
+    while(tx_data_queue.write_available() and nsent <= max_packets) {
+      tx_data_queue.push(buf[nsent++ % buf.size()]);
     }
-    else {
-      LOGGER(error) << "Timeout waiting for space in TX data queue";
-    }
-
-    if(tx_generator_thread_sleep_us > 0)
-      std::this_thread::sleep_for(std::chrono::microseconds(tx_generator_thread_sleep_us));
-    if(tx_stop_flag or rx_stop_flag) {
+    if(tx_stop_flag or rx_stop_flag or nsent > max_packets) {
       break;
     }
   }
 
   auto t1 = std::chrono::steady_clock::now();
   std::chrono::duration<double> dt = t1 - t0;
-  LOGGER(info) << max_packets << " buffers (" << (max_packets * packet_size) << " bytes) generated in " << dt.count() << " seconds";
+  LOGGER(info) << (nsent - 1) << " buffers (" << ((nsent - 1) * packet_size) << " bytes) generated in " << dt.count() << " seconds";
 
   std::this_thread::sleep_for(std::chrono::seconds(5));
   set_tx_stop_flag();
