@@ -108,11 +108,13 @@ int main(int argc, char *argv[])
     boost::asio::io_context io_context;
     std::thread sender_thread(std::ref(sender), std::ref(io_context), std::cref(local_send_endpoint), std::cref(destination_endpoint), vm["broadcast"].as<bool>());
     std::thread receiver_thread(std::ref(receiver), std::ref(io_context), std::cref(local_receive_endpoint));
-    std::thread packet_counter_thread(std::ref(packet_counter), vm["num_packets"].as<size_t>(), vm["packet_size"].as<size_t>());
+    std::thread packet_counter_thread(std::ref(data_packet_counter), vm["num_packets"].as<size_t>(), vm["packet_size"].as<size_t>());
+    std::thread response_logger_thread(std::ref(response_packet_printer));
     generator_thread.join();
     sender_thread.join();
     receiver_thread.join();
     packet_counter_thread.join();
+    response_logger_thread.join();
   }
   catch (std::exception& e) {
     LOGGER(fatal) << "exception caught: " << e.what();

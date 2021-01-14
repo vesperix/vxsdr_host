@@ -8,6 +8,7 @@
 #include "thread_utils.h"
 
 #include "vxsdr_header.hpp"
+#include "packet_proc.hpp"
 
 // parameters of the internal ring buffers
  // size of largest command/status message packet
@@ -29,6 +30,9 @@ static constexpr int    tx_send_thread_sleep_us      =      1;
 
 // parameters for the generator thread
 static constexpr int    tx_generator_thread_sleep_us =      1;
+
+// parameters for the command response processing thread
+static constexpr int    response_thread_sleep_us     =   1000;
 
 // parameters used to set the OS's network buffer
 static constexpr unsigned packets_per_network_buffer =   1024;
@@ -72,6 +76,7 @@ class udp_rx {
         start_receive();
     }
   private:
+    const bool forward_throttling_packets = false;
     boost::asio::ip::udp::socket socket;
     boost::asio::ip::udp::endpoint remote;
     data_packet recv_buffer;
@@ -107,9 +112,11 @@ class udp_rx {
                   rx_buffer_used = r->RX_buffer_used_bytes;
                   tx_buffer_fill_percent = std::min(100., floor((100. * tx_buffer_used) / tx_buffer_size));
                   rx_buffer_fill_percent = std::min(100., floor((100. * rx_buffer_used) / rx_buffer_size));
-                  //generic_cmd_or_rsp_packet p;
-                  //memcpy(&p, r, std::min((size_t)r->hdr.packet_size, sizeof(p));
-                  //response_queue.push(p);
+                  if(forward_throttling_packets) {
+                    generic_cmd_or_rsp_packet p;
+                    memcpy(&p, r, std::min((size_t)r->hdr.packet_size, sizeof(p)));
+                    response_queue.push(p);
+                  }
                 }
                 break;
               case DEVICE_CMD_RSP::GET_BUFFER_INFO_RSP:
@@ -117,9 +124,11 @@ class udp_rx {
                   get_buffer_info_rsp_packet *r = reinterpret_cast<get_buffer_info_rsp_packet *>(&recv_buffer);
                   tx_buffer_size = r->TX_buffer_size_bytes;
                   rx_buffer_size = r->RX_buffer_size_bytes;
-                  //generic_cmd_or_rsp_packet p;
-                  //memcpy(&p, r, std::min((size_t)r->hdr.packet_size, sizeof(p));
-                  //response_queue.push(p);
+                  if(forward_throttling_packets) {
+                    generic_cmd_or_rsp_packet p;
+                    memcpy(&p, r, std::min((size_t)r->hdr.packet_size, sizeof(p)));
+                    response_queue.push(p);
+                  }
                 }
                 break;
               default:
@@ -146,16 +155,16 @@ class udp_rx {
             }
 
           case PACKET_TYPES::DEVICE_CMD:
-            LOGGER(error) << "Received a device command packet";
+            LOGGER(error) << "Received a device command packet: " << (int)recv_buffer.hdr.command;
             break;
           case PACKET_TYPES::RX_RADIO_CMD:
-            LOGGER(error) << "Received a radio receiver command packet";
+            LOGGER(error) << "Received a radio receiver command packet: " << (int)recv_buffer.hdr.command;
             break;
           case PACKET_TYPES::TX_RADIO_CMD:
-            LOGGER(error) << "Received a radio transmitter command packet";
+            LOGGER(error) << "Received a radio transmitter command packet: " << (int)recv_buffer.hdr.command;
             break;
           default:
-            LOGGER(info) << "PACKET_TYPE: " << (int)recv_buffer.hdr.packet_type << " COMMAND " << (int)recv_buffer.hdr.command;
+            LOGGER(info) << "Received unknown packet: PACKET_TYPE " << (int)recv_buffer.hdr.packet_type << " COMMAND " << (int)recv_buffer.hdr.command;
             break;
         }
       }
@@ -369,8 +378,8 @@ void writer(const std::string &outfilename, const size_t max_packets) {
   LOGGER(info) << "writer thread finished";
 }
 
-void packet_counter(const size_t max_packets, const size_t packet_size) {
-  LOGGER(info) << "packet counter thread started";
+void data_packet_counter(const size_t max_packets, const size_t packet_size) {
+  LOGGER(info) << "data_packet counter thread started";
 
   //if(set_current_thread_priority_realtime(10))
   //  LOGGER(error) << "unable to set sequence checker thread realtime priority";
@@ -414,7 +423,33 @@ void packet_counter(const size_t max_packets, const size_t packet_size) {
   while(rx_data_queue.read_available())
     rx_data_queue.pop(&buffer.front(), rx_write_buffer_size);
 
-  LOGGER(info) << "packet counter thread finished";
+  LOGGER(info) << "data packet counter thread finished";
+}
+
+void response_packet_printer() {
+  LOGGER(info) << "response packet printer thread started";
+
+  const unsigned buffer_max_packets = 256;
+  static std::array<generic_cmd_or_rsp_packet, buffer_max_packets> buffer;
+  size_t packets = 0;
+
+  while(true) {
+    while(rx_data_queue.read_available()) {
+      size_t n_popped = response_queue.pop(&buffer.front(), buffer_max_packets);
+      for(size_t i = 0; i < n_popped; i++) {
+        packets++;
+        log_packet_info(buffer[i]);
+      }      
+    }
+    if(response_thread_sleep_us > 0)
+      std::this_thread::sleep_for(std::chrono::microseconds(response_thread_sleep_us));
+
+    if(tx_stop_flag or rx_stop_flag) {
+      break;
+    }
+  }
+
+  LOGGER(info) << "response packet printer thread finished";
 }
 
 void receiver(boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint)

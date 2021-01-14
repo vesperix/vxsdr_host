@@ -7,6 +7,7 @@
 #include "thread_utils.h"
 
 #include "vxsdr_header.hpp"
+#include "packet_proc.hpp"
 
 //#define SINGLE_CHANNEL
 
@@ -70,7 +71,7 @@ class udp_rx {
     boost::asio::ip::udp::socket socket;
     boost::asio::ip::udp::endpoint remote;
     data_packet recv_buffer;
-    generic_cmd_rsp_packet cmd_buffer;
+    generic_cmd_or_rsp_packet cmd_buffer;
     size_t packets_received = 0;
     std::array<size_t, 21> packet_types_received;
     //packet_types_received.reserve(PACKET_TYPES.NAMES.size());
@@ -89,88 +90,39 @@ class udp_rx {
           seq_errors++;
         last_seq = recv_buffer.hdr.sequence_counter;
         switch(recv_buffer.hdr.packet_type) {
-          case PACKET_TYPES::DEVICE_CMD_ACK:
-            LOGGER(info) << "DEVICE_CMD_ACK: " << (int)recv_buffer.hdr.command;
-            break;
-          case PACKET_TYPES::DEVICE_CMD_ERR:
-            LOGGER(info) << "DEVICE_CMD_ERR: " << (int)recv_buffer.hdr.command;
-            break;
-          case PACKET_TYPES::DEVICE_CMD_RSP:
-            switch(recv_buffer.hdr.command) {
-              case DEVICE_CMD::HELLO:
-                {
-                  LOGGER(info) << "DEVICE_CMD_RSP: HELLO";
-                  hello_rsp_packet *hr = reinterpret_cast<hello_rsp_packet *>(&recv_buffer);
-                  LOGGER(info) << "   proc_rev                  = " << (uint32_t)hr->proc_rev;
-                  LOGGER(info) << "   fpga_rev                  = " << (uint32_t)hr->fpga_rev;
-                }
-                break;
-              case DEVICE_CMD::GET_STATUS:
-                {
-                  LOGGER(info) << "DEVICE_CMD_RSP: GET_STATUS";
-                  status_rsp_packet *sr = reinterpret_cast<status_rsp_packet *>(&recv_buffer);
-                  LOGGER(info) << "   fpga_temp                 = " << sr->fpga_temp;
-                  LOGGER(info) << "   dac_temp                  = " << sr->dac_temp;
-                  LOGGER(info) << "   oos_err_count             = " << sr->oos_err_count;
-                  LOGGER(info) << "   datapath_fifo_flow_status = " << sr->datapath_fifo_flow_status;
-                  LOGGER(info) << "   ddr_arbiter_status        = " << sr->ddr_arbiter_status;
-                  LOGGER(info) << "   tgbe_status               = " << sr->tgbe_status;
-                }
-                break;
-              case DEVICE_CMD::GET_BUFFER_INFO:
-                {
-                  LOGGER(info) << "DEVICE_CMD_RSP: GET_BUFFER_INFO";
-                  get_buffer_info_rsp_packet *br = reinterpret_cast<get_buffer_info_rsp_packet *>(&recv_buffer);
-                  LOGGER(info) << "   RX_buffer_size_bytes         = " << (uint32_t)br->RX_buffer_size_bytes;
-                  LOGGER(info) << "   TX_buffer_size_bytes         = " << (uint32_t)br->TX_buffer_size_bytes;
-                }
-                break;
-              case DEVICE_CMD::GET_BUFFER_USE:
-                {
-                  LOGGER(info) << "DEVICE_CMD_RSP: GET_BUFFER_USE";
-                  get_buffer_use_rsp_packet *br = reinterpret_cast<get_buffer_use_rsp_packet *>(&recv_buffer);
-                  LOGGER(info) << "   RX_buffer_used_bytes         = " << (uint32_t)br->RX_buffer_used_bytes;
-                  LOGGER(info) << "   TX_buffer_used_bytes         = " << (uint32_t)br->TX_buffer_used_bytes;
-                }
-                break;
-              case DEVICE_CMD::READ_ADC_REG:
-                {
-                  LOGGER(info) << "DEVICE_CMD_RSP: READ_ADC_REG";
-                  dev_read_reg_rsp_packet *br = reinterpret_cast<dev_read_reg_rsp_packet *>(&recv_buffer);
-                  LOGGER(info) << "   value                        = " << boost::format("%08x") % (uint32_t)br->value;
-                }
-                break;
-              case DEVICE_CMD::READ_DAC_REG:
-                {
-                  LOGGER(info) << "DEVICE_CMD_RSP: READ_DAC_REG";
-                  dev_read_reg_rsp_packet *br = reinterpret_cast<dev_read_reg_rsp_packet *>(&recv_buffer);
-                  LOGGER(info) << "   value                        = " << boost::format("%04x") % (uint16_t)br->value;
-                }
-                break;
-            }
-           break;
-          case PACKET_TYPES::RX_RADIO_CMD_RSP:
-            LOGGER(info) << "RX_RADIO_CMD_RSP: " << (int)recv_buffer.hdr.command;
-            break;
-          case PACKET_TYPES::RX_RADIO_CMD_ERR:
-            LOGGER(info) << "RX_RADIO_CMD_ERR: " << (int)recv_buffer.hdr.command;
-            break;
-          case PACKET_TYPES::RX_RADIO_CMD_ACK:
-            LOGGER(info) << "RX_RADIO_CMD_ACK: " << (int)recv_buffer.hdr.command;
-            break;
-          case PACKET_TYPES::TX_RADIO_CMD_RSP:
-            LOGGER(info) << "RX_RADIO_CMD_RSP: " << (int)recv_buffer.hdr.command;
-            break;
-          case PACKET_TYPES::TX_RADIO_CMD_ERR:
-            LOGGER(info) << "TX_RADIO_CMD_ERR: " << (int)recv_buffer.hdr.command;
-            break;
-          case PACKET_TYPES::TX_RADIO_CMD_ACK:
-            LOGGER(info) << "TX_RADIO_CMD_ACK: " << (int)recv_buffer.hdr.command;
-            break;
           case PACKET_TYPES::RX_SIGNAL_DATA:
+            // ignored
+            break;
+          case PACKET_TYPES::TX_SIGNAL_DATA:
+            LOGGER(error) << "Received a TX signal data packet";
+            break;
+
+          case PACKET_TYPES::DEVICE_CMD_RSP:
+          case PACKET_TYPES::DEVICE_CMD_ERR:
+          case PACKET_TYPES::DEVICE_CMD_ACK:
+          case PACKET_TYPES::RX_RADIO_CMD_RSP:
+          case PACKET_TYPES::RX_RADIO_CMD_ERR:
+          case PACKET_TYPES::RX_RADIO_CMD_ACK:
+          case PACKET_TYPES::TX_RADIO_CMD_RSP:
+          case PACKET_TYPES::TX_RADIO_CMD_ERR:
+          case PACKET_TYPES::TX_RADIO_CMD_ACK:
+            {
+              generic_cmd_or_rsp_packet p;
+              memcpy(&p, &recv_buffer, std::min((size_t)recv_buffer.hdr.packet_size, sizeof(p)));
+              log_packet_info(p);
+            }
+
+          case PACKET_TYPES::DEVICE_CMD:
+            LOGGER(error) << "Received a device command packet: " << (int)recv_buffer.hdr.command;
+            break;
+          case PACKET_TYPES::RX_RADIO_CMD:
+            LOGGER(error) << "Received a radio receiver command packet: " << (int)recv_buffer.hdr.command;
+            break;
+          case PACKET_TYPES::TX_RADIO_CMD:
+            LOGGER(error) << "Received a radio transmitter command packet: " << (int)recv_buffer.hdr.command;
             break;
           default:
-            LOGGER(info) << "PACKET_TYPE: " << (int)recv_buffer.hdr.packet_type << " COMMAND " << (int)recv_buffer.hdr.command;
+            LOGGER(info) << "Received unknown packet: PACKET_TYPE " << (int)recv_buffer.hdr.packet_type << " COMMAND " << (int)recv_buffer.hdr.command;
             break;
         }
       }
@@ -236,7 +188,7 @@ class udp_tx {
       total_bytes += bytes_sent;
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
  
-      dev_read_reg_packet p;
+      dev_read_write_reg_packet p;
       p.hdr.packet_type = PACKET_TYPES::DEVICE_CMD;
       p.hdr.target_subdevice = 0;
       p.hdr.command = DEVICE_CMD::READ_DAC_REG;
@@ -244,7 +196,7 @@ class udp_tx {
       p.hdr.packet_size = sizeof(hdr) + 8;
       p.hdr.sequence_counter = packets_sent % UINT16_MAX;
       p.reg_num = 0x2;
-      p.reserved = 0;
+      p.value = 0;
       bytes_sent = socket.send_to(boost::asio::buffer(&p, sizeof(p)), destination);
       packets_sent++;
       total_bytes += bytes_sent;
@@ -257,13 +209,13 @@ class udp_tx {
       p.hdr.packet_size = sizeof(hdr) + 8;
       p.hdr.sequence_counter = packets_sent % UINT16_MAX;
       p.reg_num = 0xD;
-      p.reserved = 0;
+      p.value = 0;
       bytes_sent = socket.send_to(boost::asio::buffer(&p, sizeof(p)), destination);
       packets_sent++;
       total_bytes += bytes_sent;
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
-      dev_write_reg_packet q;
+      dev_read_write_reg_packet q;
       q.hdr.packet_type = PACKET_TYPES::DEVICE_CMD;
       q.hdr.target_subdevice = 0;
       q.hdr.command = DEVICE_CMD::WRITE_DAC_REG;
@@ -297,7 +249,7 @@ class udp_tx {
       p.hdr.packet_size = sizeof(hdr) + 8;
       p.hdr.sequence_counter = packets_sent % UINT16_MAX;
       p.reg_num = 0x2;
-      p.reserved = 0;
+      p.value = 0;
       bytes_sent = socket.send_to(boost::asio::buffer(&p, sizeof(p)), destination);
       packets_sent++;
       total_bytes += bytes_sent;
@@ -310,7 +262,7 @@ class udp_tx {
       p.hdr.packet_size = sizeof(hdr) + 8;
       p.hdr.sequence_counter = packets_sent % UINT16_MAX;
       p.reg_num = 0xD;
-      p.reserved = 0;
+      p.value = 0;
       bytes_sent = socket.send_to(boost::asio::buffer(&p, sizeof(p)), destination);
       packets_sent++;
       total_bytes += bytes_sent;
