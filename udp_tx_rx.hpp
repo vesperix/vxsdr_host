@@ -28,7 +28,7 @@ static constexpr int    rx_data_queue_clear_sleep_us =  10000;
 static constexpr int    tx_send_thread_sleep_us      =      1;
 
 // parameters for the generator thread
-static constexpr int    tx_generator_thread_sleep_us =      0;
+static constexpr int    tx_generator_thread_sleep_us =      1;
 
 // parameters used to set the OS's network buffer
 static constexpr unsigned packets_per_network_buffer =   1024;
@@ -108,7 +108,7 @@ class udp_rx {
                   tx_buffer_fill_percent = std::min(100., floor((100. * tx_buffer_used) / tx_buffer_size));
                   rx_buffer_fill_percent = std::min(100., floor((100. * rx_buffer_used) / rx_buffer_size));
                   //generic_cmd_or_rsp_packet p;
-                  //memcpy(&p, r, r->hdr.packet_size);
+                  //memcpy(&p, r, std::min((size_t)r->hdr.packet_size, sizeof(p));
                   //response_queue.push(p);
                 }
                 break;
@@ -118,14 +118,14 @@ class udp_rx {
                   tx_buffer_size = r->TX_buffer_size_bytes;
                   rx_buffer_size = r->RX_buffer_size_bytes;
                   //generic_cmd_or_rsp_packet p;
-                  //memcpy(&p, r, r->hdr.packet_size);
+                  //memcpy(&p, r, std::min((size_t)r->hdr.packet_size, sizeof(p));
                   //response_queue.push(p);
                 }
                 break;
               default:
                 {
                   generic_cmd_or_rsp_packet p;
-                  memcpy(&p, r, r->hdr.packet_size);
+                  memcpy(&p, &recv_buffer, std::min((size_t)recv_buffer.hdr.packet_size, sizeof(p)));
                   response_queue.push(p);
                 }
                 break;
@@ -141,9 +141,8 @@ class udp_rx {
           case PACKET_TYPES::TX_RADIO_CMD_ACK:
             {
               generic_cmd_or_rsp_packet p;
-              memcpy(&p, r, r->hdr.packet_size);
+              memcpy(&p, &recv_buffer, std::min((size_t)recv_buffer.hdr.packet_size, sizeof(p)));
               response_queue.push(p);
-              break;
             }
 
           case PACKET_TYPES::DEVICE_CMD:
