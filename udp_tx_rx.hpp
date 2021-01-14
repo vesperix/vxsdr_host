@@ -433,7 +433,7 @@ void response_packet_printer() {
   static std::array<generic_cmd_or_rsp_packet, buffer_max_packets> buffer;
   size_t packets = 0;
 
-  while(true) {
+  while(not(tx_stop_flag or rx_stop_flag)) {
     while(rx_data_queue.read_available()) {
       size_t n_popped = response_queue.pop(&buffer.front(), buffer_max_packets);
       for(size_t i = 0; i < n_popped; i++) {
@@ -443,10 +443,6 @@ void response_packet_printer() {
     }
     if(response_thread_sleep_us > 0)
       std::this_thread::sleep_for(std::chrono::microseconds(response_thread_sleep_us));
-
-    if(tx_stop_flag or rx_stop_flag) {
-      break;
-    }
   }
 
   LOGGER(info) << "response packet printer thread finished";

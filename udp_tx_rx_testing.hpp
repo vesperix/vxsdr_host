@@ -111,7 +111,7 @@ class udp_rx {
               memcpy(&p, &recv_buffer, std::min((size_t)recv_buffer.hdr.packet_size, sizeof(p)));
               log_packet_info(p);
             }
-
+            break;
           case PACKET_TYPES::DEVICE_CMD:
             LOGGER(error) << "Received a device command packet: " << (int)recv_buffer.hdr.command;
             break;
