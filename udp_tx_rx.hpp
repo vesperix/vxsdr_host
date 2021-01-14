@@ -49,8 +49,8 @@ void set_tx_stop_flag() {
 static boost::lockfree::spsc_queue<data_packet, boost::lockfree::capacity<rx_data_queue_length> > rx_data_queue;
 static boost::lockfree::spsc_queue<data_packet, boost::lockfree::capacity<tx_data_queue_length> > tx_data_queue;
 
-static boost::lockfree::spsc_queue<generic_cmd_or_rsp_packet, boost::lockfree::capacity<rx_msg_queue_length> > rx_msg_queue;
-static boost::lockfree::spsc_queue<generic_cmd_or_rsp_packet, boost::lockfree::capacity<tx_msg_queue_length> > tx_msg_queue;
+static boost::lockfree::spsc_queue<generic_cmd_or_rsp_packet, boost::lockfree::capacity<rx_msg_queue_length> > command_queue;
+static boost::lockfree::spsc_queue<generic_cmd_or_rsp_packet, boost::lockfree::capacity<tx_msg_queue_length> > response_queue;
 
 class udp_rx {
   public:
@@ -97,6 +97,7 @@ class udp_rx {
           case PACKET_TYPES::TX_SIGNAL_DATA:
             LOGGER(error) << "Received a TX signal data packet";
             break;
+          // the buffer info commands are special cased since they are used for TX throttling
           case PACKET_TYPES::DEVICE_CMD_RSP:
             switch(recv_buffer.hdr.command) {
               case DEVICE_CMD_RSP::GET_BUFFER_USE_RSP:
@@ -106,6 +107,9 @@ class udp_rx {
                   rx_buffer_used = r->RX_buffer_used_bytes;
                   tx_buffer_fill_percent = std::min(100., floor((100. * tx_buffer_used) / tx_buffer_size));
                   rx_buffer_fill_percent = std::min(100., floor((100. * rx_buffer_used) / rx_buffer_size));
+                  //generic_cmd_or_rsp_packet p;
+                  //memcpy(&p, r, r->hdr.packet_size);
+                  //response_queue.push(p);
                 }
                 break;
               case DEVICE_CMD_RSP::GET_BUFFER_INFO_RSP:
@@ -113,42 +117,43 @@ class udp_rx {
                   get_buffer_info_rsp_packet *r = reinterpret_cast<get_buffer_info_rsp_packet *>(&recv_buffer);
                   tx_buffer_size = r->TX_buffer_size_bytes;
                   rx_buffer_size = r->RX_buffer_size_bytes;
-                }
-                break;
-              case DEVICE_CMD::GET_STATUS:
-                {
-                  LOGGER(info) << "DEVICE_CMD_RSP: GET_STATUS";
-                  status_rsp_packet *sr = reinterpret_cast<status_rsp_packet *>(&recv_buffer);
-                  LOGGER(info) << "   fpga_temp                 = " << sr->fpga_temp;
-                  LOGGER(info) << "   dac_temp                  = " << sr->dac_temp;
-                  LOGGER(info) << "   oos_err_count             = " << sr->oos_err_count;
-                  LOGGER(info) << "   datapath_fifo_flow_status = " << sr->datapath_fifo_flow_status;
-                  LOGGER(info) << "   ddr_arbiter_status        = " << sr->ddr_arbiter_status;
-                  LOGGER(info) << "   tgbe_status               = " << sr->tgbe_status;
+                  //generic_cmd_or_rsp_packet p;
+                  //memcpy(&p, r, r->hdr.packet_size);
+                  //response_queue.push(p);
                 }
                 break;
               default:
-                LOGGER(info) << "DEVICE_CMD_RSP: " << (int)recv_buffer.hdr.command;
+                {
+                  generic_cmd_or_rsp_packet p;
+                  memcpy(&p, r, r->hdr.packet_size);
+                  response_queue.push(p);
+                }
                 break;
             }
             break;
+          case PACKET_TYPES::DEVICE_CMD_ERR:
+          case PACKET_TYPES::DEVICE_CMD_ACK:
           case PACKET_TYPES::RX_RADIO_CMD_RSP:
-            LOGGER(info) << "RX_RADIO_CMD_RSP: " << (int)recv_buffer.hdr.command;
-            break;
           case PACKET_TYPES::RX_RADIO_CMD_ERR:
-            LOGGER(info) << "RX_RADIO_CMD_ERR: " << (int)recv_buffer.hdr.command;
-            break;
           case PACKET_TYPES::RX_RADIO_CMD_ACK:
-            LOGGER(info) << "RX_RADIO_CMD_ACK: " << (int)recv_buffer.hdr.command;
-            break;
           case PACKET_TYPES::TX_RADIO_CMD_RSP:
-            LOGGER(info) << "RX_RADIO_CMD_RSP: " << (int)recv_buffer.hdr.command;
-            break;
           case PACKET_TYPES::TX_RADIO_CMD_ERR:
-            LOGGER(info) << "TX_RADIO_CMD_ERR: " << (int)recv_buffer.hdr.command;
-            break;
           case PACKET_TYPES::TX_RADIO_CMD_ACK:
-            LOGGER(info) << "TX_RADIO_CMD_ACK: " << (int)recv_buffer.hdr.command;
+            {
+              generic_cmd_or_rsp_packet p;
+              memcpy(&p, r, r->hdr.packet_size);
+              response_queue.push(p);
+              break;
+            }
+
+          case PACKET_TYPES::DEVICE_CMD:
+            LOGGER(error) << "Received a device command packet";
+            break;
+          case PACKET_TYPES::RX_RADIO_CMD:
+            LOGGER(error) << "Received a radio receiver command packet";
+            break;
+          case PACKET_TYPES::TX_RADIO_CMD:
+            LOGGER(error) << "Received a radio transmitter command packet";
             break;
           default:
             LOGGER(info) << "PACKET_TYPE: " << (int)recv_buffer.hdr.packet_type << " COMMAND " << (int)recv_buffer.hdr.command;

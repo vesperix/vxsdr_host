@@ -251,19 +251,7 @@ typedef struct {
 typedef struct {
   packet_header           hdr;
   uint32_t                reg_num;
-  uint32_t                reserved;
-} dev_read_reg_packet;
-
-typedef struct {
-  packet_header           hdr;
   uint32_t                value;
-  uint32_t                reserved;
-} dev_read_reg_rsp_packet;
-
-typedef struct {
-  packet_header           hdr;
-  uint32_t                reg_num;
-  uint32_t                value;
-} dev_write_reg_packet;
+} dev_read_write_reg_packet;
 
 #endif // VXSDR_HEADER_HPP
