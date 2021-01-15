@@ -93,7 +93,7 @@ class udp_rx {
         start_receive();
     }
   private:
-    const bool forward_throttling_packets = false;
+    const bool forward_buffer_use_packets = false;
     boost::asio::ip::udp::socket socket;
     boost::asio::ip::udp::endpoint remote;
     data_packet recv_buffer;
@@ -129,7 +129,7 @@ class udp_rx {
                   rx_buffer_used = r->RX_buffer_used_bytes;
                   tx_buffer_fill_percent = std::min(100., floor((100. * tx_buffer_used) / tx_buffer_size));
                   rx_buffer_fill_percent = std::min(100., floor((100. * rx_buffer_used) / rx_buffer_size));
-                  if(forward_throttling_packets) {
+                  if(forward_buffer_use_packets) {
                     generic_cmd_or_rsp_packet p;
                     memcpy(&p, r, std::min((size_t)r->hdr.packet_size, sizeof(p)));
                     response_queue.push(p);
@@ -141,11 +141,9 @@ class udp_rx {
                   get_buffer_info_rsp_packet *r = reinterpret_cast<get_buffer_info_rsp_packet *>(&recv_buffer);
                   tx_buffer_size = r->TX_buffer_size_bytes;
                   rx_buffer_size = r->RX_buffer_size_bytes;
-                  if(forward_throttling_packets) {
-                    generic_cmd_or_rsp_packet p;
-                    memcpy(&p, r, std::min((size_t)r->hdr.packet_size, sizeof(p)));
-                    response_queue.push(p);
-                  }
+                  generic_cmd_or_rsp_packet p;
+                  memcpy(&p, r, std::min((size_t)r->hdr.packet_size, sizeof(p)));
+                  response_queue.push(p);
                 }
                 break;
               default:
@@ -215,7 +213,7 @@ class udp_tx {
     boost::asio::ip::udp::endpoint destination;
     static constexpr size_t send_buffer_size = 16;
     std::array<data_packet, send_buffer_size> send_buffer;
-    unsigned send_errors = 0, cmds_sent = 0, buffers_sent = 0, packets_sent = 0;
+    int64_t send_errors = 0, cmds_sent = 0, buffers_sent = 0, packets_sent = 0;
 
     void start_send() {
       LOGGER(info) << "send started";
@@ -279,7 +277,8 @@ class udp_tx {
       else
         cmds_sent++;
 
-      size_t last_buffer_use_sent = 0;
+      int64_t last_check = 0;
+      constexpr int64_t n_check = 100;
 
       while(!tx_stop_flag) {
         if(tx_data_queue.read_available()) {
@@ -294,9 +293,9 @@ class udp_tx {
             if(tx_throttle_wait_us > 0)
               std::this_thread::sleep_for(std::chrono::microseconds(tx_throttle_wait_us));
           }
-          // ask for buffer use every every 100 data packets
-          if(buffers_sent - last_buffer_use_sent > 100) {
-            last_buffer_use_sent = buffers_sent;
+          // ask for buffer use every every n_check packets
+          if(packets_sent - last_check > n_check) {
+            last_check = packets_sent;
             hdr.packet_type = PACKET_TYPES::DEVICE_CMD;
             hdr.target_subdevice = 0;
             hdr.command = DEVICE_CMD::GET_BUFFER_USE;
@@ -309,7 +308,7 @@ class udp_tx {
             else
               cmds_sent++;
 
-            // get the error status exery 100 packets
+            // get the error status exery n_check packets
             hdr.packet_type = PACKET_TYPES::DEVICE_CMD;
             hdr.target_subdevice = 0;
             hdr.command = DEVICE_CMD::GET_STATUS;
@@ -321,7 +320,6 @@ class udp_tx {
               send_errors++;
             else
               cmds_sent++;
-
           }
           // update throttling
           if(tx_buffer_fill_percent > throttle_start_percent)
