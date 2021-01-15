@@ -213,7 +213,93 @@ class udp_tx {
     boost::asio::ip::udp::endpoint destination;
     static constexpr size_t send_buffer_size = 16;
     std::array<data_packet, send_buffer_size> send_buffer;
-    int64_t send_errors = 0, cmds_sent = 0, buffers_sent = 0, packets_sent = 0;
+    int64_t send_errors = 0, cmds_sent = 0, buffers_sent = 0, packets_sent = 0, bytes_sent = 0;
+
+    void send_device_get_buffer_info_cmd(const uint8_t subdev, const uint8_t flags = 0) {
+      packet_header hdr = { PACKET_TYPES::DEVICE_CMD, subdev, DEVICE_CMD::GET_BUFFER_INFO, flags, sizeof(hdr), (uint16_t)(packets_sent++ % UINT16_MAX) };
+      size_t bytes = socket.send_to(boost::asio::buffer(&hdr, hdr.packet_size), destination);
+      if(bytes != hdr.packet_size)
+        send_errors++;
+      else
+        cmds_sent++;
+      bytes_sent += bytes;
+    }
+
+    void send_device_get_buffer_use_cmd(const uint8_t subdev, const uint8_t flags = 0) {
+      packet_header hdr = { PACKET_TYPES::DEVICE_CMD, subdev, DEVICE_CMD::GET_BUFFER_USE, flags, sizeof(hdr), (uint16_t)(packets_sent++ % UINT16_MAX) };
+      size_t bytes = socket.send_to(boost::asio::buffer(&hdr, hdr.packet_size), destination);
+      if(bytes != hdr.packet_size)
+        send_errors++;
+      else
+        cmds_sent++;
+      bytes_sent += bytes;
+    }
+
+    void send_device_clear_status_cmd(const uint8_t subdev, const uint8_t flags = 0) {
+      packet_header hdr = { PACKET_TYPES::DEVICE_CMD, subdev, DEVICE_CMD::CLEAR_STATUS, flags, sizeof(hdr), (uint16_t)(packets_sent++ % UINT16_MAX) };
+      size_t bytes = socket.send_to(boost::asio::buffer(&hdr, hdr.packet_size), destination);
+      if(bytes != hdr.packet_size)
+        send_errors++;
+      else
+        cmds_sent++;
+      bytes_sent += bytes;
+    }
+
+    void send_device_get_status_cmd(const uint8_t subdev, const uint8_t flags = 0) {
+      packet_header hdr = { PACKET_TYPES::DEVICE_CMD, subdev, DEVICE_CMD::GET_STATUS, flags, sizeof(hdr), (uint16_t)(packets_sent++ % UINT16_MAX) };
+      size_t bytes = socket.send_to(boost::asio::buffer(&hdr, hdr.packet_size), destination);
+      if(bytes != hdr.packet_size)
+        send_errors++;
+      else
+        cmds_sent++;
+      bytes_sent += bytes;
+    }
+
+    void send_tx_start_now_until_stop_cmd(const uint8_t subdev, const uint8_t flags = 0) {
+      packet_header hdr = { PACKET_TYPES::TX_RADIO_CMD, subdev, RADIO_CMD::START_NOW_UNTIL_STOP, flags, sizeof(hdr), (uint16_t)(packets_sent++ % UINT16_MAX) };
+      size_t bytes = socket.send_to(boost::asio::buffer(&hdr, hdr.packet_size), destination);
+      if(bytes != hdr.packet_size)
+        send_errors++;
+      else
+        cmds_sent++;
+      bytes_sent += bytes;
+    }
+
+    void send_tx_stop_now_cmd(const uint8_t subdev, const uint8_t flags = 0) {
+      packet_header hdr = { PACKET_TYPES::TX_RADIO_CMD, subdev, RADIO_CMD::STOP_NOW, flags, sizeof(hdr), (uint16_t)(packets_sent++ % UINT16_MAX) };
+      size_t bytes = socket.send_to(boost::asio::buffer(&hdr, hdr.packet_size), destination);
+      if(bytes != hdr.packet_size)
+        send_errors++;
+      else
+        cmds_sent++;
+      bytes_sent += bytes;
+    }
+
+    void send_data_buffer(data_packet &buffer) {
+      buffer.hdr.sequence_counter = packets_sent++ % UINT16_MAX;
+      size_t bytes = socket.send_to(boost::asio::buffer(&buffer, buffer.hdr.packet_size), destination);
+      if(bytes != buffer.hdr.packet_size)
+        send_errors++;
+      else
+        buffers_sent++;
+      bytes_sent += bytes;
+    }
+
+    void async_send_data_buffer(data_packet &buffer) {
+      static auto hdlr = boost::bind(&udp_tx::handle_async_send, this, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred);
+      buffer.hdr.sequence_counter = packets_sent++ % UINT16_MAX;
+      socket.async_send_to(boost::asio::buffer(&buffer, buffer.hdr.packet_size), destination, hdlr);
+    }
+
+    void handle_async_send(const boost::system::error_code& error, size_t bytes_transferred) {
+      if(error) {
+        send_errors++;
+        LOGGER(error) << "async send error: " << error.message();
+      }
+      else
+        buffers_sent++;
+      bytes_sent += bytes_transferred;
+    }
 
     void start_send() {
       LOGGER(info) << "send started";
@@ -222,60 +308,22 @@ class udp_tx {
       constexpr unsigned throttle_stop_percent  = 50;
       constexpr unsigned throttle_amount_us =     10; // send time for 8200 bytes over 10 GbE is about 6.7 us
 
-      packet_header hdr;
-      // get TX buffer size (necessary for throttling)
-      hdr.packet_type = PACKET_TYPES::DEVICE_CMD;
-      hdr.target_subdevice = 0;
-      hdr.command = DEVICE_CMD::GET_BUFFER_INFO;
-      hdr.flags = 0;
-      hdr.packet_size = sizeof(hdr);
-      hdr.sequence_counter = packets_sent++ % UINT16_MAX;
-      size_t bytes_sent = socket.send_to(boost::asio::buffer(&hdr, hdr.packet_size), destination);
-      if(bytes_sent != hdr.packet_size)
-        send_errors++;
-      else
-        cmds_sent++;
+      const uint8_t device_subdev = 0;
+      const uint8_t tx_subdev = 0;
 
-      tx_buffer_fill_percent = 0;
+      // get device buffer sizes
+      send_device_get_buffer_info_cmd(device_subdev);
+      // make sure actual buffer use is updated
+      send_device_get_buffer_use_cmd(device_subdev);
+      // wait for the response to be processed
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-      // clear the error status
-      hdr.packet_type = PACKET_TYPES::DEVICE_CMD;
-      hdr.target_subdevice = 0;
-      hdr.command = DEVICE_CMD::CLEAR_STATUS;
-      hdr.flags = 0;
-      hdr.packet_size = sizeof(hdr);
-      hdr.sequence_counter = packets_sent++ % UINT16_MAX;
-      bytes_sent = socket.send_to(boost::asio::buffer(&hdr, hdr.packet_size), destination);
-      if(bytes_sent != hdr.packet_size)
-        send_errors++;
-      else
-        cmds_sent++;
-
+      send_device_clear_status_cmd(device_subdev);
       // get the status to make sure it's clear
-      hdr.packet_type = PACKET_TYPES::DEVICE_CMD;
-      hdr.target_subdevice = 0;
-      hdr.command = DEVICE_CMD::GET_STATUS;
-      hdr.flags = 0;
-      hdr.packet_size = sizeof(hdr);
-      hdr.sequence_counter = packets_sent++ % UINT16_MAX;
-      bytes_sent = socket.send_to(boost::asio::buffer(&hdr, hdr.packet_size), destination);
-      if(bytes_sent != hdr.packet_size)
-        send_errors++;
-      else
-        cmds_sent++;
+      send_device_get_status_cmd(device_subdev);
 
       // send a START_NOW_UNTIL_STOP
-      hdr.packet_type = PACKET_TYPES::TX_RADIO_CMD;
-      hdr.target_subdevice = 0;
-      hdr.command = RADIO_CMD::START_NOW_UNTIL_STOP;
-      hdr.flags = 0;
-      hdr.packet_size = sizeof(hdr);
-      hdr.sequence_counter = packets_sent++ % UINT16_MAX;
-      bytes_sent = socket.send_to(boost::asio::buffer(&hdr, hdr.packet_size), destination);
-      if(bytes_sent != hdr.packet_size)
-        send_errors++;
-      else
-        cmds_sent++;
+      send_tx_start_now_until_stop_cmd(tx_subdev);
 
       int64_t last_check = 0;
       constexpr int64_t n_check = 50; // current buffer size is about 1000 data packets
@@ -284,42 +332,16 @@ class udp_tx {
         if(tx_data_queue.read_available()) {
           size_t n_popped = tx_data_queue.pop(&send_buffer.front(), send_buffer.size());
           for(size_t i = 0; i < n_popped; i++) {
-            send_buffer[i].hdr.sequence_counter = packets_sent++ % UINT16_MAX;
-            bytes_sent = socket.send_to(boost::asio::buffer(&send_buffer[i], send_buffer[i].hdr.packet_size), destination);
-            if(bytes_sent != send_buffer[i].hdr.packet_size)
-              send_errors++;
-            else
-              buffers_sent++;
+            send_data_buffer(send_buffer[i]);
             if(tx_throttle_wait_us > 0)
               std::this_thread::sleep_for(std::chrono::microseconds(tx_throttle_wait_us));
           }
           // ask for buffer use every every n_check packets
           if(packets_sent - last_check > n_check) {
             last_check = packets_sent;
-            hdr.packet_type = PACKET_TYPES::DEVICE_CMD;
-            hdr.target_subdevice = 0;
-            hdr.command = DEVICE_CMD::GET_BUFFER_USE;
-            hdr.flags = 0;
-            hdr.packet_size = sizeof(hdr);
-            hdr.sequence_counter = packets_sent++ % UINT16_MAX;
-            bytes_sent = socket.send_to(boost::asio::buffer(&hdr, hdr.packet_size), destination);
-            if(bytes_sent != hdr.packet_size)
-              send_errors++;
-            else
-              cmds_sent++;
-
+            send_device_get_buffer_use_cmd(device_subdev);
             // get the error status exery n_check packets
-            hdr.packet_type = PACKET_TYPES::DEVICE_CMD;
-            hdr.target_subdevice = 0;
-            hdr.command = DEVICE_CMD::GET_STATUS;
-            hdr.flags = 0;
-            hdr.packet_size = sizeof(hdr);
-            hdr.sequence_counter = packets_sent++ % UINT16_MAX;
-            bytes_sent = socket.send_to(boost::asio::buffer(&hdr, hdr.packet_size), destination);
-            if(bytes_sent != hdr.packet_size)
-              send_errors++;
-            else
-              cmds_sent++;
+            send_device_get_status_cmd(device_subdev);
           }
           // update throttling
           if(tx_buffer_fill_percent > throttle_start_percent)
@@ -333,31 +355,11 @@ class udp_tx {
         }
       }
       // send a stop
-      hdr.packet_type = PACKET_TYPES::TX_RADIO_CMD;
-      hdr.target_subdevice = 0;
-      hdr.command = RADIO_CMD::STOP_NOW;
-      hdr.flags = 0;
-      hdr.packet_size = sizeof(hdr);
-      hdr.sequence_counter = packets_sent++ % UINT16_MAX;
-      bytes_sent = socket.send_to(boost::asio::buffer(&hdr, hdr.packet_size), destination);
-      if(bytes_sent != hdr.packet_size)
-        send_errors++;
-      else
-        cmds_sent++;
+      send_tx_stop_now_cmd(tx_subdev);
       // wait a bit for things to finish up
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
       // get the error status after TX completed
-      hdr.packet_type = PACKET_TYPES::DEVICE_CMD;
-      hdr.target_subdevice = 0;
-      hdr.command = DEVICE_CMD::GET_STATUS;
-      hdr.flags = 0;
-      hdr.packet_size = sizeof(hdr);
-      hdr.sequence_counter = packets_sent++ % UINT16_MAX;
-      bytes_sent = socket.send_to(boost::asio::buffer(&hdr, hdr.packet_size), destination);
-      if(bytes_sent != hdr.packet_size)
-        send_errors++;
-      else
-        cmds_sent++;
+      send_device_get_status_cmd(device_subdev);
 
       LOGGER(info) << "send finished: " << buffers_sent << " buffers, " << cmds_sent << " commands, " << packets_sent << " packets, "<< send_errors << " send errors";
     }
@@ -465,7 +467,7 @@ void response_packet_printer() {
   static std::array<generic_cmd_or_rsp_packet, buffer_max_packets> buffer;
   size_t packets = 0;
 
-  while(not complete_flag) { 
+  while(not complete_flag) {
     if(rx_data_queue.read_available()) {
       size_t n_popped = response_queue.pop(&buffer.front(), buffer_max_packets);
       for(size_t i = 0; i < n_popped; i++) {

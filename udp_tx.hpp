@@ -52,30 +52,111 @@ class udp_tx {
     boost::asio::ip::udp::endpoint destination;
     static constexpr size_t tx_buffer_size = 256;
     std::array<data_packet, tx_buffer_size> send_buffer;
-    unsigned send_errors = 0;
+    size_t send_errors = 0, cmds_sent = 0, buffers_sent = 0, packets_sent = 0, bytes_sent = 0;
+
+    void send_device_get_buffer_info_cmd(const uint8_t subdev, const uint8_t flags = 0) {
+      packet_header hdr = { PACKET_TYPES::DEVICE_CMD, subdev, DEVICE_CMD::GET_BUFFER_INFO, flags, sizeof(hdr), (uint16_t)(packets_sent++ % UINT16_MAX) };
+      size_t bytes = socket.send_to(boost::asio::buffer(&hdr, hdr.packet_size), destination);
+      if(bytes != hdr.packet_size)
+        send_errors++;
+      else
+        cmds_sent++;
+      bytes_sent += bytes;
+    }
+
+    void send_device_get_buffer_use_cmd(const uint8_t subdev, const uint8_t flags = 0) {
+      packet_header hdr = { PACKET_TYPES::DEVICE_CMD, subdev, DEVICE_CMD::GET_BUFFER_USE, flags, sizeof(hdr), (uint16_t)(packets_sent++ % UINT16_MAX) };
+      size_t bytes = socket.send_to(boost::asio::buffer(&hdr, hdr.packet_size), destination);
+      if(bytes != hdr.packet_size)
+        send_errors++;
+      else
+        cmds_sent++;
+      bytes_sent += bytes;
+    }
+
+    void send_device_clear_status_cmd(const uint8_t subdev, const uint8_t flags = 0) {
+      packet_header hdr = { PACKET_TYPES::DEVICE_CMD, subdev, DEVICE_CMD::CLEAR_STATUS, flags, sizeof(hdr), (uint16_t)(packets_sent++ % UINT16_MAX) };
+      size_t bytes = socket.send_to(boost::asio::buffer(&hdr, hdr.packet_size), destination);
+      if(bytes != hdr.packet_size)
+        send_errors++;
+      else
+        cmds_sent++;
+      bytes_sent += bytes;
+    }
+
+    void send_device_get_status_cmd(const uint8_t subdev, const uint8_t flags = 0) {
+      packet_header hdr = { PACKET_TYPES::DEVICE_CMD, subdev, DEVICE_CMD::GET_STATUS, flags, sizeof(hdr), (uint16_t)(packets_sent++ % UINT16_MAX) };
+      size_t bytes = socket.send_to(boost::asio::buffer(&hdr, hdr.packet_size), destination);
+      if(bytes != hdr.packet_size)
+        send_errors++;
+      else
+        cmds_sent++;
+      bytes_sent += bytes;
+    }
+
+    void send_tx_start_now_until_stop_cmd(const uint8_t subdev, const uint8_t flags = 0) {
+      packet_header hdr = { PACKET_TYPES::TX_RADIO_CMD, subdev, RADIO_CMD::START_NOW_UNTIL_STOP, flags, sizeof(hdr), (uint16_t)(packets_sent++ % UINT16_MAX) };
+      size_t bytes = socket.send_to(boost::asio::buffer(&hdr, hdr.packet_size), destination);
+      if(bytes != hdr.packet_size)
+        send_errors++;
+      else
+        cmds_sent++;
+      bytes_sent += bytes;
+    }
+
+    void send_tx_stop_now_cmd(const uint8_t subdev, const uint8_t flags = 0) {
+      packet_header hdr = { PACKET_TYPES::TX_RADIO_CMD, subdev, RADIO_CMD::STOP_NOW, flags, sizeof(hdr), (uint16_t)(packets_sent++ % UINT16_MAX) };
+      size_t bytes = socket.send_to(boost::asio::buffer(&hdr, hdr.packet_size), destination);
+      if(bytes != hdr.packet_size)
+        send_errors++;
+      else
+        cmds_sent++;
+      bytes_sent += bytes;
+    }
+
+    void send_data_buffer(data_packet &buffer) {
+      buffer.hdr.sequence_counter = packets_sent++ % UINT16_MAX;
+      size_t bytes = socket.send_to(boost::asio::buffer(&buffer, buffer.hdr.packet_size), destination);
+      if(bytes != buffer.hdr.packet_size)
+        send_errors++;
+      else
+        buffers_sent++;
+      bytes_sent += bytes;
+    }
+
+    void async_send_data_buffer(data_packet &buffer) {
+      static auto hdlr = boost::bind(&udp_tx::handle_async_send, this, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred);
+      buffer.hdr.sequence_counter = packets_sent++ % UINT16_MAX;
+      socket.async_send_to(boost::asio::buffer(&buffer, buffer.hdr.packet_size), destination, hdlr);
+    }
+
+    void handle_async_send(const boost::system::error_code& error, size_t bytes_transferred) {
+      if(error) {
+        send_errors++;
+        LOGGER(error) << "async send error: " << error.message();
+      }
+      else
+        buffers_sent++;
+      bytes_sent += bytes_transferred;
+    }
 
     void start_send() {
       LOGGER(info) << "send started";
-      auto hdlr = boost::bind(&udp_tx::handle_send, this, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred);
+      //auto hdlr = boost::bind(&udp_tx::handle_async_send, this, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred);
       while(!tx_stop_flag) {
         if(tx_data_queue.read_available()) {
           size_t n_popped = tx_data_queue.pop(&send_buffer.front(), send_buffer.size());
           for(size_t i = 0; i < n_popped; i++) {
             // cycle count when sent
             //send_buffer_[i].ts[1] = read_cycle_counter();
-            socket.async_send_to(boost::asio::buffer(&send_buffer[i], sizeof(data_packet)), destination, hdlr);
+            async_send_data_buffer(send_buffer[i]);
           }
         }
         //else
         //  LOGGER(error) << "tx queue empty";
       }
     }
-    void handle_send(const boost::system::error_code& error, std::size_t bytes_transferred) {
-      if (error) {
-        send_errors++;
-        LOGGER(error) << "async send error: " << error.message();
-      }
-    }
+
 };
 
 void generator(const size_t max_packets, const size_t requested_packet_size, const unsigned packet_wait_us) {
