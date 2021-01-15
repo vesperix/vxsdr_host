@@ -275,6 +275,16 @@ class udp_tx {
       bytes_sent += bytes;
     }
 
+    void send_rx_stop_now_cmd(const uint8_t subdev, const uint8_t flags = 0) {
+      packet_header hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::STOP_NOW, subdev, flags, sizeof(hdr), (uint16_t)(packets_sent++ % UINT16_MAX) };
+      size_t bytes = socket.send_to(boost::asio::buffer(&hdr, hdr.packet_size), destination);
+      if(bytes != hdr.packet_size)
+        send_errors++;
+      else
+        cmds_sent++;
+      bytes_sent += bytes;
+    }
+
     void send_data_buffer(data_packet &buffer) {
       buffer.hdr.sequence_counter = packets_sent++ % UINT16_MAX;
       size_t bytes = socket.send_to(boost::asio::buffer(&buffer, buffer.hdr.packet_size), destination);
