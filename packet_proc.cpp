@@ -40,30 +40,35 @@ void log_packet_info(generic_cmd_or_rsp_packet &packet)
           {
             LOGGER(info) << "DEVICE_CMD_RSP: GET_BUFFER_INFO";
             get_buffer_info_rsp_packet *br = reinterpret_cast<get_buffer_info_rsp_packet *>(&packet);
-            LOGGER(info) << "   RX_buffer_size_bytes         = " << (uint32_t)br->RX_buffer_size_bytes;
-            LOGGER(info) << "   TX_buffer_size_bytes         = " << (uint32_t)br->TX_buffer_size_bytes;
+            LOGGER(info) << "   RX_buffer_size_bytes      = " << (uint32_t)br->RX_buffer_size_bytes;
+            LOGGER(info) << "   TX_buffer_size_bytes      = " << (uint32_t)br->TX_buffer_size_bytes;
           }
           break;
         case DEVICE_CMD::GET_BUFFER_USE:
           {
             LOGGER(info) << "DEVICE_CMD_RSP: GET_BUFFER_USE";
             get_buffer_use_rsp_packet *br = reinterpret_cast<get_buffer_use_rsp_packet *>(&packet);
-            LOGGER(info) << "   RX_buffer_used_bytes         = " << (uint32_t)br->RX_buffer_used_bytes;
-            LOGGER(info) << "   TX_buffer_used_bytes         = " << (uint32_t)br->TX_buffer_used_bytes;
+            LOGGER(info) << "   RX_buffer_used_bytes      = " << (uint32_t)br->RX_buffer_used_bytes;
+            LOGGER(info) << "   TX_buffer_used_bytes      = " << (uint32_t)br->TX_buffer_used_bytes;
           }
           break;
         case DEVICE_CMD::READ_ADC_REG:
           {
             LOGGER(info) << "DEVICE_CMD_RSP: READ_ADC_REG";
             dev_read_write_reg_packet *br = reinterpret_cast<dev_read_write_reg_packet *>(&packet);
-            LOGGER(info) << "   value                        = " << boost::format("%08x") % (uint32_t)br->value;
+            LOGGER(info) << "   value                     = " << boost::format("%08x") % (uint32_t)br->value;
           }
           break;
         case DEVICE_CMD::READ_DAC_REG:
           {
             LOGGER(info) << "DEVICE_CMD_RSP: READ_DAC_REG";
             dev_read_write_reg_packet *br = reinterpret_cast<dev_read_write_reg_packet *>(&packet);
-            LOGGER(info) << "   value                        = " << boost::format("%04x") % (uint16_t)br->value;
+            LOGGER(info) << "   value                     = " << boost::format("%04x") % (uint16_t)br->value;
+          }
+          break;
+        default:
+          {
+            LOGGER(info) << "DEVICE_CMD_RSP: " << (int)packet.hdr.command;
           }
           break;
       }

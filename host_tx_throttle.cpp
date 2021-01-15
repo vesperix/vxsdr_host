@@ -114,6 +114,8 @@ int main(int argc, char *argv[])
     std::thread sender_thread(std::ref(sender), std::ref(io_context), std::cref(local_send_endpoint), std::cref(destination_endpoint), vm["broadcast"].as<bool>());
 
     generator_thread.join();
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    set_tx_stop_flag();
     sender_thread.join();
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     set_rx_stop_flag();
