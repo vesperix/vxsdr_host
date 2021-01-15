@@ -133,8 +133,6 @@ void generator(const size_t max_packets, const size_t requested_packet_size, con
   std::chrono::duration<double> dt = t1 - t0;
   LOGGER(info) << (nsent - 1) << " buffers (" << ((nsent - 1) * packet_size) << " bytes) generated in " << dt.count() << " seconds";
 
-  LOGGER(info) << "generator waiting 10 seconds for completion";
-  std::this_thread::sleep_for(std::chrono::seconds(10));
   set_tx_stop_flag();
 
   LOGGER(info) << "generator thread finished";

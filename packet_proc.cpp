@@ -1,3 +1,5 @@
+#include <bitset>
+
 #include <boost/format.hpp>
 
 #include "logging.hpp"
@@ -31,7 +33,7 @@ void log_packet_info(generic_cmd_or_rsp_packet &packet)
             LOGGER(info) << "   oos_err_count             = " << sr->oos_err_count;
             LOGGER(info) << "   datapath_fifo_flow_status = " << sr->datapath_fifo_flow_status;
             LOGGER(info) << "   ddr_arbiter_status        = " << sr->ddr_arbiter_status;
-            LOGGER(info) << "   tgbe_status               = " << sr->tgbe_status;
+            LOGGER(info) << "   tgbe_status               = " << std::bitset<32>(sr->tgbe_status);
           }
           break;
         case DEVICE_CMD::GET_BUFFER_INFO:
