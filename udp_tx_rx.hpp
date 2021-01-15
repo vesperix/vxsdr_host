@@ -12,30 +12,31 @@
 
 // parameters of the internal ring buffers
  // size of largest command/status message packet
-static constexpr size_t msg_buffer_max_bytes         = sizeof(packet_header) + MAX_PAYLOAD_LENGTH_BYTES;
+static constexpr size_t msg_buffer_max_bytes           = sizeof(packet_header) + MAX_PAYLOAD_LENGTH_BYTES;
 // size of largest data packet
-static constexpr size_t data_buffer_max_bytes        = sizeof(packet_header) + sizeof(std::complex<int16_t>) * MAX_DATA_LENGTH_SAMPLES;
-static constexpr size_t rx_data_queue_length         =  65536;    // slots in rx data queue
-static constexpr size_t tx_data_queue_length         =   1024;    // slots in tx data queue
-static constexpr size_t rx_msg_queue_length          =    256;    // slots in rx msg queue
-static constexpr size_t tx_msg_queue_length          =    256;    // slots in tx msg queue
+static constexpr size_t data_buffer_max_bytes          = sizeof(packet_header) + sizeof(std::complex<int16_t>) * MAX_DATA_LENGTH_SAMPLES;
+static constexpr size_t rx_data_queue_length           =    65536;    // slots in rx data queue
+static constexpr size_t tx_data_queue_length           =     1024;    // slots in tx data queue
+static constexpr size_t rx_msg_queue_length            =      256;    // slots in rx msg queue
+static constexpr size_t tx_msg_queue_length            =      256;    // slots in tx msg queue
 
 // parameters of the writer thread
-static constexpr size_t rx_write_buffer_size         =     16;     // rx_buffers
-static constexpr int    rx_write_thread_sleep_us     =      0;
-static constexpr int    rx_data_queue_clear_sleep_us =  10000;
+static constexpr size_t rx_write_buffer_size           =       16;     // rx_buffers
+static constexpr int    rx_write_thread_sleep_us       =        0;
+static constexpr int    rx_data_queue_clear_sleep_us   =    10000;
 
 // parameters for the send thread
-static constexpr int    tx_send_thread_sleep_us      =      1;
+static constexpr int    tx_send_thread_sleep_us        =        1;
 
 // parameters for the generator thread
-static constexpr int    tx_generator_thread_sleep_us =      1;
+static constexpr int    tx_generator_thread_sleep_us   =        1;
 
 // parameters for the command response processing thread
-static constexpr int    response_thread_sleep_us     =   1000;
+static constexpr int    response_thread_sleep_us       =     1000;
 
 // parameters used to set the OS's network buffer
-static constexpr unsigned packets_per_network_buffer =   1024;
+static constexpr unsigned network_send_buffer_bytes    = 16777216;
+static constexpr unsigned network_receive_buffer_bytes = 16777216;
 
 static std::atomic<bool> rx_stop_flag, tx_stop_flag, complete_flag;
 static std::atomic<unsigned> tx_buffer_size, tx_buffer_used;
@@ -65,7 +66,13 @@ class udp_rx {
     udp_rx(boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint)
       : socket(io_context, local_endpoint) {
       socket.set_option(boost::asio::ip::udp::socket::reuse_address(true));
-      socket.set_option(boost::asio::socket_base::receive_buffer_size(packets_per_network_buffer * data_buffer_max_bytes));
+      socket.set_option(boost::asio::socket_base::receive_buffer_size(network_receive_buffer_bytes));
+
+      boost::asio::socket_base::receive_buffer_size option;
+      socket.get_option(option);
+      int network_buffer_size = option.value();
+      LOGGER(info) << "network receive buffer size set to " << network_buffer_size;
+
       if(!rx_stop_flag)
         start_receive();
     }
@@ -75,7 +82,13 @@ class udp_rx {
       socket.set_option(boost::asio::ip::udp::socket::reuse_address(true));
       socket.bind(local_endpoint);
       socket.set_option(boost::asio::ip::multicast::join_group(multicast_ip));
-      socket.set_option(boost::asio::socket_base::receive_buffer_size(packets_per_network_buffer * data_buffer_max_bytes));
+      socket.set_option(boost::asio::socket_base::receive_buffer_size(network_receive_buffer_bytes));
+
+      boost::asio::socket_base::receive_buffer_size option;
+      socket.get_option(option);
+      int network_buffer_size = option.value();
+      LOGGER(info) << "network receive buffer size set to " << network_buffer_size;
+
       if(!rx_stop_flag)
         start_receive();
     }
@@ -187,7 +200,14 @@ class udp_tx {
       const bool broadcast) : socket(io_context, local_endpoint) {
       destination = destination_endpoint;
       socket.set_option(boost::asio::socket_base::broadcast(broadcast));
-      socket.set_option(boost::asio::socket_base::send_buffer_size(packets_per_network_buffer * data_buffer_max_bytes));
+      socket.set_option(boost::asio::socket_base::send_buffer_size(network_send_buffer_bytes));
+
+      boost::asio::socket_base::send_buffer_size option;
+      socket.get_option(option);
+      int network_buffer_size = option.value();
+      LOGGER(info) << "network send buffer size set to " << network_buffer_size;
+
+
       start_send();
     }
   private:
@@ -211,7 +231,7 @@ class udp_tx {
       hdr.command = DEVICE_CMD::GET_BUFFER_INFO;
       hdr.flags = 0;
       hdr.packet_size = sizeof(hdr);
-      hdr.sequence_counter = (cmds_sent + buffers_sent) % UINT16_MAX;
+      hdr.sequence_counter = packets_sent++ % UINT16_MAX;
       size_t bytes_sent = socket.send_to(boost::asio::buffer(&hdr, hdr.packet_size), destination);
       if(bytes_sent != hdr.packet_size)
         send_errors++;
@@ -226,7 +246,7 @@ class udp_tx {
       hdr.command = DEVICE_CMD::CLEAR_STATUS;
       hdr.flags = 0;
       hdr.packet_size = sizeof(hdr);
-      hdr.sequence_counter = buffers_sent % UINT16_MAX;
+      hdr.sequence_counter = packets_sent++ % UINT16_MAX;
       bytes_sent = socket.send_to(boost::asio::buffer(&hdr, hdr.packet_size), destination);
       if(bytes_sent != hdr.packet_size)
         send_errors++;
@@ -239,7 +259,7 @@ class udp_tx {
       hdr.command = DEVICE_CMD::GET_STATUS;
       hdr.flags = 0;
       hdr.packet_size = sizeof(hdr);
-      hdr.sequence_counter = buffers_sent % UINT16_MAX;
+      hdr.sequence_counter = packets_sent++ % UINT16_MAX;
       bytes_sent = socket.send_to(boost::asio::buffer(&hdr, hdr.packet_size), destination);
       if(bytes_sent != hdr.packet_size)
         send_errors++;
@@ -252,7 +272,7 @@ class udp_tx {
       hdr.command = RADIO_CMD::START_NOW_UNTIL_STOP;
       hdr.flags = 0;
       hdr.packet_size = sizeof(hdr);
-      hdr.sequence_counter = (cmds_sent + buffers_sent) % UINT16_MAX;
+      hdr.sequence_counter = packets_sent++ % UINT16_MAX;
       bytes_sent = socket.send_to(boost::asio::buffer(&hdr, hdr.packet_size), destination);
       if(bytes_sent != hdr.packet_size)
         send_errors++;
@@ -265,7 +285,7 @@ class udp_tx {
         if(tx_data_queue.read_available()) {
           size_t n_popped = tx_data_queue.pop(&send_buffer.front(), send_buffer.size());
           for(size_t i = 0; i < n_popped; i++) {
-            send_buffer[i].hdr.sequence_counter = (cmds_sent + buffers_sent) % UINT16_MAX;
+            send_buffer[i].hdr.sequence_counter = packets_sent++ % UINT16_MAX;
             bytes_sent = socket.send_to(boost::asio::buffer(&send_buffer[i], send_buffer[i].hdr.packet_size), destination);
             if(bytes_sent != send_buffer[i].hdr.packet_size)
               send_errors++;
@@ -282,7 +302,7 @@ class udp_tx {
             hdr.command = DEVICE_CMD::GET_BUFFER_USE;
             hdr.flags = 0;
             hdr.packet_size = sizeof(hdr);
-            hdr.sequence_counter = (cmds_sent + buffers_sent) % UINT16_MAX;
+            hdr.sequence_counter = packets_sent++ % UINT16_MAX;
             bytes_sent = socket.send_to(boost::asio::buffer(&hdr, hdr.packet_size), destination);
             if(bytes_sent != hdr.packet_size)
               send_errors++;
@@ -295,7 +315,7 @@ class udp_tx {
             hdr.command = DEVICE_CMD::GET_STATUS;
             hdr.flags = 0;
             hdr.packet_size = sizeof(hdr);
-            hdr.sequence_counter = buffers_sent % UINT16_MAX;
+            hdr.sequence_counter = packets_sent++ % UINT16_MAX;
             bytes_sent = socket.send_to(boost::asio::buffer(&hdr, hdr.packet_size), destination);
             if(bytes_sent != hdr.packet_size)
               send_errors++;
@@ -320,7 +340,7 @@ class udp_tx {
       hdr.command = RADIO_CMD::STOP_NOW;
       hdr.flags = 0;
       hdr.packet_size = sizeof(hdr);
-      hdr.sequence_counter = buffers_sent % UINT16_MAX;
+      hdr.sequence_counter = packets_sent++ % UINT16_MAX;
       bytes_sent = socket.send_to(boost::asio::buffer(&hdr, hdr.packet_size), destination);
       if(bytes_sent != hdr.packet_size)
         send_errors++;
@@ -334,14 +354,14 @@ class udp_tx {
       hdr.command = DEVICE_CMD::GET_STATUS;
       hdr.flags = 0;
       hdr.packet_size = sizeof(hdr);
-      hdr.sequence_counter = buffers_sent % UINT16_MAX;
+      hdr.sequence_counter = packets_sent++ % UINT16_MAX;
       bytes_sent = socket.send_to(boost::asio::buffer(&hdr, hdr.packet_size), destination);
       if(bytes_sent != hdr.packet_size)
         send_errors++;
       else
         cmds_sent++;
 
-      LOGGER(info) << "send finished: " << buffers_sent << " buffers, " << cmds_sent << " commands, " << send_errors << " send errors";
+      LOGGER(info) << "send finished: " << buffers_sent << " buffers, " << cmds_sent << " commands, " << packets_sent << " packets, "<< send_errors << " send errors";
     }
 };
 
