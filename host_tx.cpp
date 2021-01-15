@@ -96,8 +96,6 @@ int main(int argc, char *argv[])
     boost::asio::ip::address_v4 local_ip = boost::asio::ip::address_v4::from_string(vm["local_address"].as<std::string>());
     boost::asio::ip::address_v4 destination_ip = boost::asio::ip::address_v4::from_string(vm["destination_address"].as<std::string>());
     boost::asio::ip::udp::endpoint local_endpoint(local_ip, 0);
-    //boost::asio::ip::udp::endpoint local_endpoint(local_ip, vm["local_port"].as<unsigned>());
-    //LOGGER(info) << "using local IP " << local_endpoint.address().to_string() << " and port " << local_endpoint.port();
     LOGGER(info) << "using local IP " << local_endpoint.address().to_string();
     boost::asio::ip::udp::endpoint destination_endpoint(destination_ip, vm["destination_port"].as<unsigned>());
     LOGGER(info) << "using destination IP " << destination_endpoint.address().to_string() << " and port " << destination_endpoint.port();

@@ -26,7 +26,7 @@ static constexpr int    rx_write_thread_sleep_us       =        0;
 static constexpr int    rx_data_queue_clear_sleep_us   =    10000;
 
 // parameters for the send thread
-static constexpr int    tx_send_thread_sleep_us        =        1;
+static constexpr int    tx_send_thread_sleep_us        =       10;
 
 // parameters for the generator thread
 static constexpr int    tx_generator_thread_sleep_us   =        1;
@@ -220,7 +220,7 @@ class udp_tx {
       unsigned tx_throttle_wait_us = 0;
       constexpr unsigned throttle_start_percent = 75;
       constexpr unsigned throttle_stop_percent  = 50;
-      constexpr unsigned throttle_amount_us =     10;
+      constexpr unsigned throttle_amount_us =     10; // send time for 8200 bytes over 10 GbE is about 6.7 us
 
       packet_header hdr;
       // get TX buffer size (necessary for throttling)
@@ -278,7 +278,7 @@ class udp_tx {
         cmds_sent++;
 
       int64_t last_check = 0;
-      constexpr int64_t n_check = 100;
+      constexpr int64_t n_check = 50; // current buffer size is about 1000 data packets
 
       while(!tx_stop_flag) {
         if(tx_data_queue.read_available()) {
@@ -565,8 +565,6 @@ void generator(const size_t max_packets, const size_t requested_packet_size, con
   std::chrono::duration<double> dt = t1 - t0;
   LOGGER(info) << (nsent - 1) << " buffers (" << ((nsent - 1) * packet_size) << " bytes) generated in " << dt.count() << " seconds";
 
-  LOGGER(info) << "generator waiting 10 seconds for completion";
-  std::this_thread::sleep_for(std::chrono::seconds(10));
   set_tx_stop_flag();
   set_rx_stop_flag();
 
