@@ -38,8 +38,8 @@ static constexpr int    tx_generator_thread_sleep_us   =        1;
 static constexpr int    response_thread_sleep_us       =     100;
 
 // parameters used to set the OS's network buffer
-static constexpr unsigned network_send_buffer_bytes    = 16777216;
-static constexpr unsigned network_receive_buffer_bytes = 16777216;
+static constexpr unsigned network_send_buffer_bytes    =  4194304;
+static constexpr unsigned network_receive_buffer_bytes =  4194304;
 
 static std::atomic<bool> rx_stop_flag, tx_stop_flag, complete_flag;
 static std::atomic<unsigned> tx_buffer_size, tx_buffer_used;
@@ -372,7 +372,7 @@ class udp_tx {
       send_tx_start_now_until_stop_cmd(tx_subdev);
 
       int64_t last_check = 0;
-      constexpr int64_t n_check = 100; // current buffer size is about 1000 data packets
+      constexpr int64_t n_check = 50; // current buffer size is about 1000 data packets
 
       while(not tx_stop_flag) {
         if(tx_data_queue.read_available()) {
@@ -404,7 +404,9 @@ class udp_tx {
       send_tx_stop_now_cmd(tx_subdev);
       // wait a bit for things to finish up
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
-      LOGGER(info) << "send finished: " << buffers_sent << " buffers, " << cmds_sent << " commands, " << send_errors << " send errors";
+      LOGGER(info) << "send finished:";
+      LOGGER(info) << "   " << cmds_sent << " commands, " << buffers_sent << " buffers";
+      LOGGER(info) << "   " << packets_sent << " packets, " << send_errors << " send errors";
     }
 };
 
