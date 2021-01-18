@@ -66,6 +66,44 @@ static boost::lockfree::spsc_queue<data_packet, boost::lockfree::capacity<tx_dat
 static boost::lockfree::spsc_queue<generic_cmd_or_rsp_packet, boost::lockfree::capacity<rx_msg_queue_length> > command_queue;
 static boost::lockfree::spsc_queue<generic_cmd_or_rsp_packet, boost::lockfree::capacity<tx_msg_queue_length> > response_queue;
 
+std::string packet_type_to_name(const uint8_t number) {
+  switch(number) {
+    case PACKET_TYPES::TX_SIGNAL_DATA:
+      return "TX_SIGNAL_DATA";
+    case PACKET_TYPES::RX_SIGNAL_DATA:
+      return "RX_SIGNAL_DATA";
+    case PACKET_TYPES::DEVICE_CMD:
+      return "DEVICE_CMD";
+    case PACKET_TYPES::TX_RADIO_CMD:
+      return "TX_RADIO_CMD";
+    case PACKET_TYPES::RX_RADIO_CMD:
+      return "RX_RADIO_CMD";
+    case PACKET_TYPES::DEVICE_CMD_ERR:
+      return "DEVICE_CMD_ERR";
+    case PACKET_TYPES::TX_RADIO_CMD_ERR:
+      return "TX_RADIO_CMD_ERR";
+    case PACKET_TYPES::RX_RADIO_CMD_ERR:
+      return "RX_RADIO_CMD_ERR";
+    case PACKET_TYPES::DEVICE_CMD_RSP:
+      return "DEVICE_CMD_RSP";
+    case PACKET_TYPES::TX_RADIO_CMD_RSP:
+      return "TX_RADIO_CMD_RSP";
+    case PACKET_TYPES::RX_RADIO_CMD_RSP:
+      return "RX_RADIO_CMD_RSP";
+    case PACKET_TYPES::TX_SIGNAL_DATA_ACK:
+      return "TX_SIGNAL_DATA_ACK";
+    case PACKET_TYPES::RX_SIGNAL_DATA_ACK:
+      return "RX_SIGNAL_DATA_ACK";
+    case PACKET_TYPES::DEVICE_CMD_ACK:
+      return "DEVICE_CMD_ACK";
+    case PACKET_TYPES::TX_RADIO_CMD_ACK:
+      return "TX_RADIO_CMD_ACK";
+    case PACKET_TYPES::RX_RADIO_CMD_ACK:
+      return "RX_RADIO_CMD_ACK";
+  }
+  return "UNDEFINED";
+}
+
 class udp_rx {
   public:
     udp_rx(boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint)
@@ -104,7 +142,7 @@ class udp_rx {
     data_packet recv_buffer;
     generic_cmd_or_rsp_packet cmd_buffer;
     size_t packets_received = 0;
-    size_t packet_types_received[21] = { 0 };
+    size_t packet_types_received[UINT8_MAX] = { 0 };
     uint16_t seq = 0, last_seq = 0;
     size_t seq_errors = 0;
     unsigned percent, min_buffer_percent = 100, max_buffer_percent = 0;
@@ -113,10 +151,7 @@ class udp_rx {
       while(not rx_stop_flag) {
         socket.receive_from(boost::asio::buffer(&recv_buffer, sizeof(recv_buffer)), remote);
         packets_received++;
-        if(recv_buffer.hdr.packet_type < 0x10)
-          packet_types_received[recv_buffer.hdr.packet_type]++;
-        else if(recv_buffer.hdr.packet_type >= 0x80 and recv_buffer.hdr.packet_type <= 0x84)
-          packet_types_received[recv_buffer.hdr.packet_type - 0x70]++;
+        packet_types_received[recv_buffer.hdr.packet_type]++;
         if(packets_received > 1 and recv_buffer.hdr.sequence_counter != (uint16_t)(last_seq + 1))
           seq_errors++;
         last_seq = recv_buffer.hdr.sequence_counter;
@@ -203,8 +238,9 @@ class udp_rx {
       }
 
       LOGGER(info) << "start_receive exiting; " << packets_received << " packets received:";
-      for(unsigned i = 0; i < 21; i++)
-        LOGGER(info) << (boost::format("   %12d %s") % packet_types_received[i] % PACKET_TYPES::NAMES[i]);
+      for(unsigned i = 0; i < UINT8_MAX; i++)
+        if(packet_types_received[i] > 0)
+          LOGGER(info) << (boost::format("   %12d %s (%d)") % packet_types_received[i] % packet_type_to_name(i) % i);
       LOGGER(info) << seq_errors << " receive sequence errors found";
     }
 };
@@ -231,6 +267,7 @@ class udp_tx {
     boost::asio::ip::udp::endpoint destination;
     static constexpr size_t send_buffer_size = 16;
     std::array<data_packet, send_buffer_size> send_buffer;
+    size_t packet_types_sent[UINT8_MAX] = { 0 };
     int64_t send_errors = 0, cmds_sent = 0, buffers_sent = 0, packets_sent = 0, bytes_sent = 0;
 
     void send_device_hello_cmd(const uint8_t subdev, const uint8_t flags = 0) {
@@ -334,6 +371,7 @@ class udp_tx {
     }
 
     void send_data_buffer(data_packet &buffer) {
+      packet_types_sent[buffer.hdr.packet_type]++;
       buffer.hdr.sequence_counter = packets_sent++ % UINT16_MAX;
       size_t bytes = socket.send_to(boost::asio::buffer(&buffer, buffer.hdr.packet_size), destination);
       if(bytes != buffer.hdr.packet_size)
@@ -345,6 +383,7 @@ class udp_tx {
 
     void async_send_data_buffer(data_packet &buffer) {
       static auto hdlr = boost::bind(&udp_tx::handle_async_send, this, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred);
+      packet_types_sent[buffer.hdr.packet_type]++;
       buffer.hdr.sequence_counter = packets_sent++ % UINT16_MAX;
       socket.async_send_to(boost::asio::buffer(&buffer, buffer.hdr.packet_size), destination, hdlr);
     }
@@ -402,7 +441,7 @@ class udp_tx {
             else {
               send_data_buffer(send_buffer[i]);
             }
-            
+
             // update throttling
             if(tx_buffer_fill_percent > throttle_start_percent)
               tx_throttle_wait_us = throttle_amount_us;
@@ -427,6 +466,10 @@ class udp_tx {
       LOGGER(info) << "send finished:";
       LOGGER(info) << "   " << cmds_sent << " commands, " << buffers_sent << " buffers";
       LOGGER(info) << "   " << packets_sent << " packets, " << send_errors << " send errors";
+      for(unsigned i = 0; i < UINT8_MAX; i++)
+        if(packet_types_sent[i] > 0)
+          LOGGER(info) << (boost::format("   %12d %s (%d)") % packet_types_sent[i] % packet_type_to_name(i) % i);
+
     }
 };
 

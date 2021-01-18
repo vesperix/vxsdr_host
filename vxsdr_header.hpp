@@ -1,3 +1,6 @@
+#include <cstdint>
+#include <complex>
+
 #ifndef VXSDR_HEADER_HPP
 #define VXSDR_HEADER_HPP
 
@@ -6,9 +9,6 @@
   Version 0.1.9 07 Jan 2021
   FROZEN EXCEPT FOR ADDITIONS UNTIL INITIAL IMPLEMENTATION COMPLETE AND TESTED
 */
-
-#include <cstdint>
-#include <complex>
 
 namespace PACKET_TYPES {
   // packet types
@@ -28,29 +28,6 @@ namespace PACKET_TYPES {
   static constexpr uint8_t DEVICE_CMD_ACK     = 0x82;
   static constexpr uint8_t TX_RADIO_CMD_ACK   = 0x83;
   static constexpr uint8_t RX_RADIO_CMD_ACK   = 0x84;
-  static std::vector<std::string> NAMES = {
-    "TX_SIGNAL_DATA",
-    "RX_SIGNAL_DATA",
-    "DEVICE_CMD",
-    "TX_RADIO_CMD",
-    "RX_RADIO_CMD",
-    "RESERVED (0x05)",
-    "RESERVED (0x06)",
-    "RESERVED (0x07)",
-    "RESERVED (0x08)",
-    "RESERVED (0x09)",
-    "DEVICE_CMD_ERR",
-    "TX_RADIO_CMD_ERR",
-    "RX_RADIO_CMD_ERR",
-    "DEVICE_CMD_RSP",
-    "TX_RADIO_CMD_RSP",
-    "RX_RADIO_CMD_RSP",
-    "TX_SIGNAL_DATA_ACK",
-    "RX_SIGNAL_DATA_ACK",
-    "DEVICE_CMD_ACK",
-    "TX_RADIO_CMD_ACK",
-    "RX_RADIO_CMD_ACK",
-  };
 }
 
 static constexpr size_t   MAX_DATA_LENGTH_SAMPLES  = 2048;

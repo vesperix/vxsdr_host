@@ -48,6 +48,44 @@ void set_tx_stop_flag() {
   tx_stop_flag = true;
 }
 
+std::string packet_type_to_name(const uint8_t number) {
+  switch(number) {
+    case PACKET_TYPES::TX_SIGNAL_DATA:
+      return "TX_SIGNAL_DATA";
+    case PACKET_TYPES::RX_SIGNAL_DATA:
+      return "RX_SIGNAL_DATA";
+    case PACKET_TYPES::DEVICE_CMD:
+      return "DEVICE_CMD";
+    case PACKET_TYPES::TX_RADIO_CMD:
+      return "TX_RADIO_CMD";
+    case PACKET_TYPES::RX_RADIO_CMD:
+      return "RX_RADIO_CMD";
+    case PACKET_TYPES::DEVICE_CMD_ERR:
+      return "DEVICE_CMD_ERR";
+    case PACKET_TYPES::TX_RADIO_CMD_ERR:
+      return "TX_RADIO_CMD_ERR";
+    case PACKET_TYPES::RX_RADIO_CMD_ERR:
+      return "RX_RADIO_CMD_ERR";
+    case PACKET_TYPES::DEVICE_CMD_RSP:
+      return "DEVICE_CMD_RSP";
+    case PACKET_TYPES::TX_RADIO_CMD_RSP:
+      return "TX_RADIO_CMD_RSP";
+    case PACKET_TYPES::RX_RADIO_CMD_RSP:
+      return "RX_RADIO_CMD_RSP";
+    case PACKET_TYPES::TX_SIGNAL_DATA_ACK:
+      return "TX_SIGNAL_DATA_ACK";
+    case PACKET_TYPES::RX_SIGNAL_DATA_ACK:
+      return "RX_SIGNAL_DATA_ACK";
+    case PACKET_TYPES::DEVICE_CMD_ACK:
+      return "DEVICE_CMD_ACK";
+    case PACKET_TYPES::TX_RADIO_CMD_ACK:
+      return "TX_RADIO_CMD_ACK";
+    case PACKET_TYPES::RX_RADIO_CMD_ACK:
+      return "RX_RADIO_CMD_ACK";
+  }
+  return "UNDEFINED";
+}
+
 class udp_rx {
   public:
     udp_rx(boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint)
@@ -73,8 +111,7 @@ class udp_rx {
     data_packet recv_buffer;
     generic_cmd_or_rsp_packet cmd_buffer;
     size_t packets_received = 0;
-    std::array<size_t, 21> packet_types_received;
-    //packet_types_received.reserve(PACKET_TYPES.NAMES.size());
+    size_t packet_types_received[UINT8_MAX] = { 0 };
     size_t seq = 0, last_seq = 0, seq_errors = 0;
     unsigned percent, min_buffer_percent = 100, max_buffer_percent = 0;
     void start_receive() {
@@ -82,10 +119,8 @@ class udp_rx {
       while(not rx_stop_flag) {
         socket.receive_from(boost::asio::buffer(&recv_buffer, sizeof(recv_buffer)), remote);
         packets_received++;
-        if(recv_buffer.hdr.packet_type < 16)
-          packet_types_received[recv_buffer.hdr.packet_type]++;
-        else
-          packet_types_received[16 + (recv_buffer.hdr.packet_type % 128)]++;
+        packet_types_received[recv_buffer.hdr.packet_type]++;
+
         if(packets_received > 1 and recv_buffer.hdr.sequence_counter != last_seq + 1 and last_seq != UINT16_MAX)
           seq_errors++;
         last_seq = recv_buffer.hdr.sequence_counter;
@@ -127,8 +162,9 @@ class udp_rx {
         }
       }
       LOGGER(info) << packets_received << " packets received:";
-      for(unsigned i = 0; i < PACKET_TYPES::NAMES.size(); i++)
-        LOGGER(info) << (boost::format("   %12d %s") % packet_types_received[i] % PACKET_TYPES::NAMES[i]);
+      for(unsigned i = 0; i < UINT8_MAX; i++)
+        if(packet_types_received[i] > 0)
+          LOGGER(info) << (boost::format("   %12d %s (%d)") % packet_types_received[i] % packet_type_to_name(i) % i);
 
       LOGGER(info) << "receive finished";
     }
@@ -165,7 +201,7 @@ class udp_tx {
       packets_sent++;
       total_bytes += bytes_sent;
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
-  
+
       hdr.packet_type = PACKET_TYPES::DEVICE_CMD;
       hdr.target_subdevice = 0;
       hdr.command = DEVICE_CMD::GET_STATUS;
@@ -187,7 +223,7 @@ class udp_tx {
       packets_sent++;
       total_bytes += bytes_sent;
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
- 
+
       dev_read_write_reg_packet p;
       p.hdr.packet_type = PACKET_TYPES::DEVICE_CMD;
       p.hdr.target_subdevice = 0;
