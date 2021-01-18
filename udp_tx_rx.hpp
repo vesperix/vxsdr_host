@@ -117,7 +117,7 @@ class udp_rx {
           packet_types_received[recv_buffer.hdr.packet_type]++;
         else if(recv_buffer.hdr.packet_type >= 0x80 and recv_buffer.hdr.packet_type <= 0x84)
           packet_types_received[recv_buffer.hdr.packet_type - 0x70]++;
-        if(packets_received > 1 and recv_buffer.hdr.sequence_counter != last_seq + 1)
+        if(packets_received > 1 and recv_buffer.hdr.sequence_counter != (uint16_t)(last_seq + 1))
           seq_errors++;
         last_seq = recv_buffer.hdr.sequence_counter;
         switch(recv_buffer.hdr.packet_type) {
@@ -127,6 +127,7 @@ class udp_rx {
           case PACKET_TYPES::TX_SIGNAL_DATA:
             LOGGER(error) << "Received a TX signal data packet";
             break;
+          // tx sginal data acks contain throttling information
           case PACKET_TYPES::TX_SIGNAL_DATA_ACK:
             {
               tx_signal_data_ack_packet *r = reinterpret_cast<tx_signal_data_ack_packet *>(&recv_buffer);
@@ -134,7 +135,7 @@ class udp_rx {
               tx_buffer_fill_percent = std::min(100., (100. * tx_buffer_used) / tx_buffer_size);
             }
             break;
-          // the buffer info commands are special cased since they are used for TX throttling
+          // the buffer info commands are special cased since they can also be used for TX throttling
           case PACKET_TYPES::DEVICE_CMD_RSP:
             switch(recv_buffer.hdr.command) {
               case DEVICE_CMD_RSP::GET_BUFFER_USE_RSP:
@@ -204,7 +205,7 @@ class udp_rx {
       LOGGER(info) << "start_receive exiting; " << packets_received << " packets received:";
       for(unsigned i = 0; i < 21; i++)
         LOGGER(info) << (boost::format("   %12d %s") % packet_types_received[i] % PACKET_TYPES::NAMES[i]);
-      LOGGER(info) << seq_errors << " sequence errors found";
+      LOGGER(info) << seq_errors << " receive sequence errors found";
     }
 };
 
@@ -384,26 +385,33 @@ class udp_tx {
       send_tx_start_now_until_stop_cmd(tx_subdev);
 
       int64_t last_check = 0;
-      constexpr int64_t n_check = 50; // current buffer size is about 1000 data packets
+      constexpr int64_t n_check = 100; // current buffer size is about 1000 data packets
 
       while(not tx_stop_flag) {
         if(tx_data_queue.read_available()) {
           size_t n_popped = tx_data_queue.pop(&send_buffer.front(), send_buffer.size());
           for(size_t i = 0; i < n_popped; i++) {
-            send_data_buffer(send_buffer[i]);
+
+            if(packets_sent - last_check > n_check) {
+              last_check = packets_sent;
+              send_device_get_buffer_use_cmd(device_subdev);
+              //send_buffer[i].hdr.flags = FLAGS::REQUEST_ACK;
+              send_data_buffer(send_buffer[i]);
+              //send_buffer[i].hdr.flags = 0;
+            }
+            else {
+              send_data_buffer(send_buffer[i]);
+            }
+            
+            // update throttling
+            if(tx_buffer_fill_percent > throttle_start_percent)
+              tx_throttle_wait_us = throttle_amount_us;
+            else if (tx_buffer_fill_percent < throttle_stop_percent)
+              tx_throttle_wait_us = 0;
+
             if(tx_throttle_wait_us > 0)
               std::this_thread::sleep_for(std::chrono::microseconds(tx_throttle_wait_us));
           }
-          // ask for buffer use every every n_check packets
-          if(packets_sent - last_check > n_check) {
-            last_check = packets_sent;
-            send_device_get_buffer_use_cmd(device_subdev);
-          }
-          // update throttling
-          if(tx_buffer_fill_percent > throttle_start_percent)
-            tx_throttle_wait_us = throttle_amount_us;
-          else if (tx_buffer_fill_percent < throttle_stop_percent)
-            tx_throttle_wait_us = 0;
         }
         else {
           if(send_thread_sleep_us > 0)
@@ -427,7 +435,7 @@ void writer(const std::string &outfilename, const size_t max_packets) {
 
   std::array<data_packet, rx_write_buffer_size> buffer;
   std::ofstream outfile(outfilename.c_str(), std::ofstream::binary);
-  size_t packets = 0, seq_errors = 0, write_errors = 0, bytes_written = 0;
+  size_t packets = 0, write_errors = 0, bytes_written = 0;
 
   auto t0 = std::chrono::steady_clock::now();
 
@@ -459,7 +467,7 @@ void writer(const std::string &outfilename, const size_t max_packets) {
   auto t1 = std::chrono::steady_clock::now();
   std::chrono::duration<double> dt = t1 - t0;
   LOGGER(info) << packets << " data packets recieved in " << dt.count() << " sec";
-  LOGGER(info) << seq_errors << " sequence errors, " << write_errors << " write errors";
+  LOGGER(info) << write_errors << " write errors";
   LOGGER(info) << (bytes_written / dt.count()) << " bytes/s";
 
   std::this_thread::sleep_for(std::chrono::microseconds(rx_data_queue_clear_sleep_us));
