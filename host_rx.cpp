@@ -121,8 +121,10 @@ int main(int argc, char *argv[])
     else {
       receiver_thread = std::thread(std::ref(receiver), std::ref(io_context), std::cref(local_endpoint));
     }
-    receiver_thread.join();
     handler_thread.join();
+    set_rx_stop_flag();
+    receiver_thread.join();
+
   }
   catch (std::exception& e) {
     LOGGER(fatal) << "exception caught: " << e.what();
