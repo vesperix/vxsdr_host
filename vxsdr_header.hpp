@@ -205,20 +205,20 @@ typedef struct {
 
 typedef struct {
   packet_header           hdr;
-  uint32_t                buffer_used_bytes;
+  uint32_t                tx_buffer_used_bytes;
   uint32_t                oos_err_count;
 } tx_signal_data_ack_packet;
 
 typedef struct {
   packet_header           hdr;
-  uint32_t                RX_buffer_used_bytes;
-  uint32_t                TX_buffer_used_bytes;
+  uint32_t                rx_buffer_used_bytes;
+  uint32_t                tx_buffer_used_bytes;
 } get_buffer_use_rsp_packet;
 
 typedef struct {
   packet_header           hdr;
-  uint32_t                RX_buffer_size_bytes;
-  uint32_t                TX_buffer_size_bytes;
+  uint32_t                rx_buffer_size_bytes;
+  uint32_t                tx_buffer_size_bytes;
 } get_buffer_info_rsp_packet;
 
 typedef struct {

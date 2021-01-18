@@ -1,3 +1,5 @@
+#include <vector>
+
 #include <boost/lockfree/spsc_queue.hpp>
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
@@ -101,7 +103,8 @@ class udp_rx {
     boost::asio::ip::udp::endpoint remote;
     data_packet recv_buffer;
     generic_cmd_or_rsp_packet cmd_buffer;
-    size_t packets_received = 0, packet_types_received[16] = { 0 };
+    size_t packets_received = 0;
+    size_t packet_types_received[21] = { 0 };
     uint16_t seq = 0, last_seq = 0;
     size_t seq_errors = 0;
     unsigned percent, min_buffer_percent = 100, max_buffer_percent = 0;
@@ -110,8 +113,10 @@ class udp_rx {
       while(not rx_stop_flag) {
         socket.receive_from(boost::asio::buffer(&recv_buffer, sizeof(recv_buffer)), remote);
         packets_received++;
-        if(recv_buffer.hdr.packet_type < 16)
+        if(recv_buffer.hdr.packet_type < 0x10)
           packet_types_received[recv_buffer.hdr.packet_type]++;
+        else if(recv_buffer.hdr.packet_type >= 0x80 and recv_buffer.hdr.packet_type <= 0x84)
+          packet_types_received[recv_buffer.hdr.packet_type - 0x70]++;
         if(packets_received > 1 and recv_buffer.hdr.sequence_counter != last_seq + 1)
           seq_errors++;
         last_seq = recv_buffer.hdr.sequence_counter;
@@ -122,14 +127,21 @@ class udp_rx {
           case PACKET_TYPES::TX_SIGNAL_DATA:
             LOGGER(error) << "Received a TX signal data packet";
             break;
+          case PACKET_TYPES::TX_SIGNAL_DATA_ACK:
+            {
+              tx_signal_data_ack_packet *r = reinterpret_cast<tx_signal_data_ack_packet *>(&recv_buffer);
+              tx_buffer_used = r->tx_buffer_used_bytes;
+              tx_buffer_fill_percent = std::min(100., (100. * tx_buffer_used) / tx_buffer_size);
+            }
+            break;
           // the buffer info commands are special cased since they are used for TX throttling
           case PACKET_TYPES::DEVICE_CMD_RSP:
             switch(recv_buffer.hdr.command) {
               case DEVICE_CMD_RSP::GET_BUFFER_USE_RSP:
                 {
                   get_buffer_use_rsp_packet *r = reinterpret_cast<get_buffer_use_rsp_packet *>(&recv_buffer);
-                  tx_buffer_used = r->TX_buffer_used_bytes;
-                  rx_buffer_used = r->RX_buffer_used_bytes;
+                  tx_buffer_used = r->tx_buffer_used_bytes;
+                  rx_buffer_used = r->rx_buffer_used_bytes;
                   tx_buffer_fill_percent = std::min(100., (100. * tx_buffer_used) / tx_buffer_size);
                   rx_buffer_fill_percent = std::min(100., (100. * rx_buffer_used) / rx_buffer_size);
                   if(forward_buffer_use_packets) {
@@ -142,8 +154,8 @@ class udp_rx {
               case DEVICE_CMD_RSP::GET_BUFFER_INFO_RSP:
                 {
                   get_buffer_info_rsp_packet *r = reinterpret_cast<get_buffer_info_rsp_packet *>(&recv_buffer);
-                  tx_buffer_size = r->TX_buffer_size_bytes;
-                  rx_buffer_size = r->RX_buffer_size_bytes;
+                  tx_buffer_size = r->tx_buffer_size_bytes;
+                  rx_buffer_size = r->rx_buffer_size_bytes;
                   generic_cmd_or_rsp_packet p;
                   memcpy(&p, r, std::min((size_t)r->hdr.packet_size, sizeof(p)));
                   response_queue.push(p);
@@ -190,7 +202,7 @@ class udp_rx {
       }
 
       LOGGER(info) << "start_receive exiting; " << packets_received << " packets received:";
-      for(unsigned i = 0; i < 16; i++)
+      for(unsigned i = 0; i < 21; i++)
         LOGGER(info) << (boost::format("   %12d %s") % packet_types_received[i] % PACKET_TYPES::NAMES[i]);
       LOGGER(info) << seq_errors << " sequence errors found";
     }

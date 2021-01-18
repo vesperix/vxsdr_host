@@ -40,16 +40,16 @@ void log_packet_info(generic_cmd_or_rsp_packet &packet)
           {
             LOGGER(info) << "DEVICE_CMD_RSP: GET_BUFFER_INFO";
             get_buffer_info_rsp_packet *br = reinterpret_cast<get_buffer_info_rsp_packet *>(&packet);
-            LOGGER(info) << "   RX_buffer_size_bytes      = " << (uint32_t)br->RX_buffer_size_bytes;
-            LOGGER(info) << "   TX_buffer_size_bytes      = " << (uint32_t)br->TX_buffer_size_bytes;
+            LOGGER(info) << "   rx_buffer_size_bytes      = " << (uint32_t)br->rx_buffer_size_bytes;
+            LOGGER(info) << "   tx_buffer_size_bytes      = " << (uint32_t)br->tx_buffer_size_bytes;
           }
           break;
         case DEVICE_CMD::GET_BUFFER_USE:
           {
             LOGGER(info) << "DEVICE_CMD_RSP: GET_BUFFER_USE";
             get_buffer_use_rsp_packet *br = reinterpret_cast<get_buffer_use_rsp_packet *>(&packet);
-            LOGGER(info) << "   RX_buffer_used_bytes      = " << (uint32_t)br->RX_buffer_used_bytes;
-            LOGGER(info) << "   TX_buffer_used_bytes      = " << (uint32_t)br->TX_buffer_used_bytes;
+            LOGGER(info) << "   rx_buffer_used_bytes      = " << (uint32_t)br->rx_buffer_used_bytes;
+            LOGGER(info) << "   tx_buffer_used_bytes      = " << (uint32_t)br->tx_buffer_used_bytes;
           }
           break;
         case DEVICE_CMD::READ_ADC_REG:
