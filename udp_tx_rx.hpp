@@ -112,7 +112,7 @@ class udp_rx {
         packets_received++;
         if(recv_buffer.hdr.packet_type < 16)
           packet_types_received[recv_buffer.hdr.packet_type]++;
-        if(packets_received > 1 and recv_buffer.hdr.sequence_counter != last_seq++)
+        if(packets_received > 1 and recv_buffer.hdr.sequence_counter != last_seq + 1)
           seq_errors++;
         last_seq = recv_buffer.hdr.sequence_counter;
         switch(recv_buffer.hdr.packet_type) {
