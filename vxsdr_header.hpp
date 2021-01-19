@@ -30,9 +30,6 @@ namespace PACKET_TYPES {
   static constexpr uint8_t RX_RADIO_CMD_ACK   = 0x84;
 }
 
-static constexpr size_t   MAX_DATA_LENGTH_SAMPLES  = 2048;
-static constexpr size_t   MAX_PAYLOAD_LENGTH_BYTES = 32;  // maximum length of a CMD or RSP packet, excluding header
-
 typedef struct {
   uint8_t                 packet_type;
   uint8_t                 command;
@@ -41,6 +38,11 @@ typedef struct {
   uint16_t                packet_size;       // length of packet including header in bytes
   uint16_t                sequence_counter;  // need to figure out when this resets (every new data stream, power up, ?)
 } packet_header;
+
+typedef struct {
+  uint32_t                nanoseconds;
+  uint32_t                seconds;
+} time_spec;
 
 namespace FLAGS {
   static constexpr uint8_t REQUEST_ACK       = 0x80;  // bit 0
@@ -155,80 +157,90 @@ namespace RADIO_CMD_ERR {
   static constexpr uint8_t BAD_PARAMETER                = 0x05;
 }
 
-typedef struct {
-  uint32_t                nanoseconds;
-  uint32_t                seconds;
-} time_spec;
+static constexpr size_t   MAX_DATA_LENGTH_SAMPLES  = 2048;
+static constexpr size_t   MAX_PAYLOAD_LENGTH_BYTES = 32;  // maximum length of a CMD or RSP packet, excluding header
 
-typedef struct {
-  packet_header           hdr;       // hdr.packet_type must be TX_RADIO_CMD or RX_RADIO_CMD
-} stream_control_packet_bare;
+class packet {
+  public:
+    packet_header          hdr;
+};
 
-typedef struct {
-  packet_header           hdr;       // hdr.packet_type must be TX_RADIO_CMD or RX_RADIO_CMD
-  uint64_t                n_samples;
-} stream_control_packet_samples;
+class data_packet : public packet {
+  public:
+    std::complex<int16_t>  data[MAX_DATA_LENGTH_SAMPLES]; // FIXME: find proper way to represent variable-mength data in class
+};
 
-typedef struct {
-  packet_header           hdr;
-  time_spec               time;
-} stream_control_packet_time;
+class largest_data_packet : public data_packet {};
 
-typedef struct {
-  packet_header           hdr;
-  time_spec               time;
-  uint64_t                n_samples;
-} stream_control_packet_time_samples;
+class cmd_or_rsp_packet : public packet {};
 
-typedef struct {
-  packet_header           hdr;
-  uint32_t                tx_buffer_used_bytes;
-  uint32_t                oos_err_count;
-} tx_signal_data_ack_packet;
+class largest_cmd_or_rsp_packet : public cmd_or_rsp_packet {
+  public:
+    uint8_t                payload[MAX_PAYLOAD_LENGTH_BYTES];
+};
 
-typedef struct {
-  packet_header           hdr;
-  uint32_t                rx_buffer_used_bytes;
-  uint32_t                tx_buffer_used_bytes;
-} get_buffer_use_rsp_packet;
+class cmd_packet : public cmd_or_rsp_packet {};
 
-typedef struct {
-  packet_header           hdr;
-  uint32_t                rx_buffer_size_bytes;
-  uint32_t                tx_buffer_size_bytes;
-} get_buffer_info_rsp_packet;
+class rsp_packet : public cmd_or_rsp_packet {};
 
-typedef struct {
-  packet_header           hdr;
-  std::complex<int16_t>   data[MAX_DATA_LENGTH_SAMPLES]; // FIXME: find proper way to represent variable-mength data in struct
-} data_packet;
+class ack_packet : public cmd_or_rsp_packet {};
 
-typedef struct {
-  packet_header           hdr;
-  uint8_t                 payload[MAX_PAYLOAD_LENGTH_BYTES];
-} cmd_or_rsp_packet;
+class stream_control_packet : public cmd_packet {};
 
-typedef struct {
-  packet_header           hdr;
-  uint32_t                proc_rev;
-  uint32_t                fpga_rev;
-} hello_rsp_packet;
+class stream_control_packet_samples : public stream_control_packet {
+  public:
+    uint64_t               n_samples;
+};
 
-typedef struct {
-  packet_header           hdr;
-  uint16_t                fpga_temp;
-  uint16_t                dac_temp;
-  uint32_t                reserved;
-  uint32_t                oos_err_count;
-  uint32_t                datapath_fifo_flow_status;
-  uint32_t                ddr_arbiter_status;
-  uint32_t                tgbe_status;
-} status_rsp_packet;
+class stream_control_packet_time : public stream_control_packet {
+  public:
+    time_spec              time;
+};
 
-typedef struct {
-  packet_header           hdr;
-  uint32_t                reg_num;
-  uint32_t                value;
-} dev_read_write_reg_packet;
+class stream_control_packet_time_samples : public stream_control_packet_time {
+  public:
+    uint64_t               n_samples;
+};
+
+class tx_signal_data_ack_packet : public ack_packet {
+  public:
+    uint32_t               tx_buffer_used_bytes;
+    uint32_t               oos_err_count;
+};
+
+class get_buffer_use_rsp_packet : public rsp_packet {
+  public:
+    uint32_t               rx_buffer_used_bytes;
+    uint32_t               tx_buffer_used_bytes;
+};
+
+class get_buffer_info_rsp_packet : public rsp_packet {
+  public:
+    uint32_t               rx_buffer_size_bytes;
+    uint32_t               tx_buffer_size_bytes;
+};
+
+class hello_rsp_packet : public rsp_packet {
+  public:
+    uint32_t               proc_rev;
+    uint32_t               fpga_rev;
+};
+
+class status_rsp_packet : public rsp_packet {
+  public:
+    uint16_t               fpga_temp;
+    uint16_t               dac_temp;
+    uint32_t               reserved;
+    uint32_t               oos_err_count;
+    uint32_t               datapath_fifo_flow_status;
+    uint32_t               ddr_arbiter_status;
+    uint32_t               tgbe_status;
+};
+
+class dev_read_write_reg_packet : public cmd_or_rsp_packet {
+  public:
+    uint32_t               reg_num;
+    uint32_t               value;
+};
 
 #endif // VXSDR_HEADER_HPP
