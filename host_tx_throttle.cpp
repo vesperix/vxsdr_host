@@ -31,7 +31,7 @@ void define_options(boost::program_options::options_description &desc)
     ("broadcast,B", boost::program_options::bool_switch()->default_value(false), "flag to enable broadcast")
     ("destination_port,P", boost::program_options::value<unsigned>()->default_value(1030), "port to use on destination")
     ("packet_size,S", boost::program_options::value<size_t>()->default_value(1024), "packet size in bytes")
-    ("num_packets,N", boost::program_options::value<size_t>()->default_value(1024), "number of packets to send")
+    ("num_packets,N", boost::program_options::value<uint64_t>()->default_value(1024), "number of packets to send")
     ("wait_us,W", boost::program_options::value<unsigned>()->default_value(1000000), "wait between packets in us")
   ;
 }
@@ -103,11 +103,11 @@ int main(int argc, char *argv[])
      boost::asio::ip::udp::endpoint destination_endpoint(destination_ip, vm["destination_port"].as<unsigned>());
     LOGGER(info) << "using destination IP " << destination_endpoint.address().to_string() << " and port " << destination_endpoint.port();
 
-    std::thread generator_thread(std::ref(generator), vm["num_packets"].as<size_t>(), vm["packet_size"].as<size_t>(), vm["wait_us"].as<unsigned>());
+    std::thread generator_thread(std::ref(generator), vm["num_packets"].as<uint64_t>(), vm["packet_size"].as<size_t>(), vm["wait_us"].as<unsigned>());
 
     boost::asio::io_context io_context;
 
-    std::thread packet_counter_thread(std::ref(data_packet_counter), vm["num_packets"].as<size_t>(), vm["packet_size"].as<size_t>());
+    std::thread packet_counter_thread(std::ref(data_packet_counter), vm["num_packets"].as<uint64_t>(), vm["packet_size"].as<size_t>());
     std::thread receiver_thread(std::ref(receiver), std::ref(io_context), std::cref(local_receive_endpoint));
 
     std::thread response_logger_thread(std::ref(response_packet_printer));

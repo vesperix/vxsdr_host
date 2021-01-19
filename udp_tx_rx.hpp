@@ -142,10 +142,9 @@ class udp_rx {
     boost::asio::ip::udp::endpoint remote;
     largest_data_packet recv_buffer;
     largest_cmd_or_rsp_packet cmd_buffer;
-    size_t packets_received = 0;
-    size_t packet_types_received[UINT8_MAX] = { 0 };
+    uint64_t packets_received = 0, seq_errors = 0;
+    std::array<uint64_t, UINT8_MAX> packet_types_received = { 0 };
     uint16_t seq = 0, last_seq = 0;
-    size_t seq_errors = 0;
     unsigned percent, min_buffer_percent = 100, max_buffer_percent = 0;
     void start_receive() {
       LOGGER(info) << "start_receive started";
@@ -243,7 +242,7 @@ class udp_rx {
       }
 
       LOGGER(info) << "start_receive exiting; " << packets_received << " packets received, " << seq_errors << " sequence errors";
-      for(unsigned i = 0; i < UINT8_MAX; i++)
+      for(unsigned i = 0; i < packet_types_received.size(); i++)
         if(packet_types_received[i] > 0)
           LOGGER(info) << (boost::format("   %12d %20s (%d)") % packet_types_received[i] % packet_type_to_name(i) % i);
     }
@@ -271,8 +270,8 @@ class udp_tx {
     boost::asio::ip::udp::endpoint destination;
     static constexpr size_t send_buffer_size = 16;
     std::array<largest_data_packet, send_buffer_size> send_buffer;
-    size_t packet_types_processed[UINT8_MAX] = { 0 };
-    int64_t send_errors = 0, packets_sent = 0, bytes_sent = 0;
+    std::array<uint64_t, UINT8_MAX> packet_types_processed = { 0 };
+    uint64_t send_errors = 0, packets_sent = 0, bytes_sent = 0;
 
     void send_device_hello_cmd(const uint8_t subdev, const uint8_t flags = 0) {
       cmd_packet p;
@@ -370,8 +369,8 @@ class udp_tx {
       // send a START_NOW_UNTIL_STOP
       send_tx_start_now_until_stop_cmd(tx_subdev);
 
-      int64_t last_check = 0;
-      constexpr int64_t n_check = 100; // current buffer size is about 1000 data packets
+      uint64_t last_check = 0;
+      constexpr uint64_t n_check = 100; // current buffer size is about 1000 data packets
 
       while(not tx_stop_flag) {
         if(tx_data_queue.read_available()) {
@@ -411,19 +410,19 @@ class udp_tx {
       // wait a bit for things to finish up
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
       LOGGER(info) << "start_send exiting; " << packets_sent << " packets sent, " << send_errors << " send errors";
-      for(unsigned i = 0; i < UINT8_MAX; i++)
+      for(unsigned i = 0; i < packet_types_processed.size(); i++)
         if(packet_types_processed[i] > 0)
           LOGGER(info) << (boost::format("   %12d %20s (%d)") % packet_types_processed[i] % packet_type_to_name(i) % i);
 
     }
 };
 
-void writer(const std::string &outfilename, const size_t max_packets) {
+void writer(const std::string &outfilename, const uint64_t max_packets) {
   LOGGER(info) << "writer thread started";
 
   std::array<largest_data_packet, rx_write_buffer_size> buffer;
   std::ofstream outfile(outfilename.c_str(), std::ofstream::binary);
-  size_t packets = 0, write_errors = 0, bytes_written = 0;
+  uint64_t packets = 0, write_errors = 0, bytes_written = 0;
 
   auto t0 = std::chrono::steady_clock::now();
 
@@ -466,12 +465,12 @@ void writer(const std::string &outfilename, const size_t max_packets) {
   LOGGER(info) << "writer thread finished";
 }
 
-void data_packet_counter(const size_t max_packets, const size_t packet_size) {
+void data_packet_counter(const uint64_t max_packets, const size_t packet_size) {
   LOGGER(info) << "data_packet counter thread started";
 
   const unsigned buffer_max_packets = 256;
   static std::array<largest_data_packet, buffer_max_packets> buffer;
-  size_t packets = 0;
+  uint64_t packets = 0;
 
   auto t0 = std::chrono::steady_clock::now();
 
@@ -508,7 +507,7 @@ void response_packet_printer() {
 
   const unsigned buffer_max_packets = 256;
   static std::array<largest_cmd_or_rsp_packet, buffer_max_packets> buffer;
-  size_t packets = 0;
+  uint64_t packets = 0;
 
   while(not complete_flag) {
     if(rx_data_queue.read_available()) {
@@ -555,7 +554,7 @@ void multicast_receiver(boost::asio::io_context &io_context, const boost::asio::
   LOGGER(info) << "multicast receiver thread finished";
 }
 
-void generator(const size_t max_packets, const size_t requested_packet_size, const unsigned packet_wait_us) {
+void generator(const uint64_t max_packets, const size_t requested_packet_size, const unsigned packet_wait_us) {
   std::array<largest_data_packet, 17> buf;
   LOGGER(info) << "generator thread started";
 
@@ -584,7 +583,7 @@ void generator(const size_t max_packets, const size_t requested_packet_size, con
 
   auto t0 = std::chrono::steady_clock::now();
 
-  size_t nsent = 0;
+  uint64_t nsent = 0;
 
   while(true) {
     // wait for room in the tx queue
