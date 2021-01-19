@@ -5,7 +5,7 @@
 #include "logging.hpp"
 #include "vxsdr_header.hpp"
 
-void log_packet_info(generic_cmd_or_rsp_packet &packet)
+void log_packet_info(cmd_or_rsp_packet &packet)
 {
   switch(packet.hdr.packet_type) {
     case PACKET_TYPES::DEVICE_CMD_ACK:

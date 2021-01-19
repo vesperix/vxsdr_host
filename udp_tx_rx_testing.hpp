@@ -109,7 +109,7 @@ class udp_rx {
     boost::asio::ip::udp::socket socket;
     boost::asio::ip::udp::endpoint remote;
     data_packet recv_buffer;
-    generic_cmd_or_rsp_packet cmd_buffer;
+    cmd_or_rsp_packet cmd_buffer;
     size_t packets_received = 0;
     size_t packet_types_received[UINT8_MAX] = { 0 };
     size_t seq = 0, last_seq = 0, seq_errors = 0;
@@ -142,7 +142,7 @@ class udp_rx {
           case PACKET_TYPES::TX_RADIO_CMD_ERR:
           case PACKET_TYPES::TX_RADIO_CMD_ACK:
             {
-              generic_cmd_or_rsp_packet p;
+              cmd_or_rsp_packet p;
               memcpy(&p, &recv_buffer, std::min((size_t)recv_buffer.hdr.packet_size, sizeof(p)));
               log_packet_info(p);
             }

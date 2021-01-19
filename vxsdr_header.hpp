@@ -206,7 +206,7 @@ typedef struct {
 typedef struct {
   packet_header           hdr;
   uint8_t                 payload[MAX_PAYLOAD_LENGTH_BYTES];
-} generic_cmd_or_rsp_packet;
+} cmd_or_rsp_packet;
 
 typedef struct {
   packet_header           hdr;
