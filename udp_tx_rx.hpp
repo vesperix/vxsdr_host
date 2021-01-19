@@ -17,6 +17,7 @@
 static constexpr size_t msg_buffer_max_bytes           = sizeof(packet_header) + MAX_PAYLOAD_LENGTH_BYTES;
 // size of largest data packet
 static constexpr size_t data_buffer_max_bytes          = sizeof(packet_header) + sizeof(std::complex<int16_t>) * MAX_DATA_LENGTH_SAMPLES;
+
 static constexpr size_t rx_data_queue_length           =     4096;    // slots in rx data queue
 static constexpr size_t tx_data_queue_length           =     4096;    // slots in tx data queue
 static constexpr size_t rx_msg_queue_length            =     1024;    // slots in rx msg queue
@@ -37,11 +38,11 @@ static constexpr int    receive_thread_sleep_us        =        0;
 static constexpr int    tx_generator_thread_sleep_us   =        1;
 
 // parameters for the command response processing thread
-static constexpr int    response_thread_sleep_us       =     100;
+static constexpr int    response_thread_sleep_us       =      100;
 
 // parameters used to set the OS's network buffer
-static constexpr unsigned network_send_buffer_bytes    =  4194304;
-static constexpr unsigned network_receive_buffer_bytes =  4194304;
+static constexpr unsigned network_send_buffer_bytes    =   4194304;
+static constexpr unsigned network_receive_buffer_bytes =   4194304;
 
 static std::atomic<bool> rx_stop_flag, tx_stop_flag, complete_flag;
 static std::atomic<unsigned> tx_buffer_size, tx_buffer_used;
@@ -136,7 +137,7 @@ class udp_rx {
         start_receive();
     }
   private:
-    const bool forward_buffer_use_packets = false;
+    const bool forward_acks = false;
     boost::asio::ip::udp::socket socket;
     boost::asio::ip::udp::endpoint remote;
     data_packet recv_buffer;
@@ -157,18 +158,21 @@ class udp_rx {
           seq_errors++;
         last_seq = recv_buffer.hdr.sequence_counter;
         switch(recv_buffer.hdr.packet_type) {
+          // receive buffers go into the rx data queue
           case PACKET_TYPES::RX_SIGNAL_DATA:
             rx_data_queue.push(recv_buffer);
             break;
-          case PACKET_TYPES::TX_SIGNAL_DATA:
-            LOGGER(error) << "received a TX signal data packet";
-            break;
-          // tx sginal data acks contain throttling information
+          // tx sginal data acks special cased since they contain throttling information
           case PACKET_TYPES::TX_SIGNAL_DATA_ACK:
             {
               tx_signal_data_ack_packet *r = reinterpret_cast<tx_signal_data_ack_packet *>(&recv_buffer);
               tx_buffer_used = r->tx_buffer_used_bytes;
               tx_buffer_fill_percent = std::min(100., (100. * tx_buffer_used) / tx_buffer_size);
+              if(forward_acks) {
+                generic_cmd_or_rsp_packet p;
+                memcpy(&p, r, std::min((size_t)r->hdr.packet_size, sizeof(p)));
+                response_queue.push(p);
+              }
             }
             break;
           // the buffer info commands are special cased since they can also be used for TX throttling
@@ -181,11 +185,9 @@ class udp_rx {
                   rx_buffer_used = r->rx_buffer_used_bytes;
                   tx_buffer_fill_percent = std::min(100., (100. * tx_buffer_used) / tx_buffer_size);
                   rx_buffer_fill_percent = std::min(100., (100. * rx_buffer_used) / rx_buffer_size);
-                  if(forward_buffer_use_packets) {
-                    generic_cmd_or_rsp_packet p;
-                    memcpy(&p, r, std::min((size_t)r->hdr.packet_size, sizeof(p)));
-                    response_queue.push(p);
-                  }
+                  generic_cmd_or_rsp_packet p;
+                  memcpy(&p, r, std::min((size_t)r->hdr.packet_size, sizeof(p)));
+                  response_queue.push(p);
                 }
                 break;
               case DEVICE_CMD_RSP::GET_BUFFER_INFO_RSP:
@@ -207,31 +209,33 @@ class udp_rx {
                 break;
             }
             break;
-          case PACKET_TYPES::DEVICE_CMD_ERR:
           case PACKET_TYPES::DEVICE_CMD_ACK:
+          case PACKET_TYPES::RX_RADIO_CMD_ACK:
+          case PACKET_TYPES::TX_RADIO_CMD_ACK:
+            if(forward_acks) {
+              generic_cmd_or_rsp_packet p;
+              memcpy(&p, &recv_buffer, std::min((size_t)recv_buffer.hdr.packet_size, sizeof(p)));
+              response_queue.push(p);
+            }
+            break;
+          // DEVICE_CMD_RSP handled above
+          case PACKET_TYPES::DEVICE_CMD_ERR:
           case PACKET_TYPES::RX_RADIO_CMD_RSP:
           case PACKET_TYPES::RX_RADIO_CMD_ERR:
-          case PACKET_TYPES::RX_RADIO_CMD_ACK:
           case PACKET_TYPES::TX_RADIO_CMD_RSP:
           case PACKET_TYPES::TX_RADIO_CMD_ERR:
-          case PACKET_TYPES::TX_RADIO_CMD_ACK:
             {
               generic_cmd_or_rsp_packet p;
               memcpy(&p, &recv_buffer, std::min((size_t)recv_buffer.hdr.packet_size, sizeof(p)));
               response_queue.push(p);
             }
-
+            break;
+          // packet types that should never show up at the host are dropped
+          case PACKET_TYPES::TX_SIGNAL_DATA:
           case PACKET_TYPES::DEVICE_CMD:
-            LOGGER(error) << "received a device command packet: " << (int)recv_buffer.hdr.command;
-            break;
           case PACKET_TYPES::RX_RADIO_CMD:
-            LOGGER(error) << "received a radio receiver command packet: " << (int)recv_buffer.hdr.command;
-            break;
           case PACKET_TYPES::TX_RADIO_CMD:
-            LOGGER(error) << "received a radio transmitter command packet: " << (int)recv_buffer.hdr.command;
-            break;
-          default:
-            LOGGER(info) << "seceived unknown packet: PACKET_TYPE " << (int)recv_buffer.hdr.packet_type << " COMMAND " << (int)recv_buffer.hdr.command;
+          default: // unrecognized packet types
             break;
         }
         if(receive_thread_sleep_us > 0)
@@ -283,7 +287,7 @@ class udp_tx {
 
     void send_device_open_session_cmd(const uint8_t subdev, const uint8_t flags = 0) {
       packet_header hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::OPEN_SESSION, subdev, flags, sizeof(hdr), (uint16_t)(packets_sent++ % UINT16_MAX) };
-      packet_types_sent[hdr.packet_type]++;      
+      packet_types_sent[hdr.packet_type]++;
       size_t bytes = socket.send_to(boost::asio::buffer(&hdr, hdr.packet_size), destination);
       if(bytes != hdr.packet_size)
         send_errors++;
@@ -305,7 +309,7 @@ class udp_tx {
 
     void send_device_get_buffer_info_cmd(const uint8_t subdev, const uint8_t flags = 0) {
       packet_header hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::GET_BUFFER_INFO, subdev, flags, sizeof(hdr), (uint16_t)(packets_sent++ % UINT16_MAX) };
-      packet_types_sent[hdr.packet_type]++;      
+      packet_types_sent[hdr.packet_type]++;
       size_t bytes = socket.send_to(boost::asio::buffer(&hdr, hdr.packet_size), destination);
       if(bytes != hdr.packet_size)
         send_errors++;
@@ -316,7 +320,7 @@ class udp_tx {
 
     void send_device_get_buffer_use_cmd(const uint8_t subdev, const uint8_t flags = 0) {
       packet_header hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::GET_BUFFER_USE, subdev, flags, sizeof(hdr), (uint16_t)(packets_sent++ % UINT16_MAX) };
-      packet_types_sent[hdr.packet_type]++;      
+      packet_types_sent[hdr.packet_type]++;
       size_t bytes = socket.send_to(boost::asio::buffer(&hdr, hdr.packet_size), destination);
       if(bytes != hdr.packet_size)
         send_errors++;
@@ -327,7 +331,7 @@ class udp_tx {
 
     void send_device_clear_status_cmd(const uint8_t subdev, const uint8_t flags = 0) {
       packet_header hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::CLEAR_STATUS, subdev, flags, sizeof(hdr), (uint16_t)(packets_sent++ % UINT16_MAX) };
-      packet_types_sent[hdr.packet_type]++;      
+      packet_types_sent[hdr.packet_type]++;
       size_t bytes = socket.send_to(boost::asio::buffer(&hdr, hdr.packet_size), destination);
       if(bytes != hdr.packet_size)
         send_errors++;
@@ -338,7 +342,7 @@ class udp_tx {
 
     void send_device_get_status_cmd(const uint8_t subdev, const uint8_t flags = 0) {
       packet_header hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::GET_STATUS, subdev, flags, sizeof(hdr), (uint16_t)(packets_sent++ % UINT16_MAX) };
-      packet_types_sent[hdr.packet_type]++;      
+      packet_types_sent[hdr.packet_type]++;
       size_t bytes = socket.send_to(boost::asio::buffer(&hdr, hdr.packet_size), destination);
       if(bytes != hdr.packet_size)
         send_errors++;
@@ -349,7 +353,7 @@ class udp_tx {
 
     void send_tx_start_now_until_stop_cmd(const uint8_t subdev, const uint8_t flags = 0) {
       packet_header hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::START_NOW_UNTIL_STOP, subdev, flags, sizeof(hdr), (uint16_t)(packets_sent++ % UINT16_MAX) };
-      packet_types_sent[hdr.packet_type]++;      
+      packet_types_sent[hdr.packet_type]++;
       size_t bytes = socket.send_to(boost::asio::buffer(&hdr, hdr.packet_size), destination);
       if(bytes != hdr.packet_size)
         send_errors++;
