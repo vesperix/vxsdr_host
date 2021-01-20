@@ -279,6 +279,12 @@ class udp_tx {
       send_packet(p);
     }
 
+    void send_device_reset_cmd(const uint8_t subdev, const uint8_t flags = 0) {
+      cmd_packet p;
+      p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::RESET, subdev, flags, sizeof(packet_header), 0 };
+      send_packet(p);
+    }
+
     void send_device_open_session_cmd(const uint8_t subdev, const uint8_t flags = 0) {
       cmd_packet p;
       p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::OPEN_SESSION, subdev, flags, sizeof(packet_header), 0 };
@@ -335,7 +341,7 @@ class udp_tx {
 
     void send_packet(packet &packet) {
       packet_types_processed[packet.hdr.packet_type]++;
-      packet.hdr.sequence_counter = (uint16_t)(packets_sent++ % (UINT16_MAX + 1));
+      packet.hdr.sequence_counter = (uint16_t)(packets_sent++ % (1u << 16));
       size_t bytes = socket.send_to(boost::asio::buffer(&packet, packet.hdr.packet_size), destination);
       if(bytes != packet.hdr.packet_size)
         send_errors++;
@@ -354,17 +360,16 @@ class udp_tx {
       const uint8_t device_subdev = 0;
       const uint8_t tx_subdev = 0;
 
-      send_device_hello_cmd(device_subdev);
+      send_device_reset_cmd(device_subdev);
+      // wait for the reset to complete
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
       // get device buffer sizes
       send_device_get_buffer_info_cmd(device_subdev);
-      // make sure actual buffer use is updated
-      send_device_get_buffer_use_cmd(device_subdev);
       // wait for the response to be processed
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
+      // clear the status registers
       send_device_clear_status_cmd(device_subdev);
-      // get the status to make sure it's clear
-      send_device_get_status_cmd(device_subdev);
+
 
       // send a START_NOW_UNTIL_STOP
       send_tx_start_now_until_stop_cmd(tx_subdev);
