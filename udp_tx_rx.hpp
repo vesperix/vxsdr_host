@@ -184,9 +184,9 @@ class udp_rx {
                   rx_buffer_used = r->rx_buffer_used_bytes;
                   tx_buffer_fill_percent = std::min(100., (100. * tx_buffer_used) / tx_buffer_size);
                   rx_buffer_fill_percent = std::min(100., (100. * rx_buffer_used) / rx_buffer_size);
-                  largest_cmd_or_rsp_packet p;
-                  memcpy(&p, r, std::min((size_t)r->hdr.packet_size, sizeof(p)));
-                  response_queue.push(p);
+                  //largest_cmd_or_rsp_packet p;
+                  //memcpy(&p, r, std::min((size_t)r->hdr.packet_size, sizeof(p)));
+                  //response_queue.push(p);
                 }
                 break;
               case DEVICE_CMD_RSP::GET_BUFFER_INFO_RSP:
