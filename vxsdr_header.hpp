@@ -232,7 +232,7 @@ class status_rsp_packet : public rsp_packet {
     uint16_t               dac_temp;
     uint32_t               reserved;
     uint32_t               oos_err_count;
-    uint32_t               datapath_fifo_flow_status;
+    uint32_t               error_flags;
     uint32_t               ddr_arbiter_status;
     uint32_t               tgbe_status;
 };
