@@ -184,9 +184,9 @@ class udp_rx {
                   rx_buffer_used = r->rx_buffer_used_bytes;
                   tx_buffer_fill_percent = std::min(100., (100. * tx_buffer_used) / tx_buffer_size);
                   rx_buffer_fill_percent = std::min(100., (100. * rx_buffer_used) / rx_buffer_size);
-                  largest_cmd_or_rsp_packet p;
-                  memcpy(&p, r, std::min((size_t)r->hdr.packet_size, sizeof(p)));
-                  response_queue.push(p);
+                  //largest_cmd_or_rsp_packet p;
+                  //memcpy(&p, r, std::min((size_t)r->hdr.packet_size, sizeof(p)));
+                  //response_queue.push(p);
                 }
                 break;
               case DEVICE_CMD_RSP::GET_BUFFER_INFO_RSP:
@@ -345,8 +345,6 @@ class udp_tx {
       size_t bytes = socket.send_to(boost::asio::buffer(&packet, packet.hdr.packet_size), destination);
       if(bytes != packet.hdr.packet_size)
         send_errors++;
-      else
-        packets_sent++;
       bytes_sent += bytes;
     }
 
@@ -360,15 +358,13 @@ class udp_tx {
       const uint8_t device_subdev = 0;
       const uint8_t tx_subdev = 0;
 
-      send_device_reset_cmd(device_subdev);
-      // wait for the reset to complete
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
       // get device buffer sizes
       send_device_get_buffer_info_cmd(device_subdev);
       // wait for the response to be processed
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
       // clear the status registers
       send_device_clear_status_cmd(device_subdev);
+      send_device_get_status_cmd(device_subdev);
 
 
       // send a START_NOW_UNTIL_STOP
