@@ -31,7 +31,7 @@ void log_packet_info(cmd_or_rsp_packet &packet)
             LOGGER(info) << "   fpga_temp                 = " << sr->fpga_temp;
             LOGGER(info) << "   dac_temp                  = " << sr->dac_temp;
             LOGGER(info) << "   oos_err_count             = " << sr->oos_err_count;
-            LOGGER(info) << "   datapath_fifo_flow_status = " << sr->datapath_fifo_flow_status;
+            LOGGER(info) << "   error_flags               = " << std::bitset<8>((sr->error_flags) % 256);
             LOGGER(info) << "   ddr_arbiter_status        = " << sr->ddr_arbiter_status;
             LOGGER(info) << "   tgbe_status               = " << std::bitset<8>((sr->tgbe_status) % 256);
           }
