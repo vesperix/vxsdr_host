@@ -185,19 +185,19 @@ class rsp_packet : public cmd_or_rsp_packet {};
 
 class ack_packet : public cmd_or_rsp_packet {};
 
-class stream_control_packet : public cmd_packet {};
+class stream_ctrl_packet : public cmd_packet {};
 
-class stream_control_packet_samples : public stream_control_packet {
+class stream_ctrl_packet_samples : public stream_ctrl_packet {
   public:
     uint64_t               n_samples;
 };
 
-class stream_control_packet_time : public stream_control_packet {
+class stream_ctrl_packet_time : public stream_ctrl_packet {
   public:
     time_spec              time;
 };
 
-class stream_control_packet_time_samples : public stream_control_packet_time {
+class stream_ctrl_packet_time_samples : public stream_ctrl_packet_time {
   public:
     uint64_t               n_samples;
 };

@@ -322,13 +322,20 @@ class udp_tx {
     }
 
     void send_tx_start_now_until_stop_cmd(const uint8_t subdev, const uint8_t flags = 0) {
-      cmd_packet p;
+      stream_ctrl_packet p;
       p.hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::START_NOW_UNTIL_STOP, subdev, flags, sizeof(packet_header), 0 };
       send_packet(p);
     }
 
+    void send_tx_start_now_for_n_samples_cmd(const uint64_t n, const uint8_t subdev, const uint8_t flags = 0) {
+      stream_ctrl_packet_samples p;
+      p.hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::START_NOW_UNTIL_STOP, subdev, flags, sizeof(packet_header), 0 };
+      p.n_samples = n;
+      send_packet(p);
+    }
+
     void send_tx_stop_now_cmd(const uint8_t subdev, const uint8_t flags = 0) {
-      cmd_packet p;
+      stream_ctrl_packet p;
       p.hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::STOP_NOW, subdev, flags, sizeof(packet_header), 0 };
       send_packet(p);
     }
@@ -565,7 +572,7 @@ void generator(const uint64_t max_packets, const size_t requested_packet_size, c
     packet_size = data_buffer_max_bytes;
   }
 
-  const double a = 16000;
+  const double a = 4000;
   const float ncycles = 9117.; // number of cycles in buf.size() buffers; must be integer to avoid skips
   const double w = (2 * M_PI * ncycles) / (buf.size() * MAX_DATA_LENGTH_SAMPLES);
 
