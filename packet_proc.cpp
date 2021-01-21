@@ -91,6 +91,14 @@ void log_packet_info(cmd_or_rsp_packet &packet)
     case PACKET_TYPES::TX_RADIO_CMD_ACK:
       LOGGER(info) << "TX_RADIO_CMD_ACK: " << (int)packet.hdr.command;
       break;
+    case PACKET_TYPES::TX_SIGNAL_DATA_ACK:
+      {
+        LOGGER(info) << "TX_SIGNAL_DATA_ACK";
+        tx_signal_data_ack_packet *br = reinterpret_cast<tx_signal_data_ack_packet *>(&packet);
+        LOGGER(info) << "   tx_buffer_used_bytes      = " << (uint32_t)br->tx_buffer_used_bytes;
+        LOGGER(info) << "   oos_err_count             = " << (uint32_t)br->oos_err_count;
+      }
+      break;
     case PACKET_TYPES::RX_SIGNAL_DATA:
       break;
     default:
