@@ -5,8 +5,8 @@
 #define VXSDR_HEADER_HPP
 
 /*
-  SDR packet headers
-  Version 0.1.9 07 Jan 2021
+  SDR packet definitions
+  Version 0.2.0 22 Jan 2021
   FROZEN EXCEPT FOR ADDITIONS UNTIL INITIAL IMPLEMENTATION COMPLETE AND TESTED
 */
 
