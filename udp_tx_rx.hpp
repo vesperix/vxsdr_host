@@ -327,9 +327,22 @@ class udp_tx {
       send_packet(p);
     }
 
+    void send_rx_start_now_until_stop_cmd(const uint8_t subdev, const uint8_t flags = 0) {
+      stream_ctrl_packet p;
+      p.hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::START_NOW_UNTIL_STOP, subdev, flags, sizeof(packet_header), 0 };
+      send_packet(p);
+    }
+
     void send_tx_start_now_for_n_samples_cmd(const uint64_t n, const uint8_t subdev, const uint8_t flags = 0) {
       stream_ctrl_packet_samples p;
       p.hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::START_NOW_UNTIL_STOP, subdev, flags, sizeof(packet_header), 0 };
+      p.n_samples = n;
+      send_packet(p);
+    }
+
+    void send_rx_start_now_for_n_samples_cmd(const uint64_t n, const uint8_t subdev, const uint8_t flags = 0) {
+      stream_ctrl_packet_samples p;
+      p.hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::START_NOW_UNTIL_STOP, subdev, flags, sizeof(packet_header), 0 };
       p.n_samples = n;
       send_packet(p);
     }
@@ -362,12 +375,15 @@ class udp_tx {
       constexpr unsigned throttle_stop_percent  = 50;
       constexpr unsigned throttle_amount_us =     10; // send time for 8200 bytes over 10 GbE is about 6.7 us
 
-      const uint8_t device_subdev = 0;
-      const uint8_t tx_subdev = 0;
+      const uint8_t device_subdev = 0, tx_subdev = 0, rx_subdev = 0;
+
+      send_tx_stop_now_cmd(tx_subdev);
+      send_rx_stop_now_cmd(tx_subdev);
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
       // get device buffer sizes
       send_device_get_buffer_info_cmd(device_subdev);
-      // wait for the response to be processed
+      // wait for the response come back and be processed
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
       // clear the status registers
       send_device_clear_status_cmd(device_subdev);
@@ -375,7 +391,8 @@ class udp_tx {
 
 
       // send a START_NOW_UNTIL_STOP
-      send_tx_start_now_until_stop_cmd(tx_subdev);
+      send_tx_start_now_for_n_samples_cmd(1500000 * 2048ull, tx_subdev);
+      send_rx_start_now_for_n_samples_cmd(1500000 * 2048ull, rx_subdev);
 
       uint64_t last_check = 0;
       constexpr uint64_t buffer_check_interval = 100; // current buffer size is about 1000 data packets
@@ -414,7 +431,8 @@ class udp_tx {
       // get the status at the end
       send_device_get_status_cmd(device_subdev);
       // send a stop
-      send_tx_stop_now_cmd(tx_subdev);
+      //send_tx_stop_now_cmd(tx_subdev);
+      //send_rx_stop_now_cmd(rx_subdev);
       // wait a bit for things to finish up
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
       LOGGER(info) << "start_send exiting; " << packets_sent << " packets sent, " << send_errors << " send errors";
