@@ -30,7 +30,7 @@ void log_packet_info(cmd_or_rsp_packet &packet)
             status_rsp_packet *sr = reinterpret_cast<status_rsp_packet *>(&packet);
             LOGGER(info) << "   fpga_temp                 = " << sr->fpga_temp;
             LOGGER(info) << "   dac_temp                  = " << sr->dac_temp;
-            LOGGER(info) << "   oos_err_count             = " << sr->oos_err_count;
+            LOGGER(info) << "   sequence_err_count        = " << sr->sequence_err_count;
             LOGGER(info) << "   error_flags               = " << std::bitset<8>((sr->error_flags) % 256);
             LOGGER(info) << "   ddr_arbiter_status        = " << sr->ddr_arbiter_status;
             LOGGER(info) << "   tgbe_status               = " << std::bitset<8>((sr->tgbe_status) % 256);
@@ -95,8 +95,9 @@ void log_packet_info(cmd_or_rsp_packet &packet)
       {
         LOGGER(info) << "TX_SIGNAL_DATA_ACK";
         tx_signal_data_ack_packet *br = reinterpret_cast<tx_signal_data_ack_packet *>(&packet);
+        LOGGER(info) << "   requester_seq_num         = " << (uint64_t)br->requester_seq_num;
         LOGGER(info) << "   tx_buffer_used_bytes      = " << (uint32_t)br->tx_buffer_used_bytes;
-        LOGGER(info) << "   oos_err_count             = " << (uint32_t)br->oos_err_count;
+        LOGGER(info) << "   sequence_err_count        = " << (uint32_t)br->sequence_err_count;
       }
       break;
     case PACKET_TYPES::RX_SIGNAL_DATA:

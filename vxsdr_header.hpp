@@ -204,8 +204,9 @@ class stream_ctrl_packet_time_samples : public stream_ctrl_packet_time {
 
 class tx_signal_data_ack_packet : public ack_packet {
   public:
+    uint64_t               requester_seq_num;
     uint32_t               tx_buffer_used_bytes;
-    uint32_t               oos_err_count;
+    uint32_t               sequence_err_count;
 };
 
 class get_buffer_use_rsp_packet : public rsp_packet {
@@ -231,7 +232,7 @@ class status_rsp_packet : public rsp_packet {
     uint16_t               fpga_temp;
     uint16_t               dac_temp;
     uint32_t               reserved;
-    uint32_t               oos_err_count;
+    uint32_t               sequence_err_count;
     uint32_t               error_flags;
     uint32_t               ddr_arbiter_status;
     uint32_t               tgbe_status;
