@@ -24,7 +24,7 @@ else
 	CXX_FLAGS = $(CXX_BASEFLAGS) $(CXX_OPTFLAGS) $(CXX_DEFINES)
 endif
 
-PROGS = host_tx host_rx host_tx_sync host_rx_sync host_tx_throttle host_tester minimal_tx minimal_rx
+PROGS = host_tx host_rx host_tx_throttle host_tester minimal_tx minimal_rx
 
 COMMON_SRC = packet_proc.cpp
 
@@ -32,23 +32,17 @@ all: $(PROGS) Makefile
 
 .PHONY: all
 
-host_tx: host_tx.cpp udp_tx.hpp
+host_tx: host_tx.cpp udp_tx.hpp vxsdr_header.hpp
 	$(CXX) $(CXX_FLAGS) -o $@ $< $(CXX_LDFLAGS)
 
-host_tx_sync: host_tx.cpp udp_tx_sync.hpp
-	$(CXX) $(CXX_FLAGS) -DSYNC -o $@ $< $(CXX_LDFLAGS)
-
-host_tx_throttle: host_tx_throttle.cpp udp_tx_rx.hpp packet_proc.cpp
+host_tx_throttle: host_tx_throttle.cpp udp_tx_rx.hpp packet_proc.cpp vxsdr_header.hpp
 	$(CXX) $(CXX_FLAGS) -o $@ $< $(COMMON_SRC) $(CXX_LDFLAGS)
 
-host_tester: host_tester.cpp udp_tx_rx_testing.hpp packet_proc.cpp
+host_tester: host_tester.cpp udp_tx_rx_testing.hpp packet_proc.cpp vxsdr_header.hpp
 	$(CXX) $(CXX_FLAGS) -o $@ $< $(COMMON_SRC) $(CXX_LDFLAGS)
 
-host_rx: host_rx.cpp udp_rx.hpp
+host_rx: host_rx.cpp udp_rx.hpp vxsdr_header.hpp
 	$(CXX) $(CXX_FLAGS) -o $@ $< $(COMMON_SRC) $(CXX_LDFLAGS)
-
-host_rx_sync: host_rx.cpp udp_rx_sync.hpp
-	$(CXX) $(CXX_FLAGS) -DSYNC -o $@ $< $(COMMON_SRC) $(CXX_LDFLAGS)
 
 minimal_tx: minimal_tx.c
 	$(CC) $(CC_FLAGS) -o $@ $< $(CC_LDFLAGS)
