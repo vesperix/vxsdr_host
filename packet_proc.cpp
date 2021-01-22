@@ -20,20 +20,20 @@ void log_packet_info(cmd_or_rsp_packet &packet)
           {
             LOGGER(info) << "DEVICE_CMD_RSP: HELLO";
             hello_rsp_packet *hr = reinterpret_cast<hello_rsp_packet *>(&packet);
-            LOGGER(info) << "   proc_rev                  = " << (uint32_t)hr->proc_rev;
-            LOGGER(info) << "   fpga_rev                  = " << (uint32_t)hr->fpga_rev;
+            LOGGER(info) << "   mcu_sw_version            = " << (uint32_t)hr->mcu_sw_version;
+            LOGGER(info) << "   fpga_fw_version           = " << (uint32_t)hr->fpga_fw_version;
           }
           break;
         case DEVICE_CMD::GET_STATUS:
           {
             LOGGER(info) << "DEVICE_CMD_RSP: GET_STATUS";
             status_rsp_packet *sr = reinterpret_cast<status_rsp_packet *>(&packet);
-            LOGGER(info) << "   fpga_temp                 = " << sr->fpga_temp;
-            LOGGER(info) << "   dac_temp                  = " << sr->dac_temp;
-            LOGGER(info) << "   sequence_err_count        = " << sr->sequence_err_count;
-            LOGGER(info) << "   error_flags               = " << std::bitset<8>((sr->error_flags) % 256);
+            LOGGER(info) << "   fpga_temperature          = " << sr->fpga_temperature;
+            LOGGER(info) << "   dac_temperature           = " << sr->dac_temperature;
+            LOGGER(info) << "   sequence_error_count      = " << sr->sequence_error_count;
+            LOGGER(info) << "   data_flow_error_flags     = " << std::bitset<8>((sr->data_flow_error_flags) % 256);
             LOGGER(info) << "   ddr_arbiter_status        = " << sr->ddr_arbiter_status;
-            LOGGER(info) << "   tgbe_status               = " << std::bitset<8>((sr->tgbe_status) % 256);
+            LOGGER(info) << "   ethernet_status           = " << std::bitset<8>((sr->ethernet_status) % 256);
           }
           break;
         case DEVICE_CMD::GET_BUFFER_INFO:
@@ -97,7 +97,7 @@ void log_packet_info(cmd_or_rsp_packet &packet)
         tx_signal_data_ack_packet *br = reinterpret_cast<tx_signal_data_ack_packet *>(&packet);
         LOGGER(info) << "   requester_seq_num         = " << (uint64_t)br->requester_seq_num;
         LOGGER(info) << "   tx_buffer_used_bytes      = " << (uint32_t)br->tx_buffer_used_bytes;
-        LOGGER(info) << "   sequence_err_count        = " << (uint32_t)br->sequence_err_count;
+        LOGGER(info) << "   sequence_error_count      = " << (uint32_t)br->sequence_error_count;
       }
       break;
     case PACKET_TYPES::RX_SIGNAL_DATA:

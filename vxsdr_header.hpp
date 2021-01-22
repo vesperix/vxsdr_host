@@ -206,7 +206,7 @@ class tx_signal_data_ack_packet : public ack_packet {
   public:
     uint64_t               requester_seq_num;
     uint32_t               tx_buffer_used_bytes;
-    uint32_t               sequence_err_count;
+    uint32_t               sequence_error_count;
 };
 
 class get_buffer_use_rsp_packet : public rsp_packet {
@@ -223,24 +223,24 @@ class get_buffer_info_rsp_packet : public rsp_packet {
 
 class hello_rsp_packet : public rsp_packet {
   public:
-    uint32_t               proc_rev;
-    uint32_t               fpga_rev;
+    uint32_t               mcu_sw_version;
+    uint32_t               fpga_fw_version;
 };
 
 class status_rsp_packet : public rsp_packet {
   public:
-    uint16_t               fpga_temp;
-    uint16_t               dac_temp;
+    uint16_t               fpga_temperature;
+    uint16_t               dac_temperature;
     uint32_t               reserved;
-    uint32_t               sequence_err_count;
-    uint32_t               error_flags;
+    uint32_t               sequence_error_count;
+    uint32_t               data_flow_error_flags;
     uint32_t               ddr_arbiter_status;
-    uint32_t               tgbe_status;
+    uint32_t               ethernet_status;
 };
 
 class dev_read_write_reg_packet : public cmd_or_rsp_packet {
   public:
-    uint32_t               reg_num;
+    uint32_t               register_number;
     uint32_t               value;
 };
 

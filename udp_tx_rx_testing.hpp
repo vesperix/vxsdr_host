@@ -231,7 +231,7 @@ class udp_tx {
       p.hdr.flags = FLAGS::REQUEST_ACK;
       p.hdr.packet_size = sizeof(hdr) + 8;
       p.hdr.sequence_counter = packets_sent % UINT16_MAX;
-      p.reg_num = 0x2;
+      p.register_number = 0x2;
       p.value = 0;
       bytes_sent = socket.send_to(boost::asio::buffer(&p, sizeof(p)), destination);
       packets_sent++;
@@ -244,7 +244,7 @@ class udp_tx {
       p.hdr.flags = FLAGS::REQUEST_ACK;
       p.hdr.packet_size = sizeof(hdr) + 8;
       p.hdr.sequence_counter = packets_sent % UINT16_MAX;
-      p.reg_num = 0xD;
+      p.register_number = 0xD;
       p.value = 0;
       bytes_sent = socket.send_to(boost::asio::buffer(&p, sizeof(p)), destination);
       packets_sent++;
@@ -258,7 +258,7 @@ class udp_tx {
       q.hdr.flags = FLAGS::REQUEST_ACK;
       q.hdr.packet_size = sizeof(hdr) + 8;
       q.hdr.sequence_counter = packets_sent % UINT16_MAX;
-      q.reg_num = 0x2;
+      q.register_number = 0x2;
       q.value = 0x2042;
       bytes_sent = socket.send_to(boost::asio::buffer(&q, sizeof(q)), destination);
       packets_sent++;
@@ -271,7 +271,7 @@ class udp_tx {
       q.hdr.flags = FLAGS::REQUEST_ACK;
       q.hdr.packet_size = sizeof(hdr) + 8;
       q.hdr.sequence_counter = packets_sent % UINT16_MAX;
-      q.reg_num = 0xD;
+      q.register_number = 0xD;
       q.value = 0x4400;
       bytes_sent = socket.send_to(boost::asio::buffer(&q, sizeof(q)), destination);
       packets_sent++;
@@ -284,7 +284,7 @@ class udp_tx {
       p.hdr.flags = FLAGS::REQUEST_ACK;
       p.hdr.packet_size = sizeof(hdr) + 8;
       p.hdr.sequence_counter = packets_sent % UINT16_MAX;
-      p.reg_num = 0x2;
+      p.register_number = 0x2;
       p.value = 0;
       bytes_sent = socket.send_to(boost::asio::buffer(&p, sizeof(p)), destination);
       packets_sent++;
@@ -297,7 +297,7 @@ class udp_tx {
       p.hdr.flags = FLAGS::REQUEST_ACK;
       p.hdr.packet_size = sizeof(hdr) + 8;
       p.hdr.sequence_counter = packets_sent % UINT16_MAX;
-      p.reg_num = 0xD;
+      p.register_number = 0xD;
       p.value = 0;
       bytes_sent = socket.send_to(boost::asio::buffer(&p, sizeof(p)), destination);
       packets_sent++;

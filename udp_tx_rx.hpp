@@ -137,7 +137,7 @@ class udp_rx {
         start_receive();
     }
   private:
-    const bool forward_acks = true;
+    const bool forward_acks = false;
     boost::asio::ip::udp::socket socket;
     boost::asio::ip::udp::endpoint remote;
     largest_data_packet recv_buffer;
@@ -378,19 +378,19 @@ class udp_tx {
       send_tx_start_now_until_stop_cmd(tx_subdev);
 
       uint64_t last_check = 0;
-      constexpr uint64_t n_check = 100; // current buffer size is about 1000 data packets
+      constexpr uint64_t buffer_check_interval = 100; // current buffer size is about 1000 data packets
 
       while(not tx_stop_flag) {
         if(tx_data_queue.read_available()) {
           size_t n_popped = tx_data_queue.pop(&send_buffer.front(), send_buffer.size());
           for(size_t i = 0; i < n_popped; i++) {
 
-            if(packets_sent - last_check > n_check) {
+            if(packets_sent - last_check > buffer_check_interval) {
               last_check = packets_sent;
-              send_device_get_buffer_use_cmd(device_subdev);
-              //send_buffer[i].hdr.flags = FLAGS::REQUEST_ACK;
+              //send_device_get_buffer_use_cmd(device_subdev);
+              send_buffer[i].hdr.flags = FLAGS::REQUEST_ACK;
               send_packet(send_buffer[i]);
-              //send_buffer[i].hdr.flags = 0;
+              send_buffer[i].hdr.flags = 0;
             }
             else {
               send_packet(send_buffer[i]);
