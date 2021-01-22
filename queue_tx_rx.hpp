@@ -282,21 +282,21 @@ class udp_tx {
     }
 
     void initialize_tx(const uint8_t device_subdev, const uint8_t tx_subdev) {
-      send_tx_stop_now_cmd(tx_subdev);
+      send_tx_stop_now(tx_subdev);
       // get device buffer sizes
-      send_device_get_buffer_info_cmd(device_subdev);
+      send_device_get_buffer_info(device_subdev);
       // wait for the response come back and be processed
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
       // clear the status registers
-      send_device_clear_status_cmd(device_subdev);
-      send_device_get_status_cmd(device_subdev);
+      send_device_clear_status(device_subdev);
+      send_device_get_status(device_subdev);
     }
 
     void close_tx(const uint8_t device_subdev, const uint8_t tx_subdev) {
       // get the status at the end
-      send_device_get_status_cmd(device_subdev);
+      send_device_get_status(device_subdev);
       // send a stop
-      send_tx_stop_now_cmd(tx_subdev);
+      send_tx_stop_now(tx_subdev);
     }
 
     void start_send() {
@@ -566,67 +566,67 @@ void sender(boost::asio::io_context &io_context, const boost::asio::ip::udp::end
   LOGGER(info) << "sender thread finished";
 }
 
-void send_device_hello_cmd(const uint8_t subdev = 0, const uint8_t flags = 0) {
+void send_device_hello(const uint8_t subdev = 0, const uint8_t flags = 0) {
   largest_cmd_or_rsp_packet p;
   p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::HELLO, subdev, flags, sizeof(packet_header), 0 };
   command_queue.push(p);
 }
 
-void send_device_reset_cmd(const uint8_t subdev = 0, const uint8_t flags = 0) {
+void send_device_reset(const uint8_t subdev = 0, const uint8_t flags = 0) {
   largest_cmd_or_rsp_packet p;
   p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::RESET, subdev, flags, sizeof(packet_header), 0 };
   command_queue.push(p);
 }
 
-void send_device_open_session_cmd(const uint8_t subdev = 0, const uint8_t flags = 0) {
+void send_device_open_session(const uint8_t subdev = 0, const uint8_t flags = 0) {
   largest_cmd_or_rsp_packet p;
   p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::OPEN_SESSION, subdev, flags, sizeof(packet_header), 0 };
   command_queue.push(p);
 }
 
-void send_device_close_session_cmd(const uint8_t subdev = 0, const uint8_t flags = 0) {
+void send_device_close_session(const uint8_t subdev = 0, const uint8_t flags = 0) {
   largest_cmd_or_rsp_packet p;
   p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::CLOSE_SESSION, subdev, flags, sizeof(packet_header), 0 };
   command_queue.push(p);
 }
 
-void send_device_get_buffer_info_cmd(const uint8_t subdev = 0, const uint8_t flags = 0) {
+void send_device_get_buffer_info(const uint8_t subdev = 0, const uint8_t flags = 0) {
   largest_cmd_or_rsp_packet p;
   p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::GET_BUFFER_INFO, subdev, flags, sizeof(packet_header), 0 };
   command_queue.push(p);
 }
 
-void send_device_get_buffer_use_cmd(const uint8_t subdev = 0, const uint8_t flags = 0) {
+void send_device_get_buffer_use(const uint8_t subdev = 0, const uint8_t flags = 0) {
   largest_cmd_or_rsp_packet p;
   p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::GET_BUFFER_USE, subdev, flags, sizeof(packet_header), 0 };
   command_queue.push(p);
 }
 
-void send_device_clear_status_cmd(const uint8_t subdev = 0, const uint8_t flags = 0) {
+void send_device_clear_status(const uint8_t subdev = 0, const uint8_t flags = 0) {
   largest_cmd_or_rsp_packet p;
   p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::CLEAR_STATUS, subdev, flags, sizeof(packet_header), 0 };
   command_queue.push(p);
 }
 
-void send_device_get_status_cmd(const uint8_t subdev = 0, const uint8_t flags = 0) {
+void send_device_get_status(const uint8_t subdev = 0, const uint8_t flags = 0) {
   largest_cmd_or_rsp_packet p;
   p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::GET_STATUS, subdev, flags, sizeof(packet_header), 0 };
   command_queue.push(p);
 }
 
-void send_tx_start_now_until_stop_cmd(const uint8_t subdev = 0, const uint8_t flags = 0) {
+void send_tx_start_now_until_stop(const uint8_t subdev = 0, const uint8_t flags = 0) {
   largest_cmd_or_rsp_packet p;
   p.hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::START_NOW_UNTIL_STOP, subdev, flags, sizeof(packet_header), 0 };
   command_queue.push(p);
 }
 
-void send_rx_start_now_until_stop_cmd(const uint8_t subdev = 0, const uint8_t flags = 0) {
+void send_rx_start_now_until_stop(const uint8_t subdev = 0, const uint8_t flags = 0) {
   largest_cmd_or_rsp_packet p;
   p.hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::START_NOW_UNTIL_STOP, subdev, flags, sizeof(packet_header), 0 };
   command_queue.push(p);
 }
 
-void send_tx_start_now_for_n_samples_cmd(const uint64_t n, const uint8_t subdev = 0, const uint8_t flags = 0) {
+void send_tx_start_now_for_n_samples(const uint64_t n, const uint8_t subdev = 0, const uint8_t flags = 0) {
   stream_ctrl_packet_samples p;
   p.hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::START_NOW_UNTIL_STOP, subdev, flags, sizeof(packet_header), 0 };
   p.n_samples = n;
@@ -635,7 +635,7 @@ void send_tx_start_now_for_n_samples_cmd(const uint64_t n, const uint8_t subdev 
   command_queue.push(q);
 }
 
-void send_rx_start_now_for_n_samples_cmd(const uint64_t n, const uint8_t subdev = 0, const uint8_t flags = 0) {
+void send_rx_start_now_for_n_samples(const uint64_t n, const uint8_t subdev = 0, const uint8_t flags = 0) {
   stream_ctrl_packet_samples p;
   p.hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::START_NOW_UNTIL_STOP, subdev, flags, sizeof(packet_header), 0 };
   p.n_samples = n;
@@ -644,13 +644,13 @@ void send_rx_start_now_for_n_samples_cmd(const uint64_t n, const uint8_t subdev 
   command_queue.push(q);
 }
 
-void send_tx_stop_now_cmd(const uint8_t subdev = 0, const uint8_t flags = 0) {
+void send_tx_stop_now(const uint8_t subdev = 0, const uint8_t flags = 0) {
   largest_cmd_or_rsp_packet p;
   p.hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::STOP_NOW, subdev, flags, sizeof(packet_header), 0 };
   command_queue.push(p);
 }
 
-void send_rx_stop_now_cmd(const uint8_t subdev = 0, const uint8_t flags = 0) {
+void send_rx_stop_now(const uint8_t subdev = 0, const uint8_t flags = 0) {
   largest_cmd_or_rsp_packet p;
   p.hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::STOP_NOW, subdev, flags, sizeof(packet_header), 0 };
   command_queue.push(p);

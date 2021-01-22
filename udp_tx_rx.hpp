@@ -273,87 +273,87 @@ class udp_tx {
     std::array<uint64_t, UINT8_MAX> packet_types_processed = { 0 };
     uint64_t send_errors = 0, packets_sent = 0, bytes_sent = 0;
 
-    void send_device_hello_cmd(const uint8_t subdev, const uint8_t flags = 0) {
+    void send_device_hello(const uint8_t subdev, const uint8_t flags = 0) {
       cmd_packet p;
       p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::HELLO, subdev, flags, sizeof(packet_header), 0 };
       send_packet(p);
     }
 
-    void send_device_reset_cmd(const uint8_t subdev, const uint8_t flags = 0) {
+    void send_device_reset(const uint8_t subdev, const uint8_t flags = 0) {
       cmd_packet p;
       p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::RESET, subdev, flags, sizeof(packet_header), 0 };
       send_packet(p);
     }
 
-    void send_device_open_session_cmd(const uint8_t subdev, const uint8_t flags = 0) {
+    void send_device_open_session(const uint8_t subdev, const uint8_t flags = 0) {
       cmd_packet p;
       p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::OPEN_SESSION, subdev, flags, sizeof(packet_header), 0 };
       send_packet(p);
     }
 
-    void send_device_close_session_cmd(const uint8_t subdev, const uint8_t flags = 0) {
+    void send_device_close_session(const uint8_t subdev, const uint8_t flags = 0) {
       cmd_packet p;
       p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::CLOSE_SESSION, subdev, flags, sizeof(packet_header), 0 };
       send_packet(p);
     }
 
-    void send_device_get_buffer_info_cmd(const uint8_t subdev, const uint8_t flags = 0) {
+    void send_device_get_buffer_info(const uint8_t subdev, const uint8_t flags = 0) {
       cmd_packet p;
       p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::GET_BUFFER_INFO, subdev, flags, sizeof(packet_header), 0 };
       send_packet(p);
     }
 
-    void send_device_get_buffer_use_cmd(const uint8_t subdev, const uint8_t flags = 0) {
+    void send_device_get_buffer_use(const uint8_t subdev, const uint8_t flags = 0) {
       cmd_packet p;
       p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::GET_BUFFER_USE, subdev, flags, sizeof(packet_header), 0 };
       send_packet(p);
     }
 
-    void send_device_clear_status_cmd(const uint8_t subdev, const uint8_t flags = 0) {
+    void send_device_clear_status(const uint8_t subdev, const uint8_t flags = 0) {
       cmd_packet p;
       p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::CLEAR_STATUS, subdev, flags, sizeof(packet_header), 0 };
       send_packet(p);
     }
 
-    void send_device_get_status_cmd(const uint8_t subdev, const uint8_t flags = 0) {
+    void send_device_get_status(const uint8_t subdev, const uint8_t flags = 0) {
       cmd_packet p;
       p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::GET_STATUS, subdev, flags, sizeof(packet_header), 0 };
       send_packet(p);
     }
 
-    void send_tx_start_now_until_stop_cmd(const uint8_t subdev, const uint8_t flags = 0) {
+    void send_tx_start_now_until_stop(const uint8_t subdev, const uint8_t flags = 0) {
       stream_ctrl_packet p;
       p.hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::START_NOW_UNTIL_STOP, subdev, flags, sizeof(packet_header), 0 };
       send_packet(p);
     }
 
-    void send_rx_start_now_until_stop_cmd(const uint8_t subdev, const uint8_t flags = 0) {
+    void send_rx_start_now_until_stop(const uint8_t subdev, const uint8_t flags = 0) {
       stream_ctrl_packet p;
       p.hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::START_NOW_UNTIL_STOP, subdev, flags, sizeof(packet_header), 0 };
       send_packet(p);
     }
 
-    void send_tx_start_now_for_n_samples_cmd(const uint64_t n, const uint8_t subdev, const uint8_t flags = 0) {
+    void send_tx_start_now_for_n_samples(const uint64_t n, const uint8_t subdev, const uint8_t flags = 0) {
       stream_ctrl_packet_samples p;
-      p.hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::START_NOW_UNTIL_STOP, subdev, flags, sizeof(packet_header), 0 };
+      p.hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::START_NOW_FOR_N_SAMPLES, subdev, flags, sizeof(packet_header), 0 };
       p.n_samples = n;
       send_packet(p);
     }
 
-    void send_rx_start_now_for_n_samples_cmd(const uint64_t n, const uint8_t subdev, const uint8_t flags = 0) {
+    void send_rx_start_now_for_n_samples(const uint64_t n, const uint8_t subdev, const uint8_t flags = 0) {
       stream_ctrl_packet_samples p;
-      p.hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::START_NOW_UNTIL_STOP, subdev, flags, sizeof(packet_header), 0 };
+      p.hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::START_NOW_FOR_N_SAMPLES, subdev, flags, sizeof(packet_header), 0 };
       p.n_samples = n;
       send_packet(p);
     }
 
-    void send_tx_stop_now_cmd(const uint8_t subdev, const uint8_t flags = 0) {
+    void send_tx_stop_now(const uint8_t subdev, const uint8_t flags = 0) {
       stream_ctrl_packet p;
       p.hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::STOP_NOW, subdev, flags, sizeof(packet_header), 0 };
       send_packet(p);
     }
 
-    void send_rx_stop_now_cmd(const uint8_t subdev, const uint8_t flags = 0) {
+    void send_rx_stop_now(const uint8_t subdev, const uint8_t flags = 0) {
       cmd_packet p;
       p.hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::STOP_NOW, subdev, flags, sizeof(packet_header), 0 };
       send_packet(p);
@@ -377,22 +377,23 @@ class udp_tx {
 
       const uint8_t device_subdev = 0, tx_subdev = 0, rx_subdev = 0;
 
-      send_tx_stop_now_cmd(tx_subdev);
-      send_rx_stop_now_cmd(tx_subdev);
+      send_tx_stop_now(tx_subdev);
+      send_rx_stop_now(tx_subdev);
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
       // get device buffer sizes
-      send_device_get_buffer_info_cmd(device_subdev);
+      send_device_get_buffer_info(device_subdev);
       // wait for the response come back and be processed
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
       // clear the status registers
-      send_device_clear_status_cmd(device_subdev);
-      send_device_get_status_cmd(device_subdev);
+      send_device_clear_status(device_subdev);
+      send_device_get_status(device_subdev);
 
 
       // send a START_NOW_UNTIL_STOP
-      send_tx_start_now_for_n_samples_cmd(1500000 * 2048ull, tx_subdev);
-      send_rx_start_now_for_n_samples_cmd(1500000 * 2048ull, rx_subdev);
+      send_tx_start_now_for_n_samples(1000 * 2048ull, tx_subdev);
+      send_rx_start_now_until_stop(rx_subdev);
+      //send_rx_start_now_for_n_samples(180000 * 2048ull, rx_subdev);
 
       uint64_t last_check = 0;
       constexpr uint64_t buffer_check_interval = 100; // current buffer size is about 1000 data packets
@@ -404,10 +405,10 @@ class udp_tx {
 
             if(packets_sent - last_check > buffer_check_interval) {
               last_check = packets_sent;
-              //send_device_get_buffer_use_cmd(device_subdev);
-              send_buffer[i].hdr.flags = FLAGS::REQUEST_ACK;
+              //send_device_get_buffer_use(device_subdev);
+              send_buffer[i].hdr.flags |= FLAGS::REQUEST_ACK;
               send_packet(send_buffer[i]);
-              send_buffer[i].hdr.flags = 0;
+              //send_buffer[i].hdr.flags = 0;
             }
             else {
               send_packet(send_buffer[i]);
@@ -429,10 +430,10 @@ class udp_tx {
         }
       }
       // get the status at the end
-      send_device_get_status_cmd(device_subdev);
+      send_device_get_status(device_subdev);
       // send a stop
-      //send_tx_stop_now_cmd(tx_subdev);
-      //send_rx_stop_now_cmd(rx_subdev);
+      //send_tx_stop_now(tx_subdev);
+      //send_rx_stop_now(rx_subdev);
       // wait a bit for things to finish up
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
       LOGGER(info) << "start_send exiting; " << packets_sent << " packets sent, " << send_errors << " send errors";

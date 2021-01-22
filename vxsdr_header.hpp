@@ -197,8 +197,9 @@ class stream_ctrl_packet_time : public stream_ctrl_packet {
     time_spec              time;
 };
 
-class stream_ctrl_packet_time_samples : public stream_ctrl_packet_time {
+class stream_ctrl_packet_time_samples : public stream_ctrl_packet {
   public:
+    time_spec              time;
     uint64_t               n_samples;
 };
 
