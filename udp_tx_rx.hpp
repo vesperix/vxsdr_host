@@ -323,26 +323,26 @@ class udp_tx {
 
     void send_tx_start_now_until_stop(const uint8_t subdev, const uint8_t flags = 0) {
       stream_ctrl_packet p;
-      p.hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::START_NOW_UNTIL_STOP, subdev, flags, sizeof(packet_header), 0 };
+      p.hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::START_NOW_UNTIL_STOP, subdev, flags, sizeof(stream_ctrl_packet), 0 };
       send_packet(p);
     }
 
     void send_rx_start_now_until_stop(const uint8_t subdev, const uint8_t flags = 0) {
       stream_ctrl_packet p;
-      p.hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::START_NOW_UNTIL_STOP, subdev, flags, sizeof(packet_header), 0 };
+      p.hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::START_NOW_UNTIL_STOP, subdev, flags, sizeof(stream_ctrl_packet), 0 };
       send_packet(p);
     }
 
     void send_tx_start_now_for_n_samples(const uint64_t n, const uint8_t subdev, const uint8_t flags = 0) {
       stream_ctrl_packet_samples p;
-      p.hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::START_NOW_FOR_N_SAMPLES, subdev, flags, sizeof(packet_header), 0 };
+      p.hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::START_NOW_FOR_N_SAMPLES, subdev, flags, sizeof(stream_ctrl_packet_samples), 0 };
       p.n_samples = n;
       send_packet(p);
     }
 
     void send_rx_start_now_for_n_samples(const uint64_t n, const uint8_t subdev, const uint8_t flags = 0) {
       stream_ctrl_packet_samples p;
-      p.hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::START_NOW_FOR_N_SAMPLES, subdev, flags, sizeof(packet_header), 0 };
+      p.hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::START_NOW_FOR_N_SAMPLES, subdev, flags, sizeof(stream_ctrl_packet_samples), 0 };
       p.n_samples = n;
       send_packet(p);
     }
