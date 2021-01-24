@@ -12,6 +12,9 @@
 #include "vxsdr_header.hpp"
 #include "packet_proc.hpp"
 
+#ifndef VXSDR_HPP
+#define VXSDR_HPP
+
 class vxsdr {
   public:
     vxsdr(const boost::asio::ip::udp::endpoint &local_receive_endpoint,
@@ -69,7 +72,7 @@ class vxsdr {
       return "UNDEFINED";
     }
   private:
-    // threads used for sending ann receiving
+    // threads used for sending and receiving
     std::thread sender_thread;
     std::thread receiver_thread;
 
@@ -147,7 +150,7 @@ class vxsdr {
         largest_data_packet recv_buffer;
         largest_cmd_or_rsp_packet cmd_buffer;
         uint64_t packets_received = 0, seq_errors = 0;
-        std::array<uint64_t, UINT8_MAX> packet_types_received = { 0 };
+        std::array<uint64_t, UINT8_MAX + 1> packet_types_received = { 0 };
         uint16_t seq = 0, last_seq = 0;
         unsigned percent, min_buffer_percent = 100, max_buffer_percent = 0;
         void start_receive() {
@@ -271,7 +274,7 @@ class vxsdr {
       private:
         boost::asio::ip::udp::socket socket;
         boost::asio::ip::udp::endpoint destination;
-        std::array<uint64_t, UINT8_MAX> packet_types_processed = { 0 };
+        std::array<uint64_t, UINT8_MAX + 1> packet_types_processed = { 0 };
         uint64_t send_errors = 0, packets_sent = 0, bytes_sent = 0;
 
         void send_packet(packet &packet) {
@@ -332,7 +335,7 @@ class vxsdr {
                 if(packets_sent - last_check > buffer_check_interval) {
                   // request ack to update buffer use
                   data_buffer[i].hdr.flags |= FLAGS::REQUEST_ACK;
-                  send_packet(send_buffer[i]);
+                  send_packet(cmd_buffer[i]);
                   last_check = packets_sent;
                 }
                 else {
@@ -367,12 +370,12 @@ class vxsdr {
     {
       LOGGER(info) << "receiver thread started";
 
-      if(thread_set_realtime_priority)
-        if(set_current_thread_priority_realtime(receiver_thread_priority))
+      if(thread_set_priority)
+        if(set_current_thread_priority_realtime(receive_thread_priority))
           LOGGER(error) << "unable to set receiver thread realtime priority";
 
       if(thread_set_affinity)
-        if(set_current_thread_affinity(receiver_thread_cpu))
+        if(set_current_thread_affinity(receive_thread_cpu))
           LOGGER(error) << "unable to set receiver thread CPU affinity";
 
       udp_rx server(io_context, local_endpoint);
@@ -386,19 +389,20 @@ class vxsdr {
     {
       LOGGER(info) << "sender thread started";
 
-      if(thread_set_realtime_priority)
-        if(set_current_thread_priority_realtime(sender_thread_priority))
+      if(thread_set_priority)
+        if(set_current_thread_priority_realtime(send_thread_priority))
           LOGGER(error) << "unable to set sender thread realtime priority";
 
       if(thread_set_affinity)
-        if(set_current_thread_affinity(sender_thread_cpu))
+        if(set_current_thread_affinity(send_thread_cpu))
           LOGGER(error) << "unable to set sender thread CPU affinity";
 
-      udp_tx server(io_context, local_endpoint, destination_endpoint, broadcast);
+      udp_tx server(io_context, local_endpoint, destination_endpoint);
       io_context.run();
       LOGGER(info) << "sender thread finished";
     }
 
+  public:
     void send_device_hello(const uint8_t subdev = 0, const uint8_t flags = 0) {
       largest_cmd_or_rsp_packet p;
       p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::HELLO, subdev, flags, sizeof(packet_header), 0 };
@@ -464,7 +468,7 @@ class vxsdr {
       p.hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::START_NOW_UNTIL_STOP, subdev, flags, sizeof(packet_header), 0 };
       p.n_samples = n;
       largest_cmd_or_rsp_packet q;
-      memcpy(&q, &p, p.packet_size);
+      memcpy(&q, &p, p.hdr.packet_size);
       command_queue.push(q);
     }
 
@@ -473,7 +477,7 @@ class vxsdr {
       p.hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::START_NOW_UNTIL_STOP, subdev, flags, sizeof(packet_header), 0 };
       p.n_samples = n;
       largest_cmd_or_rsp_packet q;
-      memcpy(&q, &p, p.packet_size);
+      memcpy(&q, &p, p.hdr.packet_size);
       command_queue.push(q);
     }
 
@@ -489,3 +493,5 @@ class vxsdr {
       command_queue.push(p);
     }
 };
+
+#endif // VXSDR_HPP
