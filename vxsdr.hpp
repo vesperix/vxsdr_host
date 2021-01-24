@@ -1,4 +1,5 @@
 #include <vector>
+#include <functional>
 
 #include <boost/lockfree/spsc_queue.hpp>
 #include <boost/asio.hpp>
@@ -21,8 +22,8 @@ class vxsdr {
           const boost::asio::ip::udp::endpoint &local_send_endpoint,
           const boost::asio::ip::udp::endpoint &destination_endpoint) {
       boost::asio::io_context io_context;
-      receiver_thread = std::thread(std::ref(vxsdr::receiver), std::ref(io_context), std::cref(local_receive_endpoint));
-      sender_thread = std::thread(std::ref(vxsdr::sender), std::ref(io_context), std::cref(local_send_endpoint), std::cref(destination_endpoint));
+      receiver_thread = std::thread(std::ref(receiver), std::ref(io_context), std::cref(local_receive_endpoint));
+      sender_thread = std::thread(std::ref(sender), std::ref(io_context), std::cref(local_send_endpoint), std::cref(destination_endpoint));
       //FIXME: more init needed
     };
     ~vxsdr() {
