@@ -21,8 +21,8 @@ class vxsdr {
           const boost::asio::ip::udp::endpoint &local_send_endpoint,
           const boost::asio::ip::udp::endpoint &destination_endpoint) {
       boost::asio::io_context io_context;
-      receiver_thread = std::thread(std::ref(receiver), std::ref(io_context), std::cref(local_receive_endpoint));
-      sender_thread = std::thread(std::ref(sender), std::ref(io_context), std::cref(local_send_endpoint), std::cref(destination_endpoint));
+      receiver_thread = std::thread(std::ref(vxsdr::receiver), std::ref(io_context), std::cref(local_receive_endpoint));
+      sender_thread = std::thread(std::ref(vxsdr::sender), std::ref(io_context), std::cref(local_send_endpoint), std::cref(destination_endpoint));
       //FIXME: more init needed
     };
     ~vxsdr() {
@@ -34,7 +34,7 @@ class vxsdr {
       //FIXME:
     };
 
-    std::string packet_type_to_name(const uint8_t number) {
+    static std::string packet_type_to_name(const uint8_t number) {
       switch(number) {
         case PACKET_TYPES::TX_SIGNAL_DATA:
           return "TX_SIGNAL_DATA";
@@ -116,15 +116,15 @@ class vxsdr {
     // flags used for orderly shutdown
     static std::atomic<bool> rx_stop_flag, tx_stop_flag, complete_flag;
 
-    void set_rx_stop_flag() {
+    static void set_rx_stop_flag() {
       rx_stop_flag = true;
     }
 
-    void set_tx_stop_flag() {
+    static void set_tx_stop_flag() {
       tx_stop_flag = true;
     }
 
-    void set_complete_flag() {
+    static void set_complete_flag() {
       complete_flag = true;
     }
 
@@ -148,11 +148,10 @@ class vxsdr {
         boost::asio::ip::udp::socket socket;
         boost::asio::ip::udp::endpoint remote;
         largest_data_packet recv_buffer;
-        largest_cmd_or_rsp_packet cmd_buffer;
         uint64_t packets_received = 0, seq_errors = 0;
         std::array<uint64_t, UINT8_MAX + 1> packet_types_received = { 0 };
-        uint16_t seq = 0, last_seq = 0;
-        unsigned percent, min_buffer_percent = 100, max_buffer_percent = 0;
+        uint16_t last_seq = 0;
+        //unsigned percent, min_buffer_percent = 100, max_buffer_percent = 0;
         void start_receive() {
           LOGGER(info) << "start_receive started";
           // FIXME: need to add timeout if no packets are coming in
@@ -366,7 +365,7 @@ class vxsdr {
         }
     };
 
-    void receiver(boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint)
+    static void receiver(boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint)
     {
       LOGGER(info) << "receiver thread started";
 
@@ -383,7 +382,7 @@ class vxsdr {
       LOGGER(info) << "receiver thread finished";
     }
 
-    void sender(boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint,
+    static void sender(boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint,
           const boost::asio::ip::udp::endpoint &destination_endpoint,
           const bool broadcast)
     {
@@ -403,67 +402,67 @@ class vxsdr {
     }
 
   public:
-    void send_device_hello(const uint8_t subdev = 0, const uint8_t flags = 0) {
+    static void send_device_hello(const uint8_t subdev = 0, const uint8_t flags = 0) {
       largest_cmd_or_rsp_packet p;
       p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::HELLO, subdev, flags, sizeof(packet_header), 0 };
       command_queue.push(p);
     }
 
-    void send_device_reset(const uint8_t subdev = 0, const uint8_t flags = 0) {
+    static void send_device_reset(const uint8_t subdev = 0, const uint8_t flags = 0) {
       largest_cmd_or_rsp_packet p;
       p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::RESET, subdev, flags, sizeof(packet_header), 0 };
       command_queue.push(p);
     }
 
-    void send_device_open_session(const uint8_t subdev = 0, const uint8_t flags = 0) {
+    static void send_device_open_session(const uint8_t subdev = 0, const uint8_t flags = 0) {
       largest_cmd_or_rsp_packet p;
       p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::OPEN_SESSION, subdev, flags, sizeof(packet_header), 0 };
       command_queue.push(p);
     }
 
-    void send_device_close_session(const uint8_t subdev = 0, const uint8_t flags = 0) {
+    static void send_device_close_session(const uint8_t subdev = 0, const uint8_t flags = 0) {
       largest_cmd_or_rsp_packet p;
       p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::CLOSE_SESSION, subdev, flags, sizeof(packet_header), 0 };
       command_queue.push(p);
     }
 
-    void send_device_get_buffer_info(const uint8_t subdev = 0, const uint8_t flags = 0) {
+    static void send_device_get_buffer_info(const uint8_t subdev = 0, const uint8_t flags = 0) {
       largest_cmd_or_rsp_packet p;
       p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::GET_BUFFER_INFO, subdev, flags, sizeof(packet_header), 0 };
       command_queue.push(p);
     }
 
-    void send_device_get_buffer_use(const uint8_t subdev = 0, const uint8_t flags = 0) {
+    static void send_device_get_buffer_use(const uint8_t subdev = 0, const uint8_t flags = 0) {
       largest_cmd_or_rsp_packet p;
       p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::GET_BUFFER_USE, subdev, flags, sizeof(packet_header), 0 };
       command_queue.push(p);
     }
 
-    void send_device_clear_status(const uint8_t subdev = 0, const uint8_t flags = 0) {
+    static void send_device_clear_status(const uint8_t subdev = 0, const uint8_t flags = 0) {
       largest_cmd_or_rsp_packet p;
       p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::CLEAR_STATUS, subdev, flags, sizeof(packet_header), 0 };
       command_queue.push(p);
     }
 
-    void send_device_get_status(const uint8_t subdev = 0, const uint8_t flags = 0) {
+    static void send_device_get_status(const uint8_t subdev = 0, const uint8_t flags = 0) {
       largest_cmd_or_rsp_packet p;
       p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::GET_STATUS, subdev, flags, sizeof(packet_header), 0 };
       command_queue.push(p);
     }
 
-    void send_tx_start_now_until_stop(const uint8_t subdev = 0, const uint8_t flags = 0) {
+    static void send_tx_start_now_until_stop(const uint8_t subdev = 0, const uint8_t flags = 0) {
       largest_cmd_or_rsp_packet p;
       p.hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::START_NOW_UNTIL_STOP, subdev, flags, sizeof(packet_header), 0 };
       command_queue.push(p);
     }
 
-    void send_rx_start_now_until_stop(const uint8_t subdev = 0, const uint8_t flags = 0) {
+    static void send_rx_start_now_until_stop(const uint8_t subdev = 0, const uint8_t flags = 0) {
       largest_cmd_or_rsp_packet p;
       p.hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::START_NOW_UNTIL_STOP, subdev, flags, sizeof(packet_header), 0 };
       command_queue.push(p);
     }
 
-    void send_tx_start_now_for_n_samples(const uint64_t n, const uint8_t subdev = 0, const uint8_t flags = 0) {
+    static void send_tx_start_now_for_n_samples(const uint64_t n, const uint8_t subdev = 0, const uint8_t flags = 0) {
       stream_ctrl_packet_samples p;
       p.hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::START_NOW_UNTIL_STOP, subdev, flags, sizeof(packet_header), 0 };
       p.n_samples = n;
@@ -472,7 +471,7 @@ class vxsdr {
       command_queue.push(q);
     }
 
-    void send_rx_start_now_for_n_samples(const uint64_t n, const uint8_t subdev = 0, const uint8_t flags = 0) {
+    static void send_rx_start_now_for_n_samples(const uint64_t n, const uint8_t subdev = 0, const uint8_t flags = 0) {
       stream_ctrl_packet_samples p;
       p.hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::START_NOW_UNTIL_STOP, subdev, flags, sizeof(packet_header), 0 };
       p.n_samples = n;
@@ -481,13 +480,13 @@ class vxsdr {
       command_queue.push(q);
     }
 
-    void send_tx_stop_now(const uint8_t subdev = 0, const uint8_t flags = 0) {
+    static void send_tx_stop_now(const uint8_t subdev = 0, const uint8_t flags = 0) {
       largest_cmd_or_rsp_packet p;
       p.hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::STOP_NOW, subdev, flags, sizeof(packet_header), 0 };
       command_queue.push(p);
     }
 
-    void send_rx_stop_now(const uint8_t subdev = 0, const uint8_t flags = 0) {
+    static void send_rx_stop_now(const uint8_t subdev = 0, const uint8_t flags = 0) {
       largest_cmd_or_rsp_packet p;
       p.hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::STOP_NOW, subdev, flags, sizeof(packet_header), 0 };
       command_queue.push(p);
