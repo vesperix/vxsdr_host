@@ -12,6 +12,9 @@
 #include "vxsdr_header.hpp"
 #include "packet_proc.hpp"
 
+#ifndef UDP_TX_RX_HPP
+#define UDP_TX_RX_HPP
+
 // parameters of the internal ring buffers
  // size of largest command/status message packet
 static constexpr size_t msg_buffer_max_bytes           = sizeof(packet_header) + MAX_PAYLOAD_LENGTH_BYTES;
@@ -648,3 +651,5 @@ void sender(boost::asio::io_context &io_context, const boost::asio::ip::udp::end
   io_context.run();
   LOGGER(info) << "sender thread finished";
 }
+
+#endif // UDP_TX_RX_HPP
