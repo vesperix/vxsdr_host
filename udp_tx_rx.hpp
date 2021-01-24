@@ -143,7 +143,7 @@ class udp_rx {
     largest_data_packet recv_buffer;
     largest_cmd_or_rsp_packet cmd_buffer;
     uint64_t packets_received = 0, seq_errors = 0;
-    std::array<uint64_t, UINT8_MAX> packet_types_received = { 0 };
+    std::array<uint64_t, UINT8_MAX + 1> packet_types_received = { 0 };
     uint16_t seq = 0, last_seq = 0;
     unsigned percent, min_buffer_percent = 100, max_buffer_percent = 0;
     void start_receive() {
@@ -270,7 +270,7 @@ class udp_tx {
     boost::asio::ip::udp::endpoint destination;
     static constexpr size_t send_buffer_size = 16;
     std::array<largest_data_packet, send_buffer_size> send_buffer;
-    std::array<uint64_t, UINT8_MAX> packet_types_processed = { 0 };
+    std::array<uint64_t, UINT8_MAX + 1> packet_types_processed = { 0 };
     uint64_t send_errors = 0, packets_sent = 0, bytes_sent = 0;
 
     void send_device_hello(const uint8_t subdev, const uint8_t flags = 0) {
