@@ -52,15 +52,15 @@ static std::atomic<unsigned> tx_buffer_size, tx_buffer_used;
 static std::atomic<unsigned> rx_buffer_size, rx_buffer_used;
 static std::atomic<float> tx_buffer_fill_percent, rx_buffer_fill_percent;
 
-void set_rx_stop_flag() {
+inline void set_rx_stop_flag() {
   rx_stop_flag = true;
 }
 
-void set_tx_stop_flag() {
+inline void set_tx_stop_flag() {
   tx_stop_flag = true;
 }
 
-void set_complete_flag() {
+inline void set_complete_flag() {
   complete_flag = true;
 }
 
@@ -148,7 +148,7 @@ class udp_rx {
     uint64_t packets_received = 0, seq_errors = 0;
     std::array<uint64_t, UINT8_MAX + 1> packet_types_received = { 0 };
     uint16_t seq = 0, last_seq = 0;
-    unsigned percent, min_buffer_percent = 100, max_buffer_percent = 0;
+    //unsigned percent, min_buffer_percent = 100, max_buffer_percent = 0;
     void start_receive() {
       LOGGER(info) << "start_receive started";
       // FIXME: need to add timeout if no packets are coming in
@@ -167,7 +167,7 @@ class udp_rx {
           // tx sginal data acks special cased since they contain throttling information
           case PACKET_TYPES::TX_SIGNAL_DATA_ACK:
             {
-              tx_signal_data_ack_packet *r = reinterpret_cast<tx_signal_data_ack_packet *>(&recv_buffer);
+              auto *r = reinterpret_cast<tx_signal_data_ack_packet *>(&recv_buffer);
               tx_buffer_used = r->tx_buffer_used_bytes;
               tx_buffer_fill_percent = std::min(100., (100. * tx_buffer_used) / tx_buffer_size);
               if(forward_acks) {
@@ -182,7 +182,7 @@ class udp_rx {
             switch(recv_buffer.hdr.command) {
               case DEVICE_CMD_RSP::GET_BUFFER_USE_RSP:
                 {
-                  get_buffer_use_rsp_packet *r = reinterpret_cast<get_buffer_use_rsp_packet *>(&recv_buffer);
+                  auto *r = reinterpret_cast<get_buffer_use_rsp_packet *>(&recv_buffer);
                   tx_buffer_used = r->tx_buffer_used_bytes;
                   rx_buffer_used = r->rx_buffer_used_bytes;
                   tx_buffer_fill_percent = std::min(100., (100. * tx_buffer_used) / tx_buffer_size);
@@ -194,7 +194,7 @@ class udp_rx {
                 break;
               case DEVICE_CMD_RSP::GET_BUFFER_INFO_RSP:
                 {
-                  get_buffer_info_rsp_packet *r = reinterpret_cast<get_buffer_info_rsp_packet *>(&recv_buffer);
+                  auto *r = reinterpret_cast<get_buffer_info_rsp_packet *>(&recv_buffer);
                   tx_buffer_size = r->tx_buffer_size_bytes;
                   rx_buffer_size = r->rx_buffer_size_bytes;
                   largest_cmd_or_rsp_packet p;
@@ -364,7 +364,7 @@ class udp_tx {
 
     void send_packet(packet &packet) {
       packet_types_processed[packet.hdr.packet_type]++;
-      packet.hdr.sequence_counter = (uint16_t)(packets_sent++ % (1u << 16));
+      packet.hdr.sequence_counter = (uint16_t)(packets_sent++ % (1U << 16U));
       size_t bytes = socket.send_to(boost::asio::buffer(&packet, packet.hdr.packet_size), destination);
       if(bytes != packet.hdr.packet_size)
         send_errors++;
@@ -402,7 +402,7 @@ class udp_tx {
       constexpr uint64_t buffer_check_interval = 100; // current buffer size is about 1000 data packets
 
       while(not tx_stop_flag) {
-        if(tx_data_queue.read_available()) {
+        if(tx_data_queue.read_available() > 0) {
           size_t n_popped = tx_data_queue.pop(&send_buffer.front(), send_buffer.size());
           for(size_t i = 0; i < n_popped; i++) {
 
@@ -446,7 +446,7 @@ class udp_tx {
     }
 };
 
-void writer(const std::string &outfilename, const uint64_t max_packets) {
+inline void writer(const std::string &outfilename, const uint64_t max_packets) {
   LOGGER(info) << "writer thread started";
 
   std::array<largest_data_packet, rx_write_buffer_size> buffer;
@@ -494,7 +494,7 @@ void writer(const std::string &outfilename, const uint64_t max_packets) {
   LOGGER(info) << "writer thread finished";
 }
 
-void data_packet_counter(const uint64_t max_packets, const size_t packet_size) {
+inline void data_packet_counter(const uint64_t max_packets, const size_t packet_size) {
   LOGGER(info) << "data_packet counter thread started";
 
   const unsigned buffer_max_packets = 256;
@@ -504,7 +504,7 @@ void data_packet_counter(const uint64_t max_packets, const size_t packet_size) {
   auto t0 = std::chrono::steady_clock::now();
 
   while(packets < max_packets) {
-    while(rx_data_queue.read_available()) {
+    while(rx_data_queue.read_available() > 0) {
       size_t n_popped = rx_data_queue.pop(&buffer.front(), buffer_max_packets);
       for(size_t i = 0; i < n_popped; i++) {
         packets++;
@@ -525,13 +525,13 @@ void data_packet_counter(const uint64_t max_packets, const size_t packet_size) {
 
   std::this_thread::sleep_for(std::chrono::microseconds(rx_data_queue_clear_sleep_us));
   // empty the queue
-  while(rx_data_queue.read_available())
+  while(rx_data_queue.read_available() > 0)
     rx_data_queue.pop(&buffer.front(), rx_write_buffer_size);
 
   LOGGER(info) << "data packet counter thread finished";
 }
 
-void response_packet_printer() {
+inline void response_packet_printer() {
   LOGGER(info) << "response packet printer thread started";
 
   const unsigned buffer_max_packets = 256;
@@ -539,7 +539,7 @@ void response_packet_printer() {
   uint64_t packets = 0;
 
   while(not complete_flag) {
-    if(response_queue.read_available()) {
+    if(response_queue.read_available() > 0) {
       size_t n_popped = response_queue.pop(&buffer.front(), buffer_max_packets);
       for(size_t i = 0; i < n_popped; i++) {
         packets++;
@@ -553,7 +553,7 @@ void response_packet_printer() {
   LOGGER(info) << "response packet printer thread finished";
 }
 
-void receiver(boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint)
+inline void receiver(boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint)
 {
   LOGGER(info) << "receiver thread started";
 
@@ -568,7 +568,7 @@ void receiver(boost::asio::io_context &io_context, const boost::asio::ip::udp::e
   LOGGER(info) << "receiver thread finished";
 }
 
-void multicast_receiver(boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint, const boost::asio::ip::address_v4 &multicast_ip)
+inline void multicast_receiver(boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint, const boost::asio::ip::address_v4 &multicast_ip)
 {
   LOGGER(info) << "multicast receiver thread started";
 
@@ -583,7 +583,7 @@ void multicast_receiver(boost::asio::io_context &io_context, const boost::asio::
   LOGGER(info) << "multicast receiver thread finished";
 }
 
-void generator(const uint64_t max_packets, const size_t requested_packet_size, const unsigned packet_wait_us) {
+inline void generator(const uint64_t max_packets, const size_t requested_packet_size, const unsigned packet_wait_us) {
   std::array<largest_data_packet, 17> buf;
   LOGGER(info) << "generator thread started";
 
@@ -616,11 +616,11 @@ void generator(const uint64_t max_packets, const size_t requested_packet_size, c
 
   while(true) {
     // wait for room in the tx queue
-    while(!tx_data_queue.write_available()) {
+    while(tx_data_queue.write_available() == 0) {
       if(tx_generator_thread_sleep_us > 0)
         std::this_thread::sleep_for(std::chrono::microseconds(tx_generator_thread_sleep_us));
     }
-    while(tx_data_queue.write_available() and nsent <= max_packets) {
+    while(tx_data_queue.write_available() > 0 and nsent <= max_packets) {
       tx_data_queue.push(buf[nsent++ % buf.size()]);
     }
     if(tx_stop_flag or nsent > max_packets) {
@@ -634,7 +634,7 @@ void generator(const uint64_t max_packets, const size_t requested_packet_size, c
   LOGGER(info) << "generator thread finished";
 }
 
-void sender(boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint,
+inline void sender(boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint,
       const boost::asio::ip::udp::endpoint &destination_endpoint,
       const bool broadcast)
 {
