@@ -391,7 +391,7 @@ class udp_tx {
       // clear the status registers
       send_device_clear_status(device_subdev);
       send_device_get_status(device_subdev);
-
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
       // send a START_NOW_UNTIL_STOP
       send_tx_start_now_until_stop(tx_subdev);
       //send_tx_start_now_for_n_samples(1000000 * 2048ull, tx_subdev);
@@ -434,11 +434,10 @@ class udp_tx {
       }
       // get the status at the end
       send_device_get_status(device_subdev);
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
       // send a stop
       //send_tx_stop_now(tx_subdev, FLAGS::REQUEST_ACK);
       //send_rx_stop_now(rx_subdev);
-      // wait a bit for things to finish up
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
       LOGGER(info) << "start_send exiting; " << packets_sent << " packets sent, " << send_errors << " send errors";
       for(unsigned i = 0; i < packet_types_processed.size(); i++)
         if(packet_types_processed[i] > 0)
@@ -540,7 +539,7 @@ void response_packet_printer() {
   uint64_t packets = 0;
 
   while(not complete_flag) {
-    if(rx_data_queue.read_available()) {
+    if(response_queue.read_available()) {
       size_t n_popped = response_queue.pop(&buffer.front(), buffer_max_packets);
       for(size_t i = 0; i < n_popped; i++) {
         packets++;
