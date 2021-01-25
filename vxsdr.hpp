@@ -114,18 +114,19 @@ class vxsdr {
     static std::atomic<unsigned> rx_buffer_size, rx_buffer_used;
     static std::atomic<float> tx_buffer_fill_percent, rx_buffer_fill_percent;
 
+  public:
     // flags used for orderly shutdown
     static std::atomic<bool> rx_stop_flag, tx_stop_flag, complete_flag;
 
-    static void set_rx_stop_flag() {
+    void set_rx_stop_flag() {
       rx_stop_flag = true;
     }
 
-    static void set_tx_stop_flag() {
+    void set_tx_stop_flag() {
       tx_stop_flag = true;
     }
 
-    static void set_complete_flag() {
+    void set_complete_flag() {
       complete_flag = true;
     }
 

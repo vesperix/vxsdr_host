@@ -24,7 +24,7 @@ else
 	CXX_FLAGS = $(CXX_BASEFLAGS) $(CXX_OPTFLAGS) $(CXX_DEFINES)
 endif
 
-PROGS = host_tx host_rx host_tx_throttle host_tester minimal_tx minimal_rx
+PROGS = host_tx host_rx host_tx_throttle host_tester vxsdr_test minimal_tx minimal_rx
 
 COMMON_SRC = packet_proc.cpp
 
@@ -44,12 +44,14 @@ host_tester: host_tester.cpp udp_tx_rx_testing.hpp packet_proc.cpp vxsdr_header.
 host_rx: host_rx.cpp udp_rx.hpp vxsdr_header.hpp
 	$(CXX) $(CXX_FLAGS) -o $@ $< $(COMMON_SRC) $(CXX_LDFLAGS)
 
+vxsdr_test: vxsdr_test.cpp vxsdr.hpp
+	$(CXX) $(CXX_FLAGS) -o $@ $< $(CXX_LDFLAGS)
+
 minimal_tx: minimal_tx.c
 	$(CC) $(CC_FLAGS) -o $@ $< $(CC_LDFLAGS)
 
 minimal_rx: minimal_rx.c
 	$(CC) $(CC_FLAGS) -o $@ $< $(CC_LDFLAGS)
-
 clean:
 	rm -f $(PROGS) *.o *~
 
