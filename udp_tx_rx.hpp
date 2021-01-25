@@ -187,9 +187,9 @@ class udp_rx {
                   rx_buffer_used = r->rx_buffer_used_bytes;
                   tx_buffer_fill_percent = std::min(100., (100. * tx_buffer_used) / tx_buffer_size);
                   rx_buffer_fill_percent = std::min(100., (100. * rx_buffer_used) / rx_buffer_size);
-                  //largest_cmd_or_rsp_packet p;
-                  //memcpy(&p, r, std::min((size_t)r->hdr.packet_size, sizeof(p)));
-                  //response_queue.push(p);
+                  largest_cmd_or_rsp_packet p;
+                  memcpy(&p, r, std::min((size_t)r->hdr.packet_size, sizeof(p)));
+                  response_queue.push(p);
                 }
                 break;
               case DEVICE_CMD_RSP::GET_BUFFER_INFO_RSP:
@@ -381,7 +381,7 @@ class udp_tx {
       const uint8_t device_subdev = 0, tx_subdev = 0, rx_subdev = 0;
 
       send_tx_stop_now(tx_subdev);
-      send_rx_stop_now(tx_subdev);
+      send_rx_stop_now(rx_subdev);
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
       // get device buffer sizes
@@ -392,10 +392,10 @@ class udp_tx {
       send_device_clear_status(device_subdev);
       send_device_get_status(device_subdev);
 
-
       // send a START_NOW_UNTIL_STOP
-      send_tx_start_now_for_n_samples(1000 * 2048ull, tx_subdev);
-      send_rx_start_now_until_stop(rx_subdev);
+      send_tx_start_now_until_stop(tx_subdev);
+      //send_tx_start_now_for_n_samples(1000000 * 2048ull, tx_subdev);
+      //send_rx_start_now_until_stop(rx_subdev);
       //send_rx_start_now_for_n_samples(180000 * 2048ull, rx_subdev);
 
       uint64_t last_check = 0;
@@ -435,7 +435,7 @@ class udp_tx {
       // get the status at the end
       send_device_get_status(device_subdev);
       // send a stop
-      //send_tx_stop_now(tx_subdev);
+      //send_tx_stop_now(tx_subdev, FLAGS::REQUEST_ACK);
       //send_rx_stop_now(rx_subdev);
       // wait a bit for things to finish up
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
