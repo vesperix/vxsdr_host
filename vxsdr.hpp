@@ -22,8 +22,8 @@ class vxsdr {
           const boost::asio::ip::udp::endpoint &local_send_endpoint,
           const boost::asio::ip::udp::endpoint &destination_endpoint) {
       boost::asio::io_context io_context;
-      receiver_thread = std::thread(std::ref(receiver), std::ref(io_context), std::cref(local_receive_endpoint));
-      sender_thread = std::thread(std::ref(sender), std::ref(io_context), std::cref(local_send_endpoint), std::cref(destination_endpoint));
+      receiver_thread = std::thread(&vxsdr::receiver, this, std::ref(io_context), std::cref(local_receive_endpoint));
+      sender_thread = std::thread(&vxsdr::sender, this, std::ref(io_context), std::cref(local_send_endpoint), std::cref(destination_endpoint));
       //FIXME: more init needed
     };
     ~vxsdr() {
@@ -366,7 +366,7 @@ class vxsdr {
         }
     };
 
-    static void receiver(boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint)
+    void receiver(boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint)
     {
       LOGGER(info) << "receiver thread started";
 
@@ -383,9 +383,8 @@ class vxsdr {
       LOGGER(info) << "receiver thread finished";
     }
 
-    static void sender(boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint,
-          const boost::asio::ip::udp::endpoint &destination_endpoint,
-          const bool broadcast)
+    void sender(boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint,
+          const boost::asio::ip::udp::endpoint &destination_endpoint)
     {
       LOGGER(info) << "sender thread started";
 
