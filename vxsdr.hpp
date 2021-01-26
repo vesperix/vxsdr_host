@@ -189,20 +189,18 @@ class vxsdr {
     }
 
     void send_tx_start_now_for_n_samples(const uint64_t n, const uint8_t subdev = 0, const uint8_t flags = 0) {
-      stream_ctrl_packet_samples p;
-      p.hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::START_NOW_UNTIL_STOP, subdev, flags, sizeof(packet_header), 0 };
-      p.n_samples = n;
       largest_cmd_or_rsp_packet q;
-      memcpy(&q, &p, p.hdr.packet_size);
+      auto *p = reinterpret_cast<stream_ctrl_packet_samples *>(&q);
+      p->hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::START_NOW_FOR_N_SAMPLES, subdev, flags, sizeof(packet_header), 0 };
+      p->n_samples = n;
       command_queue.push(q);
     }
 
     void send_rx_start_now_for_n_samples(const uint64_t n, const uint8_t subdev = 0, const uint8_t flags = 0) {
-      stream_ctrl_packet_samples p;
-      p.hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::START_NOW_UNTIL_STOP, subdev, flags, sizeof(packet_header), 0 };
-      p.n_samples = n;
       largest_cmd_or_rsp_packet q;
-      memcpy(&q, &p, p.hdr.packet_size);
+      auto *p = reinterpret_cast<stream_ctrl_packet_samples *>(&q);
+      p->hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::START_NOW_FOR_N_SAMPLES, subdev, flags, sizeof(packet_header), 0 };
+      p->n_samples = n;
       command_queue.push(q);
     }
 
@@ -314,9 +312,8 @@ class vxsdr {
                   sdrptr->tx_buffer_used = r->tx_buffer_used_bytes;
                   sdrptr->tx_buffer_fill_percent = std::min(100., (100. * sdrptr->tx_buffer_used) / sdrptr->tx_buffer_size);
                   if(forward_acks) {
-                    largest_cmd_or_rsp_packet p;
-                    memcpy(&p, r, std::min((size_t)r->hdr.packet_size, sizeof(p)));
-                    sdrptr->response_queue.push(p);
+                    auto *p = reinterpret_cast<largest_cmd_or_rsp_packet *>(&recv_buffer);
+                    sdrptr->response_queue.push(*p);
                   }
                 }
                 break;
@@ -330,9 +327,8 @@ class vxsdr {
                       sdrptr->rx_buffer_used = r->rx_buffer_used_bytes;
                       sdrptr->tx_buffer_fill_percent = std::min(100., (100. * sdrptr->tx_buffer_used) / sdrptr->tx_buffer_size);
                       sdrptr->rx_buffer_fill_percent = std::min(100., (100. * sdrptr->rx_buffer_used) / sdrptr->rx_buffer_size);
-                      //largest_cmd_or_rsp_packet p;
-                      //memcpy(&p, r, std::min((size_t)r->hdr.packet_size, sizeof(p)));
-                      //sdrptr->response_queue.push(p);
+                      auto *p = reinterpret_cast<largest_cmd_or_rsp_packet *>(&recv_buffer);
+                      sdrptr->response_queue.push(*p);
                     }
                     break;
                   case DEVICE_CMD_RSP::GET_BUFFER_INFO_RSP:
@@ -340,16 +336,14 @@ class vxsdr {
                       auto *r = reinterpret_cast<get_buffer_info_rsp_packet *>(&recv_buffer);
                       sdrptr->tx_buffer_size = r->tx_buffer_size_bytes;
                       sdrptr->rx_buffer_size = r->rx_buffer_size_bytes;
-                      largest_cmd_or_rsp_packet p;
-                      memcpy(&p, r, std::min((size_t)r->hdr.packet_size, sizeof(p)));
-                      sdrptr->response_queue.push(p);
+                      auto *p = reinterpret_cast<largest_cmd_or_rsp_packet *>(&recv_buffer);
+                      sdrptr->response_queue.push(*p);
                     }
                     break;
                   default:
                     {
-                      largest_cmd_or_rsp_packet p;
-                      memcpy(&p, &recv_buffer, std::min((size_t)recv_buffer.hdr.packet_size, sizeof(p)));
-                      sdrptr->response_queue.push(p);
+                      auto *p = reinterpret_cast<largest_cmd_or_rsp_packet *>(&recv_buffer);
+                      sdrptr->response_queue.push(*p);
                     }
                     break;
                 }
@@ -358,9 +352,8 @@ class vxsdr {
               case PACKET_TYPES::RX_RADIO_CMD_ACK:
               case PACKET_TYPES::TX_RADIO_CMD_ACK:
                 if(forward_acks) {
-                  largest_cmd_or_rsp_packet p;
-                  memcpy(&p, &recv_buffer, std::min((size_t)recv_buffer.hdr.packet_size, sizeof(p)));
-                  sdrptr->response_queue.push(p);
+                  auto *p = reinterpret_cast<largest_cmd_or_rsp_packet *>(&recv_buffer);
+                  sdrptr->response_queue.push(*p);
                 }
                 break;
               // DEVICE_CMD_RSP handled above
@@ -370,9 +363,8 @@ class vxsdr {
               case PACKET_TYPES::TX_RADIO_CMD_RSP:
               case PACKET_TYPES::TX_RADIO_CMD_ERR:
                 {
-                  largest_cmd_or_rsp_packet p;
-                  memcpy(&p, &recv_buffer, std::min((size_t)recv_buffer.hdr.packet_size, sizeof(p)));
-                  sdrptr->response_queue.push(p);
+                  auto *p = reinterpret_cast<largest_cmd_or_rsp_packet *>(&recv_buffer);
+                  sdrptr->response_queue.push(*p);
                 }
                 break;
               // packet types that should never show up at the host are dropped
