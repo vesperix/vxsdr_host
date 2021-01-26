@@ -44,6 +44,8 @@ typedef struct {
   uint32_t                seconds;
 } time_spec;
 
+typedef uint64_t          stream_spec;
+
 namespace FLAGS {
   static constexpr uint8_t REQUEST_ACK       = 0x80;  // bit 0
   static constexpr uint8_t TIME_PRESENT      = 0x40;  // bit 1
@@ -127,17 +129,17 @@ namespace RADIO_CMD {
   static constexpr uint8_t START_AT_TIME_FOR_N_SAMPLES  = 0x05;  // error if TIME_PRESENT is 0
   // 0x06-0x0F reserved
   static constexpr uint8_t GET_RF_INFO                  = 0x10;  // unimplemented // available frequency, gain, sample rate, and bandwidth ranges, number of selectable I/Os
-  static constexpr uint8_t GET_RF_FREQ                  = 0x11;  // unimplemented 
-  static constexpr uint8_t GET_RF_GAIN                  = 0x12;  // unimplemented 
-  static constexpr uint8_t GET_SAMPLE_RATE              = 0x13;  // unimplemented 
-  static constexpr uint8_t GET_RF_BW                    = 0x14;  // unimplemented 
-  static constexpr uint8_t GET_RF_IO                    = 0x15;  // unimplemented 
+  static constexpr uint8_t GET_RF_FREQ                  = 0x11;  // unimplemented
+  static constexpr uint8_t GET_RF_GAIN                  = 0x12;  // unimplemented
+  static constexpr uint8_t GET_SAMPLE_RATE              = 0x13;  // unimplemented
+  static constexpr uint8_t GET_RF_BW                    = 0x14;  // unimplemented
+  static constexpr uint8_t GET_RF_IO                    = 0x15;  // unimplemented
   // 0x16-0x20 reserved
-  static constexpr uint8_t SET_RF_FREQ                  = 0x21;  // unimplemented 
-  static constexpr uint8_t SET_RF_GAIN                  = 0x22;  // unimplemented 
-  static constexpr uint8_t SET_SAMPLE_RATE              = 0x23;  // unimplemented 
-  static constexpr uint8_t SET_RF_BW                    = 0x24;  // unimplemented 
-  static constexpr uint8_t SET_RF_IO                    = 0x25;  // unimplemented 
+  static constexpr uint8_t SET_RF_FREQ                  = 0x21;  // unimplemented
+  static constexpr uint8_t SET_RF_GAIN                  = 0x22;  // unimplemented
+  static constexpr uint8_t SET_SAMPLE_RATE              = 0x23;  // unimplemented
+  static constexpr uint8_t SET_RF_BW                    = 0x24;  // unimplemented
+  static constexpr uint8_t SET_RF_IO                    = 0x25;  // unimplemented
   // 0x26-0xFF reserved
 }
 
@@ -171,12 +173,33 @@ class data_packet : public packet {
     std::complex<int16_t>  data[MAX_DATA_LENGTH_SAMPLES]; // FIXME: find proper way to represent variable-mength data in class
 };
 
-class largest_data_packet : public data_packet {};
+class data_packet_time : public packet {
+  public:
+    time_spec              time;
+    std::complex<int16_t>  data[MAX_DATA_LENGTH_SAMPLES]; // FIXME: find proper way to represent variable-mength data in class
+};
+
+class data_packet_stream : public packet {
+  public:
+    stream_spec            stream_id;
+    std::complex<int16_t>  data[MAX_DATA_LENGTH_SAMPLES]; // FIXME: find proper way to represent variable-mength data in class
+};
+
+class data_packet_time_stream : public packet {
+  public:
+    time_spec              time;
+    stream_spec            stream_id;
+    std::complex<int16_t>  data[MAX_DATA_LENGTH_SAMPLES]; // FIXME: find proper way to represent variable-mength data in class
+};
+
+class largest_data_packet : public data_packet_time_stream {};
 
 class cmd_or_rsp_packet : public packet {};
 
 class largest_cmd_or_rsp_packet : public cmd_or_rsp_packet {
   public:
+    time_spec              time;
+    stream_spec            stream_id;
     uint8_t                payload[MAX_PAYLOAD_LENGTH_BYTES];
 };
 
