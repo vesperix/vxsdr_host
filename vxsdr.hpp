@@ -219,7 +219,7 @@ class vxsdr {
   private:
     void receiver(boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint)
     {
-      LOGGER(info) << "receiver thread started";
+      LOGGER(debug) << "receiver thread started";
 
       if(thread_set_priority)
         if(set_current_thread_priority_realtime(receive_thread_priority) != 0)
@@ -231,13 +231,13 @@ class vxsdr {
 
       udp_rx server(this, io_context, local_endpoint);
       io_context.run();
-      LOGGER(info) << "receiver thread finished";
+      LOGGER(debug) << "receiver thread finished";
     }
 
     void sender(boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint,
           const boost::asio::ip::udp::endpoint &destination_endpoint)
     {
-      LOGGER(info) << "sender thread started";
+      LOGGER(debug) << "sender thread started";
 
       if(thread_set_priority)
         if(set_current_thread_priority_realtime(send_thread_priority) != 0)
@@ -249,7 +249,7 @@ class vxsdr {
 
       udp_tx server(this, io_context, local_endpoint, destination_endpoint);
       io_context.run();
-      LOGGER(info) << "sender thread finished";
+      LOGGER(debug) << "sender thread finished";
     }
 
     class udp_rx {
@@ -291,7 +291,7 @@ class vxsdr {
         uint16_t last_seq = 0;
         //unsigned percent, min_buffer_percent = 100, max_buffer_percent = 0;
         void start_receive() {
-          LOGGER(info) << "start_receive started";
+          LOGGER(debug) << "start_receive started";
           // FIXME: need to add timeout if no packets are coming in
           while(not sdrptr->rx_stop_flag) {
             socket.receive_from(boost::asio::buffer(&recv_buffer, sizeof(recv_buffer)), remote);
@@ -448,7 +448,7 @@ class vxsdr {
         }
 
         void start_send() {
-          LOGGER(info) << "start_send started";
+          LOGGER(debug) << "start_send started";
           static constexpr size_t data_buffer_size = 16, cmd_buffer_size = 16;
           std::array<largest_data_packet, data_buffer_size> data_buffer;
           std::array<largest_cmd_or_rsp_packet, cmd_buffer_size> cmd_buffer;
