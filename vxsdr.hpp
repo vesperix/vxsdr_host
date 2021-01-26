@@ -103,14 +103,18 @@ class vxsdr {
     std::atomic<bool> rx_stop_flag, tx_stop_flag;
 
   public:
+    // constructor
     vxsdr(const boost::asio::ip::udp::endpoint &local_receive_endpoint,
           const boost::asio::ip::udp::endpoint &local_send_endpoint,
           const boost::asio::ip::udp::endpoint &destination_endpoint) {
       boost::asio::io_context io_context;
       receiver_thread = std::thread(&vxsdr::receiver, this, std::ref(io_context), std::cref(local_receive_endpoint));
       sender_thread = std::thread(&vxsdr::sender, this, std::ref(io_context), std::cref(local_send_endpoint), std::cref(destination_endpoint));
+      tx_stop_flag = false;
+      rx_stop_flag = false;
       //FIXME: more init needed
     };
+    // destructor
     ~vxsdr() {
       rx_stop_flag = true;
       tx_stop_flag = true;
@@ -119,6 +123,10 @@ class vxsdr {
       sender_thread.join();
       //FIXME:
     };
+    // copy constructor
+    // copy assignment
+    // move constructor
+    // move assignment
 
     void send_device_hello(const uint8_t subdev = 0, const uint8_t flags = 0) {
       largest_cmd_or_rsp_packet p;
@@ -216,11 +224,11 @@ class vxsdr {
       LOGGER(info) << "receiver thread started";
 
       if(thread_set_priority)
-        if(set_current_thread_priority_realtime(receive_thread_priority))
+        if(set_current_thread_priority_realtime(receive_thread_priority) != 0)
           LOGGER(error) << "unable to set receiver thread realtime priority";
 
       if(thread_set_affinity)
-        if(set_current_thread_affinity(receive_thread_cpu))
+        if(set_current_thread_affinity(receive_thread_cpu) != 0)
           LOGGER(error) << "unable to set receiver thread CPU affinity";
 
       udp_rx server(this, io_context, local_endpoint);
@@ -249,6 +257,7 @@ class vxsdr {
     class udp_rx {
 
       public:
+        // constructor
         udp_rx(vxsdr *p, boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint)
           : socket(io_context, local_endpoint) {
           sdrptr = p;
@@ -263,10 +272,15 @@ class vxsdr {
           if(not sdrptr->rx_stop_flag)
             start_receive();
         }
+        // destructor
         ~udp_rx() {
           //FIXME
           socket.close();
         }
+        // copy constructor
+        // copy assignment
+        // move constructor
+        // move assignment
 
       private:
         const bool forward_acks = false;
@@ -383,6 +397,7 @@ class vxsdr {
     class udp_tx {
 
       public:
+        // constructor
         udp_tx(vxsdr *p, boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint,
           const boost::asio::ip::udp::endpoint &destination_endpoint) : socket(io_context, local_endpoint) {
           sdrptr = p;
@@ -397,11 +412,15 @@ class vxsdr {
           if(not sdrptr->tx_stop_flag)
             start_send();
         }
+        // destructor
         ~udp_tx() {
           socket.close();
           //FIXME
         }
-
+        // copy constructor
+        // copy assignment
+        // move constructor
+        // move assignment
       private:
         vxsdr *sdrptr;
         boost::asio::ip::udp::socket socket;
@@ -411,7 +430,7 @@ class vxsdr {
 
         void send_packet(packet &packet) {
           packet_types_processed[packet.hdr.packet_type]++;
-          packet.hdr.sequence_counter = (uint16_t)(packets_sent++ % (1u << 16));
+          packet.hdr.sequence_counter = (uint16_t)(packets_sent++ % (UINT16_MAX + 1));
           size_t bytes = socket.send_to(boost::asio::buffer(&packet, packet.hdr.packet_size), destination);
           if(bytes != packet.hdr.packet_size)
             send_errors++;

@@ -11,26 +11,28 @@ extern "C" {
 #include <pthread.h>
 #endif
 
-int set_current_thread_affinity(const int cpunum)
+inline int set_current_thread_affinity(const int cpunum)
 {
 #ifdef HAVE_PTHREADS
   pthread_t current_thread = pthread_self();
   cpu_set_t set;
   CPU_ZERO(&set);
   CPU_SET(cpunum, &set);
+  // returns 0 on success
   return pthread_setaffinity_np(current_thread, sizeof(cpu_set_t), &set);
 #else
   return -1;
 #endif
 }
 
-int set_current_thread_priority_realtime(const int priority)
+inline int set_current_thread_priority_realtime(const int priority)
 {
 #ifdef HAVE_PTHREADS
   pthread_t current_thread = pthread_self();
   int policy = SCHED_RR;
   struct sched_param param;
   param.sched_priority = priority;
+  // returns 0 on success
   return pthread_setschedparam(current_thread, policy, &param);
 #else
   return -1;

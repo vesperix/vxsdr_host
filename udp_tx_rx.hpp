@@ -364,7 +364,7 @@ class udp_tx {
 
     void send_packet(packet &packet) {
       packet_types_processed[packet.hdr.packet_type]++;
-      packet.hdr.sequence_counter = (uint16_t)(packets_sent++ % (1U << 16U));
+      packet.hdr.sequence_counter = (uint16_t)(packets_sent++ % (UINT16_MAX + 1));
       size_t bytes = socket.send_to(boost::asio::buffer(&packet, packet.hdr.packet_size), destination);
       if(bytes != packet.hdr.packet_size)
         send_errors++;
