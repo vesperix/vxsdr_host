@@ -17,6 +17,7 @@
 #define VXSDR_HPP
 
 class vxsdr {
+
   private:
     // thread realtime priority settings
     static constexpr bool thread_set_priority = true;
@@ -102,7 +103,6 @@ class vxsdr {
     std::atomic<bool> rx_stop_flag, tx_stop_flag;
 
   public:
-
     vxsdr(const boost::asio::ip::udp::endpoint &local_receive_endpoint,
           const boost::asio::ip::udp::endpoint &local_send_endpoint,
           const boost::asio::ip::udp::endpoint &destination_endpoint) {
@@ -211,7 +211,6 @@ class vxsdr {
     }
 
   private:
-
     void receiver(boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint)
     {
       LOGGER(info) << "receiver thread started";
@@ -248,6 +247,7 @@ class vxsdr {
     }
 
     class udp_rx {
+
       public:
         udp_rx(vxsdr *p, boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint)
           : socket(io_context, local_endpoint) {
@@ -264,8 +264,10 @@ class vxsdr {
             start_receive();
         }
         ~udp_rx() {
-          //FIXME!!! need destructor
+          //FIXME
+          socket.close();
         }
+
       private:
         const bool forward_acks = false;
         vxsdr *sdrptr;
@@ -379,6 +381,7 @@ class vxsdr {
     };
 
     class udp_tx {
+
       public:
         udp_tx(vxsdr *p, boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint,
           const boost::asio::ip::udp::endpoint &destination_endpoint) : socket(io_context, local_endpoint) {
@@ -395,8 +398,10 @@ class vxsdr {
             start_send();
         }
         ~udp_tx() {
-          //FIXME!!! need destructor
+          socket.close();
+          //FIXME
         }
+
       private:
         vxsdr *sdrptr;
         boost::asio::ip::udp::socket socket;
