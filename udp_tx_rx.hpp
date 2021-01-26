@@ -373,9 +373,11 @@ class udp_tx {
 
     void start_send() {
       LOGGER(info) << "start_send started";
-      unsigned tx_throttle_wait_us = 0;
-      constexpr unsigned throttle_start_percent = 75;
-      constexpr unsigned throttle_stop_percent  = 50;
+      //FIXME: handle halt correctly
+      constexpr float throttle_halt_percent  = 90;
+      constexpr float throttle_on_percent    = 75;
+      constexpr float throttle_off_percent   = 50;
+      bool throttling = false;
       constexpr unsigned throttle_amount_us =     10; // send time for 8200 bytes over 10 GbE is about 6.7 us
 
       const uint8_t device_subdev = 0, tx_subdev = 0, rx_subdev = 0;
@@ -401,8 +403,9 @@ class udp_tx {
       uint64_t last_check = 0;
       constexpr uint64_t buffer_check_interval = 100; // current buffer size is about 1000 data packets
 
+      // FIXME: is a timeout needed?
       while(not tx_stop_flag) {
-        if(tx_data_queue.read_available() > 0) {
+        if(tx_data_queue.read_available() > 0 and tx_buffer_fill_percent < throttle_halt_percent) {
           size_t n_popped = tx_data_queue.pop(&send_buffer.front(), send_buffer.size());
           for(size_t i = 0; i < n_popped; i++) {
 
@@ -418,13 +421,12 @@ class udp_tx {
             }
 
             // update throttling
-            if(tx_buffer_fill_percent > throttle_start_percent)
-              tx_throttle_wait_us = throttle_amount_us;
-            else if (tx_buffer_fill_percent < throttle_stop_percent)
-              tx_throttle_wait_us = 0;
-
-            if(tx_throttle_wait_us > 0)
-              std::this_thread::sleep_for(std::chrono::microseconds(tx_throttle_wait_us));
+            if(tx_buffer_fill_percent > throttle_on_percent)
+              throttling = true;
+            else if(tx_buffer_fill_percent <= throttle_off_percent)
+              throttling = false;
+            if(throttling)
+              std::this_thread::sleep_for(std::chrono::microseconds(throttle_amount_us));
           }
         }
         else {

@@ -453,10 +453,11 @@ class vxsdr {
           std::array<largest_data_packet, data_buffer_size> data_buffer;
           std::array<largest_cmd_or_rsp_packet, cmd_buffer_size> cmd_buffer;
 
-          unsigned tx_throttle_wait_us = 0;
-          constexpr unsigned throttle_start_percent = 75;
-          constexpr unsigned throttle_stop_percent  = 50;
-          constexpr unsigned throttle_amount_us =     10; // send time for 8200 bytes over 10 GbE is about 6.7 us
+          constexpr float throttle_halt_percent  = 90;
+          constexpr float throttle_on_percent    = 75;
+          constexpr float throttle_off_percent   = 50;
+          bool throttling = false;
+          constexpr unsigned throttle_amount_us  = 10; // send time for 8200 bytes over 10 GbE is about 6.7 us
 
           const uint8_t device_subdev = 0, tx_subdev = 0;
 
@@ -472,7 +473,8 @@ class vxsdr {
                 send_packet(cmd_buffer[i]);
               }
             }
-            else if(sdrptr->tx_data_queue.read_available() > 0) {
+            // FIXME: is a timeout needed?
+            else if(sdrptr->tx_data_queue.read_available() > 0 and sdrptr->tx_buffer_fill_percent < throttle_halt_percent) {
               size_t n_popped = sdrptr->tx_data_queue.pop(&data_buffer.front(), data_buffer.size());
               for(size_t i = 0; i < n_popped; i++) {
                 if(packets_sent - last_check > buffer_check_interval) {
@@ -484,14 +486,16 @@ class vxsdr {
                 else {
                   send_packet(data_buffer[i]);
                 }
-                // update throttling
-                if(sdrptr->tx_buffer_fill_percent > throttle_start_percent)
-                  tx_throttle_wait_us = throttle_amount_us;
-                else if (sdrptr->tx_buffer_fill_percent < throttle_stop_percent)
-                  tx_throttle_wait_us = 0;
-
-                if(tx_throttle_wait_us > 0)
-                  std::this_thread::sleep_for(std::chrono::microseconds(tx_throttle_wait_us));
+                // throttle if needed
+                //FIXME: needs a timeout!!
+                //while(sdrptr->tx_buffer_fill_percent > throttle_halt_percent)
+                //  std::this_thread::sleep_for(std::chrono::microseconds(throttle_amount_us));
+                if(sdrptr->tx_buffer_fill_percent > throttle_on_percent)
+                  throttling = true;
+                else if(sdrptr->tx_buffer_fill_percent <= throttle_off_percent)
+                  throttling = false;
+                if(throttling)
+                  std::this_thread::sleep_for(std::chrono::microseconds(throttle_amount_us));
               }
             }
             else {
