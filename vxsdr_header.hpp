@@ -68,27 +68,28 @@ namespace DEVICE_CMD {
   static constexpr uint8_t OPEN_SESSION                 = 0x08;
   static constexpr uint8_t CLOSE_SESSION                = 0x09;
   // 0x0A-0x0F reserved
-  static constexpr uint8_t GET_TRANSPORT_INFO           = 0x10;  // how many interfaces, what kind
+  static constexpr uint8_t GET_TRANSPORT_INFO           = 0x10;  // unimplemented // how many interfaces, what kind
   static constexpr uint8_t GET_TRANSPORT_ADDR           = 0x11;  // we'll use this for IP addresses
   static constexpr uint8_t GET_TRANSPORT_PKTSIZ         = 0x12;
   // 0x12-0x1F reserved for more get_transport stuff as needed
   static constexpr uint8_t SET_TRANSPORT_ADDR           = 0x21;
   static constexpr uint8_t SET_TRANSPORT_PKTSIZ         = 0x22;
+  static constexpr uint8_t SAVE_TRANSPORT_ADDR          = 0x23;
   // 0x22-0x2F reserved for more set_transport stuff as needed
-  static constexpr uint8_t GET_CHANNEL_INFO             = 0x30;  // how many, are they TX/RX, etc
+  static constexpr uint8_t GET_CHANNEL_INFO             = 0x30;  // unimplemented // how many, are they TX/RX, etc
   // 0x31-0x4F reserved for channel parameter get and set
-  static constexpr uint8_t GET_TIMING_INFO              = 0x50;  // what timing inputs are available
+  static constexpr uint8_t GET_TIMING_INFO              = 0x50;  // unimplemented // what timing inputs are available
   static constexpr uint8_t GET_TIMING_STATUS            = 0x51;  // PPS present/absent; 10 MHz locked/unlocked
-  static constexpr uint8_t GET_TIMING_REF               = 0x52;  // current sources of 10 MHz and PPS
-  static constexpr uint8_t SET_TIMING_REF               = 0x53;  // set sources of 10 MHz and PPS
+  static constexpr uint8_t GET_TIMING_REF               = 0x52;  // unimplemented // current sources of 10 MHz and PPS
+  static constexpr uint8_t SET_TIMING_REF               = 0x53;  // unimplemented // set sources of 10 MHz and PPS
   static constexpr uint8_t READ_DAC_REG                 = 0x60;
   static constexpr uint8_t WRITE_DAC_REG                = 0x61;
   static constexpr uint8_t READ_ADC_REG                 = 0x62;
   static constexpr uint8_t WRITE_ADC_REG                = 0x63;
 
   // 0x64-0xFD reserved for stuff we haven't thought of yet
-  static constexpr uint8_t STOP                         = 0xFE;  // stop all streaming and return to wait state within session
-  static constexpr uint8_t RESET                        = 0xFF;  // do a power on reset (closing session and returning to idle)
+  static constexpr uint8_t STOP                         = 0xFE;  // unimplemented // stop all streaming and return to wait state within session
+  static constexpr uint8_t RESET                        = 0xFF;  // unimplemented // do a power on reset (closing session and returning to idle)
 }
 
 namespace DEVICE_CMD_RSP {
@@ -125,18 +126,18 @@ namespace RADIO_CMD {
   static constexpr uint8_t START_NOW_FOR_N_SAMPLES      = 0x04;
   static constexpr uint8_t START_AT_TIME_FOR_N_SAMPLES  = 0x05;  // error if TIME_PRESENT is 0
   // 0x06-0x0F reserved
-  static constexpr uint8_t GET_RF_INFO                  = 0x10;  // available frequency, gain, sample rate, and bandwidth ranges, number of selectable I/Os
-  static constexpr uint8_t GET_RF_FREQ                  = 0x11;
-  static constexpr uint8_t GET_RF_GAIN                  = 0x12;
-  static constexpr uint8_t GET_SAMPLE_RATE              = 0x13;
-  static constexpr uint8_t GET_RF_BW                    = 0x14;
-  static constexpr uint8_t GET_RF_IO                    = 0x15;
+  static constexpr uint8_t GET_RF_INFO                  = 0x10;  // unimplemented // available frequency, gain, sample rate, and bandwidth ranges, number of selectable I/Os
+  static constexpr uint8_t GET_RF_FREQ                  = 0x11;  // unimplemented 
+  static constexpr uint8_t GET_RF_GAIN                  = 0x12;  // unimplemented 
+  static constexpr uint8_t GET_SAMPLE_RATE              = 0x13;  // unimplemented 
+  static constexpr uint8_t GET_RF_BW                    = 0x14;  // unimplemented 
+  static constexpr uint8_t GET_RF_IO                    = 0x15;  // unimplemented 
   // 0x16-0x20 reserved
-  static constexpr uint8_t SET_RF_FREQ                  = 0x21;
-  static constexpr uint8_t SET_RF_GAIN                  = 0x22;
-  static constexpr uint8_t SET_SAMPLE_RATE              = 0x23;
-  static constexpr uint8_t SET_RF_BW                    = 0x24;
-  static constexpr uint8_t SET_RF_IO                    = 0x25;
+  static constexpr uint8_t SET_RF_FREQ                  = 0x21;  // unimplemented 
+  static constexpr uint8_t SET_RF_GAIN                  = 0x22;  // unimplemented 
+  static constexpr uint8_t SET_SAMPLE_RATE              = 0x23;  // unimplemented 
+  static constexpr uint8_t SET_RF_BW                    = 0x24;  // unimplemented 
+  static constexpr uint8_t SET_RF_IO                    = 0x25;  // unimplemented 
   // 0x26-0xFF reserved
 }
 
@@ -243,6 +244,18 @@ class dev_read_write_reg_packet : public cmd_or_rsp_packet {
   public:
     uint32_t               register_number;
     uint32_t               value;
+};
+
+class transport_addr_packet : public cmd_or_rsp_packet {
+  public:
+    uint32_t               ip_addr;
+    uint32_t               reserved;
+};
+
+class transport_pktsiz_packet : public cmd_or_rsp_packet {
+  public:
+    uint32_t               packet_size_bytes;  //must be multiple of 8 bytes, min = 1024, max = 8192
+    uint32_t               reserved;
 };
 
 #endif // VXSDR_HEADER_HPP
