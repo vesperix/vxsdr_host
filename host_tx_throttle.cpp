@@ -84,7 +84,7 @@ int main(int argc, char *argv[])
 {
   INIT_LOGGER();
   try {
-    LOGGER(info) << argv[0] << " started";
+    LOGGER(debug) << argv[0] << " started";
     signal(SIGINT, &sig_int_handler);
     boost::program_options::options_description desc("Command line options");
     boost::program_options::variables_map vm;
@@ -127,6 +127,6 @@ int main(int argc, char *argv[])
     return EXIT_INTERNAL_ERROR;
   }
 
-  LOGGER(info) << argv[0] << " finished";
+  LOGGER(debug) << argv[0] << " finished";
   return EXIT_SUCCESS;
 }

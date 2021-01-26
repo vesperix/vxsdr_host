@@ -28,7 +28,7 @@ static constexpr size_t tx_msg_queue_length            =     1024;    // slots i
 
 // parameters of the writer thread
 static constexpr size_t rx_write_buffer_size           =       16;     // rx_buffers
-static constexpr int    rx_write_thread_sleep_us       =        0;
+static constexpr int    rx_write_thread_sleep_us       =      100;
 static constexpr int    rx_data_queue_clear_sleep_us   =    10000;
 
 // parameters for the send thread
@@ -150,7 +150,7 @@ class udp_rx {
     uint16_t seq = 0, last_seq = 0;
     //unsigned percent, min_buffer_percent = 100, max_buffer_percent = 0;
     void start_receive() {
-      LOGGER(info) << "start_receive started";
+      LOGGER(debug) << "start_receive started";
       // FIXME: need to add timeout if no packets are coming in
       while(not rx_stop_flag) {
         socket.receive_from(boost::asio::buffer(&recv_buffer, sizeof(recv_buffer)), remote);
@@ -372,7 +372,7 @@ class udp_tx {
     }
 
     void start_send() {
-      LOGGER(info) << "start_send started";
+      LOGGER(debug) << "start_send started";
       //FIXME: handle halt correctly
       constexpr float throttle_halt_percent  = 90;
       constexpr float throttle_on_percent    = 75;
@@ -396,6 +396,7 @@ class udp_tx {
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
       // send a START_NOW_UNTIL_STOP
       send_tx_start_now_until_stop(tx_subdev);
+      send_rx_start_now_until_stop(rx_subdev);
       //send_tx_start_now_for_n_samples(1000000 * 2048ull, tx_subdev);
       //send_rx_start_now_until_stop(rx_subdev);
       //send_rx_start_now_for_n_samples(180000 * 2048ull, rx_subdev);
@@ -438,8 +439,9 @@ class udp_tx {
       send_device_get_status(device_subdev);
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
       // send a stop
-      //send_tx_stop_now(tx_subdev, FLAGS::REQUEST_ACK);
-      //send_rx_stop_now(rx_subdev);
+      send_tx_stop_now(tx_subdev, FLAGS::REQUEST_ACK);
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      send_rx_stop_now(rx_subdev);
       LOGGER(info) << "start_send exiting; " << packets_sent << " packets sent, " << send_errors << " send errors";
       for(unsigned i = 0; i < packet_types_processed.size(); i++)
         if(packet_types_processed[i] > 0)
@@ -449,7 +451,7 @@ class udp_tx {
 };
 
 inline void writer(const std::string &outfilename, const uint64_t max_packets) {
-  LOGGER(info) << "writer thread started";
+  LOGGER(debug) << "writer thread started";
 
   std::array<largest_data_packet, rx_write_buffer_size> buffer;
   std::ofstream outfile(outfilename.c_str(), std::ofstream::binary);
@@ -493,11 +495,11 @@ inline void writer(const std::string &outfilename, const uint64_t max_packets) {
   while(rx_data_queue.read_available())
     rx_data_queue.pop(&buffer.front(), rx_write_buffer_size);
 
-  LOGGER(info) << "writer thread finished";
+  LOGGER(debug) << "writer thread finished";
 }
 
 inline void data_packet_counter(const uint64_t max_packets, const size_t packet_size) {
-  LOGGER(info) << "data_packet counter thread started";
+  LOGGER(debug) << "data_packet counter thread started";
 
   const unsigned buffer_max_packets = 256;
   static std::array<largest_data_packet, buffer_max_packets> buffer;
@@ -530,11 +532,11 @@ inline void data_packet_counter(const uint64_t max_packets, const size_t packet_
   while(rx_data_queue.read_available() > 0)
     rx_data_queue.pop(&buffer.front(), rx_write_buffer_size);
 
-  LOGGER(info) << "data packet counter thread finished";
+  LOGGER(debug) << "data packet counter thread finished";
 }
 
 inline void response_packet_printer() {
-  LOGGER(info) << "response packet printer thread started";
+  LOGGER(debug) << "response packet printer thread started";
 
   const unsigned buffer_max_packets = 256;
   static std::array<largest_cmd_or_rsp_packet, buffer_max_packets> buffer;
@@ -552,12 +554,12 @@ inline void response_packet_printer() {
       std::this_thread::sleep_for(std::chrono::microseconds(response_thread_sleep_us));
   }
 
-  LOGGER(info) << "response packet printer thread finished";
+  LOGGER(debug) << "response packet printer thread finished";
 }
 
 inline void receiver(boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint)
 {
-  LOGGER(info) << "receiver thread started";
+  LOGGER(debug) << "receiver thread started";
 
   if(set_current_thread_priority_realtime(20))
     LOGGER(error) << "unable to set receiver thread realtime priority";
@@ -567,12 +569,12 @@ inline void receiver(boost::asio::io_context &io_context, const boost::asio::ip:
 
   udp_rx server(io_context, local_endpoint);
   io_context.run();
-  LOGGER(info) << "receiver thread finished";
+  LOGGER(debug) << "receiver thread finished";
 }
 
 inline void multicast_receiver(boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint, const boost::asio::ip::address_v4 &multicast_ip)
 {
-  LOGGER(info) << "multicast receiver thread started";
+  LOGGER(debug) << "multicast receiver thread started";
 
   if(set_current_thread_priority_realtime(20))
     LOGGER(error) << "unable to set realtime thread priority";
@@ -582,12 +584,12 @@ inline void multicast_receiver(boost::asio::io_context &io_context, const boost:
 
   udp_rx server(io_context, local_endpoint, multicast_ip);
   io_context.run();
-  LOGGER(info) << "multicast receiver thread finished";
+  LOGGER(debug) << "multicast receiver thread finished";
 }
 
 inline void generator(const uint64_t max_packets, const size_t requested_packet_size, const unsigned packet_wait_us) {
   std::array<largest_data_packet, 17> buf;
-  LOGGER(info) << "generator thread started";
+  LOGGER(debug) << "generator thread started";
 
   size_t packet_size = requested_packet_size;
   if(requested_packet_size > data_buffer_max_bytes) {
@@ -633,14 +635,14 @@ inline void generator(const uint64_t max_packets, const size_t requested_packet_
   auto t1 = std::chrono::steady_clock::now();
   std::chrono::duration<double> dt = t1 - t0;
   LOGGER(info) << (nsent - 1) << " buffers (" << ((nsent - 1) * packet_size) << " bytes) generated in " << dt.count() << " seconds";
-  LOGGER(info) << "generator thread finished";
+  LOGGER(debug) << "generator thread finished";
 }
 
 inline void sender(boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint,
       const boost::asio::ip::udp::endpoint &destination_endpoint,
       const bool broadcast)
 {
-  LOGGER(info) << "sender thread started";
+  LOGGER(debug) << "sender thread started";
 
   if(set_current_thread_priority_realtime(20))
     LOGGER(error) << "unable to set sender thread realtime priority";
@@ -650,7 +652,7 @@ inline void sender(boost::asio::io_context &io_context, const boost::asio::ip::u
 
   udp_tx server(io_context, local_endpoint, destination_endpoint, broadcast);
   io_context.run();
-  LOGGER(info) << "sender thread finished";
+  LOGGER(debug) << "sender thread finished";
 }
 
 #endif // UDP_TX_RX_HPP
