@@ -240,11 +240,11 @@ class vxsdr {
       LOGGER(info) << "sender thread started";
 
       if(thread_set_priority)
-        if(set_current_thread_priority_realtime(send_thread_priority))
+        if(set_current_thread_priority_realtime(send_thread_priority) != 0)
           LOGGER(error) << "unable to set sender thread realtime priority";
 
       if(thread_set_affinity)
-        if(set_current_thread_affinity(send_thread_cpu))
+        if(set_current_thread_affinity(send_thread_cpu) != 0)
           LOGGER(error) << "unable to set sender thread CPU affinity";
 
       udp_tx server(this, io_context, local_endpoint, destination_endpoint);
