@@ -18,10 +18,6 @@
 
 class vxsdr {
   private:
-    // threads used for sending and receiving
-    std::thread sender_thread;
-    std::thread receiver_thread;
-
     // thread realtime priority settings
     static constexpr bool thread_set_priority = true;
     static constexpr int send_thread_priority = 20;
@@ -37,12 +33,6 @@ class vxsdr {
     static constexpr size_t tx_data_queue_length           =     4096;    // slots in tx data queue
     static constexpr size_t rx_msg_queue_length            =     1024;    // slots in rx msg queue
     static constexpr size_t tx_msg_queue_length            =     1024;    // slots in tx msg queue
-    // data queues
-    boost::lockfree::spsc_queue<largest_data_packet, boost::lockfree::capacity<rx_data_queue_length> > rx_data_queue;
-    boost::lockfree::spsc_queue<largest_data_packet, boost::lockfree::capacity<tx_data_queue_length> > tx_data_queue;
-    // command and response queues
-    boost::lockfree::spsc_queue<largest_cmd_or_rsp_packet, boost::lockfree::capacity<rx_msg_queue_length> > command_queue;
-    boost::lockfree::spsc_queue<largest_cmd_or_rsp_packet, boost::lockfree::capacity<tx_msg_queue_length> > response_queue;
 
     // parameters for the send thread
     static constexpr int    send_thread_sleep_us           =       10;
@@ -59,25 +49,18 @@ class vxsdr {
     std::atomic<unsigned> rx_buffer_size, rx_buffer_used;
     std::atomic<float> tx_buffer_fill_percent, rx_buffer_fill_percent;
 
-  public:
-    vxsdr(const boost::asio::ip::udp::endpoint &local_receive_endpoint,
-          const boost::asio::ip::udp::endpoint &local_send_endpoint,
-          const boost::asio::ip::udp::endpoint &destination_endpoint) {
-      boost::asio::io_context io_context;
-      receiver_thread = std::thread(&vxsdr::receiver, this, std::ref(io_context), std::cref(local_receive_endpoint));
-      sender_thread = std::thread(&vxsdr::sender, this, std::ref(io_context), std::cref(local_send_endpoint), std::cref(destination_endpoint));
-      //FIXME: more init needed
-    };
-    ~vxsdr() {
-      set_rx_stop_flag();
-      set_tx_stop_flag();
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
-      receiver_thread.join();
-      sender_thread.join();
-      //FIXME:
-    };
+    // data queues
+    boost::lockfree::spsc_queue<largest_data_packet, boost::lockfree::capacity<rx_data_queue_length> > rx_data_queue;
+    boost::lockfree::spsc_queue<largest_data_packet, boost::lockfree::capacity<tx_data_queue_length> > tx_data_queue;
+    // command and response queues
+    boost::lockfree::spsc_queue<largest_cmd_or_rsp_packet, boost::lockfree::capacity<rx_msg_queue_length> > command_queue;
+    boost::lockfree::spsc_queue<largest_cmd_or_rsp_packet, boost::lockfree::capacity<tx_msg_queue_length> > response_queue;
 
-    static std::string packet_type_to_name(const uint8_t number) {
+    // threads used for sending and receiving
+    std::thread sender_thread;
+    std::thread receiver_thread;
+
+    std::string packet_type_to_name(const uint8_t number) {
       switch(number) {
         case PACKET_TYPES::TX_SIGNAL_DATA:
           return "TX_SIGNAL_DATA";
@@ -116,18 +99,152 @@ class vxsdr {
     }
 
     // flags used for orderly shutdown
-    std::atomic<bool> rx_stop_flag, tx_stop_flag, complete_flag;
+    std::atomic<bool> rx_stop_flag, tx_stop_flag;
 
-    void set_rx_stop_flag() {
+  public:
+
+    vxsdr(const boost::asio::ip::udp::endpoint &local_receive_endpoint,
+          const boost::asio::ip::udp::endpoint &local_send_endpoint,
+          const boost::asio::ip::udp::endpoint &destination_endpoint) {
+      boost::asio::io_context io_context;
+      receiver_thread = std::thread(&vxsdr::receiver, this, std::ref(io_context), std::cref(local_receive_endpoint));
+      sender_thread = std::thread(&vxsdr::sender, this, std::ref(io_context), std::cref(local_send_endpoint), std::cref(destination_endpoint));
+      //FIXME: more init needed
+    };
+    ~vxsdr() {
       rx_stop_flag = true;
-    }
-
-    void set_tx_stop_flag() {
       tx_stop_flag = true;
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      receiver_thread.join();
+      sender_thread.join();
+      //FIXME:
+    };
+
+    void send_device_hello(const uint8_t subdev = 0, const uint8_t flags = 0) {
+      largest_cmd_or_rsp_packet p;
+      p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::HELLO, subdev, flags, sizeof(packet_header), 0 };
+      command_queue.push(p);
     }
 
-    void set_complete_flag() {
-      complete_flag = true;
+    void send_device_reset(const uint8_t subdev = 0, const uint8_t flags = 0) {
+      largest_cmd_or_rsp_packet p;
+      p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::RESET, subdev, flags, sizeof(packet_header), 0 };
+      command_queue.push(p);
+    }
+
+    void send_device_open_session(const uint8_t subdev = 0, const uint8_t flags = 0) {
+      largest_cmd_or_rsp_packet p;
+      p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::OPEN_SESSION, subdev, flags, sizeof(packet_header), 0 };
+      command_queue.push(p);
+    }
+
+    void send_device_close_session(const uint8_t subdev = 0, const uint8_t flags = 0) {
+      largest_cmd_or_rsp_packet p;
+      p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::CLOSE_SESSION, subdev, flags, sizeof(packet_header), 0 };
+      command_queue.push(p);
+    }
+
+    void send_device_get_buffer_info(const uint8_t subdev = 0, const uint8_t flags = 0) {
+      largest_cmd_or_rsp_packet p;
+      p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::GET_BUFFER_INFO, subdev, flags, sizeof(packet_header), 0 };
+      command_queue.push(p);
+    }
+
+    void send_device_get_buffer_use(const uint8_t subdev = 0, const uint8_t flags = 0) {
+      largest_cmd_or_rsp_packet p;
+      p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::GET_BUFFER_USE, subdev, flags, sizeof(packet_header), 0 };
+      command_queue.push(p);
+    }
+
+    void send_device_clear_status(const uint8_t subdev = 0, const uint8_t flags = 0) {
+      largest_cmd_or_rsp_packet p;
+      p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::CLEAR_STATUS, subdev, flags, sizeof(packet_header), 0 };
+      command_queue.push(p);
+    }
+
+    void send_device_get_status(const uint8_t subdev = 0, const uint8_t flags = 0) {
+      largest_cmd_or_rsp_packet p;
+      p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::GET_STATUS, subdev, flags, sizeof(packet_header), 0 };
+      command_queue.push(p);
+    }
+
+    void send_tx_start_now_until_stop(const uint8_t subdev = 0, const uint8_t flags = 0) {
+      largest_cmd_or_rsp_packet p;
+      p.hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::START_NOW_UNTIL_STOP, subdev, flags, sizeof(packet_header), 0 };
+      command_queue.push(p);
+    }
+
+    void send_rx_start_now_until_stop(const uint8_t subdev = 0, const uint8_t flags = 0) {
+      largest_cmd_or_rsp_packet p;
+      p.hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::START_NOW_UNTIL_STOP, subdev, flags, sizeof(packet_header), 0 };
+      command_queue.push(p);
+    }
+
+    void send_tx_start_now_for_n_samples(const uint64_t n, const uint8_t subdev = 0, const uint8_t flags = 0) {
+      stream_ctrl_packet_samples p;
+      p.hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::START_NOW_UNTIL_STOP, subdev, flags, sizeof(packet_header), 0 };
+      p.n_samples = n;
+      largest_cmd_or_rsp_packet q;
+      memcpy(&q, &p, p.hdr.packet_size);
+      command_queue.push(q);
+    }
+
+    void send_rx_start_now_for_n_samples(const uint64_t n, const uint8_t subdev = 0, const uint8_t flags = 0) {
+      stream_ctrl_packet_samples p;
+      p.hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::START_NOW_UNTIL_STOP, subdev, flags, sizeof(packet_header), 0 };
+      p.n_samples = n;
+      largest_cmd_or_rsp_packet q;
+      memcpy(&q, &p, p.hdr.packet_size);
+      command_queue.push(q);
+    }
+
+    void send_tx_stop_now(const uint8_t subdev = 0, const uint8_t flags = 0) {
+      largest_cmd_or_rsp_packet p;
+      p.hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::STOP_NOW, subdev, flags, sizeof(packet_header), 0 };
+      command_queue.push(p);
+    }
+
+    void send_rx_stop_now(const uint8_t subdev = 0, const uint8_t flags = 0) {
+      largest_cmd_or_rsp_packet p;
+      p.hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::STOP_NOW, subdev, flags, sizeof(packet_header), 0 };
+      command_queue.push(p);
+    }
+
+  private:
+
+    void receiver(boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint)
+    {
+      LOGGER(info) << "receiver thread started";
+
+      if(thread_set_priority)
+        if(set_current_thread_priority_realtime(receive_thread_priority))
+          LOGGER(error) << "unable to set receiver thread realtime priority";
+
+      if(thread_set_affinity)
+        if(set_current_thread_affinity(receive_thread_cpu))
+          LOGGER(error) << "unable to set receiver thread CPU affinity";
+
+      udp_rx server(this, io_context, local_endpoint);
+      io_context.run();
+      LOGGER(info) << "receiver thread finished";
+    }
+
+    void sender(boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint,
+          const boost::asio::ip::udp::endpoint &destination_endpoint)
+    {
+      LOGGER(info) << "sender thread started";
+
+      if(thread_set_priority)
+        if(set_current_thread_priority_realtime(send_thread_priority))
+          LOGGER(error) << "unable to set sender thread realtime priority";
+
+      if(thread_set_affinity)
+        if(set_current_thread_affinity(send_thread_cpu))
+          LOGGER(error) << "unable to set sender thread CPU affinity";
+
+      udp_tx server(this, io_context, local_endpoint, destination_endpoint);
+      io_context.run();
+      LOGGER(info) << "sender thread finished";
     }
 
     class udp_rx {
@@ -145,6 +262,9 @@ class vxsdr {
 
           if(not sdrptr->rx_stop_flag)
             start_receive();
+        }
+        ~udp_rx() {
+          //FIXME!!! need destructor
         }
       private:
         const bool forward_acks = false;
@@ -254,7 +374,7 @@ class vxsdr {
           LOGGER(info) << "start_receive exiting; " << packets_received << " packets received, " << seq_errors << " sequence errors";
           for(unsigned i = 0; i < packet_types_received.size(); i++)
             if(packet_types_received[i] > 0)
-              LOGGER(info) << (boost::format("   %12d %20s (%d)") % packet_types_received[i] % packet_type_to_name(i) % i);
+              LOGGER(info) << (boost::format("   %12d %20s (%d)") % packet_types_received[i] % sdrptr->packet_type_to_name(i) % i);
         }
     };
 
@@ -274,7 +394,9 @@ class vxsdr {
           if(not sdrptr->tx_stop_flag)
             start_send();
         }
-
+        ~udp_tx() {
+          //FIXME!!! need destructor
+        }
       private:
         vxsdr *sdrptr;
         boost::asio::ip::udp::socket socket;
@@ -366,136 +488,10 @@ class vxsdr {
           LOGGER(info) << "start_send exiting; " << packets_sent << " packets sent, " << send_errors << " send errors";
           for(unsigned i = 0; i < packet_types_processed.size(); i++)
             if(packet_types_processed[i] > 0)
-              LOGGER(info) << (boost::format("   %12d %20s (%d)") % packet_types_processed[i] % packet_type_to_name(i) % i);
+              LOGGER(info) << (boost::format("   %12d %20s (%d)") % packet_types_processed[i] % sdrptr->packet_type_to_name(i) % i);
 
         }
     };
-
-    void receiver(boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint)
-    {
-      LOGGER(info) << "receiver thread started";
-
-      if(thread_set_priority)
-        if(set_current_thread_priority_realtime(receive_thread_priority))
-          LOGGER(error) << "unable to set receiver thread realtime priority";
-
-      if(thread_set_affinity)
-        if(set_current_thread_affinity(receive_thread_cpu))
-          LOGGER(error) << "unable to set receiver thread CPU affinity";
-
-      udp_rx server(this, io_context, local_endpoint);
-      io_context.run();
-      LOGGER(info) << "receiver thread finished";
-    }
-
-    void sender(boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint,
-          const boost::asio::ip::udp::endpoint &destination_endpoint)
-    {
-      LOGGER(info) << "sender thread started";
-
-      if(thread_set_priority)
-        if(set_current_thread_priority_realtime(send_thread_priority))
-          LOGGER(error) << "unable to set sender thread realtime priority";
-
-      if(thread_set_affinity)
-        if(set_current_thread_affinity(send_thread_cpu))
-          LOGGER(error) << "unable to set sender thread CPU affinity";
-
-      udp_tx server(this, io_context, local_endpoint, destination_endpoint);
-      io_context.run();
-      LOGGER(info) << "sender thread finished";
-    }
-
-  public:
-    void send_device_hello(const uint8_t subdev = 0, const uint8_t flags = 0) {
-      largest_cmd_or_rsp_packet p;
-      p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::HELLO, subdev, flags, sizeof(packet_header), 0 };
-      command_queue.push(p);
-    }
-
-    void send_device_reset(const uint8_t subdev = 0, const uint8_t flags = 0) {
-      largest_cmd_or_rsp_packet p;
-      p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::RESET, subdev, flags, sizeof(packet_header), 0 };
-      command_queue.push(p);
-    }
-
-    void send_device_open_session(const uint8_t subdev = 0, const uint8_t flags = 0) {
-      largest_cmd_or_rsp_packet p;
-      p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::OPEN_SESSION, subdev, flags, sizeof(packet_header), 0 };
-      command_queue.push(p);
-    }
-
-    void send_device_close_session(const uint8_t subdev = 0, const uint8_t flags = 0) {
-      largest_cmd_or_rsp_packet p;
-      p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::CLOSE_SESSION, subdev, flags, sizeof(packet_header), 0 };
-      command_queue.push(p);
-    }
-
-    void send_device_get_buffer_info(const uint8_t subdev = 0, const uint8_t flags = 0) {
-      largest_cmd_or_rsp_packet p;
-      p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::GET_BUFFER_INFO, subdev, flags, sizeof(packet_header), 0 };
-      command_queue.push(p);
-    }
-
-    void send_device_get_buffer_use(const uint8_t subdev = 0, const uint8_t flags = 0) {
-      largest_cmd_or_rsp_packet p;
-      p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::GET_BUFFER_USE, subdev, flags, sizeof(packet_header), 0 };
-      command_queue.push(p);
-    }
-
-    void send_device_clear_status(const uint8_t subdev = 0, const uint8_t flags = 0) {
-      largest_cmd_or_rsp_packet p;
-      p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::CLEAR_STATUS, subdev, flags, sizeof(packet_header), 0 };
-      command_queue.push(p);
-    }
-
-    void send_device_get_status(const uint8_t subdev = 0, const uint8_t flags = 0) {
-      largest_cmd_or_rsp_packet p;
-      p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::GET_STATUS, subdev, flags, sizeof(packet_header), 0 };
-      command_queue.push(p);
-    }
-
-    void send_tx_start_now_until_stop(const uint8_t subdev = 0, const uint8_t flags = 0) {
-      largest_cmd_or_rsp_packet p;
-      p.hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::START_NOW_UNTIL_STOP, subdev, flags, sizeof(packet_header), 0 };
-      command_queue.push(p);
-    }
-
-    void send_rx_start_now_until_stop(const uint8_t subdev = 0, const uint8_t flags = 0) {
-      largest_cmd_or_rsp_packet p;
-      p.hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::START_NOW_UNTIL_STOP, subdev, flags, sizeof(packet_header), 0 };
-      command_queue.push(p);
-    }
-
-    void send_tx_start_now_for_n_samples(const uint64_t n, const uint8_t subdev = 0, const uint8_t flags = 0) {
-      stream_ctrl_packet_samples p;
-      p.hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::START_NOW_UNTIL_STOP, subdev, flags, sizeof(packet_header), 0 };
-      p.n_samples = n;
-      largest_cmd_or_rsp_packet q;
-      memcpy(&q, &p, p.hdr.packet_size);
-      command_queue.push(q);
-    }
-
-    void send_rx_start_now_for_n_samples(const uint64_t n, const uint8_t subdev = 0, const uint8_t flags = 0) {
-      stream_ctrl_packet_samples p;
-      p.hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::START_NOW_UNTIL_STOP, subdev, flags, sizeof(packet_header), 0 };
-      p.n_samples = n;
-      largest_cmd_or_rsp_packet q;
-      memcpy(&q, &p, p.hdr.packet_size);
-      command_queue.push(q);
-    }
-
-    void send_tx_stop_now(const uint8_t subdev = 0, const uint8_t flags = 0) {
-      largest_cmd_or_rsp_packet p;
-      p.hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::STOP_NOW, subdev, flags, sizeof(packet_header), 0 };
-      command_queue.push(p);
-    }
-
-    void send_rx_stop_now(const uint8_t subdev = 0, const uint8_t flags = 0) {
-      largest_cmd_or_rsp_packet p;
-      p.hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::STOP_NOW, subdev, flags, sizeof(packet_header), 0 };
-      command_queue.push(p);
-    }
 };
 
 #endif // VXSDR_HPP
