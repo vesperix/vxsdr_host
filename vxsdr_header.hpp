@@ -196,12 +196,26 @@ class largest_data_packet : public data_packet_time_stream {};
 
 class cmd_or_rsp_packet : public packet {};
 
-class largest_cmd_or_rsp_packet : public cmd_or_rsp_packet {
+class cmd_or_rsp_packet_time : public cmd_or_rsp_packet {
+  public:
+    time_spec              time;
+    uint8_t                payload[MAX_PAYLOAD_LENGTH_BYTES];
+};
+
+class cmd_or_rsp_packet_stream : public cmd_or_rsp_packet {
+  public:
+    stream_spec            stream_id;
+    uint8_t                payload[MAX_PAYLOAD_LENGTH_BYTES];
+};
+
+class cmd_or_rsp_packet_time_stream : public cmd_or_rsp_packet {
   public:
     time_spec              time;
     stream_spec            stream_id;
     uint8_t                payload[MAX_PAYLOAD_LENGTH_BYTES];
 };
+
+class largest_cmd_or_rsp_packet : public cmd_or_rsp_packet_time_stream {};
 
 class cmd_packet : public cmd_or_rsp_packet {};
 
