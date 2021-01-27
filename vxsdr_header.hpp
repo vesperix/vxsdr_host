@@ -43,9 +43,9 @@ typedef struct {
 typedef struct {
   uint32_t                nanoseconds = 0;
   uint32_t                seconds = 0;
-} time_spec;
+} time_spec_t;
 
-typedef uint64_t          stream_spec;
+typedef uint64_t          stream_spec_t;
 
 namespace FLAGS {
   static constexpr uint8_t REQUEST_ACK       = 0x80;  // bit 0
@@ -176,20 +176,20 @@ class data_packet : public packet {
 
 class data_packet_time : public packet {
   public:
-    time_spec              time;
+    time_spec_t            time;
     std::complex<int16_t>  data[MAX_DATA_LENGTH_SAMPLES]; // FIXME: find proper way to represent variable-mength data in class
 };
 
 class data_packet_stream : public packet {
   public:
-    stream_spec            stream_id = 0;
+    stream_spec_t          stream_id = 0;
     std::complex<int16_t>  data[MAX_DATA_LENGTH_SAMPLES]; // FIXME: find proper way to represent variable-mength data in class
 };
 
 class data_packet_time_stream : public packet {
   public:
-    time_spec              time;
-    stream_spec            stream_id = 0;
+    time_spec_t            time;
+    stream_spec_t          stream_id = 0;
     std::complex<int16_t>  data[MAX_DATA_LENGTH_SAMPLES]; // FIXME: find proper way to represent variable-mength data in class
 };
 
@@ -199,8 +199,8 @@ class cmd_or_rsp_packet : public packet {};
 
 class largest_cmd_or_rsp_packet : public cmd_or_rsp_packet {
   public:
-    time_spec              time;
-    stream_spec            stream_id = 0;
+    time_spec_t            time;
+    stream_spec_t          stream_id = 0;
     uint8_t                payload[MAX_PAYLOAD_LENGTH_BYTES];
 };
 
@@ -219,12 +219,12 @@ class stream_ctrl_packet_samples : public stream_ctrl_packet {
 
 class stream_ctrl_packet_time : public stream_ctrl_packet {
   public:
-    time_spec              time;
+    time_spec_t            time;
 };
 
 class stream_ctrl_packet_time_samples : public stream_ctrl_packet {
   public:
-    time_spec              time;
+    time_spec_t            time;
     uint64_t               n_samples = 0;
 };
 
