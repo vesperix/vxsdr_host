@@ -17,6 +17,7 @@ namespace PACKET_TYPES {
   static constexpr uint8_t DEVICE_CMD         = 0x02;
   static constexpr uint8_t TX_RADIO_CMD       = 0x03;
   static constexpr uint8_t RX_RADIO_CMD       = 0x04;
+  static constexpr uint8_t STATUS_MSG         = 0x05;
   static constexpr uint8_t DEVICE_CMD_ERR     = 0x0A;
   static constexpr uint8_t TX_RADIO_CMD_ERR   = 0x0B;
   static constexpr uint8_t RX_RADIO_CMD_ERR   = 0x0C;
