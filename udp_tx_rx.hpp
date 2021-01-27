@@ -70,7 +70,7 @@ static boost::lockfree::spsc_queue<largest_data_packet, boost::lockfree::capacit
 static boost::lockfree::spsc_queue<largest_cmd_or_rsp_packet, boost::lockfree::capacity<rx_msg_queue_length> > command_queue;
 static boost::lockfree::spsc_queue<largest_cmd_or_rsp_packet, boost::lockfree::capacity<tx_msg_queue_length> > response_queue;
 
-std::string packet_type_to_name(const uint8_t number) {
+inline std::string packet_type_to_name(const uint8_t number) {
   switch(number) {
     case PACKET_TYPES::TX_SIGNAL_DATA:
       return "TX_SIGNAL_DATA";
@@ -171,9 +171,8 @@ class udp_rx {
               tx_buffer_used = r->tx_buffer_used_bytes;
               tx_buffer_fill_percent = std::min(100., (100. * tx_buffer_used) / tx_buffer_size);
               if(forward_acks) {
-                largest_cmd_or_rsp_packet p;
-                memcpy(&p, r, std::min((size_t)r->hdr.packet_size, sizeof(p)));
-                response_queue.push(p);
+                auto *p = reinterpret_cast<largest_cmd_or_rsp_packet *>(&recv_buffer);
+                response_queue.push(*p);
               }
             }
             break;
@@ -187,9 +186,8 @@ class udp_rx {
                   rx_buffer_used = r->rx_buffer_used_bytes;
                   tx_buffer_fill_percent = std::min(100., (100. * tx_buffer_used) / tx_buffer_size);
                   rx_buffer_fill_percent = std::min(100., (100. * rx_buffer_used) / rx_buffer_size);
-                  largest_cmd_or_rsp_packet p;
-                  memcpy(&p, r, std::min((size_t)r->hdr.packet_size, sizeof(p)));
-                  response_queue.push(p);
+                  auto *p = reinterpret_cast<largest_cmd_or_rsp_packet *>(&recv_buffer);
+                  response_queue.push(*p);
                 }
                 break;
               case DEVICE_CMD_RSP::GET_BUFFER_INFO_RSP:
@@ -197,16 +195,14 @@ class udp_rx {
                   auto *r = reinterpret_cast<get_buffer_info_rsp_packet *>(&recv_buffer);
                   tx_buffer_size = r->tx_buffer_size_bytes;
                   rx_buffer_size = r->rx_buffer_size_bytes;
-                  largest_cmd_or_rsp_packet p;
-                  memcpy(&p, r, std::min((size_t)r->hdr.packet_size, sizeof(p)));
-                  response_queue.push(p);
+                  auto *p = reinterpret_cast<largest_cmd_or_rsp_packet *>(&recv_buffer);
+                  response_queue.push(*p);
                 }
                 break;
               default:
                 {
-                  largest_cmd_or_rsp_packet p;
-                  memcpy(&p, &recv_buffer, std::min((size_t)recv_buffer.hdr.packet_size, sizeof(p)));
-                  response_queue.push(p);
+                  auto *p = reinterpret_cast<largest_cmd_or_rsp_packet *>(&recv_buffer);
+                  response_queue.push(*p);
                 }
                 break;
             }
@@ -215,9 +211,8 @@ class udp_rx {
           case PACKET_TYPES::RX_RADIO_CMD_ACK:
           case PACKET_TYPES::TX_RADIO_CMD_ACK:
             if(forward_acks) {
-              largest_cmd_or_rsp_packet p;
-              memcpy(&p, &recv_buffer, std::min((size_t)recv_buffer.hdr.packet_size, sizeof(p)));
-              response_queue.push(p);
+              auto *p = reinterpret_cast<largest_cmd_or_rsp_packet *>(&recv_buffer);
+              response_queue.push(*p);
             }
             break;
           // DEVICE_CMD_RSP handled above
@@ -227,9 +222,8 @@ class udp_rx {
           case PACKET_TYPES::TX_RADIO_CMD_RSP:
           case PACKET_TYPES::TX_RADIO_CMD_ERR:
             {
-              largest_cmd_or_rsp_packet p;
-              memcpy(&p, &recv_buffer, std::min((size_t)recv_buffer.hdr.packet_size, sizeof(p)));
-              response_queue.push(p);
+              auto *p = reinterpret_cast<largest_cmd_or_rsp_packet *>(&recv_buffer);
+              response_queue.push(*p);
             }
             break;
           // packet types that should never show up at the host are dropped
@@ -492,7 +486,7 @@ inline void writer(const std::string &outfilename, const uint64_t max_packets) {
 
   std::this_thread::sleep_for(std::chrono::microseconds(rx_data_queue_clear_sleep_us));
   // empty the queue
-  while(rx_data_queue.read_available())
+  while(rx_data_queue.read_available() > 0)
     rx_data_queue.pop(&buffer.front(), rx_write_buffer_size);
 
   LOGGER(debug) << "writer thread finished";
@@ -561,10 +555,10 @@ inline void receiver(boost::asio::io_context &io_context, const boost::asio::ip:
 {
   LOGGER(debug) << "receiver thread started";
 
-  if(set_current_thread_priority_realtime(20))
+  if(set_current_thread_priority_realtime(20) != 0)
     LOGGER(error) << "unable to set receiver thread realtime priority";
 
-  if(set_current_thread_affinity(0))
+  if(set_current_thread_affinity(0) != 0)
     LOGGER(error) << "unable to set receiver thread CPU affinity";
 
   udp_rx server(io_context, local_endpoint);
@@ -576,10 +570,10 @@ inline void multicast_receiver(boost::asio::io_context &io_context, const boost:
 {
   LOGGER(debug) << "multicast receiver thread started";
 
-  if(set_current_thread_priority_realtime(20))
+  if(set_current_thread_priority_realtime(20) != 0)
     LOGGER(error) << "unable to set realtime thread priority";
 
-  if(set_current_thread_affinity(0))
+  if(set_current_thread_affinity(0) != 0)
     LOGGER(error) << "unable to set thread CPU affinity";
 
   udp_rx server(io_context, local_endpoint, multicast_ip);
@@ -587,7 +581,7 @@ inline void multicast_receiver(boost::asio::io_context &io_context, const boost:
   LOGGER(debug) << "multicast receiver thread finished";
 }
 
-inline void generator(const uint64_t max_packets, const size_t requested_packet_size, const unsigned packet_wait_us) {
+inline void generator(const uint64_t max_packets, const size_t requested_packet_size) {
   std::array<largest_data_packet, 17> buf;
   LOGGER(debug) << "generator thread started";
 
@@ -644,10 +638,10 @@ inline void sender(boost::asio::io_context &io_context, const boost::asio::ip::u
 {
   LOGGER(debug) << "sender thread started";
 
-  if(set_current_thread_priority_realtime(20))
+  if(set_current_thread_priority_realtime(20) != 0)
     LOGGER(error) << "unable to set sender thread realtime priority";
 
-  if(set_current_thread_affinity(2))
+  if(set_current_thread_affinity(2) != 0)
     LOGGER(error) << "unable to set sender thread CPU affinity";
 
   udp_tx server(io_context, local_endpoint, destination_endpoint, broadcast);
