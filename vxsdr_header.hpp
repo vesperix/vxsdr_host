@@ -171,26 +171,26 @@ class packet {
 
 class data_packet : public packet {
   public:
-    std::complex<int16_t>  data[MAX_DATA_LENGTH_SAMPLES]; // FIXME: find proper way to represent variable-mength data in class
+    std::complex<int16_t>  data[MAX_DATA_LENGTH_SAMPLES];
 };
 
 class data_packet_time : public packet {
   public:
     time_spec_t            time;
-    std::complex<int16_t>  data[MAX_DATA_LENGTH_SAMPLES]; // FIXME: find proper way to represent variable-mength data in class
+    std::complex<int16_t>  data[MAX_DATA_LENGTH_SAMPLES];
 };
 
 class data_packet_stream : public packet {
   public:
     stream_spec_t          stream_id = 0;
-    std::complex<int16_t>  data[MAX_DATA_LENGTH_SAMPLES]; // FIXME: find proper way to represent variable-mength data in class
+    std::complex<int16_t>  data[MAX_DATA_LENGTH_SAMPLES];
 };
 
 class data_packet_time_stream : public packet {
   public:
     time_spec_t            time;
     stream_spec_t          stream_id = 0;
-    std::complex<int16_t>  data[MAX_DATA_LENGTH_SAMPLES]; // FIXME: find proper way to represent variable-mength data in class
+    std::complex<int16_t>  data[MAX_DATA_LENGTH_SAMPLES];
 };
 
 class largest_data_packet : public data_packet_time_stream {};
