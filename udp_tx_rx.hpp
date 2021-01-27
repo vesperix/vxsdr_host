@@ -467,12 +467,12 @@ inline void writer(const std::string &outfilename, const uint64_t max_packets) {
           data_bytes = (p->hdr.packet_size - (sizeof(packet_header) + sizeof(time_spec_t) + sizeof(stream_spec_t)));
           outfile.write(reinterpret_cast<const char*>(&p->data[0]), data_bytes);
         }
-        else if(buffer[i].hdr.flags & FLAGS::TIME_PRESENT != 0) {
+        else if((buffer[i].hdr.flags & FLAGS::TIME_PRESENT) != 0) {
           auto *p = reinterpret_cast<data_packet_time *>(&buffer[i]);
           data_bytes = (p->hdr.packet_size - (sizeof(packet_header) + sizeof(time_spec_t)));
           outfile.write(reinterpret_cast<const char*>(&p->data[0]), data_bytes);
         }
-        else if(buffer[i].hdr.flags & FLAGS::STREAM_ID_PRESENT != 0) {
+        else if((buffer[i].hdr.flags & FLAGS::STREAM_ID_PRESENT) != 0) {
           auto *p = reinterpret_cast<data_packet_stream *>(&buffer[i]);
           data_bytes = (p->hdr.packet_size - (sizeof(packet_header) + sizeof(stream_spec_t)));
           outfile.write(reinterpret_cast<const char*>(&p->data[0]), data_bytes);
