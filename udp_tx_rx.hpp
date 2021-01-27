@@ -460,8 +460,28 @@ inline void writer(const std::string &outfilename, const uint64_t max_packets) {
         nwrite = max_packets - packets;
       for(size_t i = 0; i < nwrite; i++) {
         packets++;
-        size_t data_bytes = (buffer[i].hdr.packet_size - sizeof(packet_header));
-        outfile.write(reinterpret_cast<const char*>(&buffer[i].data[0]), data_bytes);
+        // identify the data packet type and write the data
+        size_t data_bytes;
+        if((buffer[i].hdr.flags & FLAGS::TIME_PRESENT) and (buffer[i].hdr.flags & FLAGS::STREAM_ID_PRESENT)) {
+          auto *p = reinterpret_cast<data_packet_time_stream *>(&buffer[i]);
+          data_bytes = (p->hdr.packet_size - (sizeof(packet_header) + sizeof(time_spec_t) + sizeof(stream_spec_t)));
+          outfile.write(reinterpret_cast<const char*>(&p->data[0]), data_bytes);
+        }
+        else if (buffer[i].hdr.flags & FLAGS::TIME_PRESENT) {
+          auto *p = reinterpret_cast<data_packet_time *>(&buffer[i]);
+          data_bytes = (p->hdr.packet_size - (sizeof(packet_header) + sizeof(time_spec_t)));
+          outfile.write(reinterpret_cast<const char*>(&p->data[0]), data_bytes);
+        }
+        else if(buffer[i].hdr.flags & FLAGS::STREAM_ID_PRESENT) {
+          auto *p = reinterpret_cast<data_packet_stream *>(&buffer[i]);
+          data_bytes = (p->hdr.packet_size - (sizeof(packet_header) + sizeof(stream_spec_t)));
+          outfile.write(reinterpret_cast<const char*>(&p->data[0]), data_bytes);
+        }
+        else {
+          auto *p = reinterpret_cast<data_packet *>(&buffer[i]);
+          data_bytes = (p->hdr.packet_size - sizeof(packet_header));
+          outfile.write(reinterpret_cast<const char*>(&p->data[0]), data_bytes);
+        }
         if(outfile.bad())
           write_errors++;
         else
