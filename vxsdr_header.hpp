@@ -17,6 +17,7 @@ namespace PACKET_TYPES {
   static constexpr uint8_t DEVICE_CMD         = 0x02;
   static constexpr uint8_t TX_RADIO_CMD       = 0x03;
   static constexpr uint8_t RX_RADIO_CMD       = 0x04;
+  static constexpr uint8_t STATUS_MSG         = 0x05;
   static constexpr uint8_t DEVICE_CMD_ERR     = 0x0A;
   static constexpr uint8_t TX_RADIO_CMD_ERR   = 0x0B;
   static constexpr uint8_t RX_RADIO_CMD_ERR   = 0x0C;
@@ -28,23 +29,24 @@ namespace PACKET_TYPES {
   static constexpr uint8_t DEVICE_CMD_ACK     = 0x82;
   static constexpr uint8_t TX_RADIO_CMD_ACK   = 0x83;
   static constexpr uint8_t RX_RADIO_CMD_ACK   = 0x84;
+  static constexpr uint8_t INVALID_PACKET     = 0xFF;
 }
 
 typedef struct {
-  uint8_t                 packet_type;
-  uint8_t                 command;
-  uint8_t                 target_subdevice;  // for cases where multiple devices exist (e.g. multiple network I/F or multichannel TX/RX)
-  uint8_t                 flags;
-  uint16_t                packet_size;       // length of packet including header in bytes
-  uint16_t                sequence_counter;  // need to figure out when this resets (every new data stream, power up, ?)
+  uint8_t                 packet_type = PACKET_TYPES::INVALID_PACKET;
+  uint8_t                 command = 0;
+  uint8_t                 target_subdevice = 0;  // for cases where multiple devices exist (e.g. multiple network I/F or multichannel TX/RX)
+  uint8_t                 flags = 0;
+  uint16_t                packet_size = 0;       // length of packet including header in bytes
+  uint16_t                sequence_counter = 0;  // need to figure out when this resets (every new data stream, power up, ?)
 } packet_header;
 
 typedef struct {
-  uint32_t                nanoseconds;
-  uint32_t                seconds;
-} time_spec;
+  uint32_t                nanoseconds = 0;
+  uint32_t                seconds = 0;
+} time_spec_t;
 
-typedef uint64_t          stream_spec;
+typedef uint64_t          stream_spec_t;
 
 namespace FLAGS {
   static constexpr uint8_t REQUEST_ACK       = 0x80;  // bit 0
@@ -170,26 +172,26 @@ class packet {
 
 class data_packet : public packet {
   public:
-    std::complex<int16_t>  data[MAX_DATA_LENGTH_SAMPLES]; // FIXME: find proper way to represent variable-mength data in class
+    std::complex<int16_t>  data[MAX_DATA_LENGTH_SAMPLES];
 };
 
 class data_packet_time : public packet {
   public:
-    time_spec              time;
-    std::complex<int16_t>  data[MAX_DATA_LENGTH_SAMPLES]; // FIXME: find proper way to represent variable-mength data in class
+    time_spec_t            time;
+    std::complex<int16_t>  data[MAX_DATA_LENGTH_SAMPLES];
 };
 
 class data_packet_stream : public packet {
   public:
-    stream_spec            stream_id;
-    std::complex<int16_t>  data[MAX_DATA_LENGTH_SAMPLES]; // FIXME: find proper way to represent variable-mength data in class
+    stream_spec_t          stream_id = 0;
+    std::complex<int16_t>  data[MAX_DATA_LENGTH_SAMPLES];
 };
 
 class data_packet_time_stream : public packet {
   public:
-    time_spec              time;
-    stream_spec            stream_id;
-    std::complex<int16_t>  data[MAX_DATA_LENGTH_SAMPLES]; // FIXME: find proper way to represent variable-mength data in class
+    time_spec_t            time;
+    stream_spec_t          stream_id = 0;
+    std::complex<int16_t>  data[MAX_DATA_LENGTH_SAMPLES];
 };
 
 class largest_data_packet : public data_packet_time_stream {};
@@ -198,24 +200,18 @@ class cmd_or_rsp_packet : public packet {};
 
 class cmd_or_rsp_packet_time : public cmd_or_rsp_packet {
   public:
-    time_spec              time;
-    uint8_t                payload[MAX_PAYLOAD_LENGTH_BYTES];
-};
-
-class cmd_or_rsp_packet_stream : public cmd_or_rsp_packet {
-  public:
-    stream_spec            stream_id;
-    uint8_t                payload[MAX_PAYLOAD_LENGTH_BYTES];
+    time_spec_t            time;
 };
 
 class cmd_or_rsp_packet_time_stream : public cmd_or_rsp_packet {
   public:
-    time_spec              time;
-    stream_spec            stream_id;
-    uint8_t                payload[MAX_PAYLOAD_LENGTH_BYTES];
+    time_spec_t            time;
+    stream_spec_t          stream_id;
 };
 
-class largest_cmd_or_rsp_packet : public cmd_or_rsp_packet_time_stream {};
+class largest_cmd_or_rsp_packet : public cmd_or_rsp_packet_time_stream {
+    uint8_t                payload[MAX_PAYLOAD_LENGTH_BYTES];
+};
 
 class cmd_packet : public cmd_or_rsp_packet {};
 
@@ -223,76 +219,75 @@ class rsp_packet : public cmd_or_rsp_packet {};
 
 class ack_packet : public cmd_or_rsp_packet {};
 
+class status_packet : public cmd_or_rsp_packet {};
+
 class stream_ctrl_packet : public cmd_packet {};
-
-class stream_ctrl_packet_samples : public stream_ctrl_packet {
-  public:
-    uint64_t               n_samples;
-};
-
-class stream_ctrl_packet_time : public stream_ctrl_packet {
-  public:
-    time_spec              time;
-};
 
 class stream_ctrl_packet_time_samples : public stream_ctrl_packet {
   public:
-    time_spec              time;
-    uint64_t               n_samples;
+    time_spec_t            time;
+    uint64_t               n_samples = 0;
 };
 
 class tx_signal_data_ack_packet : public ack_packet {
   public:
-    uint64_t               requester_seq_num;
-    uint32_t               tx_buffer_used_bytes;
-    uint32_t               sequence_error_count;
+    uint64_t               requester_seq_num = 0;
+    uint32_t               tx_buffer_used_bytes = 0;
+    uint32_t               sequence_error_count = 0;
 };
 
 class get_buffer_use_rsp_packet : public rsp_packet {
   public:
-    uint32_t               rx_buffer_used_bytes;
-    uint32_t               tx_buffer_used_bytes;
+    uint32_t               rx_buffer_used_bytes = 0;
+    uint32_t               tx_buffer_used_bytes = 0;
 };
 
 class get_buffer_info_rsp_packet : public rsp_packet {
   public:
-    uint32_t               rx_buffer_size_bytes;
-    uint32_t               tx_buffer_size_bytes;
+    uint32_t               rx_buffer_size_bytes = 0;
+    uint32_t               tx_buffer_size_bytes = 0;
 };
 
 class hello_rsp_packet : public rsp_packet {
   public:
-    uint32_t               mcu_sw_version;
-    uint32_t               fpga_fw_version;
+    uint32_t               mcu_sw_version = 0;
+    uint32_t               fpga_fw_version = 0;
 };
 
 class status_rsp_packet : public rsp_packet {
   public:
-    uint16_t               fpga_temperature;
-    uint16_t               dac_temperature;
-    uint32_t               reserved;
-    uint32_t               sequence_error_count;
-    uint32_t               data_flow_error_flags;
-    uint32_t               ddr_arbiter_status;
-    uint32_t               ethernet_status;
+    uint16_t               fpga_temperature = 0;
+    uint16_t               dac_temperature = 0;
+    uint32_t               reserved = 0;
+    uint32_t               sequence_error_count = 0;
+    uint32_t               data_flow_error_flags = 0;
+    uint32_t               ddr_arbiter_status = 0;
+    uint32_t               ethernet_status = 0;
 };
 
 class dev_read_write_reg_packet : public cmd_or_rsp_packet {
   public:
-    uint32_t               register_number;
-    uint32_t               value;
+    uint32_t               register_number = 0;
+    uint32_t               value = 0;
 };
 
 class transport_addr_packet : public cmd_or_rsp_packet {
   public:
-    uint32_t               ip_addr;
-    uint32_t               reserved;
+    uint32_t               ip_addr = 0;
+    uint32_t               reserved = 0;
 };
 
 class transport_pktsiz_packet : public cmd_or_rsp_packet {
   public:
-    uint32_t               packet_size_bytes;  //must be multiple of 8 bytes, min = 1024, max = 8192
-    uint32_t               reserved;
+    uint32_t               packet_size_bytes = 0;  //must be multiple of 8 bytes, min = 1024, max = 8192
+    uint32_t               reserved = 0;
 };
+
+class dataflow_status_packet : public status_packet {
+  public:
+    uint16_t               tx_radio_status = 0;
+    uint16_t               rx_radio_status = 0;
+    uint32_t               device_status = 0;
+}
 
 #endif // VXSDR_HEADER_HPP
