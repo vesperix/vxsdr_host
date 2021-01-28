@@ -279,7 +279,7 @@ class transport_addr_packet : public cmd_or_rsp_packet {
 
 class transport_pktsiz_packet : public cmd_or_rsp_packet {
   public:
-    uint32_t               packet_size_bytes = 0;  //must be multiple of 8 bytes, min = 1024, max = 8192
+    uint32_t               packet_size_bytes = 0;  // must be multiple of 8 bytes, min = 1024, max = 8216
     uint32_t               reserved = 0;
 };
 
