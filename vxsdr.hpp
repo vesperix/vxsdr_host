@@ -190,16 +190,16 @@ class vxsdr {
 
     void send_tx_start_now_for_n_samples(const uint64_t n, const uint8_t subdev = 0, const uint8_t flags = 0) {
       largest_cmd_or_rsp_packet q;
-      auto *p = reinterpret_cast<stream_ctrl_packet_samples *>(&q);
-      p->hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::START_NOW_FOR_N_SAMPLES, subdev, flags, sizeof(packet_header), 0 };
+      auto *p = reinterpret_cast<stream_ctrl_packet_time_samples *>(&q);
+      p->hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::START_NOW_FOR_N_SAMPLES, subdev, flags, sizeof(stream_ctrl_packet_time_samples), 0 };
       p->n_samples = n;
       command_queue.push(q);
     }
 
     void send_rx_start_now_for_n_samples(const uint64_t n, const uint8_t subdev = 0, const uint8_t flags = 0) {
       largest_cmd_or_rsp_packet q;
-      auto *p = reinterpret_cast<stream_ctrl_packet_samples *>(&q);
-      p->hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::START_NOW_FOR_N_SAMPLES, subdev, flags, sizeof(packet_header), 0 };
+      auto *p = reinterpret_cast<stream_ctrl_packet_time_samples *>(&q);
+      p->hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::START_NOW_FOR_N_SAMPLES, subdev, flags, sizeof(stream_ctrl_packet_time_samples), 0 };
       p->n_samples = n;
       command_queue.push(q);
     }
