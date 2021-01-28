@@ -113,8 +113,9 @@ int main(int argc, char *argv[])
     generator_thread.join();
     // allow time for the packets in tx queue to be sent
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    set_rx_stop_flag();
     set_tx_stop_flag();
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    set_rx_stop_flag();
     receiver_thread.join();
     sender_thread.join();
     packet_counter_thread.join();
