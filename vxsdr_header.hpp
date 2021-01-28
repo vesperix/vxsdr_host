@@ -288,6 +288,6 @@ class dataflow_status_packet : public status_packet {
     uint16_t               tx_radio_status = 0;
     uint16_t               rx_radio_status = 0;
     uint32_t               device_status = 0;
-}
+};
 
 #endif // VXSDR_HEADER_HPP

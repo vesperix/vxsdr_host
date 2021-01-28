@@ -16,10 +16,6 @@
 #define UDP_TX_RX_HPP
 
 // parameters of the internal ring buffers
- // size of largest command/status message packet
-static constexpr size_t msg_buffer_max_bytes           = sizeof(packet_header) + MAX_PAYLOAD_LENGTH_BYTES;
-// size of largest data packet
-static constexpr size_t data_buffer_max_bytes          = sizeof(packet_header) + sizeof(std::complex<int16_t>) * MAX_DATA_LENGTH_SAMPLES;
 
 static constexpr size_t rx_data_queue_length           =     4096;    // slots in rx data queue
 static constexpr size_t tx_data_queue_length           =     4096;    // slots in tx data queue
@@ -331,15 +327,15 @@ class udp_tx {
     }
 
     void send_tx_start_now_for_n_samples(const uint64_t n, const uint8_t subdev, const uint8_t flags = 0) {
-      stream_ctrl_packet_samples p;
-      p.hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::START_NOW_FOR_N_SAMPLES, subdev, flags, sizeof(stream_ctrl_packet_samples), 0 };
+      stream_ctrl_packet_time_samples p;
+      p.hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::START_NOW_FOR_N_SAMPLES, subdev, flags, sizeof(stream_ctrl_packet_time_samples), 0 };
       p.n_samples = n;
       send_packet(p);
     }
 
     void send_rx_start_now_for_n_samples(const uint64_t n, const uint8_t subdev, const uint8_t flags = 0) {
-      stream_ctrl_packet_samples p;
-      p.hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::START_NOW_FOR_N_SAMPLES, subdev, flags, sizeof(stream_ctrl_packet_samples), 0 };
+      stream_ctrl_packet_time_samples p;
+      p.hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::START_NOW_FOR_N_SAMPLES, subdev, flags, sizeof(stream_ctrl_packet_time_samples), 0 };
       p.n_samples = n;
       send_packet(p);
     }
@@ -603,6 +599,7 @@ inline void multicast_receiver(boost::asio::io_context &io_context, const boost:
 
 inline void generator(const uint64_t max_packets, const size_t requested_packet_size) {
   std::array<largest_data_packet, 17> buf;
+  static constexpr size_t data_buffer_max_bytes = sizeof(largest_data_packet);
   LOGGER(debug) << "generator thread started";
 
   size_t packet_size = requested_packet_size;

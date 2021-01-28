@@ -142,9 +142,8 @@ class udp_rx {
           case PACKET_TYPES::TX_RADIO_CMD_ERR:
           case PACKET_TYPES::TX_RADIO_CMD_ACK:
             {
-              cmd_or_rsp_packet p;
-              memcpy(&p, &recv_buffer, std::min((size_t)recv_buffer.hdr.packet_size, sizeof(p)));
-              log_packet_info(p);
+              auto *p = reinterpret_cast<cmd_or_rsp_packet *>(&recv_buffer);
+              log_packet_info(*p);
             }
             break;
           case PACKET_TYPES::DEVICE_CMD:

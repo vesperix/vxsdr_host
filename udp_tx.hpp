@@ -10,8 +10,6 @@
 #include "vxsdr_header.hpp"
 
 // parameters of the internal ring buffers
-// size of largest data packet
-static constexpr size_t data_buffer_max_bytes        = sizeof(packet_header) + sizeof(std::complex<int16_t>) * MAX_DATA_LENGTH_SAMPLES;
 static constexpr size_t tx_data_queue_length         =     1024;    // slots in tx data queue
 
 // parameters for the send thread
@@ -160,6 +158,7 @@ class udp_tx {
 
 void generator(const size_t max_packets, const size_t requested_packet_size, const unsigned packet_wait_us) {
   std::array<data_packet, 17> buf;
+  static constexpr size_t data_buffer_max_bytes = sizeof(largest_data_packet);
   LOGGER(info) << "generator thread started";
 
   //if(set_current_thread_priority_realtime(10))
