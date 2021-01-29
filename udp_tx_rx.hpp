@@ -145,6 +145,8 @@ class udp_rx {
     std::array<uint64_t, UINT8_MAX + 1> packet_types_received = { 0 };
     uint16_t seq = 0, last_seq = 0;
     //unsigned percent, min_buffer_percent = 100, max_buffer_percent = 0;
+    std::vector<std::chrono::time_point<std::chrono::steady_clock> > seq_error_times;
+    std::chrono::time_point<std::chrono::steady_clock> start_time = std::chrono::steady_clock::now();
     void start_receive() {
       LOGGER(debug) << "start_receive started";
       // FIXME: need to add timeout if no packets are coming in
@@ -152,8 +154,10 @@ class udp_rx {
         socket.receive_from(boost::asio::buffer(&recv_buffer, sizeof(recv_buffer)), remote);
         packets_received++;
         packet_types_received[recv_buffer.hdr.packet_type]++;
-        if(packets_received > 1 and recv_buffer.hdr.sequence_counter != (uint16_t)(last_seq + 1))
+        if(packets_received > 1 and recv_buffer.hdr.sequence_counter != (uint16_t)(last_seq + 1)) {
           seq_errors++;
+          seq_error_times.push_back(std::chrono::steady_clock::now());
+        }
         last_seq = recv_buffer.hdr.sequence_counter;
         switch(recv_buffer.hdr.packet_type) {
           // receive buffers go into the rx data queue
@@ -235,6 +239,10 @@ class udp_rx {
       }
 
       LOGGER(info) << "start_receive exiting; " << packets_received << " packets received, " << seq_errors << " sequence errors";
+      for(unsigned i =0; i < seq_error_times.size(); i++) {
+        auto us = std::chrono::duration<double, std::micro>(seq_error_times[i] - start_time);
+        LOGGER(info) << boost::format(" %10d %20.4f us") % i % us.count();
+      }
       for(unsigned i = 0; i < packet_types_received.size(); i++)
         if(packet_types_received[i] > 0)
           LOGGER(info) << (boost::format("   %12d %20s (%d)") % packet_types_received[i] % packet_type_to_name(i) % i);

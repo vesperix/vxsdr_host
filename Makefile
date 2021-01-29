@@ -24,7 +24,7 @@ else
 	CXX_FLAGS = $(CXX_BASEFLAGS) $(CXX_OPTFLAGS) $(CXX_DEFINES)
 endif
 
-PROGS = host_tx host_rx host_tx_throttle host_tester vxsdr_test minimal_tx minimal_rx
+PROGS = host_tx host_rx host_tx_throttle host_tester vxsdr_test #minimal_tx minimal_rx
 
 COMMON_SRC = packet_proc.cpp
 
