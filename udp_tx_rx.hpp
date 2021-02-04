@@ -146,6 +146,9 @@ class udp_rx {
     uint16_t seq = 0, last_seq = 0;
     //unsigned percent, min_buffer_percent = 100, max_buffer_percent = 0;
     std::vector<std::chrono::time_point<std::chrono::steady_clock> > seq_error_times;
+    std::vector<uint8_t> seq_error_packet_type;
+    std::vector<uint16_t> seq_error_counter;
+    std::vector<uint16_t> seq_error_expected;
     std::chrono::time_point<std::chrono::steady_clock> start_time = std::chrono::steady_clock::now();
     void start_receive() {
       LOGGER(debug) << "start_receive started";
@@ -157,6 +160,9 @@ class udp_rx {
         if(packets_received > 1 and recv_buffer.hdr.sequence_counter != (uint16_t)(last_seq + 1)) {
           seq_errors++;
           seq_error_times.push_back(std::chrono::steady_clock::now());
+          seq_error_packet_type.push_back(recv_buffer.hdr.packet_type);
+          seq_error_counter.push_back(recv_buffer.hdr.sequence_counter);
+          seq_error_expected.push_back((uint16_t)(last_seq + 1));
         }
         last_seq = recv_buffer.hdr.sequence_counter;
         switch(recv_buffer.hdr.packet_type) {
@@ -241,7 +247,7 @@ class udp_rx {
       LOGGER(info) << "start_receive exiting; " << packets_received << " packets received, " << seq_errors << " sequence errors";
       for(unsigned i =0; i < seq_error_times.size(); i++) {
         auto us = std::chrono::duration<double, std::micro>(seq_error_times[i] - start_time);
-        LOGGER(info) << boost::format(" %10d %20.4f us") % i % us.count();
+        LOGGER(info) << boost::format(" %10d %20.4f us %3d %8d %d8") % i % us.count() % seq_error_packet_type[i] % seq_error_counter[i] % seq_error_expected[i];
       }
       for(unsigned i = 0; i < packet_types_received.size(); i++)
         if(packet_types_received[i] > 0)
