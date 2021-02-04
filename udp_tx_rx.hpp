@@ -247,8 +247,8 @@ class udp_rx {
       LOGGER(info) << "start_receive exiting; " << packets_received << " packets received, " << seq_errors << " sequence errors";
       for(unsigned i =0; i < seq_error_times.size(); i++) {
         auto us = std::chrono::duration<double, std::micro>(seq_error_times[i] - start_time);
-        LOGGER(info) << boost::format(" %10d %20.4f %20s (%3d) %8d %8d") % i % us.count() % packet_type_to_name(seq_error_packet_type[i])
-                                                                 % seq_error_packet_type[i] % seq_error_counter[i] % seq_error_expected[i];
+        LOGGER(info) << boost::format(" %18.1f %20s %8d %8d") % us.count() % packet_type_to_name(seq_error_packet_type[i])
+                                                                 % seq_error_counter[i] % seq_error_expected[i];
       }
       for(unsigned i = 0; i < packet_types_received.size(); i++)
         if(packet_types_received[i] > 0)
