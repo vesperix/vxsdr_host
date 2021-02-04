@@ -65,6 +65,50 @@ static boost::lockfree::spsc_queue<largest_data_packet, boost::lockfree::capacit
 
 static boost::lockfree::spsc_queue<largest_cmd_or_rsp_packet, boost::lockfree::capacity<rx_msg_queue_length> > command_queue;
 static boost::lockfree::spsc_queue<largest_cmd_or_rsp_packet, boost::lockfree::capacity<tx_msg_queue_length> > response_queue;
+	
+//  Licensed under the Apache License, Version 2.0 (the "License");
+//   you may not use this file except in compliance with the License.
+//   You may obtain a copy of the License at
+//
+//       http://www.apache.org/licenses/LICENSE-2.0
+//
+//   Unless required by applicable law or agreed to in writing, software
+//   distributed under the License is distributed on an "AS IS" BASIS,
+//   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//   See the License for the specific language governing permissions and
+//   limitations under the License.
+ 
+/////////////////////////////////////////////////////////////////////////////////
+// Format an std::time_point as a string with fractional seconds to 6
+// decimal places, e.g. 2014-08-30 08:18:51.867479
+// Warning will not work for any date/times before the start of the UNIX epoch.
+//
+
+inline std::string format_time(std::chrono::time_point<std::chrono::system_clock> t) {
+ 
+	// convert to time_t which will represent the number of
+	// seconds since the UNIX epoch, UTC 00:00:00 Thursday, 1st. January 1970
+	auto epoch_seconds = std::chrono::system_clock::to_time_t(t);
+ 
+	// Format this as date time to seconds resolution
+	// e.g. 2016-08-30T08:18:51
+	std::stringstream stream;
+	stream << std::put_time(localtime(&epoch_seconds), "%F %T");
+ 
+	// If we now convert back to a time_point we will get the time truncated
+	// to whole seconds 
+	auto truncated = std::chrono::system_clock::from_time_t(epoch_seconds);
+ 
+	// Now we subtract this seconds count from the original time to
+	// get the number of extra microseconds..
+	auto delta_us = std::chrono::duration_cast<std::chrono::microseconds>(t - truncated).count();
+ 
+	// And append this to the output stream as fractional seconds
+	// e.g. 2016-08-30 08:18:51.867479
+	stream << "." << std::fixed << std::setw(6) << std::setfill('0') << delta_us;
+ 
+	return stream.str();
+}
 
 inline std::string packet_type_to_name(const uint8_t number) {
   switch(number) {
@@ -145,11 +189,11 @@ class udp_rx {
     std::array<uint64_t, UINT8_MAX + 1> packet_types_received = { 0 };
     uint16_t seq = 0, last_seq = 0;
     //unsigned percent, min_buffer_percent = 100, max_buffer_percent = 0;
-    std::vector<std::chrono::time_point<std::chrono::steady_clock> > seq_error_times;
+    std::vector<std::chrono::time_point<std::chrono::system_clock> > seq_error_times;
     std::vector<uint8_t> seq_error_packet_type;
     std::vector<uint16_t> seq_error_counter;
     std::vector<uint16_t> seq_error_expected;
-    std::chrono::time_point<std::chrono::steady_clock> start_time = std::chrono::steady_clock::now();
+
     void start_receive() {
       LOGGER(debug) << "start_receive started";
       // FIXME: need to add timeout if no packets are coming in
@@ -159,7 +203,7 @@ class udp_rx {
         packet_types_received[recv_buffer.hdr.packet_type]++;
         if(packets_received > 1 and recv_buffer.hdr.sequence_counter != (uint16_t)(last_seq + 1)) {
           seq_errors++;
-          seq_error_times.push_back(std::chrono::steady_clock::now());
+          seq_error_times.push_back(std::chrono::system_clock::now());
           seq_error_packet_type.push_back(recv_buffer.hdr.packet_type);
           seq_error_counter.push_back(recv_buffer.hdr.sequence_counter);
           seq_error_expected.push_back((uint16_t)(last_seq + 1));
@@ -246,8 +290,7 @@ class udp_rx {
 
       LOGGER(info) << "start_receive exiting; " << packets_received << " packets received, " << seq_errors << " sequence errors";
       for(unsigned i =0; i < seq_error_times.size(); i++) {
-        auto us = std::chrono::duration<double, std::micro>(seq_error_times[i] - start_time);
-        LOGGER(info) << boost::format(" %18.1f %20s %8d %8d") % us.count() % packet_type_to_name(seq_error_packet_type[i])
+        LOGGER(info) << boost::format(" %40s %20s %8d %8d") % format_time(seq_error_times[i]) % packet_type_to_name(seq_error_packet_type[i])
                                                                  % seq_error_counter[i] % seq_error_expected[i];
       }
       for(unsigned i = 0; i < packet_types_received.size(); i++)
