@@ -290,7 +290,7 @@ class udp_rx {
 
       LOGGER(info) << "start_receive exiting; " << packets_received << " packets received, " << seq_errors << " sequence errors";
       for(unsigned i =0; i < seq_error_times.size(); i++) {
-        LOGGER(info) << boost::format(" %40s %20s %8d %8d") % format_time(seq_error_times[i]) % packet_type_to_name(seq_error_packet_type[i])
+        LOGGER(info) << boost::format(" %30s %20s %8d %8d") % format_time(seq_error_times[i]) % packet_type_to_name(seq_error_packet_type[i])
                                                                  % seq_error_counter[i] % seq_error_expected[i];
       }
       for(unsigned i = 0; i < packet_types_received.size(); i++)
