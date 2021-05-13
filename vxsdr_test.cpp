@@ -48,7 +48,7 @@ int main(int argc, char *argv[])
     LOGGER(info) << "using local receive IP " << local_receive_endpoint.address().to_string() << " and port " << local_receive_endpoint.port();
     boost::asio::ip::udp::endpoint destination_endpoint(destination_ip, vm["destination_port"].as<unsigned>());
     LOGGER(info) << "using destination IP " << destination_endpoint.address().to_string() << " and port " << destination_endpoint.port();
-    auto radio = std::shared_ptr<vxsdr>(new vxsdr(local_send_endpoint, local_receive_endpoint, destination_endpoint));
+    auto radio = std::make_shared<vxsdr>(local_send_endpoint, local_receive_endpoint, destination_endpoint);
 
     set_common_options(vm, radio);
     set_rx_1ch_options(vm, radio);
