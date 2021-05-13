@@ -53,6 +53,35 @@ int main(int argc, char *argv[])
     set_common_options(vm, radio);
     set_rx_1ch_options(vm, radio);
     set_tx_1ch_options(vm, radio);
+
+    if(vm["duration"].as<double>() <= 0.0) {
+      LOGGER(fatal) << "Duration must be positive";
+      return EXIT_CMD_LINE_ERROR;
+    }
+
+    size_t n_samp = std::llround(vm["duration"].as<double>() * vm["rate"].as<double>());
+
+    LOGGER(info) << boost::format("Acquiring data for %.3f seconds (%lld samples)") % vm["duration"].as<double>() % n_samp;
+
+    std::vector<std::complex<int16_t> > data(n_samp);
+
+    std::string filename = vm["prefix"].as<std::string>();
+    filename.append(make_filename_time(std::chrono::system_clock::now(), vm["freq"].as<double>(), vm["rate"].as<double>()));
+    filename.append(vm["suffix"].as<std::string>());
+
+    LOGGER(info) << "Saving data to file" << filename;
+
+    LOGGER(info) << "Starting...";
+
+    radio->rx_start_now_for_n_samples(n_samp);
+    radio->get_rx_data(data, n_samp);
+    radio->rx_stop_now();
+
+    LOGGER(info) << "Acquisition complete";
+
+    size_t n_written = write_cplx_16(filename, data);
+    LOGGER(info) << n_written << "samples written";
+
   }
   catch (std::exception& e) {
     LOGGER(fatal) << "exception caught: " << e.what();

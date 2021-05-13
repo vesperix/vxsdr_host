@@ -1,5 +1,6 @@
 #include <chrono>
 #include <sstream>
+#include <fstream>
 #include <iomanip>
 #include <cmath>
 
@@ -51,6 +52,45 @@ std::string make_filename_time(const std::chrono::time_point<std::chrono::system
   s << boost::format("%.3f-mhz-%.1f-ksps-") % (freq / 1e6) %  (rate / 1e3);
   s << format_time(t, 0, true, "%Y-%m-%d-%H.%M.%S-utc");
   return s.str();
+}
+
+size_t read_cplx_16(const std::string &name, std::vector<std::complex<int16_t> > &data)
+{
+  std::ifstream infile(name, std::ios::binary);
+
+  if(infile.is_open()) {
+    infile.seekg(0, infile.end);
+    size_t num_elem = infile.tellg() / sizeof(std::complex<int16_t>);
+    infile.seekg(0, infile.beg);
+    
+    if(num_elem > data.size())
+      data.resize(num_elem);
+
+    if(infile.good())
+      infile.read((char *)&data.front(), sizeof(std::complex<int16_t>) * num_elem);
+    infile.close();
+    
+    for(size_t i = num_elem; i < data.size(); i++)
+      data[i] = std::complex<int16_t>(0, 0);
+    return num_elem;
+  }
+  else
+    return 0;
+}
+
+size_t write_cplx_16(const std::string &name, std::vector<std::complex<int16_t> > &data)
+{
+  std::fstream outfile(name, std::ios::binary);
+
+  if(outfile.is_open()) {
+    outfile.write((char *)&data.front(), sizeof(std::complex<int16_t>) * data.size());
+    outfile.seekg(0, outfile.end);
+    size_t num_elem = outfile.tellg() / sizeof(std::complex<int16_t>);
+    outfile.close();
+    return num_elem;
+  }
+  else
+    return 0;
 }
 
 std::string packet_type_to_name(const uint8_t number) {
