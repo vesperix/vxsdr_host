@@ -336,8 +336,6 @@ class vxsdr {
       command_queue.push(p);
     }
 
-
-
     void receiver(boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint)
     {
       LOGGER(debug) << "receiver thread started";

@@ -5,14 +5,110 @@
 #include "logging.hpp"
 #include "vxsdr_header.hpp"
 
+std::string packet_type_to_name(const uint8_t number) {
+  switch(number) {
+    case PACKET_TYPES::TX_SIGNAL_DATA:
+      return "TX_SIGNAL_DATA";
+    case PACKET_TYPES::RX_SIGNAL_DATA:
+      return "RX_SIGNAL_DATA";
+    case PACKET_TYPES::DEVICE_CMD:
+      return "DEVICE_CMD";
+    case PACKET_TYPES::TX_RADIO_CMD:
+      return "TX_RADIO_CMD";
+    case PACKET_TYPES::RX_RADIO_CMD:
+      return "RX_RADIO_CMD";
+    case PACKET_TYPES::DEVICE_CMD_ERR:
+      return "DEVICE_CMD_ERR";
+    case PACKET_TYPES::TX_RADIO_CMD_ERR:
+      return "TX_RADIO_CMD_ERR";
+    case PACKET_TYPES::RX_RADIO_CMD_ERR:
+      return "RX_RADIO_CMD_ERR";
+    case PACKET_TYPES::DEVICE_CMD_RSP:
+      return "DEVICE_CMD_RSP";
+    case PACKET_TYPES::TX_RADIO_CMD_RSP:
+      return "TX_RADIO_CMD_RSP";
+    case PACKET_TYPES::RX_RADIO_CMD_RSP:
+      return "RX_RADIO_CMD_RSP";
+    case PACKET_TYPES::TX_SIGNAL_DATA_ACK:
+      return "TX_SIGNAL_DATA_ACK";
+    case PACKET_TYPES::RX_SIGNAL_DATA_ACK:
+      return "RX_SIGNAL_DATA_ACK";
+    case PACKET_TYPES::DEVICE_CMD_ACK:
+      return "DEVICE_CMD_ACK";
+    case PACKET_TYPES::TX_RADIO_CMD_ACK:
+      return "TX_RADIO_CMD_ACK";
+    case PACKET_TYPES::RX_RADIO_CMD_ACK:
+      return "RX_RADIO_CMD_ACK";
+  }
+  return "UNDEFINED";
+}
+
+std::string command_to_name(const uint8_t cmd) {
+  switch(cmd) {
+    case DEVICE_CMD::HELLO:
+      return "HELLO";
+    case DEVICE_CMD::SET_TIME_NOW:
+      return "SET_TIME_NOW";
+    case DEVICE_CMD::SET_TIME_NEXT_PPS:
+      return "SET_TIME_NEXT_PPS";
+    case DEVICE_CMD::GET_TIME:
+      return "GET_TIME";
+    case DEVICE_CMD::GET_STATUS:
+      return "GET_STATUS";
+    case DEVICE_CMD::GET_BUFFER_INFO:
+      return "GET_BUFFER_INFO";
+    case DEVICE_CMD::GET_BUFFER_USE:
+      return "GET_BUFFER_USE";
+    case DEVICE_CMD::OPEN_SESSION:
+      return "OPEN_SESSION";
+    case DEVICE_CMD::CLOSE_SESSION:
+      return "CLOSE_SESSION";
+    case DEVICE_CMD::GET_TRANSPORT_INFO:
+      return "GET_TRANSPORT_INFO";
+    case DEVICE_CMD::GET_TRANSPORT_ADDR:
+      return "GET_TRANSPORT_ADDR";
+    case DEVICE_CMD::GET_TRANSPORT_PKTSIZ:
+      return "GET_TRANSPORT_PKTSIZ";
+    case DEVICE_CMD::SET_TRANSPORT_ADDR:
+      return "SET_TRANSPORT_ADDR";
+    case DEVICE_CMD::SET_TRANSPORT_PKTSIZ:
+      return "SET_TRANSPORT_PKTSIZ";
+    case DEVICE_CMD::SAVE_TRANSPORT_ADDR:
+      return "SAVE_TRANSPORT_ADDR";
+    case DEVICE_CMD::GET_CHANNEL_INFO:
+      return "GET_CHANNEL_INFO";
+    case DEVICE_CMD::GET_TIMING_INFO:
+      return "GET_TIMING_INFO";
+    case DEVICE_CMD::GET_TIMING_STATUS:
+      return "GET_TIMING_STATUS";
+    case DEVICE_CMD::GET_TIMING_REF:
+      return "GET_TIMING_REF";
+    case DEVICE_CMD::SET_TIMING_REF:
+      return "SET_TIMING_REF";
+    case DEVICE_CMD::READ_DAC_REG:
+      return "READ_DAC_REG";
+    case DEVICE_CMD::WRITE_DAC_REG:
+      return "WRITE_DAC_REG";
+    case DEVICE_CMD::READ_ADC_REG:
+      return "READ_ADC_REG";
+    case DEVICE_CMD::WRITE_ADC_REG:
+      return "WRITE_ADC_REG";
+    case DEVICE_CMD::STOP:
+      return "STOP";
+    case DEVICE_CMD::RESET:
+      return "RESET";
+  }
+  return "UNDEFINED";
+}
+
 void log_packet_info(cmd_or_rsp_packet &packet)
 {
   switch(packet.hdr.packet_type) {
     case PACKET_TYPES::DEVICE_CMD_ACK:
-      LOGGER(info) << "DEVICE_CMD_ACK: " << (int)packet.hdr.command;
+      LOGGER(info) << "DEVICE_CMD_ACK: " << command_to_name(packet.hdr.command);
       break;
     case PACKET_TYPES::DEVICE_CMD_ERR:
-      LOGGER(info) << "DEVICE_CMD_ERR: " << (int)packet.hdr.command;
+      LOGGER(info) << "DEVICE_CMD_ERR: " << command_to_name(packet.hdr.command);
       break;
     case PACKET_TYPES::DEVICE_CMD_RSP:
       switch(packet.hdr.command) {
