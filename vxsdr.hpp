@@ -90,6 +90,58 @@ class vxsdr {
     // move constructor
     // move assignment
 
+    size_t get_rx_data(std::vector<std::complex<int16_t> > &data, size_t n_desired = 0, const uint8_t subdev = 0) {
+      size_t n_popped = 0;
+      largest_data_packet q;
+
+      data.clear();
+      if(n_desired > 0) {
+        data.reserve(n_desired);
+      }
+      else {
+        n_desired = data.size();
+      }
+
+      size_t n_packets = n_desired / MAX_DATA_LENGTH_SAMPLES;
+
+      while(not tx_stop_flag and n_popped < n_packets) {
+        if(rx_data_queue.read_available() > 0) {
+          rx_data_queue.pop(&q);
+          bool has_time = (q.hdr.flags | FLAGS::TIME_PRESENT);
+          bool has_stream_id = (q.hdr.flags | FLAGS::STREAM_ID_PRESENT);
+          if(not has_time and not has_stream_id) {
+            auto *p = reinterpret_cast<data_packet *>(&q);
+            size_t data_size = std::min(MAX_DATA_LENGTH_SAMPLES, (p->hdr.packet_size - sizeof(packet_header)) / sizeof(std::complex<int16_t>));
+            std::copy_n(std::begin(p->data), data_size, std::back_inserter(data));
+          }
+          else if(has_time and not has_stream_id) {
+            auto *p = reinterpret_cast<data_packet_time *>(&q);
+            size_t data_size = std::min(MAX_DATA_LENGTH_SAMPLES, (p->hdr.packet_size - sizeof(packet_header) - sizeof(time_spec_t)) / sizeof(std::complex<int16_t>));
+            std::copy_n(std::begin(p->data), data_size, std::back_inserter(data));
+          }
+          else if(has_stream_id and not has_time) {
+            auto *p = reinterpret_cast<data_packet_stream *>(&q);
+            size_t data_size = std::min(MAX_DATA_LENGTH_SAMPLES, (p->hdr.packet_size - sizeof(packet_header) - sizeof(stream_spec_t)) / sizeof(std::complex<int16_t>));
+            std::copy_n(std::begin(p->data), data_size, std::back_inserter(data));
+          }
+          else {
+            auto *p = reinterpret_cast<data_packet_time_stream *>(&q);
+            size_t data_size = std::min(MAX_DATA_LENGTH_SAMPLES, (p->hdr.packet_size - sizeof(packet_header) - sizeof(time_spec_t) - sizeof(stream_spec_t)) / sizeof(std::complex<int16_t>));
+            std::copy_n(std::begin(p->data), data_size, std::back_inserter(data));
+          }
+          n_popped++;
+        }
+      }
+      return data.size();
+    }
+
+    size_t put_tx_data(std::vector<std::complex<int16_t> > data, const size_t n_desired = 0, const uint8_t subdev = 0) {
+      size_t n_put = 0;
+      largest_data_packet q;
+
+      return n_put;
+    }
+
     void devce_hello(const uint8_t subdev = 0, const uint8_t flags = 0) {
       largest_cmd_or_rsp_packet p;
       p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::HELLO, subdev, flags, sizeof(packet_header), 0 };

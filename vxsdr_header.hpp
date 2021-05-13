@@ -170,6 +170,8 @@ class packet {
     packet_header          hdr;
 };
 
+//FIXME: Need to add number of samples so that we don't always use MAX_DATA_LENGTH_SAMPLES!
+
 class data_packet : public packet {
   public:
     std::complex<int16_t>  data[MAX_DATA_LENGTH_SAMPLES];
