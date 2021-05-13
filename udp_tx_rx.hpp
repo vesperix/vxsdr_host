@@ -8,6 +8,7 @@
 #include "logging.hpp"
 #include "cycle_counter.h"
 #include "thread_utils.h"
+#include "utility.hpp"
 
 #include "vxsdr_header.hpp"
 #include "packet_proc.hpp"
@@ -64,50 +65,6 @@ static boost::lockfree::spsc_queue<largest_data_packet, boost::lockfree::capacit
 
 static boost::lockfree::spsc_queue<largest_cmd_or_rsp_packet, boost::lockfree::capacity<msg_queue_length> > command_queue;
 static boost::lockfree::spsc_queue<largest_cmd_or_rsp_packet, boost::lockfree::capacity<msg_queue_length> > response_queue;
-	
-//  Licensed under the Apache License, Version 2.0 (the "License");
-//   you may not use this file except in compliance with the License.
-//   You may obtain a copy of the License at
-//
-//       http://www.apache.org/licenses/LICENSE-2.0
-//
-//   Unless required by applicable law or agreed to in writing, software
-//   distributed under the License is distributed on an "AS IS" BASIS,
-//   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//   See the License for the specific language governing permissions and
-//   limitations under the License.
- 
-/////////////////////////////////////////////////////////////////////////////////
-// Format an std::time_point as a string with fractional seconds to 6
-// decimal places, e.g. 2014-08-30 08:18:51.867479
-// Warning will not work for any date/times before the start of the UNIX epoch.
-//
-
-inline std::string format_time(std::chrono::time_point<std::chrono::system_clock> t) {
- 
-	// convert to time_t which will represent the number of
-	// seconds since the UNIX epoch, UTC 00:00:00 Thursday, 1st. January 1970
-	auto epoch_seconds = std::chrono::system_clock::to_time_t(t);
- 
-	// Format this as date time to seconds resolution
-	// e.g. 2016-08-30T08:18:51
-	std::stringstream stream;
-	stream << std::put_time(localtime(&epoch_seconds), "%F %T");
- 
-	// If we now convert back to a time_point we will get the time truncated
-	// to whole seconds 
-	auto truncated = std::chrono::system_clock::from_time_t(epoch_seconds);
- 
-	// Now we subtract this seconds count from the original time to
-	// get the number of extra microseconds..
-	auto delta_us = std::chrono::duration_cast<std::chrono::microseconds>(t - truncated).count();
- 
-	// And append this to the output stream as fractional seconds
-	// e.g. 2016-08-30 08:18:51.867479
-	stream << "." << std::fixed << std::setw(6) << std::setfill('0') << delta_us;
- 
-	return stream.str();
-}
 
 inline std::string packet_type_to_name(const uint8_t number) {
   switch(number) {

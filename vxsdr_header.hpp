@@ -294,6 +294,7 @@ class radio_rf_freq_packet : public cmd_or_rsp_packet {
   public:
     double                 freq = 0.0;
     double                 rtol = 0.0;
+    //FIXME: this is OK for testing, but we want the MCU to manage output_sel when done testing
     uint32_t               output_sel = 0; //(doubler)output A = 1, output B = 2
     uint32_t               reserved = 0;
 };
@@ -302,6 +303,7 @@ class radio_rf_freq_packet : public cmd_or_rsp_packet {
 //(RX only) positive gain value sets VGA gain (0 to 31.5dB) paramter range [0 to 63]
 class radio_rf_gain_packet : public cmd_or_rsp_packet {
   public:
+    //FIXME: when done testing, move gain setting logic (attenuator choice, levels) to MCU
     int32_t                gain = 0; //lsb = 0.5dB
     uint32_t               reserved = 0;
 };

@@ -8,6 +8,7 @@
 #include <limits>
 #include <cstdlib>
 #include <thread>
+#include <sstream>
 
 #include <boost/version.hpp>
 #include <boost/program_options.hpp>
@@ -18,22 +19,19 @@
 #include "errors.hpp"
 #include "udp_tx_rx.hpp"
 #include "host_radio_options.hpp"
+#include "utility.hpp"
 
 extern "C" void sig_int_handler(int sig_num) {
   LOGGER(fatal) << "terminated by SIGINT (ctrl-C)";
   exit(EXIT_USER_TERMINATED);
 }
 
-std::string make_filename(time_t tt, const double freq, const double rate)
+std::string make_filename_time(const std::chrono::time_point<std::chrono::system_clock> t, const double freq, const double rate)
 {
-  std::string s;
-  tm *gmt = gmtime(&tt);
-  char buf[FILENAME_MAX];
-  sprintf(buf, "%.3f-mhz-%.1f-ksps-", freq / 1e6, rate / 1e3);
-  s = buf;
-  strftime(buf, FILENAME_MAX, "%Y-%m-%d-%H.%M.%S-utc", gmt);
-  s.append(buf);
-  return s;
+  std::stringstream s;
+  s << boost::format("%.3f-mhz-%.1f-ksps-") % (freq / 1e6) %  (rate / 1e3);
+  s << format_time(t, 0, true);
+  return s.str();
 }
 
 int main(int argc, char *argv[])
@@ -62,7 +60,7 @@ int main(int argc, char *argv[])
     LOGGER(info) << "using destination IP " << destination_endpoint.address().to_string() << " and port " << destination_endpoint.port();
 
     std::string filename = vm["prefix"].as<std::string>();
-    filename.append(make_filename(std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()), vm["freq"].as<double>(), vm["rate"].as<double>()));
+    filename.append(make_filename_time(std::chrono::system_clock::now(), vm["freq"].as<double>(), vm["rate"].as<double>()));
     filename.append(vm["suffix"].as<std::string>());
 
 
