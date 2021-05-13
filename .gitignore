@@ -5,8 +5,6 @@ host_tx
 host_rx_sync
 host_tx_sync
 host_tx_throttle
+host_rx_test
 vxsdr_test
-host_tester
-minimal_rx
-minimal_tx
 .vscode

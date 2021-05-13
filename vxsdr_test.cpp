@@ -20,58 +20,6 @@
 #include "vxsdr.hpp"
 #include "host_radio_options.hpp"
 
-void define_options(boost::program_options::options_description &desc)
-{
-  desc.add_options()
-    ("help,H", "show help message")
-    ("config_file,C", boost::program_options::value<std::string>(), "configuration file giving command line options")
-    ("local_address,A", boost::program_options::value<std::string>()->default_value(""), "IPv4 address of local interface")
-    ("local_receive_port,L", boost::program_options::value<unsigned>()->default_value(1030), "port to receive on local interface")
-    ("local_send_port,M", boost::program_options::value<unsigned>()->default_value(55123), "port to send on local interface")
-    ("destination_address,D", boost::program_options::value<std::string>()->default_value(""), "IPv4 address of destination (including broadcast/multicast)")
-    ("destination_port,P", boost::program_options::value<unsigned>()->default_value(1030), "port to use on destination")
-  ;
-}
-
-void check_options( boost::program_options::variables_map &vm)
-{
-  if(vm["local_address"].as<std::string>().empty()) {
-    LOGGER(fatal) << "local IP address must be specified";
-    exit(EXIT_CMD_LINE_ERROR);
-  }
-  if(vm["destination_address"].as<std::string>().empty()) {
-    LOGGER(fatal) << "destination IP address must be specified";
-    exit(EXIT_CMD_LINE_ERROR);
-  }
-}
-
-void init_options(boost::program_options::options_description &desc, boost::program_options::variables_map &vm, const int argc, char *argv[])
-{
-  // define the allowed options
-  define_options(desc);
-  // setup the program options from the command line
-  boost::program_options::store(boost::program_options::parse_command_line(argc, argv, desc), vm);
-  boost::program_options::notify(vm);
-  // if a config file is specified on the command line, load it
-  if (vm.count("config_file") > 0) {
-    std::ifstream ifs(vm["config_file"].as<std::string>().c_str());
-    if (!ifs) {
-      std::cerr << "Error: cannot open config file " << vm["config_file"].as<std::string>() << "!" << std::endl;
-      throw std::runtime_error("Specified config file not found.");
-    }
-    boost::program_options::store(boost::program_options::parse_config_file(ifs, desc), vm);
-    boost::program_options::notify(vm);
-  }
-  // now reload the command line options so that they take precedence over the config file
-  boost::program_options::store(boost::program_options::parse_command_line(argc, argv, desc), vm);
-  boost::program_options::notify(vm);
-  // if --help was specified, show help and exit
-  if(vm.count("help") > 0) {
-    std::cout << desc << std::endl;
-    exit(EXIT_SUCCESS);
-  }
-}
-
 extern "C" void sig_int_handler(int sig_num) {
   LOGGER(fatal) << "terminated by SIGINT (ctrl-C)";
   exit(EXIT_USER_TERMINATED);
@@ -90,7 +38,7 @@ int main(int argc, char *argv[])
     add_network_options(desc);
     add_rx_1ch_options(desc);
 
-    init_options(desc, vm, argc, argv);
+    init_vm(desc, vm, argc, argv);
 
     boost::asio::ip::address_v4 local_ip = boost::asio::ip::address_v4::from_string(vm["local_address"].as<std::string>());
     boost::asio::ip::address_v4 destination_ip = boost::asio::ip::address_v4::from_string(vm["destination_address"].as<std::string>());
