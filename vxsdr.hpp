@@ -111,22 +111,26 @@ class vxsdr {
           bool has_stream_id = (q.hdr.flags | FLAGS::STREAM_ID_PRESENT);
           if(not has_time and not has_stream_id) {
             auto *p = reinterpret_cast<data_packet *>(&q);
-            size_t data_size = std::min(MAX_DATA_LENGTH_SAMPLES, (p->hdr.packet_size - sizeof(packet_header)) / sizeof(std::complex<int16_t>));
+            size_t data_size = std::min(MAX_DATA_LENGTH_SAMPLES, 
+                  (p->hdr.packet_size - sizeof(packet_header)) / sizeof(std::complex<int16_t>));
             std::copy_n(std::begin(p->data), data_size, std::back_inserter(data));
           }
           else if(has_time and not has_stream_id) {
             auto *p = reinterpret_cast<data_packet_time *>(&q);
-            size_t data_size = std::min(MAX_DATA_LENGTH_SAMPLES, (p->hdr.packet_size - sizeof(packet_header) - sizeof(time_spec_t)) / sizeof(std::complex<int16_t>));
+            size_t data_size = std::min(MAX_DATA_LENGTH_SAMPLES, 
+                  (p->hdr.packet_size - sizeof(packet_header) - sizeof(time_spec_t)) / sizeof(std::complex<int16_t>));
             std::copy_n(std::begin(p->data), data_size, std::back_inserter(data));
           }
           else if(has_stream_id and not has_time) {
             auto *p = reinterpret_cast<data_packet_stream *>(&q);
-            size_t data_size = std::min(MAX_DATA_LENGTH_SAMPLES, (p->hdr.packet_size - sizeof(packet_header) - sizeof(stream_spec_t)) / sizeof(std::complex<int16_t>));
+            size_t data_size = std::min(MAX_DATA_LENGTH_SAMPLES, 
+                  (p->hdr.packet_size - sizeof(packet_header) - sizeof(stream_spec_t)) / sizeof(std::complex<int16_t>));
             std::copy_n(std::begin(p->data), data_size, std::back_inserter(data));
           }
           else {
             auto *p = reinterpret_cast<data_packet_time_stream *>(&q);
-            size_t data_size = std::min(MAX_DATA_LENGTH_SAMPLES, (p->hdr.packet_size - sizeof(packet_header) - sizeof(time_spec_t) - sizeof(stream_spec_t)) / sizeof(std::complex<int16_t>));
+            size_t data_size = std::min(MAX_DATA_LENGTH_SAMPLES, 
+                  (p->hdr.packet_size - sizeof(packet_header) - sizeof(time_spec_t) - sizeof(stream_spec_t)) / sizeof(std::complex<int16_t>));
             std::copy_n(std::begin(p->data), data_size, std::back_inserter(data));
           }
           n_popped++;
