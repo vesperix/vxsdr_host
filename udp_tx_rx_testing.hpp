@@ -7,6 +7,7 @@
 #include "thread_utils.h"
 
 #include "vxsdr_header.hpp"
+#include "packet_proc.hpp"
 
 //#define SINGLE_CHANNEL
 
@@ -47,6 +48,44 @@ void set_tx_stop_flag() {
   tx_stop_flag = true;
 }
 
+std::string packet_type_to_name(const uint8_t number) {
+  switch(number) {
+    case PACKET_TYPES::TX_SIGNAL_DATA:
+      return "TX_SIGNAL_DATA";
+    case PACKET_TYPES::RX_SIGNAL_DATA:
+      return "RX_SIGNAL_DATA";
+    case PACKET_TYPES::DEVICE_CMD:
+      return "DEVICE_CMD";
+    case PACKET_TYPES::TX_RADIO_CMD:
+      return "TX_RADIO_CMD";
+    case PACKET_TYPES::RX_RADIO_CMD:
+      return "RX_RADIO_CMD";
+    case PACKET_TYPES::DEVICE_CMD_ERR:
+      return "DEVICE_CMD_ERR";
+    case PACKET_TYPES::TX_RADIO_CMD_ERR:
+      return "TX_RADIO_CMD_ERR";
+    case PACKET_TYPES::RX_RADIO_CMD_ERR:
+      return "RX_RADIO_CMD_ERR";
+    case PACKET_TYPES::DEVICE_CMD_RSP:
+      return "DEVICE_CMD_RSP";
+    case PACKET_TYPES::TX_RADIO_CMD_RSP:
+      return "TX_RADIO_CMD_RSP";
+    case PACKET_TYPES::RX_RADIO_CMD_RSP:
+      return "RX_RADIO_CMD_RSP";
+    case PACKET_TYPES::TX_SIGNAL_DATA_ACK:
+      return "TX_SIGNAL_DATA_ACK";
+    case PACKET_TYPES::RX_SIGNAL_DATA_ACK:
+      return "RX_SIGNAL_DATA_ACK";
+    case PACKET_TYPES::DEVICE_CMD_ACK:
+      return "DEVICE_CMD_ACK";
+    case PACKET_TYPES::TX_RADIO_CMD_ACK:
+      return "TX_RADIO_CMD_ACK";
+    case PACKET_TYPES::RX_RADIO_CMD_ACK:
+      return "RX_RADIO_CMD_ACK";
+  }
+  return "UNDEFINED";
+}
+
 class udp_rx {
   public:
     udp_rx(boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint)
@@ -70,8 +109,9 @@ class udp_rx {
     boost::asio::ip::udp::socket socket;
     boost::asio::ip::udp::endpoint remote;
     data_packet recv_buffer;
-    generic_cmd_rsp_packet cmd_buffer;
-    size_t packets_received = 0, packet_types_received[16] = { 0 };
+    cmd_or_rsp_packet cmd_buffer;
+    size_t packets_received = 0;
+    size_t packet_types_received[UINT8_MAX] = { 0 };
     size_t seq = 0, last_seq = 0, seq_errors = 0;
     unsigned percent, min_buffer_percent = 100, max_buffer_percent = 0;
     void start_receive() {
@@ -79,79 +119,51 @@ class udp_rx {
       while(not rx_stop_flag) {
         socket.receive_from(boost::asio::buffer(&recv_buffer, sizeof(recv_buffer)), remote);
         packets_received++;
-        if(recv_buffer.hdr.packet_type < 16)
-          packet_types_received[recv_buffer.hdr.packet_type]++;
+        packet_types_received[recv_buffer.hdr.packet_type]++;
+
         if(packets_received > 1 and recv_buffer.hdr.sequence_counter != last_seq + 1 and last_seq != UINT16_MAX)
           seq_errors++;
         last_seq = recv_buffer.hdr.sequence_counter;
         switch(recv_buffer.hdr.packet_type) {
-          case PACKET_TYPES::DEVICE_CMD_ACK:
-            LOGGER(info) << "DEVICE_CMD_ACK: " << (int)recv_buffer.hdr.command;
-            break;
-          case PACKET_TYPES::DEVICE_CMD_ERR:
-            LOGGER(info) << "DEVICE_CMD_ERR: " << (int)recv_buffer.hdr.command;
-            break;
-          case PACKET_TYPES::DEVICE_CMD_RSP:
-            switch(recv_buffer.hdr.command) {
-              case DEVICE_CMD::HELLO:
-                {
-                  LOGGER(info) << "DEVICE_CMD_RSP: HELLO";
-                  hello_rsp_packet *hr = reinterpret_cast<hello_rsp_packet *>(&recv_buffer);
-                  LOGGER(info) << "   proc_rev                  = " << (uint32_t)hr->proc_rev;
-                  LOGGER(info) << "   fpga_rev                  = " << (uint32_t)hr->fpga_rev;
-                }
-                break;
-              case DEVICE_CMD::GET_STATUS:
-                {
-                  LOGGER(info) << "DEVICE_CMD_RSP: GET_STATUS";
-                  status_rsp_packet *sr = reinterpret_cast<status_rsp_packet *>(&recv_buffer);
-                  LOGGER(info) << "   fpga_temp                 = " << sr->fpga_temp;
-                  LOGGER(info) << "   dac_temp                  = " << sr->dac_temp;
-                  LOGGER(info) << "   tx_data_oos_cnt           = " << sr->tx_data_oos_cnt;
-                  LOGGER(info) << "   tx_ctrl_oos_cnt           = " << sr->tx_ctrl_oos_cnt;
-                  LOGGER(info) << "   datapath_fifo_flow_status = " << sr->datapath_fifo_flow_status;
-                  LOGGER(info) << "   ddr_arbiter_status        = " << sr->ddr_arbiter_status;
-                  LOGGER(info) << "   tgbe_status               = " << sr->tgbe_status;
-                }
-                break;
-              case DEVICE_CMD::GET_BUFFER_USE:
-                {
-                  LOGGER(info) << "DEVICE_CMD_RSP: GET_BUFFER_USE";
-                  get_buffer_use_rsp_packet *br = reinterpret_cast<get_buffer_use_rsp_packet *>(&recv_buffer);
-                  LOGGER(info) << "   buffer_used_bytes         = " << (uint32_t)br->buffer_used_bytes;
-                  LOGGER(info) << "   buffer_size_bytes         = " << (uint32_t)br->buffer_size_bytes;
-                }
-                break;
-            }
-           break;
-          case PACKET_TYPES::RX_RADIO_CMD_RSP:
-            LOGGER(info) << "RX_RADIO_CMD_RSP: " << (int)recv_buffer.hdr.command;
-            break;
-          case PACKET_TYPES::RX_RADIO_CMD_ERR:
-            LOGGER(info) << "RX_RADIO_CMD_ERR: " << (int)recv_buffer.hdr.command;
-            break;
-          case PACKET_TYPES::RX_RADIO_CMD_ACK:
-            LOGGER(info) << "RX_RADIO_CMD_ACK: " << (int)recv_buffer.hdr.command;
-            break;
-          case PACKET_TYPES::TX_RADIO_CMD_RSP:
-            LOGGER(info) << "RX_RADIO_CMD_RSP: " << (int)recv_buffer.hdr.command;
-            break;
-          case PACKET_TYPES::TX_RADIO_CMD_ERR:
-            LOGGER(info) << "TX_RADIO_CMD_ERR: " << (int)recv_buffer.hdr.command;
-            break;
-          case PACKET_TYPES::TX_RADIO_CMD_ACK:
-            LOGGER(info) << "TX_RADIO_CMD_ACK: " << (int)recv_buffer.hdr.command;
-            break;
           case PACKET_TYPES::RX_SIGNAL_DATA:
+            // ignored
+            break;
+          case PACKET_TYPES::TX_SIGNAL_DATA:
+            LOGGER(error) << "Received a TX signal data packet";
+            break;
+
+          case PACKET_TYPES::DEVICE_CMD_RSP:
+          case PACKET_TYPES::DEVICE_CMD_ERR:
+          case PACKET_TYPES::DEVICE_CMD_ACK:
+          case PACKET_TYPES::RX_RADIO_CMD_RSP:
+          case PACKET_TYPES::RX_RADIO_CMD_ERR:
+          case PACKET_TYPES::RX_RADIO_CMD_ACK:
+          case PACKET_TYPES::TX_RADIO_CMD_RSP:
+          case PACKET_TYPES::TX_RADIO_CMD_ERR:
+          case PACKET_TYPES::TX_RADIO_CMD_ACK:
+            {
+              auto *p = reinterpret_cast<cmd_or_rsp_packet *>(&recv_buffer);
+              log_packet_info(*p);
+            }
+            break;
+          case PACKET_TYPES::DEVICE_CMD:
+            LOGGER(error) << "Received a device command packet: " << (int)recv_buffer.hdr.command;
+            break;
+          case PACKET_TYPES::RX_RADIO_CMD:
+            LOGGER(error) << "Received a radio receiver command packet: " << (int)recv_buffer.hdr.command;
+            break;
+          case PACKET_TYPES::TX_RADIO_CMD:
+            LOGGER(error) << "Received a radio transmitter command packet: " << (int)recv_buffer.hdr.command;
             break;
           default:
-            LOGGER(info) << "PACKET_TYPE: " << (int)recv_buffer.hdr.packet_type << " COMMAND " << (int)recv_buffer.hdr.command;
+            LOGGER(info) << "Received unknown packet: PACKET_TYPE " << (int)recv_buffer.hdr.packet_type << " COMMAND " << (int)recv_buffer.hdr.command;
             break;
         }
       }
       LOGGER(info) << packets_received << " packets received:";
-      for(unsigned i = 0; i < 16; i++)
-        LOGGER(info) << (boost::format("   %12d %s") % packet_types_received[i] % PACKET_TYPES::NAMES[i]);
+      for(unsigned i = 0; i < UINT8_MAX; i++)
+        if(packet_types_received[i] > 0)
+          LOGGER(info) << (boost::format("   %12d %s (%d)") % packet_types_received[i] % packet_type_to_name(i) % i);
 
       LOGGER(info) << "receive finished";
     }
@@ -181,48 +193,116 @@ class udp_tx {
       hdr.packet_type = PACKET_TYPES::DEVICE_CMD;
       hdr.target_subdevice = 0;
       hdr.command = DEVICE_CMD::HELLO;
-      hdr.flags = 0;
+      hdr.flags = FLAGS::REQUEST_ACK;
       hdr.packet_size = sizeof(hdr);
       hdr.sequence_counter = packets_sent % UINT16_MAX;
       size_t bytes_sent = socket.send_to(boost::asio::buffer(&hdr, hdr.packet_size), destination);
       packets_sent++;
       total_bytes += bytes_sent;
-      std::this_thread::sleep_for(std::chrono::seconds(1));
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
       hdr.packet_type = PACKET_TYPES::DEVICE_CMD;
       hdr.target_subdevice = 0;
       hdr.command = DEVICE_CMD::GET_STATUS;
-      hdr.flags = 0;
+      hdr.flags = FLAGS::REQUEST_ACK;
       hdr.packet_size = sizeof(hdr);
       hdr.sequence_counter = packets_sent % UINT16_MAX;
       bytes_sent = socket.send_to(boost::asio::buffer(&hdr, hdr.packet_size), destination);
       packets_sent++;
       total_bytes += bytes_sent;
-      std::this_thread::sleep_for(std::chrono::seconds(1));
-      hdr.packet_type = PACKET_TYPES::DEVICE_CMD;
-      hdr.target_subdevice = 0;
-      hdr.command = DEVICE_CMD::GET_BUFFER_USE;
-      hdr.flags = 0;
-      hdr.packet_size = sizeof(hdr);
-      for(unsigned i = 0; i < 10; i++) {
-        hdr.sequence_counter = packets_sent % UINT16_MAX;
-        bytes_sent = socket.send_to(boost::asio::buffer(&hdr, hdr.packet_size), destination);
-        packets_sent++;
-        total_bytes += bytes_sent;
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
-      }
-      std::this_thread::sleep_for(std::chrono::seconds(1));
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
       hdr.packet_type = PACKET_TYPES::RX_RADIO_CMD;
       hdr.target_subdevice = 0;
       hdr.command = RADIO_CMD::STOP_NOW;
-      hdr.flags = 0;
+      hdr.flags = FLAGS::REQUEST_ACK;
       hdr.packet_size = sizeof(hdr);
-      for(unsigned i = 0; i < 10; i++) {
-        hdr.sequence_counter = packets_sent % UINT16_MAX;
-        bytes_sent = socket.send_to(boost::asio::buffer(&hdr, hdr.packet_size), destination);
-        packets_sent++;
-        total_bytes += bytes_sent;
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
-      }
+      hdr.sequence_counter = packets_sent % UINT16_MAX;
+      bytes_sent = socket.send_to(boost::asio::buffer(&hdr, hdr.packet_size), destination);
+      packets_sent++;
+      total_bytes += bytes_sent;
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+      dev_read_write_reg_packet p;
+      p.hdr.packet_type = PACKET_TYPES::DEVICE_CMD;
+      p.hdr.target_subdevice = 0;
+      p.hdr.command = DEVICE_CMD::READ_DAC_REG;
+      p.hdr.flags = FLAGS::REQUEST_ACK;
+      p.hdr.packet_size = sizeof(hdr) + 8;
+      p.hdr.sequence_counter = packets_sent % UINT16_MAX;
+      p.register_number = 0x2;
+      p.value = 0;
+      bytes_sent = socket.send_to(boost::asio::buffer(&p, sizeof(p)), destination);
+      packets_sent++;
+      total_bytes += bytes_sent;
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+      p.hdr.packet_type = PACKET_TYPES::DEVICE_CMD;
+      p.hdr.target_subdevice = 0;
+      p.hdr.command = DEVICE_CMD::READ_DAC_REG;
+      p.hdr.flags = FLAGS::REQUEST_ACK;
+      p.hdr.packet_size = sizeof(hdr) + 8;
+      p.hdr.sequence_counter = packets_sent % UINT16_MAX;
+      p.register_number = 0xD;
+      p.value = 0;
+      bytes_sent = socket.send_to(boost::asio::buffer(&p, sizeof(p)), destination);
+      packets_sent++;
+      total_bytes += bytes_sent;
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+      dev_read_write_reg_packet q;
+      q.hdr.packet_type = PACKET_TYPES::DEVICE_CMD;
+      q.hdr.target_subdevice = 0;
+      q.hdr.command = DEVICE_CMD::WRITE_DAC_REG;
+      q.hdr.flags = FLAGS::REQUEST_ACK;
+      q.hdr.packet_size = sizeof(hdr) + 8;
+      q.hdr.sequence_counter = packets_sent % UINT16_MAX;
+      q.register_number = 0x2;
+      q.value = 0x2042;
+      bytes_sent = socket.send_to(boost::asio::buffer(&q, sizeof(q)), destination);
+      packets_sent++;
+      total_bytes += bytes_sent;
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+      q.hdr.packet_type = PACKET_TYPES::DEVICE_CMD;
+      q.hdr.target_subdevice = 0;
+      q.hdr.command = DEVICE_CMD::WRITE_DAC_REG;
+      q.hdr.flags = FLAGS::REQUEST_ACK;
+      q.hdr.packet_size = sizeof(hdr) + 8;
+      q.hdr.sequence_counter = packets_sent % UINT16_MAX;
+      q.register_number = 0xD;
+      q.value = 0x4400;
+      bytes_sent = socket.send_to(boost::asio::buffer(&q, sizeof(q)), destination);
+      packets_sent++;
+      total_bytes += bytes_sent;
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+      p.hdr.packet_type = PACKET_TYPES::DEVICE_CMD;
+      p.hdr.target_subdevice = 0;
+      p.hdr.command = DEVICE_CMD::READ_DAC_REG;
+      p.hdr.flags = FLAGS::REQUEST_ACK;
+      p.hdr.packet_size = sizeof(hdr) + 8;
+      p.hdr.sequence_counter = packets_sent % UINT16_MAX;
+      p.register_number = 0x2;
+      p.value = 0;
+      bytes_sent = socket.send_to(boost::asio::buffer(&p, sizeof(p)), destination);
+      packets_sent++;
+      total_bytes += bytes_sent;
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+      p.hdr.packet_type = PACKET_TYPES::DEVICE_CMD;
+      p.hdr.target_subdevice = 0;
+      p.hdr.command = DEVICE_CMD::READ_DAC_REG;
+      p.hdr.flags = FLAGS::REQUEST_ACK;
+      p.hdr.packet_size = sizeof(hdr) + 8;
+      p.hdr.sequence_counter = packets_sent % UINT16_MAX;
+      p.register_number = 0xD;
+      p.value = 0;
+      bytes_sent = socket.send_to(boost::asio::buffer(&p, sizeof(p)), destination);
+      packets_sent++;
+      total_bytes += bytes_sent;
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
       // now set stop flag and then send a HELLO to get the RX to quit
       set_rx_stop_flag();
       std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -236,6 +316,7 @@ class udp_tx {
       packets_sent++;
       total_bytes += bytes_sent;
       std::this_thread::sleep_for(std::chrono::seconds(1));
+
       LOGGER(info) << "send finished: " << packets_sent << " packets, " << total_bytes << " bytes sent";
     }
 };

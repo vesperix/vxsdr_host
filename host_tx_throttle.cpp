@@ -31,8 +31,7 @@ void define_options(boost::program_options::options_description &desc)
     ("broadcast,B", boost::program_options::bool_switch()->default_value(false), "flag to enable broadcast")
     ("destination_port,P", boost::program_options::value<unsigned>()->default_value(1030), "port to use on destination")
     ("packet_size,S", boost::program_options::value<size_t>()->default_value(1024), "packet size in bytes")
-    ("num_packets,N", boost::program_options::value<size_t>()->default_value(1024), "number of packets to send")
-    ("wait_us,W", boost::program_options::value<unsigned>()->default_value(1000000), "wait between packets in us")
+    ("num_packets,N", boost::program_options::value<uint64_t>()->default_value(1024), "number of packets to send")
   ;
 }
 
@@ -84,7 +83,7 @@ int main(int argc, char *argv[])
 {
   INIT_LOGGER();
   try {
-    LOGGER(info) << argv[0] << " started";
+    LOGGER(debug) << argv[0] << " started";
     signal(SIGINT, &sig_int_handler);
     boost::program_options::options_description desc("Command line options");
     boost::program_options::variables_map vm;
@@ -94,8 +93,8 @@ int main(int argc, char *argv[])
 
     boost::asio::ip::address_v4 local_ip = boost::asio::ip::address_v4::from_string(vm["local_address"].as<std::string>());
     boost::asio::ip::address_v4 destination_ip = boost::asio::ip::address_v4::from_string(vm["destination_address"].as<std::string>());
-    boost::asio::ip::address_v4 netmask = boost::asio::ip::address_v4::from_string(vm["netmask"].as<std::string>());
-    boost::asio::ip::address_v4 broadcast_ip = boost::asio::ip::address_v4::broadcast(local_ip, netmask);
+    //boost::asio::ip::address_v4 netmask = boost::asio::ip::address_v4::from_string(vm["netmask"].as<std::string>());
+    //boost::asio::ip::address_v4 broadcast_ip = boost::asio::ip::address_v4::broadcast(local_ip, netmask);
     boost::asio::ip::udp::endpoint local_send_endpoint(local_ip, vm["local_send_port"].as<unsigned>());
     LOGGER(info) << "using local send IP " << local_send_endpoint.address().to_string() << " and port " << local_send_endpoint.port();
     boost::asio::ip::udp::endpoint local_receive_endpoint(local_ip, vm["local_receive_port"].as<unsigned>());
@@ -103,22 +102,31 @@ int main(int argc, char *argv[])
      boost::asio::ip::udp::endpoint destination_endpoint(destination_ip, vm["destination_port"].as<unsigned>());
     LOGGER(info) << "using destination IP " << destination_endpoint.address().to_string() << " and port " << destination_endpoint.port();
 
-    std::thread generator_thread(std::ref(generator), vm["num_packets"].as<size_t>(), vm["packet_size"].as<size_t>(), vm["wait_us"].as<unsigned>());
-
     boost::asio::io_context io_context;
-    std::thread sender_thread(std::ref(sender), std::ref(io_context), std::cref(local_send_endpoint), std::cref(destination_endpoint), vm["broadcast"].as<bool>());
+
+    std::thread generator_thread(std::ref(generator), vm["num_packets"].as<uint64_t>(), vm["packet_size"].as<size_t>());
+    std::thread packet_counter_thread(std::ref(data_packet_counter), vm["num_packets"].as<uint64_t>(), vm["packet_size"].as<size_t>());
     std::thread receiver_thread(std::ref(receiver), std::ref(io_context), std::cref(local_receive_endpoint));
-    std::thread packet_counter_thread(std::ref(packet_counter), vm["num_packets"].as<size_t>(), vm["packet_size"].as<size_t>());
+    std::thread response_logger_thread(std::ref(response_packet_printer));
+    std::thread sender_thread(std::ref(sender), std::ref(io_context), std::cref(local_send_endpoint), std::cref(destination_endpoint), vm["broadcast"].as<bool>());
+
     generator_thread.join();
-    sender_thread.join();
+    // allow time for the packets in tx queue to be sent
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    set_tx_stop_flag();
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    set_rx_stop_flag();
     receiver_thread.join();
+    sender_thread.join();
     packet_counter_thread.join();
+    set_complete_flag();
+    response_logger_thread.join();
   }
   catch (std::exception& e) {
     LOGGER(fatal) << "exception caught: " << e.what();
     return EXIT_INTERNAL_ERROR;
   }
 
-  LOGGER(info) << argv[0] << " finished";
+  LOGGER(debug) << argv[0] << " finished";
   return EXIT_SUCCESS;
 }

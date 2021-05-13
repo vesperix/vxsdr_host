@@ -1,14 +1,14 @@
+#include <cstdint>
+#include <complex>
+
 #ifndef VXSDR_HEADER_HPP
 #define VXSDR_HEADER_HPP
 
 /*
-  SDR packet headers
-  Version 0.1.5 29 Nov 2020
+  SDR packet definitions
+  Version 0.2.0 22 Jan 2021
   FROZEN EXCEPT FOR ADDITIONS UNTIL INITIAL IMPLEMENTATION COMPLETE AND TESTED
 */
-
-#include <cstdint>
-#include <complex>
 
 namespace PACKET_TYPES {
   // packet types
@@ -17,48 +17,36 @@ namespace PACKET_TYPES {
   static constexpr uint8_t DEVICE_CMD         = 0x02;
   static constexpr uint8_t TX_RADIO_CMD       = 0x03;
   static constexpr uint8_t RX_RADIO_CMD       = 0x04;
-  static constexpr uint8_t TX_SIGNAL_DATA_ACK = 0x05;
-  static constexpr uint8_t RX_SIGNAL_DATA_ACK = 0x06;
-  static constexpr uint8_t DEVICE_CMD_ACK     = 0x07;
-  static constexpr uint8_t TX_RADIO_CMD_ACK   = 0x08;
-  static constexpr uint8_t RX_RADIO_CMD_ACK   = 0x09;
+  static constexpr uint8_t STATUS_MSG         = 0x05;
   static constexpr uint8_t DEVICE_CMD_ERR     = 0x0A;
   static constexpr uint8_t TX_RADIO_CMD_ERR   = 0x0B;
   static constexpr uint8_t RX_RADIO_CMD_ERR   = 0x0C;
   static constexpr uint8_t DEVICE_CMD_RSP     = 0x0D;
   static constexpr uint8_t TX_RADIO_CMD_RSP   = 0x0E;
   static constexpr uint8_t RX_RADIO_CMD_RSP   = 0x0F;
-  static std::array<std::string, 16> NAMES = {
-    "TX_SIGNAL_DATA",
-    "RX_SIGNAL_DATA",
-    "DEVICE_CMD",
-    "TX_RADIO_CMD",
-    "RX_RADIO_CMD",
-    "TX_SIGNAL_DATA_ACK",
-    "RX_SIGNAL_DATA_ACK",
-    "DEVICE_CMD_ACK",
-    "TX_RADIO_CMD_ACK",
-    "RX_RADIO_CMD_ACK",
-    "DEVICE_CMD_ERR",
-    "TX_RADIO_CMD_ERR",
-    "RX_RADIO_CMD_ERR",
-    "DEVICE_CMD_RSP",
-    "TX_RADIO_CMD_RSP",
-    "RX_RADIO_CMD_RSP"
-  };
+  static constexpr uint8_t TX_SIGNAL_DATA_ACK = 0x80;
+  static constexpr uint8_t RX_SIGNAL_DATA_ACK = 0x81;
+  static constexpr uint8_t DEVICE_CMD_ACK     = 0x82;
+  static constexpr uint8_t TX_RADIO_CMD_ACK   = 0x83;
+  static constexpr uint8_t RX_RADIO_CMD_ACK   = 0x84;
+  static constexpr uint8_t INVALID_PACKET     = 0xFF;
 }
 
-static constexpr size_t   MAX_DATA_LENGTH_SAMPLES  = 2048;
-static constexpr size_t   MAX_PAYLOAD_LENGTH_BYTES = 256;  // maximum length of a CMD or RSP packet, excluding header
+typedef struct {
+  uint8_t                 packet_type = PACKET_TYPES::INVALID_PACKET;
+  uint8_t                 command = 0;
+  uint8_t                 target_subdevice = 0;  // for cases where multiple devices exist (e.g. multiple network I/F or multichannel TX/RX)
+  uint8_t                 flags = 0;
+  uint16_t                packet_size = 0;       // length of packet including header in bytes
+  uint16_t                sequence_counter = 0;  // need to figure out when this resets (every new data stream, power up, ?)
+} packet_header;
 
 typedef struct {
-  uint8_t                 packet_type;
-  uint8_t                 command;
-  uint8_t                 target_subdevice;  // for cases where multiple devices exist (e.g. multiple network I/F or multichannel TX/RX)
-  uint8_t                 flags;
-  uint16_t                packet_size;       // length of packet including header in bytes
-  uint16_t                sequence_counter;  // need to figure out when this resets (every new data stream, power up, ?)
-} packet_header;
+  uint32_t                nanoseconds = 0;
+  uint32_t                seconds = 0;
+} time_spec_t;
+
+typedef uint64_t          stream_spec_t;
 
 namespace FLAGS {
   static constexpr uint8_t REQUEST_ACK       = 0x80;  // bit 0
@@ -84,29 +72,35 @@ namespace DEVICE_CMD {
   static constexpr uint8_t OPEN_SESSION                 = 0x08;
   static constexpr uint8_t CLOSE_SESSION                = 0x09;
   // 0x0A-0x0F reserved
-  static constexpr uint8_t GET_TRANSPORT_INFO           = 0x10;  // how many interfaces, what kind
+  static constexpr uint8_t GET_TRANSPORT_INFO           = 0x10;  // unimplemented // how many interfaces, what kind
   static constexpr uint8_t GET_TRANSPORT_ADDR           = 0x11;  // we'll use this for IP addresses
   static constexpr uint8_t GET_TRANSPORT_PKTSIZ         = 0x12;
   // 0x12-0x1F reserved for more get_transport stuff as needed
   static constexpr uint8_t SET_TRANSPORT_ADDR           = 0x21;
   static constexpr uint8_t SET_TRANSPORT_PKTSIZ         = 0x22;
+  static constexpr uint8_t SAVE_TRANSPORT_ADDR          = 0x23;
   // 0x22-0x2F reserved for more set_transport stuff as needed
-  static constexpr uint8_t GET_CHANNEL_INFO             = 0x30;  // how many, are they TX/RX, etc
+  static constexpr uint8_t GET_CHANNEL_INFO             = 0x30;  // unimplemented // how many, are they TX/RX, etc
   // 0x31-0x4F reserved for channel parameter get and set
-  static constexpr uint8_t GET_TIMING_INFO              = 0x50;  // what timing inputs are available
+  static constexpr uint8_t GET_TIMING_INFO              = 0x50;  // unimplemented // what timing inputs are available
   static constexpr uint8_t GET_TIMING_STATUS            = 0x51;  // PPS present/absent; 10 MHz locked/unlocked
-  static constexpr uint8_t GET_TIMING_REF               = 0x52;  // current sources of 10 MHz and PPS
-  static constexpr uint8_t SET_TIMING_REF               = 0x53;  // set sources of 10 MHz and PPS
+  static constexpr uint8_t GET_TIMING_REF               = 0x52;  // unimplemented // current sources of 10 MHz and PPS
+  static constexpr uint8_t SET_TIMING_REF               = 0x53;  // unimplemented // set sources of 10 MHz and PPS
+  static constexpr uint8_t READ_DAC_REG                 = 0x60;
+  static constexpr uint8_t WRITE_DAC_REG                = 0x61;
+  static constexpr uint8_t READ_ADC_REG                 = 0x62;
+  static constexpr uint8_t WRITE_ADC_REG                = 0x63;
 
-  // 0x50-0xFD reserved for stuff we haven't thought of yet
-  static constexpr uint8_t STOP                         = 0xFE;  // stop all streaming and return to wait state within session
-  static constexpr uint8_t RESET                        = 0xFF;  // do a power on reset (closing session and returning to idle)
+  // 0x64-0xFD reserved for stuff we haven't thought of yet
+  static constexpr uint8_t STOP                         = 0xFE;  // unimplemented // stop all streaming and return to wait state within session
+  static constexpr uint8_t RESET                        = 0xFF;  // unimplemented // do a power on reset (closing session and returning to idle)
 }
 
 namespace DEVICE_CMD_RSP {
-  static constexpr uint8_t HELLO_RSP                    = 0x00;  
+  static constexpr uint8_t HELLO_RSP                    = 0x00;
   static constexpr uint8_t GET_TIME_RSP                 = 0x03;
   static constexpr uint8_t GET_STATUS_RSP               = 0x04;
+  static constexpr uint8_t GET_BUFFER_INFO_RSP          = 0x06;
   static constexpr uint8_t GET_BUFFER_USE_RSP           = 0x07;
   static constexpr uint8_t OPEN_SESSION_RSP             = 0x08;
   static constexpr uint8_t CLOSE_SESSION_RSP            = 0x09;
@@ -117,6 +111,8 @@ namespace DEVICE_CMD_RSP {
   static constexpr uint8_t GET_TIMING_INFO_RSP          = 0x50;
   static constexpr uint8_t GET_TIMING_STATUS_RSP        = 0x51;
   static constexpr uint8_t GET_TIMING_REF_RSP           = 0x52;
+  static constexpr uint8_t READ_DAC_REG_RSP             = 0x60;
+  static constexpr uint8_t READ_ADC_REG_RSP             = 0x62;
 }
 
 namespace DEVICE_CMD_ERR {
@@ -134,18 +130,18 @@ namespace RADIO_CMD {
   static constexpr uint8_t START_NOW_FOR_N_SAMPLES      = 0x04;
   static constexpr uint8_t START_AT_TIME_FOR_N_SAMPLES  = 0x05;  // error if TIME_PRESENT is 0
   // 0x06-0x0F reserved
-  static constexpr uint8_t GET_RF_INFO                  = 0x10;  // available frequency, gain, sample rate, and bandwidth ranges, number of selectable I/Os
-  static constexpr uint8_t GET_RF_FREQ                  = 0x11;
-  static constexpr uint8_t GET_RF_GAIN                  = 0x12;
-  static constexpr uint8_t GET_SAMPLE_RATE              = 0x13;
-  static constexpr uint8_t GET_RF_BW                    = 0x14;
-  static constexpr uint8_t GET_RF_IO                    = 0x15;
+  static constexpr uint8_t GET_RF_INFO                  = 0x10;  // unimplemented // available frequency, gain, sample rate, and bandwidth ranges, number of selectable I/Os
+  static constexpr uint8_t GET_RF_FREQ                  = 0x11;  // unimplemented
+  static constexpr uint8_t GET_RF_GAIN                  = 0x12;  // unimplemented
+  static constexpr uint8_t GET_SAMPLE_RATE              = 0x13;  // unimplemented
+  static constexpr uint8_t GET_RF_BW                    = 0x14;  // unimplemented
+  static constexpr uint8_t GET_RF_IO                    = 0x15;  // unimplemented
   // 0x16-0x20 reserved
-  static constexpr uint8_t SET_RF_FREQ                  = 0x21;
-  static constexpr uint8_t SET_RF_GAIN                  = 0x22;
-  static constexpr uint8_t SET_SAMPLE_RATE              = 0x23;
-  static constexpr uint8_t SET_RF_BW                    = 0x24;
-  static constexpr uint8_t SET_RF_IO                    = 0x25;
+  static constexpr uint8_t SET_RF_FREQ                  = 0x21;  // unimplemented
+  static constexpr uint8_t SET_RF_GAIN                  = 0x22;  // unimplemented
+  static constexpr uint8_t SET_SAMPLE_RATE              = 0x23;  // unimplemented
+  static constexpr uint8_t SET_RF_BW                    = 0x24;  // unimplemented
+  static constexpr uint8_t SET_RF_IO                    = 0x25;  // unimplemented
   // 0x26-0xFF reserved
 }
 
@@ -166,63 +162,132 @@ namespace RADIO_CMD_ERR {
   static constexpr uint8_t BAD_PARAMETER                = 0x05;
 }
 
-typedef struct {
-  uint32_t                nanoseconds;
-  uint32_t                seconds;
-} time_spec;
+static constexpr size_t   MAX_DATA_LENGTH_SAMPLES  = 2048;
+static constexpr size_t   MAX_PAYLOAD_LENGTH_BYTES = 32;  // maximum length of a CMD or RSP packet, excluding header
 
-typedef struct {
-  packet_header           hdr;       // hdr.packet_type must be TX_RADIO_CMD or RX_RADIO_CMD
-} stream_control_packet_bare;
+class packet {
+  public:
+    packet_header          hdr;
+};
 
-typedef struct {
-  packet_header           hdr;       // hdr.packet_type must be TX_RADIO_CMD or RX_RADIO_CMD
-  uint64_t                n_samples;
-} stream_control_packet_samples;
+class data_packet : public packet {
+  public:
+    std::complex<int16_t>  data[MAX_DATA_LENGTH_SAMPLES];
+};
 
-typedef struct {
-  packet_header           hdr;
-  time_spec               time;
-} stream_control_packet_time;
+class data_packet_time : public packet {
+  public:
+    time_spec_t            time;
+    std::complex<int16_t>  data[MAX_DATA_LENGTH_SAMPLES];
+};
 
-typedef struct {
-  packet_header           hdr;
-  time_spec               time;
-  uint64_t                n_samples;
-} stream_control_packet_time_samples;
+class data_packet_stream : public packet {
+  public:
+    stream_spec_t          stream_id = 0;
+    std::complex<int16_t>  data[MAX_DATA_LENGTH_SAMPLES];
+};
 
-typedef struct {
-  packet_header           hdr;
-  uint32_t                buffer_used_bytes;
-  uint32_t                buffer_size_bytes;
-} get_buffer_use_rsp_packet;
+class data_packet_time_stream : public packet {
+  public:
+    time_spec_t            time;
+    stream_spec_t          stream_id = 0;
+    std::complex<int16_t>  data[MAX_DATA_LENGTH_SAMPLES];
+};
 
-typedef struct {
-  packet_header           hdr;
-  std::complex<int16_t>   data[MAX_DATA_LENGTH_SAMPLES]; // FIXME: find proper way to represent variable-mength data in struct
-} data_packet;
+class largest_data_packet : public data_packet_time_stream {};
 
-typedef struct {
-  packet_header           hdr;
-  uint8_t                 payload[MAX_PAYLOAD_LENGTH_BYTES];
-} generic_cmd_rsp_packet;
+class cmd_or_rsp_packet : public packet {};
 
-typedef struct {
-  packet_header           hdr;
-  uint32_t                proc_rev;
-  uint32_t                fpga_rev;
-} hello_rsp_packet;
+class cmd_or_rsp_packet_time : public cmd_or_rsp_packet {
+  public:
+    time_spec_t            time;
+};
 
-typedef struct {
-  packet_header           hdr;
-  uint16_t                fpga_temp;
-  uint16_t                dac_temp;
-  uint32_t                reserved;
-  uint16_t                tx_data_oos_cnt;
-  uint16_t                tx_ctrl_oos_cnt;
-  uint32_t                datapath_fifo_flow_status;
-  uint32_t                ddr_arbiter_status;
-  uint32_t                tgbe_status;
-} status_rsp_packet;
+class cmd_or_rsp_packet_time_stream : public cmd_or_rsp_packet {
+  public:
+    time_spec_t            time;
+    stream_spec_t          stream_id;
+};
+
+class largest_cmd_or_rsp_packet : public cmd_or_rsp_packet_time_stream {
+    uint8_t                payload[MAX_PAYLOAD_LENGTH_BYTES];
+};
+
+class cmd_packet : public cmd_or_rsp_packet {};
+
+class rsp_packet : public cmd_or_rsp_packet {};
+
+class ack_packet : public cmd_or_rsp_packet {};
+
+class status_packet : public cmd_or_rsp_packet {};
+
+class stream_ctrl_packet : public cmd_packet {};
+
+class stream_ctrl_packet_time_samples : public stream_ctrl_packet {
+  public:
+    time_spec_t            time;
+    uint64_t               n_samples = 0;
+};
+
+class tx_signal_data_ack_packet : public ack_packet {
+  public:
+    uint64_t               requester_seq_num = 0;
+    uint32_t               tx_buffer_used_bytes = 0;
+    uint32_t               sequence_error_count = 0;
+};
+
+class get_buffer_use_rsp_packet : public rsp_packet {
+  public:
+    uint32_t               rx_buffer_used_bytes = 0;
+    uint32_t               tx_buffer_used_bytes = 0;
+};
+
+class get_buffer_info_rsp_packet : public rsp_packet {
+  public:
+    uint32_t               rx_buffer_size_bytes = 0;
+    uint32_t               tx_buffer_size_bytes = 0;
+};
+
+class hello_rsp_packet : public rsp_packet {
+  public:
+    uint32_t               mcu_sw_version = 0;
+    uint32_t               fpga_fw_version = 0;
+};
+
+class status_rsp_packet : public rsp_packet {
+  public:
+    uint16_t               fpga_temperature = 0;
+    uint16_t               dac_temperature = 0;
+    uint32_t               reserved = 0;
+    uint32_t               sequence_error_count = 0;
+    uint32_t               data_flow_error_flags = 0;
+    uint32_t               ddr_arbiter_status = 0;
+    uint32_t               ethernet_status = 0;
+};
+
+class dev_read_write_reg_packet : public cmd_or_rsp_packet {
+  public:
+    uint32_t               register_number = 0;
+    uint32_t               value = 0;
+};
+
+class transport_addr_packet : public cmd_or_rsp_packet {
+  public:
+    uint32_t               ip_addr = 0;
+    uint32_t               reserved = 0;
+};
+
+class transport_pktsiz_packet : public cmd_or_rsp_packet {
+  public:
+    uint32_t               packet_size_bytes = 0;  // must be multiple of 8 bytes, min = 1024, max = 8216
+    uint32_t               reserved = 0;
+};
+
+class dataflow_status_packet : public status_packet {
+  public:
+    uint16_t               tx_radio_status = 0;
+    uint16_t               rx_radio_status = 0;
+    uint32_t               device_status = 0;
+};
 
 #endif // VXSDR_HEADER_HPP
