@@ -4,6 +4,7 @@
 
 #include "logging.hpp"
 #include "errors.hpp"
+#include "vxsdr.hpp"
 
 void add_rx_1ch_options(boost::program_options::options_description &desc)
 {
@@ -79,14 +80,14 @@ void init_vm(boost::program_options::options_description &desc, boost::program_o
     exit(EXIT_SUCCESS);
   }
 }
-/*
-auto set_common_options(boost::program_options::variables_map &vm, vxsdr::sptr radio) -> int
+
+int set_common_options(boost::program_options::variables_map &vm, std::shared_ptr<vxsdr> radio)
 {
   // options currently set in specific sections even when they are defined as common
   return 0;
 }
 
-auto set_rx_1ch_options(boost::program_options::variables_map &vm, vxsdr::sptr radio) -> int
+int set_rx_1ch_options(boost::program_options::variables_map &vm, std::shared_ptr<vxsdr> radio)
 {
   if(vm.count("rate") > 0)
     radio->set_rx_rate(vm["rate"].as<double>());
@@ -107,7 +108,7 @@ auto set_rx_1ch_options(boost::program_options::variables_map &vm, vxsdr::sptr r
   }
 
   if (vm.count("rx_ant") > 0)
-    radio->set_rx_antenna(vm["rx_ant"].as<string>());
+    radio->set_rx_antenna(vm["rx_ant"].as<std::string>());
 
   if (vm.count("rx_gain") > 0)
       radio->set_rx_gain(vm["rx_gain"].as<double>());
@@ -115,7 +116,7 @@ auto set_rx_1ch_options(boost::program_options::variables_map &vm, vxsdr::sptr r
   return 0;
 }
 
-auto set_tx_1ch_options(boost::program_options::variables_map &vm, vxsdr::sptr radio) -> int
+int set_tx_1ch_options(boost::program_options::variables_map &vm, std::shared_ptr<vxsdr> radio)
 {
   if(vm.count("rate") > 0)
     radio->set_tx_rate(vm["rate"].as<double>());
@@ -136,7 +137,7 @@ auto set_tx_1ch_options(boost::program_options::variables_map &vm, vxsdr::sptr r
   }
 
   if(vm.count("tx_ant") > 0)
-    radio->set_tx_antenna(vm["tx_ant"].as<string>());
+    radio->set_tx_antenna(vm["tx_ant"].as<std::string>());
 
   if(vm.count("tx_gain") > 0)
     radio->set_tx_gain(vm["tx_gain"].as<double>());
@@ -144,8 +145,9 @@ auto set_tx_1ch_options(boost::program_options::variables_map &vm, vxsdr::sptr r
   return 0;
 }
 
-auto set_time_options(boost::program_options::variables_map &vm, vxsdr::sptr radio) -> int
+int set_time_options(boost::program_options::variables_map &vm, std::shared_ptr<vxsdr> radio)
 {
+  /*
   if(vm.count("time_source") > 0)
     radio->set_time_source(vm["clock_source"].as<string>());
   else if(vm.count("no_ext_time") > 0)
@@ -171,7 +173,6 @@ auto set_time_options(boost::program_options::variables_map &vm, vxsdr::sptr rad
     radio->synch_external_time_ref(0, true);
   else
     radio->synch_system_time();
+  */
   return 0;
 }
-
-*/

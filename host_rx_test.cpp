@@ -63,7 +63,6 @@ int main(int argc, char *argv[])
     filename.append(make_filename_time(std::chrono::system_clock::now(), vm["freq"].as<double>(), vm["rate"].as<double>()));
     filename.append(vm["suffix"].as<std::string>());
 
-
     boost::asio::io_context io_context;
     std::thread sender_thread(std::ref(sender), std::ref(io_context), std::cref(local_send_endpoint), std::cref(destination_endpoint), vm["broadcast"].as<bool>());
     std::thread receiver_thread(std::ref(receiver), std::ref(io_context), std::cref(local_receive_endpoint));

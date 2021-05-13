@@ -166,7 +166,7 @@ class vxsdr {
       command_queue.push(p);
     }
 
-    void tx_set_freq(const double freq, const uint8_t subdev = 0, const uint8_t flags = 0) {
+    void set_tx_freq(const double freq, const uint8_t subdev = 0, const uint8_t flags = 0) {
       largest_cmd_or_rsp_packet q;
       auto *p = reinterpret_cast<radio_rf_freq_packet *>(&q);
       p->hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::SET_RF_FREQ, subdev, flags, sizeof(packet_header), 0 };
@@ -184,7 +184,7 @@ class vxsdr {
       command_queue.push(q);
     }
 
-    void rx_set_freq(const double freq, const uint8_t subdev = 0, const uint8_t flags = 0) {
+    void set_rx_freq(const double freq, const uint8_t subdev = 0, const uint8_t flags = 0) {
       largest_cmd_or_rsp_packet q;
       auto *p = reinterpret_cast<radio_rf_freq_packet *>(&q);
       p->hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::SET_RF_FREQ, subdev, flags, sizeof(packet_header), 0 };
@@ -202,7 +202,7 @@ class vxsdr {
       command_queue.push(q);
     }
 
-    void tx_set_gain(const double gain_db, const uint8_t subdev = 0, const uint8_t flags = 0) {
+    void set_tx_gain(const double gain_db, const uint8_t subdev = 0, const uint8_t flags = 0) {
       largest_cmd_or_rsp_packet q;
       auto *p = reinterpret_cast<radio_rf_gain_packet *>(&q);
       p->hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::SET_RF_GAIN, subdev, flags, sizeof(packet_header), 0 };
@@ -211,17 +211,44 @@ class vxsdr {
       command_queue.push(q);
     }
 
-    void rx_set_gain(const double gain_db, const uint8_t subdev = 0, const uint8_t flags = 0) {
+    void set_rx_gain(const double gain_db, const uint8_t subdev = 0, const uint8_t flags = 0) {
       largest_cmd_or_rsp_packet q;
       auto *p = reinterpret_cast<radio_rf_gain_packet *>(&q);
       p->hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::SET_RF_GAIN, subdev, flags, sizeof(packet_header), 0 };
       //FIXME: gain setting needs to be done in MCU from gain_db, not here
-      p->gain = 0;
+      //FIXME: attenuator cannot be set to 0, only 0.5 db
+      p->gain = -1;
       command_queue.push(q);
       if(gain_db > 0.0) {
         p->gain = std::min(0, std::max(63, (int)std::lround(2 * gain_db)));
         command_queue.push(q);
       }
+    }
+
+    void set_tx_rate(const double rate_samples_sec, const uint8_t subdev = 0, const uint8_t flags = 0) {
+      largest_cmd_or_rsp_packet q;
+      auto *p = reinterpret_cast<radio_rf_sample_rate_packet *>(&q);
+      p->hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::SET_SAMPLE_RATE, subdev, flags, sizeof(packet_header), 0 };
+      //FIXME: rate setting needs to be done in MCU from rate_samples_sec, not here
+      p->rate = std::min(1000, std::max(1, (int)std::lround(160.0e6 / rate_samples_sec)));
+      command_queue.push(q);
+    }
+
+    void set_rx_rate(const double rate_samples_sec, const uint8_t subdev = 0, const uint8_t flags = 0) {
+      largest_cmd_or_rsp_packet q;
+      auto *p = reinterpret_cast<radio_rf_sample_rate_packet *>(&q);
+      p->hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::SET_SAMPLE_RATE, subdev, flags, sizeof(packet_header), 0 };
+      //FIXME: rate setting needs to be done in MCU from rate_samples_sec, not here
+      p->rate = std::min(1000, std::max(1, (int)std::lround(160.0e6 / rate_samples_sec)));
+      command_queue.push(q);
+    }
+
+    void set_tx_antenna(const std::string ant, const uint8_t subdev = 0, const uint8_t flags = 0) {
+      //FIXME: implement
+    }
+
+    void set_rx_antenna(const std::string ant, const uint8_t subdev = 0, const uint8_t flags = 0) {
+      //FIXME: implement      
     }
 
   private:

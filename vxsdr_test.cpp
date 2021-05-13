@@ -18,6 +18,7 @@
 #include "errors.hpp"
 
 #include "vxsdr.hpp"
+#include "host_radio_options.hpp"
 
 void define_options(boost::program_options::options_description &desc)
 {
@@ -85,8 +86,11 @@ int main(int argc, char *argv[])
     boost::program_options::options_description desc("Command line options");
     boost::program_options::variables_map vm;
 
+    add_common_options(desc);
+    add_network_options(desc);
+    add_rx_1ch_options(desc);
+
     init_options(desc, vm, argc, argv);
-    check_options(vm);
 
     boost::asio::ip::address_v4 local_ip = boost::asio::ip::address_v4::from_string(vm["local_address"].as<std::string>());
     boost::asio::ip::address_v4 destination_ip = boost::asio::ip::address_v4::from_string(vm["destination_address"].as<std::string>());
@@ -96,7 +100,11 @@ int main(int argc, char *argv[])
     LOGGER(info) << "using local receive IP " << local_receive_endpoint.address().to_string() << " and port " << local_receive_endpoint.port();
     boost::asio::ip::udp::endpoint destination_endpoint(destination_ip, vm["destination_port"].as<unsigned>());
     LOGGER(info) << "using destination IP " << destination_endpoint.address().to_string() << " and port " << destination_endpoint.port();
-    vxsdr radio(local_send_endpoint, local_receive_endpoint, destination_endpoint);
+    auto radio = std::shared_ptr<vxsdr>(new vxsdr(local_send_endpoint, local_receive_endpoint, destination_endpoint));
+
+    set_common_options(vm, radio);
+    set_rx_1ch_options(vm, radio);
+    set_tx_1ch_options(vm, radio);
   }
   catch (std::exception& e) {
     LOGGER(fatal) << "exception caught: " << e.what();
