@@ -19,8 +19,7 @@
 
 static constexpr size_t rx_data_queue_length           =     4096;    // slots in rx data queue
 static constexpr size_t tx_data_queue_length           =     4096;    // slots in tx data queue
-static constexpr size_t rx_msg_queue_length            =     1024;    // slots in rx msg queue
-static constexpr size_t tx_msg_queue_length            =     1024;    // slots in tx msg queue
+static constexpr size_t msg_queue_length               =     1024;    // slots in command and response msg queues
 
 // parameters of the writer thread
 static constexpr size_t rx_write_buffer_size           =       16;     // rx_buffers
@@ -63,8 +62,8 @@ inline void set_complete_flag() {
 static boost::lockfree::spsc_queue<largest_data_packet, boost::lockfree::capacity<rx_data_queue_length> > rx_data_queue;
 static boost::lockfree::spsc_queue<largest_data_packet, boost::lockfree::capacity<tx_data_queue_length> > tx_data_queue;
 
-static boost::lockfree::spsc_queue<largest_cmd_or_rsp_packet, boost::lockfree::capacity<rx_msg_queue_length> > command_queue;
-static boost::lockfree::spsc_queue<largest_cmd_or_rsp_packet, boost::lockfree::capacity<tx_msg_queue_length> > response_queue;
+static boost::lockfree::spsc_queue<largest_cmd_or_rsp_packet, boost::lockfree::capacity<msg_queue_length> > command_queue;
+static boost::lockfree::spsc_queue<largest_cmd_or_rsp_packet, boost::lockfree::capacity<msg_queue_length> > response_queue;
 	
 //  Licensed under the Apache License, Version 2.0 (the "License");
 //   you may not use this file except in compliance with the License.
