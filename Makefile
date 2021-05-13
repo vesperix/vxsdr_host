@@ -24,6 +24,9 @@ else
 	CXX_FLAGS = $(CXX_BASEFLAGS) $(CXX_OPTFLAGS) $(CXX_DEFINES)
 endif
 
+COMMON_INCLUDES = udp_tx_rx.hpp host_radio_options.hpp
+COMMON_SOURCE = host_radio_options.cpp
+
 PROGS = host_tx host_rx host_tx_sync host_rx_sync host_tx_throttle host_tester minimal_tx minimal_rx
 
 all: $(PROGS) Makefile
@@ -47,6 +50,9 @@ host_rx: host_rx.cpp udp_rx.hpp
 
 host_rx_sync: host_rx.cpp udp_rx_sync.hpp
 	$(CXX) $(CXX_FLAGS) -DSYNC -o $@ $< $(CXX_LDFLAGS)
+
+host_rx_test: host_rx_test.cpp $(COMMON_INCLUDES)
+	$(CXX) $(CXX_FLAGS) -o $@ $< $(COMMON_SOURCE) $(CXX_LDFLAGS)
 
 minimal_tx: minimal_tx.c
 	$(CC) $(CC_FLAGS) -o $@ $< $(CC_LDFLAGS)
