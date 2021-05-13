@@ -1,0 +1,180 @@
+using namespace std;
+
+void add_rx_1ch_options(boost::program_options::options_description &desc)
+{
+  desc.add_options()
+    ("rx_rate", boost::program_options::value<double>(), "RX sample rate in Hz")
+    ("rx_freq", boost::program_options::value<double>(), "RX center frequency in Hz")
+    ("rx_gain", boost::program_options::value<double>(), "RX gain in dB")
+    ("rx_ant", boost::program_options::value<string>(), "RX antenna input selection")
+  ;
+}
+
+void add_tx_1ch_options(boost::program_options::options_description &desc)
+{
+  desc.add_options()
+    ("tx_rate", boost::program_options::value<double>(), "TX sample rate in Hz")
+    ("tx_freq", boost::program_options::value<double>(), "TX center frequency in Hz")
+    ("tx_gain", boost::program_options::value<double>(), "TX gain in dB")
+    ("tx_ant", boost::program_options::value<string>(), "TX antenna input selection")
+  ;
+}
+
+void add_common_options(boost::program_options::options_description &desc)
+{
+  desc.add_options()
+    ("help", "help message")
+    ("config_file", boost::program_options::value<string>(), "configuration file name")
+    ("prefix", boost::program_options::value<string>()->default_value("test-"), "prefix for the output file")
+    ("suffix", boost::program_options::value<string>()->default_value(".dat"), "suffix for the output file")
+    ("duration", boost::program_options::value<double>()->default_value(0.0), "duration in seconds")
+    ("startup_delay", boost::program_options::value<int>()->default_value(5), "startup delay in (integer) seconds")
+    ("no_filename_time", "do not include time in output filenames")
+    ("clock_source", boost::program_options::value<string>(), "source for frequency reference")
+    ("time_source", boost::program_options::value<string>(), "source for PPS reference")
+    ("rate", boost::program_options::value<double>(), "TX/RX sample rate in Hz")
+    ("freq", boost::program_options::value<double>(), "TX/RX center frequency in Hz")
+    ("verbose_level", boost::program_options::value<int>(), "log level (0 = trace, 1 = debug, 2 = info, 3 = warning, 4 = error, 5 = fatal, 6 = none)")
+    ("quit_on_error", boost::program_options::value<bool>()->default_value(true), "quit on errors")
+  ;
+}
+
+void add_network_options(boost::program_options::options_description &desc)
+{
+  desc.add_options()
+    ("local_address,A", boost::program_options::value<std::string>()->required(), "IPv4 address of local interface")
+    ("local_receive_port,L", boost::program_options::value<unsigned>()->default_value(1030), "port to receive on local interface")
+    ("local_send_port,M", boost::program_options::value<unsigned>()->default_value(55123), "port to send on local interface")
+    ("destination_address,D", boost::program_options::value<std::string>()->required(), "IPv4 address of destination (including broadcast/multicast)")
+    ("netmask,K", boost::program_options::value<std::string>()->default_value("255.255.255.0"), "IPv4 netmask of local interface")
+    ("broadcast,B", boost::program_options::bool_switch()->default_value(false), "flag to enable broadcast")
+    ("destination_port,P", boost::program_options::value<unsigned>()->default_value(1030), "port to use on destination")
+    ("packet_size,S", boost::program_options::value<size_t>()->default_value(1024), "packet size in bytes")
+    ("num_packets,N", boost::program_options::value<size_t>()->default_value(1024), "number of packets to send")
+    ("wait_us,W", boost::program_options::value<unsigned>()->default_value(1000000), "wait between packets in us")
+  ;
+}
+
+void init_vm(boost::program_options::options_description &desc, boost::program_options::variables_map &vm, int argc, char *argv[])
+{
+  // setup the program options
+  boost::program_options::store(boost::program_options::parse_command_line(argc, argv, desc), vm);
+  boost::program_options::notify(vm);
+
+  if (vm.count("config_file") > 0) {
+    ifstream ifs(vm["config_file"].as<string>().c_str());
+    if (!ifs) {
+      cerr << "Error: cannot open config file " << vm["config_file"].as<string>() << "!" << endl;
+      throw std::runtime_error("Specified config file not found.");
+    }
+    boost::program_options::store(boost::program_options::parse_config_file(ifs, desc), vm);
+    boost::program_options::notify(vm);
+  }
+
+  if(vm.count("help") > 0) {
+    cout << desc << endl;
+    exit(EXIT_SUCCESS);
+  }
+}
+
+auto set_common_options(boost::program_options::variables_map &vm, my_usrp::sptr usrp) -> int
+{
+  // options currently set in specific sections even when they are defined as common
+  return 0;
+}
+
+auto set_rx_1ch_options(boost::program_options::variables_map &vm, my_usrp::sptr usrp) -> int
+{
+  if(vm.count("rate") > 0)
+    usrp->set_rx_rate(vm["rate"].as<double>());
+  else if(vm.count("rx_rate") > 0)
+    usrp->set_rx_rate(vm["rx_rate"].as<double>());
+  else {
+    UHD_LOGGER_FATAL("SETUP_RADIO") << "Please specify the global sample rate with --rate or the RX sample rate with --rx_rate";
+  }
+
+  if(vm.count("freq") > 0)
+    usrp->set_rx_freq(vm["freq"].as<double>());
+  else if(vm.count("rx_freq") > 0)
+    usrp->set_rx_freq(vm["rx_freq"].as<double>());
+  else {
+    // only give error message and quit if a freq_list is not specified; if it is, the freqs will be set later
+    if(vm.count("freq_list") == 0) {
+      UHD_LOGGER_FATAL("SETUP_RADIO") << "Please specify the global center frequency with --freq or the RX center frequency with --rx_freq";
+    }
+  }
+
+  if (vm.count("rx_bw") > 0)
+    usrp->set_rx_bandwidth(vm["rx_bw"].as<double>());
+
+  if (vm.count("rx_ant") > 0)
+    usrp->set_rx_antenna(vm["rx_ant"].as<string>());
+
+  if(vm.count("rx_agc") > 0)
+    usrp->set_rx_agc(true);
+  else {
+    if (vm.count("rx_gain") > 0)
+      usrp->set_rx_gain(vm["rx_gain"].as<double>());
+  }
+  return 0;
+}
+
+auto set_tx_1ch_options(boost::program_options::variables_map &vm, my_usrp::sptr usrp) -> int
+{
+  if(vm.count("rate") > 0)
+    usrp->set_tx_rate(vm["rate"].as<double>());
+  else if(vm.count("tx_rate") > 0)
+    usrp->set_tx_rate(vm["tx_rate"].as<double>());
+  else {
+    UHD_LOGGER_FATAL("SETUP_RADIO") << "Please specify the global sample rate with --rate or the TX sample rate with --tx_rate";
+  }
+
+  if(vm.count("freq") > 0)
+    usrp->set_tx_freq(vm["freq"].as<double>());
+  else if(vm.count("tx_freq") > 0)
+    usrp->set_tx_freq(vm["tx_freq"].as<double>());
+  else {
+    UHD_LOGGER_FATAL("SETUP_RADIO") << "Please specify the global center frequency with --freq or the TX center frequency with --tx_freq";
+  }
+
+  if(vm.count("tx_bw") > 0)
+    usrp->set_tx_bandwidth(vm["tx_bw"].as<double>());
+
+  if(vm.count("tx_ant") > 0)
+    usrp->set_tx_antenna(vm["tx_ant"].as<string>());
+
+  if(vm.count("tx_gain") > 0)
+    usrp->set_tx_gain(vm["tx_gain"].as<double>());
+
+  return 0;
+}
+
+auto set_time_options(boost::program_options::variables_map &vm, my_usrp::sptr usrp) -> int
+{
+  if(vm.count("time_source") > 0)
+    usrp->set_time_source(vm["clock_source"].as<string>());
+  else if(vm.count("no_ext_time") > 0)
+    usrp->set_no_time_ref();
+  else
+    usrp->set_external_time_ref();
+
+  if(vm.count("clock_source") > 0) {
+    usrp->set_clock_source(vm["clock_source"].as<string>());
+    if(vm.count("no_ext_ref") > 0)
+      UHD_LOGGER_WARNING("SETUP_RADIO") << "Both clock_source and no_ext_ref specified; clock_source takes precedence";
+  }
+  else if(vm.count("no_ext_ref") > 0)
+    usrp->set_internal_freq_ref();
+  else
+    usrp->set_external_freq_ref();
+
+  usrp->check_reference_lock();
+
+  usrp->check_lo_lock();
+
+  if(vm.count("no_time_synch") == 0 and vm.count("no_ext_time") == 0)
+    usrp->synch_external_time_ref(0, true);
+  else
+    usrp->synch_system_time();
+  return 0;
+}
