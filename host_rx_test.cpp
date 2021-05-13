@@ -26,14 +26,6 @@ extern "C" void sig_int_handler(int sig_num) {
   exit(EXIT_USER_TERMINATED);
 }
 
-std::string make_filename_time(const std::chrono::time_point<std::chrono::system_clock> t, const double freq, const double rate)
-{
-  std::stringstream s;
-  s << boost::format("%.3f-mhz-%.1f-ksps-") % (freq / 1e6) %  (rate / 1e3);
-  s << format_time(t, 0, true);
-  return s.str();
-}
-
 int main(int argc, char *argv[])
 {
   INIT_LOGGER();

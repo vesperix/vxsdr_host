@@ -6,15 +6,17 @@
 #include <boost/format.hpp>
 
 #include "vxsdr_header.hpp"
+#include "logging.hpp"
+#include "errors.hpp"
 
-std::string format_time(const std::chrono::time_point<std::chrono::system_clock> t, const int digits, const bool use_utc) {
+std::string format_time(const std::chrono::time_point<std::chrono::system_clock> t, const int digits, const bool use_utc, const std::string fmt) {
   std::stringstream output;
   time_t n_seconds = std::chrono::system_clock::to_time_t(t);
   if(use_utc) {
-    output << std::put_time(gmtime(&n_seconds), "%Y-%m-%d %H:%M:%S");
+    output << std::put_time(gmtime(&n_seconds), fmt.c_str());
   }
   else {
-    output << std::put_time(localtime(&n_seconds), "%Y-%m-%d %H:%M:%S");
+    output << std::put_time(localtime(&n_seconds), fmt.c_str());
   }
   int32_t ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t - std::chrono::system_clock::from_time_t(n_seconds)).count();
   switch(digits) {
@@ -41,6 +43,14 @@ std::string format_time(const std::chrono::time_point<std::chrono::system_clock>
       break;
   }
   return output.str();
+}
+
+std::string make_filename_time(const std::chrono::time_point<std::chrono::system_clock> t, const double freq, const double rate)
+{
+  std::stringstream s;
+  s << boost::format("%.3f-mhz-%.1f-ksps-") % (freq / 1e6) %  (rate / 1e3);
+  s << format_time(t, 0, true, "%Y-%m-%d-%H.%M.%S-utc");
+  return s.str();
 }
 
 std::string packet_type_to_name(const uint8_t number) {
