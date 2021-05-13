@@ -6,7 +6,7 @@
 
 /*
   SDR packet definitions
-  Version 0.2.0 22 Jan 2021
+  Version 0.2.1 13 May 2021
   FROZEN EXCEPT FOR ADDITIONS UNTIL INITIAL IMPLEMENTATION COMPLETE AND TESTED
 */
 
@@ -133,15 +133,15 @@ namespace RADIO_CMD {
   static constexpr uint8_t GET_RF_INFO                  = 0x10;  // unimplemented // available frequency, gain, sample rate, and bandwidth ranges, number of selectable I/Os
   static constexpr uint8_t GET_RF_FREQ                  = 0x11;  // unimplemented
   static constexpr uint8_t GET_RF_GAIN                  = 0x12;  // unimplemented
-  static constexpr uint8_t GET_SAMPLE_RATE              = 0x13;  // unimplemented
+  static constexpr uint8_t GET_SAMPLE_RATE              = 0x13;  
   static constexpr uint8_t GET_RF_BW                    = 0x14;  // unimplemented
   static constexpr uint8_t GET_RF_IO                    = 0x15;  // unimplemented
   // 0x16-0x20 reserved
-  static constexpr uint8_t SET_RF_FREQ                  = 0x21;  // unimplemented
-  static constexpr uint8_t SET_RF_GAIN                  = 0x22;  // unimplemented
-  static constexpr uint8_t SET_SAMPLE_RATE              = 0x23;  // unimplemented
+  static constexpr uint8_t SET_RF_FREQ                  = 0x21;  
+  static constexpr uint8_t SET_RF_GAIN                  = 0x22;  
+  static constexpr uint8_t SET_SAMPLE_RATE              = 0x23;  // sets CIC interpolation/decimation rate (valid 1-128)
   static constexpr uint8_t SET_RF_BW                    = 0x24;  // unimplemented
-  static constexpr uint8_t SET_RF_IO                    = 0x25;  // unimplemented
+  static constexpr uint8_t SET_RF_IO                    = 0x25;  // enables(0x1) or disables(0x0) RX/TX RF path
   // 0x26-0xFF reserved
 }
 
@@ -288,6 +288,34 @@ class dataflow_status_packet : public status_packet {
     uint16_t               tx_radio_status = 0;
     uint16_t               rx_radio_status = 0;
     uint32_t               device_status = 0;
+};
+
+class radio_rf_freq_packet : public cmd_or_rsp_packet {
+  public:
+    double                 freq = 0.0;
+    double                 rtol = 0.0;
+    uint32_t               output_sel = 0; //(doubler)output A = 1, output B = 2
+    uint32_t               reserved = 0;
+};
+
+//negative gain value sets attenuator (0 to -15.5dB) parameter range [0 to -31]
+//(RX only) positive gain value sets VGA gain (0 to 31.5dB) paramter range [0 to 63]
+class radio_rf_gain_packet : public cmd_or_rsp_packet {
+  public:
+    int32_t                gain = 0; //lsb = 0.5dB
+    uint32_t               reserved = 0;
+};
+
+class radio_rf_sample_rate_packet : public cmd_or_rsp_packet {
+  public:
+    uint32_t               rate = 0;
+    uint32_t               reserved = 0;
+};
+
+class radio_rf_io_packet : public cmd_or_rsp_packet {
+  public:
+    uint32_t               enabled = 0; //TX/RX path enable (1 = on, 0 = off)
+    uint32_t               reserved = 0;
 };
 
 #endif // VXSDR_HEADER_HPP
