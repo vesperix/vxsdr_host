@@ -69,7 +69,7 @@ int main(int argc, char *argv[])
     filename.append(make_filename_time(std::chrono::system_clock::now(), vm["freq"].as<double>(), vm["rate"].as<double>()));
     filename.append(vm["suffix"].as<std::string>());
 
-    LOGGER(info) << "Saving data to file" << filename;
+    LOGGER(info) << "Saving data to file " << filename;
 
     LOGGER(info) << "Starting...";
 

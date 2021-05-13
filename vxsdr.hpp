@@ -69,21 +69,25 @@ class vxsdr {
     vxsdr(const boost::asio::ip::udp::endpoint &local_receive_endpoint,
           const boost::asio::ip::udp::endpoint &local_send_endpoint,
           const boost::asio::ip::udp::endpoint &destination_endpoint) {
+      LOGGER(debug) << "vxsdr constructor entered";
       boost::asio::io_context io_context;
       receiver_thread = std::thread(&vxsdr::receiver, this, std::ref(io_context), std::cref(local_receive_endpoint));
       sender_thread = std::thread(&vxsdr::sender, this, std::ref(io_context), std::cref(local_send_endpoint), std::cref(destination_endpoint));
       tx_stop_flag = false;
       rx_stop_flag = false;
       //FIXME: more init needed
+      LOGGER(debug) << "vxsdr constructor complete";
     };
     // destructor
     ~vxsdr() {
+      LOGGER(debug) << "vxsdr destructor entered";
       rx_stop_flag = true;
       tx_stop_flag = true;
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
       receiver_thread.join();
       sender_thread.join();
       //FIXME:
+      LOGGER(debug) << "vxsdr destructor complete";
     };
     // copy constructor
     // copy assignment
@@ -91,6 +95,7 @@ class vxsdr {
     // move assignment
 
     size_t get_rx_data(std::vector<std::complex<int16_t> > &data, size_t n_desired = 0, const uint8_t subdev = 0) {
+      LOGGER(debug) << "get_rx_data() entered";
       size_t n_popped = 0;
       largest_data_packet q;
 
@@ -133,9 +138,13 @@ class vxsdr {
                   (p->hdr.packet_size - sizeof(packet_header) - sizeof(time_spec_t) - sizeof(stream_spec_t)) / sizeof(std::complex<int16_t>));
             std::copy_n(std::begin(p->data), data_size, std::back_inserter(data));
           }
+          if(n_popped % 100 == 0)
+            LOGGER(debug) << "n_popped = " << n_popped;
+
           n_popped++;
         }
       }
+      LOGGER(debug) << "get_rx_data() complete";
       return data.size();
     }
 
@@ -223,6 +232,7 @@ class vxsdr {
     }
 
     void set_tx_freq(const double freq, const uint8_t subdev = 0, const uint8_t flags = 0) {
+      LOGGER(debug) << "set_tx_freq() entered with freq = " << freq;
       largest_cmd_or_rsp_packet q;
       auto *p = reinterpret_cast<radio_rf_freq_packet *>(&q);
       p->hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::SET_RF_FREQ, subdev, flags, sizeof(packet_header), 0 };
@@ -241,6 +251,7 @@ class vxsdr {
     }
 
     void set_rx_freq(const double freq, const uint8_t subdev = 0, const uint8_t flags = 0) {
+      LOGGER(debug) << "set_rx_freq() entered with freq = " << freq;
       largest_cmd_or_rsp_packet q;
       auto *p = reinterpret_cast<radio_rf_freq_packet *>(&q);
       p->hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::SET_RF_FREQ, subdev, flags, sizeof(packet_header), 0 };
@@ -259,6 +270,7 @@ class vxsdr {
     }
 
     void set_tx_gain(const double gain_db, const uint8_t subdev = 0, const uint8_t flags = 0) {
+      LOGGER(debug) << "set_tx_gain() entered with gain = " << gain_db;
       largest_cmd_or_rsp_packet q;
       auto *p = reinterpret_cast<radio_rf_gain_packet *>(&q);
       p->hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::SET_RF_GAIN, subdev, flags, sizeof(packet_header), 0 };
@@ -268,6 +280,7 @@ class vxsdr {
     }
 
     void set_rx_gain(const double gain_db, const uint8_t subdev = 0, const uint8_t flags = 0) {
+      LOGGER(debug) << "set_rx_gain() entered with gain = " << gain_db;
       largest_cmd_or_rsp_packet q;
       auto *p = reinterpret_cast<radio_rf_gain_packet *>(&q);
       p->hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::SET_RF_GAIN, subdev, flags, sizeof(packet_header), 0 };
@@ -282,6 +295,7 @@ class vxsdr {
     }
 
     void set_tx_rate(const double rate_samples_sec, const uint8_t subdev = 0, const uint8_t flags = 0) {
+      LOGGER(debug) << "set_tx_rate() entered with rate = " << rate_samples_sec;
       largest_cmd_or_rsp_packet q;
       auto *p = reinterpret_cast<radio_rf_sample_rate_packet *>(&q);
       p->hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::SET_SAMPLE_RATE, subdev, flags, sizeof(packet_header), 0 };
@@ -291,6 +305,7 @@ class vxsdr {
     }
 
     void set_rx_rate(const double rate_samples_sec, const uint8_t subdev = 0, const uint8_t flags = 0) {
+      LOGGER(debug) << "set_rx_rate() entered with rate = " << rate_samples_sec;
       largest_cmd_or_rsp_packet q;
       auto *p = reinterpret_cast<radio_rf_sample_rate_packet *>(&q);
       p->hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::SET_SAMPLE_RATE, subdev, flags, sizeof(packet_header), 0 };
