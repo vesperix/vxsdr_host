@@ -1,3 +1,5 @@
+#include <fstream>
+
 #include <boost/program_options.hpp>
 
 #include "logging.hpp"
@@ -6,20 +8,20 @@
 void add_rx_1ch_options(boost::program_options::options_description &desc)
 {
   desc.add_options()
-    ("rx_rate", boost::program_options::value<double>(), "RX sample rate in Hz")
-    ("rx_freq", boost::program_options::value<double>(), "RX center frequency in Hz")
+   // ("rx_rate", boost::program_options::value<double>(), "RX sample rate in Hz")
+   // ("rx_freq", boost::program_options::value<double>(), "RX center frequency in Hz")
     ("rx_gain", boost::program_options::value<double>(), "RX gain in dB")
-    ("rx_ant", boost::program_options::value<string>(), "RX antenna input selection")
+    ("rx_ant", boost::program_options::value<std::string>(), "RX antenna input selection")
   ;
 }
 
 void add_tx_1ch_options(boost::program_options::options_description &desc)
 {
   desc.add_options()
-    ("tx_rate", boost::program_options::value<double>(), "TX sample rate in Hz")
-    ("tx_freq", boost::program_options::value<double>(), "TX center frequency in Hz")
+   // ("tx_rate", boost::program_options::value<double>(), "TX sample rate in Hz")
+   // ("tx_freq", boost::program_options::value<double>(), "TX center frequency in Hz")
     ("tx_gain", boost::program_options::value<double>(), "TX gain in dB")
-    ("tx_ant", boost::program_options::value<string>(), "TX antenna input selection")
+    ("tx_ant", boost::program_options::value<std::string>(), "TX antenna input selection")
   ;
 }
 
@@ -27,16 +29,16 @@ void add_common_options(boost::program_options::options_description &desc)
 {
   desc.add_options()
     ("help", "help message")
-    ("config_file", boost::program_options::value<string>(), "configuration file name")
-    ("prefix", boost::program_options::value<string>()->default_value("test-"), "prefix for the output file")
-    ("suffix", boost::program_options::value<string>()->default_value(".dat"), "suffix for the output file")
+    ("config_file", boost::program_options::value<std::string>(), "configuration file name")
+    ("prefix", boost::program_options::value<std::string>()->default_value("test-"), "prefix for the output file")
+    ("suffix", boost::program_options::value<std::string>()->default_value(".dat"), "suffix for the output file")
     ("duration", boost::program_options::value<double>()->default_value(0.0), "duration in seconds")
-    ("startup_delay", boost::program_options::value<int>()->default_value(5), "startup delay in (integer) seconds")
+ //   ("startup_delay", boost::program_options::value<int>()->default_value(5), "startup delay in (integer) seconds")
     ("no_filename_time", "do not include time in output filenames")
-    ("clock_source", boost::program_options::value<string>(), "source for frequency reference")
-    ("time_source", boost::program_options::value<string>(), "source for PPS reference")
-    ("rate", boost::program_options::value<double>(), "TX/RX sample rate in Hz")
-    ("freq", boost::program_options::value<double>(), "TX/RX center frequency in Hz")
+    ("clock_source", boost::program_options::value<std::string>(), "source for frequency reference")
+    ("time_source", boost::program_options::value<std::string>(), "source for PPS reference")
+    ("rate", boost::program_options::value<double>()->required(), "TX/RX sample rate in Hz")
+    ("freq", boost::program_options::value<double>()->required(), "TX/RX center frequency in Hz")
     ("verbose_level", boost::program_options::value<int>(), "log level (0 = trace, 1 = debug, 2 = info, 3 = warning, 4 = error, 5 = fatal, 6 = none)")
     ("quit_on_error", boost::program_options::value<bool>()->default_value(true), "quit on errors")
   ;
@@ -52,7 +54,7 @@ void add_network_options(boost::program_options::options_description &desc)
     ("netmask", boost::program_options::value<std::string>()->default_value("255.255.255.0"), "IPv4 netmask of local interface")
     ("broadcast", boost::program_options::bool_switch()->default_value(false), "flag to enable broadcast")
     ("destination_port", boost::program_options::value<unsigned>()->default_value(1030), "port to use on destination")
-    ("packet_size", boost::program_options::value<size_t>()->default_value(1024), "packet size in bytes")
+    ("packet_size", boost::program_options::value<size_t>()->default_value(4096), "packet size in bytes")
   ;
 }
 
@@ -63,9 +65,9 @@ void init_vm(boost::program_options::options_description &desc, boost::program_o
   boost::program_options::notify(vm);
 
   if (vm.count("config_file") > 0) {
-    std::ifstream ifs(vm["config_file"].as<string>().c_str());
+    std::ifstream ifs(vm["config_file"].as<std::string>().c_str());
     if (!ifs) {
-      std::cerr << "Error: cannot open config file " << vm["config_file"].as<string>() << "!" << std::endl;
+      std::cerr << "Error: cannot open config file " << vm["config_file"].as<std::string>() << "!" << std::endl;
       throw std::runtime_error("Specified config file not found.");
     }
     boost::program_options::store(boost::program_options::parse_config_file(ifs, desc), vm);
@@ -77,7 +79,7 @@ void init_vm(boost::program_options::options_description &desc, boost::program_o
     exit(EXIT_SUCCESS);
   }
 }
-
+/*
 auto set_common_options(boost::program_options::variables_map &vm, vxsdr::sptr radio) -> int
 {
   // options currently set in specific sections even when they are defined as common
@@ -144,7 +146,6 @@ auto set_tx_1ch_options(boost::program_options::variables_map &vm, vxsdr::sptr r
 
 auto set_time_options(boost::program_options::variables_map &vm, vxsdr::sptr radio) -> int
 {
-  /*
   if(vm.count("time_source") > 0)
     radio->set_time_source(vm["clock_source"].as<string>());
   else if(vm.count("no_ext_time") > 0)
@@ -170,6 +171,7 @@ auto set_time_options(boost::program_options::variables_map &vm, vxsdr::sptr rad
     radio->synch_external_time_ref(0, true);
   else
     radio->synch_system_time();
-  */
   return 0;
 }
+
+*/
