@@ -54,11 +54,6 @@ host_rx_sync: host_rx.cpp udp_rx_sync.hpp
 host_rx_test: host_rx_test.cpp $(COMMON_INCLUDES)
 	$(CXX) $(CXX_FLAGS) -o $@ $< $(COMMON_SRC) $(CXX_LDFLAGS)
 
-minimal_tx: minimal_tx.c
-	$(CC) $(CC_FLAGS) -o $@ $< $(CC_LDFLAGS)
-
-minimal_rx: minimal_rx.c
-	$(CC) $(CC_FLAGS) -o $@ $< $(CC_LDFLAGS)
 clean:
 	rm -f $(PROGS) *.o *~
 
