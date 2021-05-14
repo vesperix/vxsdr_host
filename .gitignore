@@ -1,10 +1,6 @@
 *.o
 *.dat
-host_rx
-host_tx
-host_rx_sync
-host_tx_sync
 host_tx_throttle
-host_rx_test
+test_rx
 vxsdr_test
 .vscode

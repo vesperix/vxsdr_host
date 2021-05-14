@@ -27,7 +27,7 @@ endif
 COMMON_INCLUDES = packet_proc.cpp vxsdr_header.hpp host_radio_options.hpp utility.hpp
 COMMON_SRC = host_radio_options.cpp packet_proc.cpp utility.cpp
 
-PROGS = host_tx_throttle host_rx_test vxsdr_test test_rx
+PROGS = host_tx_throttle vxsdr_test test_rx
 
 all: $(PROGS) Makefile
 
@@ -36,10 +36,7 @@ all: $(PROGS) Makefile
 host_tx_throttle: host_tx_throttle.cpp udp_tx_rx.hpp $(COMMON_INCLUDES)
 	$(CXX) $(CXX_FLAGS) -o $@ $< $(COMMON_SRC) $(CXX_LDFLAGS)
 
-test_rx: test_rx.cpp udp_tx_rx.hpp $(COMMON_INCLUDES)
-	$(CXX) $(CXX_FLAGS) -o $@ $< $(COMMON_SRC) $(CXX_LDFLAGS)
-
-host_rx_test: host_rx_test.cpp udp_tx_rx.hpp $(COMMON_INCLUDES)
+test_rx: test_rx.cpp test_tx_rx.hpp $(COMMON_INCLUDES)
 	$(CXX) $(CXX_FLAGS) -o $@ $< $(COMMON_SRC) $(CXX_LDFLAGS)
 
 vxsdr_test: vxsdr_test.cpp vxsdr.hpp $(COMMON_INCLUDES)
