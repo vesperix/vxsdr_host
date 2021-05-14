@@ -485,12 +485,12 @@ inline void writer(const std::string &outfilename, const uint64_t max_packets) {
   LOGGER(debug) << "writer thread finished";
 }
 
-inline void data_packet_counter(const uint64_t max_packets, const size_t packet_size) {
+inline void data_packet_counter(const uint64_t max_packets) {
   LOGGER(debug) << "data_packet counter thread started";
 
   const unsigned buffer_max_packets = 256;
   static std::array<largest_data_packet, buffer_max_packets> buffer;
-  uint64_t packets = 0;
+  uint64_t packets = 0, bytes = 0;
 
   auto t0 = std::chrono::steady_clock::now();
 
@@ -499,6 +499,7 @@ inline void data_packet_counter(const uint64_t max_packets, const size_t packet_
       size_t n_popped = rx_data_queue.pop(&buffer.front(), buffer_max_packets);
       for(size_t i = 0; i < n_popped; i++) {
         packets++;
+        bytes += buffer[i].hdr.packet_size;
       }
     }
     if(rx_write_thread_sleep_us > 0)
@@ -512,7 +513,7 @@ inline void data_packet_counter(const uint64_t max_packets, const size_t packet_
   auto t1 = std::chrono::steady_clock::now();
   std::chrono::duration<double> dt = t1 - t0;
   LOGGER(info) << packets << " data packets recieved in " << dt.count() << " sec";
-  LOGGER(info) << (packets * packet_size / dt.count()) << " bytes/s, " << (8 * packets * packet_size / dt.count()) << " bits/s";
+  LOGGER(info) << (bytes / dt.count()) << " bytes/s, " << (8 * bytes / dt.count()) << " bits/s";
 
   std::this_thread::sleep_for(std::chrono::microseconds(rx_data_queue_clear_sleep_us));
   // empty the queue

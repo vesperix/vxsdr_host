@@ -24,25 +24,22 @@ else
 	CXX_FLAGS = $(CXX_BASEFLAGS) $(CXX_OPTFLAGS) $(CXX_DEFINES)
 endif
 
-COMMON_INCLUDES = packet_proc.cpp vxsdr_header.hpp udp_tx_rx.hpp host_radio_options.hpp utility.hpp
+COMMON_INCLUDES = packet_proc.cpp vxsdr_header.hpp host_radio_options.hpp utility.hpp
 COMMON_SRC = host_radio_options.cpp packet_proc.cpp utility.cpp
 
-PROGS = host_tx host_rx host_tx_throttle host_rx_test vxsdr_test
+PROGS = host_tx_throttle host_rx_test vxsdr_test test_rx
 
 all: $(PROGS) Makefile
 
 .PHONY: all
 
-host_tx: host_tx.cpp udp_tx.hpp vxsdr_header.hpp
-	$(CXX) $(CXX_FLAGS) -o $@ $< $(CXX_LDFLAGS)
-
-host_rx: host_rx.cpp udp_rx.hpp vxsdr_header.hpp
+host_tx_throttle: host_tx_throttle.cpp udp_tx_rx.hpp $(COMMON_INCLUDES)
 	$(CXX) $(CXX_FLAGS) -o $@ $< $(COMMON_SRC) $(CXX_LDFLAGS)
 
-host_tx_throttle: host_tx_throttle.cpp $(COMMON_INCLUDES)
+test_rx: test_rx.cpp udp_tx_rx.hpp $(COMMON_INCLUDES)
 	$(CXX) $(CXX_FLAGS) -o $@ $< $(COMMON_SRC) $(CXX_LDFLAGS)
 
-host_rx_test: host_rx_test.cpp vxsdr.hpp $(COMMON_INCLUDES)
+host_rx_test: host_rx_test.cpp udp_tx_rx.hpp $(COMMON_INCLUDES)
 	$(CXX) $(CXX_FLAGS) -o $@ $< $(COMMON_SRC) $(CXX_LDFLAGS)
 
 vxsdr_test: vxsdr_test.cpp vxsdr.hpp $(COMMON_INCLUDES)
