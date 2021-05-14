@@ -378,7 +378,7 @@ class udp_tx {
       //FIXME: attenuator cannot be set to 0, only 0.5 db
       p.gain = -1;
       send_packet(p);
-      p.gain = std::min(0, std::max(63, (int)std::lround(2 * gain_db)));
+      p.gain = 63;
       send_packet(p);
     }
 
@@ -524,6 +524,7 @@ class udp_tx {
       send_tx_stop_now(tx_subdev, FLAGS::REQUEST_ACK);
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
       send_rx_stop_now(rx_subdev);
+      set_rx_enable(false);
       LOGGER(info) << "start_send exiting; " << packets_sent << " packets sent, " << send_errors << " send errors";
       for(unsigned i = 0; i < packet_types_processed.size(); i++)
         if(packet_types_processed[i] > 0)
