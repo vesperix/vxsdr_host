@@ -329,6 +329,107 @@ class udp_tx {
       send_packet(p);
     }
 
+   void set_tx_freq(const double freq, const uint8_t subdev = 0, const uint8_t flags = 0) {
+      radio_rf_freq_packet p;
+      p.hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::SET_RF_FREQ, subdev, flags, sizeof(packet_header), 0 };
+      p.freq = freq;
+      // FIXME: output_sel needs to be set by the MCU, not the user
+      if(freq >= 13.5e9) {
+        p.output_sel = 1;
+      }
+      else {
+        //FIXME: disable doubler until HW fix
+        p.output_sel = 1;
+        //p.output_sel = 2;
+      }
+      p.rtol = 1e-9;
+      send_packet(p);
+    }
+
+    void set_rx_freq(const double freq, const uint8_t subdev = 0, const uint8_t flags = 0) {
+      radio_rf_freq_packet p;
+      p.hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::SET_RF_FREQ, subdev, flags, sizeof(packet_header), 0 };
+      p.freq = freq;
+      // FIXME: output_sel needs to be set by the MCU, not the user
+      if(freq >= 13.5e9) {
+        p.output_sel = 1;
+      }
+      else {
+        //FIXME: disable doubler until HW fix
+        p.output_sel = 1;
+        //p.output_sel = 2;
+      }
+      p.rtol = 1e-9;
+      send_packet(p);
+    }
+
+    void set_tx_gain(const double gain_db, const uint8_t subdev = 0, const uint8_t flags = 0) {
+      radio_rf_gain_packet p;
+      p.hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::SET_RF_GAIN, subdev, flags, sizeof(packet_header), 0 };
+      //FIXME: gain setting needs to be done in MCU from gain_db, not here
+      p.gain = -std::min(0, std::max(31, (int)std::lround(2 * gain_db)));
+      send_packet(p);
+    }
+
+    void set_rx_gain(const double gain_db, const uint8_t subdev = 0, const uint8_t flags = 0) {
+      radio_rf_gain_packet p;
+      p.hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::SET_RF_GAIN, subdev, flags, sizeof(packet_header), 0 };
+      //FIXME: gain setting needs to be done in MCU from gain_db, not here
+      //FIXME: attenuator cannot be set to 0, only 0.5 db
+      p.gain = -1;
+      send_packet(p);
+      p.gain = std::min(0, std::max(63, (int)std::lround(2 * gain_db)));
+      send_packet(p);
+    }
+
+    void set_tx_rate(const double rate_samples_sec, const uint8_t subdev = 0, const uint8_t flags = 0) {
+      radio_rf_sample_rate_packet p;
+      p.hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::SET_SAMPLE_RATE, subdev, flags, sizeof(packet_header), 0 };
+      //FIXME: rate setting needs to be done in MCU from rate_samples_sec, not here
+      p.rate = std::min(1000, std::max(1, (int)std::lround(160.0e6 / rate_samples_sec)));
+      send_packet(p);
+    }
+
+    void set_rx_rate(const double rate_samples_sec, const uint8_t subdev = 0, const uint8_t flags = 0) {
+      radio_rf_sample_rate_packet p;
+      p.hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::SET_SAMPLE_RATE, subdev, flags, sizeof(packet_header), 0 };
+      //FIXME: rate setting needs to be done in MCU from rate_samples_sec, not here
+      p.rate = std::min(1000, std::max(1, (int)std::lround(160.0e6 / rate_samples_sec)));
+      send_packet(p);
+    }
+
+    void set_tx_antenna(const std::string ant, const uint8_t subdev = 0, const uint8_t flags = 0) {
+      //FIXME: implement
+    }
+
+    void set_rx_antenna(const std::string ant, const uint8_t subdev = 0, const uint8_t flags = 0) {
+      //FIXME: implement      
+    }
+
+    void set_tx_enable(const bool enabled, const uint8_t subdev = 0, const uint8_t flags = 0) {
+      radio_rf_enable_packet p;
+      p.hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::SET_RF_ENABLED, subdev, flags, sizeof(packet_header), 0 };
+      if(enabled) {
+        p.enabled = 1;
+      }
+      else {
+        p.enabled = 0;
+      }
+      send_packet(p);
+    }
+
+    void set_rx_enable(const bool enabled, const uint8_t subdev = 0, const uint8_t flags = 0) {
+      radio_rf_enable_packet p;
+      p.hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::SET_RF_ENABLED, subdev, flags, sizeof(packet_header), 0 };
+      if(enabled) {
+        p.enabled = 1;
+      }
+      else {
+        p.enabled = 0;
+      }
+      send_packet(p);
+    }
+
     void send_packet(packet &packet) {
       packet_types_processed[packet.hdr.packet_type]++;
       packet.hdr.sequence_counter = (uint16_t)(packets_sent++ % (UINT16_MAX + 1));
@@ -361,11 +462,25 @@ class udp_tx {
       send_device_clear_status(device_subdev);
       send_device_get_status(device_subdev);
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+      set_rx_enable(true);
+      std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+
+      double rx_freq = 5.0e9;
+      double rx_gain = 0.0;
+      double rx_rate = 160.0e6;
+
+      set_rx_freq(rx_freq);
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      set_rx_gain(rx_gain);
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      //set_rx_rate(rx_rate);
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      
       // send a START_NOW_UNTIL_STOP
-      send_tx_start_now_until_stop(tx_subdev);
+      //send_tx_start_now_until_stop(tx_subdev);
       send_rx_start_now_until_stop(rx_subdev);
       //send_tx_start_now_for_n_samples(1000000 * 2048ull, tx_subdev);
-      //send_rx_start_now_until_stop(rx_subdev);
       //send_rx_start_now_for_n_samples(180000 * 2048ull, rx_subdev);
 
       uint64_t last_check = 0;
@@ -628,8 +743,7 @@ inline void generator(const uint64_t max_packets, const size_t requested_packet_
 }
 
 inline void sender(boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint,
-      const boost::asio::ip::udp::endpoint &destination_endpoint,
-      const bool broadcast)
+      const boost::asio::ip::udp::endpoint &destination_endpoint, const bool broadcast)
 {
   LOGGER(debug) << "sender thread started";
 
@@ -641,6 +755,7 @@ inline void sender(boost::asio::io_context &io_context, const boost::asio::ip::u
 
   udp_tx server(io_context, local_endpoint, destination_endpoint, broadcast);
   io_context.run();
+
   LOGGER(debug) << "sender thread finished";
 }
 
