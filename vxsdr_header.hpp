@@ -141,7 +141,7 @@ namespace RADIO_CMD {
   static constexpr uint8_t SET_RF_GAIN                  = 0x22;  
   static constexpr uint8_t SET_SAMPLE_RATE              = 0x23;  // sets CIC interpolation/decimation rate (valid 1-128)
   static constexpr uint8_t SET_RF_BW                    = 0x24;  // unimplemented
-  static constexpr uint8_t SET_RF_IO                    = 0x25;  // enables(0x1) or disables(0x0) RX/TX RF path
+  static constexpr uint8_t SET_RF_ENABLED               = 0x25;  // enables(0x1) or disables(0x0) RX/TX RF path
   // 0x26-0xFF reserved
 }
 
@@ -316,7 +316,7 @@ class radio_rf_sample_rate_packet : public cmd_or_rsp_packet {
     uint32_t               reserved = 0;
 };
 
-class radio_rf_io_packet : public cmd_or_rsp_packet {
+class radio_rf_enable_packet : public cmd_or_rsp_packet {
   public:
     uint32_t               enabled = 0; //TX/RX path enable (1 = on, 0 = off)
     uint32_t               reserved = 0;
