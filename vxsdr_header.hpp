@@ -135,14 +135,16 @@ namespace RADIO_CMD {
   static constexpr uint8_t GET_RF_GAIN                  = 0x12;  // unimplemented
   static constexpr uint8_t GET_SAMPLE_RATE              = 0x13;  
   static constexpr uint8_t GET_RF_BW                    = 0x14;  // unimplemented
-  static constexpr uint8_t GET_RF_IO                    = 0x15;  // unimplemented
-  // 0x16-0x20 reserved
+  static constexpr uint8_t GET_RF_ENABLED               = 0x15;  // unimplemented
+  static constexpr uint8_t GET_RF_PORT                  = 0x16;  // unimplemented  
+  // 0x17-0x20 reserved
   static constexpr uint8_t SET_RF_FREQ                  = 0x21;  
   static constexpr uint8_t SET_RF_GAIN                  = 0x22;  
   static constexpr uint8_t SET_SAMPLE_RATE              = 0x23;  // sets CIC interpolation/decimation rate (valid 1-128)
   static constexpr uint8_t SET_RF_BW                    = 0x24;  // unimplemented
   static constexpr uint8_t SET_RF_ENABLED               = 0x25;  // enables(0x1) or disables(0x0) RX/TX RF path
-  // 0x26-0xFF reserved
+  static constexpr uint8_t SET_RF_PORT                  = 0x26;  // FIXME: this selects input and output ports 
+  // 0x27-0xFF reserved
 }
 
 namespace RADIO_CMD_RSP {
