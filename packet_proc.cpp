@@ -43,7 +43,7 @@ std::string packet_type_to_name(const uint8_t number) {
   return "UNDEFINED";
 }
 
-std::string command_to_name(const uint8_t cmd) {
+std::string device_command_to_name(const uint8_t cmd) {
   switch(cmd) {
     case DEVICE_CMD::HELLO:
       return "HELLO";
@@ -105,10 +105,10 @@ void log_packet_info(cmd_or_rsp_packet &packet)
 {
   switch(packet.hdr.packet_type) {
     case PACKET_TYPES::DEVICE_CMD_ACK:
-      LOGGER(info) << "DEVICE_CMD_ACK: " << command_to_name(packet.hdr.command);
+      LOGGER(info) << "DEVICE_CMD_ACK: " << device_command_to_name(packet.hdr.command);
       break;
     case PACKET_TYPES::DEVICE_CMD_ERR:
-      LOGGER(info) << "DEVICE_CMD_ERR: " << command_to_name(packet.hdr.command);
+      LOGGER(info) << "DEVICE_CMD_ERR: " << device_command_to_name(packet.hdr.command);
       break;
     case PACKET_TYPES::DEVICE_CMD_RSP:
       switch(packet.hdr.command) {
