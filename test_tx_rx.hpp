@@ -245,93 +245,93 @@ class udp_tx {
 
     void send_device_hello(const uint8_t subdev, const uint8_t flags = 0) {
       cmd_packet p;
-      p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::HELLO, subdev, flags, sizeof(packet_header), 0 };
+      p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::HELLO, subdev, flags, sizeof(p), 0 };
       send_packet(p);
     }
 
     void send_device_reset(const uint8_t subdev, const uint8_t flags = 0) {
       cmd_packet p;
-      p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::RESET, subdev, flags, sizeof(packet_header), 0 };
+      p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::RESET, subdev, flags, sizeof(p), 0 };
       send_packet(p);
     }
 
     void send_device_open_session(const uint8_t subdev, const uint8_t flags = 0) {
       cmd_packet p;
-      p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::OPEN_SESSION, subdev, flags, sizeof(packet_header), 0 };
+      p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::OPEN_SESSION, subdev, flags, sizeof(p), 0 };
       send_packet(p);
     }
 
     void send_device_close_session(const uint8_t subdev, const uint8_t flags = 0) {
       cmd_packet p;
-      p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::CLOSE_SESSION, subdev, flags, sizeof(packet_header), 0 };
+      p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::CLOSE_SESSION, subdev, flags, sizeof(p), 0 };
       send_packet(p);
     }
 
     void send_device_get_buffer_info(const uint8_t subdev, const uint8_t flags = 0) {
       cmd_packet p;
-      p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::GET_BUFFER_INFO, subdev, flags, sizeof(packet_header), 0 };
+      p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::GET_BUFFER_INFO, subdev, flags, sizeof(p), 0 };
       send_packet(p);
     }
 
     void send_device_get_buffer_use(const uint8_t subdev, const uint8_t flags = 0) {
       cmd_packet p;
-      p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::GET_BUFFER_USE, subdev, flags, sizeof(packet_header), 0 };
+      p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::GET_BUFFER_USE, subdev, flags, sizeof(p), 0 };
       send_packet(p);
     }
 
     void send_device_clear_status(const uint8_t subdev, const uint8_t flags = 0) {
       cmd_packet p;
-      p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::CLEAR_STATUS, subdev, flags, sizeof(packet_header), 0 };
+      p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::CLEAR_STATUS, subdev, flags, sizeof(p), 0 };
       send_packet(p);
     }
 
     void send_device_get_status(const uint8_t subdev, const uint8_t flags = 0) {
       cmd_packet p;
-      p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::GET_STATUS, subdev, flags, sizeof(packet_header), 0 };
+      p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::GET_STATUS, subdev, flags, sizeof(p), 0 };
       send_packet(p);
     }
 
     void send_tx_start_now_until_stop(const uint8_t subdev, const uint8_t flags = 0) {
       stream_ctrl_packet p;
-      p.hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::START_NOW_UNTIL_STOP, subdev, flags, sizeof(stream_ctrl_packet), 0 };
+      p.hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::START_NOW_UNTIL_STOP, subdev, flags, sizeof(p), 0 };
       send_packet(p);
     }
 
     void send_rx_start_now_until_stop(const uint8_t subdev, const uint8_t flags = 0) {
       stream_ctrl_packet p;
-      p.hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::START_NOW_UNTIL_STOP, subdev, flags, sizeof(stream_ctrl_packet), 0 };
+      p.hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::START_NOW_UNTIL_STOP, subdev, flags, sizeof(p), 0 };
       send_packet(p);
     }
 
     void send_tx_start_now_for_n_samples(const uint64_t n, const uint8_t subdev, const uint8_t flags = 0) {
       stream_ctrl_packet_time_samples p;
-      p.hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::START_NOW_FOR_N_SAMPLES, subdev, flags, sizeof(stream_ctrl_packet_time_samples), 0 };
+      p.hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::START_NOW_FOR_N_SAMPLES, subdev, flags, sizeof(p), 0 };
       p.n_samples = n;
       send_packet(p);
     }
 
     void send_rx_start_now_for_n_samples(const uint64_t n, const uint8_t subdev, const uint8_t flags = 0) {
       stream_ctrl_packet_time_samples p;
-      p.hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::START_NOW_FOR_N_SAMPLES, subdev, flags, sizeof(stream_ctrl_packet_time_samples), 0 };
+      p.hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::START_NOW_FOR_N_SAMPLES, subdev, flags, sizeof(p), 0 };
       p.n_samples = n;
       send_packet(p);
     }
 
     void send_tx_stop_now(const uint8_t subdev, const uint8_t flags = 0) {
       stream_ctrl_packet p;
-      p.hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::STOP_NOW, subdev, flags, sizeof(packet_header), 0 };
+      p.hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::STOP_NOW, subdev, flags, sizeof(p), 0 };
       send_packet(p);
     }
 
     void send_rx_stop_now(const uint8_t subdev, const uint8_t flags = 0) {
       cmd_packet p;
-      p.hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::STOP_NOW, subdev, flags, sizeof(packet_header), 0 };
+      p.hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::STOP_NOW, subdev, flags, sizeof(p), 0 };
       send_packet(p);
     }
 
    void set_tx_freq(const double freq, const uint8_t subdev = 0, const uint8_t flags = 0) {
       radio_rf_freq_packet p;
-      p.hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::SET_RF_FREQ, subdev, flags, sizeof(radio_rf_freq_packet), 0 };
+      p.hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::SET_RF_FREQ, subdev, flags, sizeof(p), 0 };
       p.freq = freq;
       // FIXME: output_sel needs to be set by the MCU, not the user
       if(freq >= 13.5e9) {
@@ -348,7 +348,7 @@ class udp_tx {
 
     void set_rx_freq(const double freq, const uint8_t subdev = 0, const uint8_t flags = 0) {
       radio_rf_freq_packet p;
-      p.hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::SET_RF_FREQ, subdev, flags, sizeof(radio_rf_freq_packet), 0 };
+      p.hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::SET_RF_FREQ, subdev, flags, sizeof(p), 0 };
       p.freq = freq;
       p.rtol = 1e-9;
       // FIXME: output_sel needs to be set by the MCU, not the user
@@ -365,7 +365,7 @@ class udp_tx {
 
     void set_tx_gain(const double gain_db, const uint8_t subdev = 0, const uint8_t flags = 0) {
       radio_rf_gain_packet p;
-      p.hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::SET_RF_GAIN, subdev, flags, sizeof(radio_rf_gain_packet), 0 };
+      p.hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::SET_RF_GAIN, subdev, flags, sizeof(p), 0 };
       //FIXME: gain setting needs to be done in MCU from gain_db, not here
       p.gain = -std::min(0, std::max(31, (int)std::lround(2 * gain_db)));
       send_packet(p);
@@ -373,7 +373,7 @@ class udp_tx {
 
     void set_rx_gain(const double gain_db, const uint8_t subdev = 0, const uint8_t flags = 0) {
       radio_rf_gain_packet p;
-      p.hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::SET_RF_GAIN, subdev, flags, sizeof(radio_rf_gain_packet), 0 };
+      p.hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::SET_RF_GAIN, subdev, flags, sizeof(p), 0 };
       //FIXME: gain setting needs to be done in MCU from gain_db, not here
       //FIXME: attenuator cannot be set to 0, only 0.5 db
       p.gain = -1;
@@ -384,7 +384,7 @@ class udp_tx {
 
     void set_tx_rate(const double rate_samples_sec, const uint8_t subdev = 0, const uint8_t flags = 0) {
       radio_rf_sample_rate_packet p;
-      p.hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::SET_SAMPLE_RATE, subdev, flags, sizeof(radio_rf_sample_rate_packet), 0 };
+      p.hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::SET_SAMPLE_RATE, subdev, flags, sizeof(p), 0 };
       //FIXME: rate setting needs to be done in MCU from rate_samples_sec, not here
       p.rate = std::min(1000, std::max(1, (int)std::lround(160.0e6 / rate_samples_sec)));
       send_packet(p);
@@ -392,7 +392,7 @@ class udp_tx {
 
     void set_rx_rate(const double rate_samples_sec, const uint8_t subdev = 0, const uint8_t flags = 0) {
       radio_rf_sample_rate_packet p;
-      p.hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::SET_SAMPLE_RATE, subdev, flags, sizeof(radio_rf_sample_rate_packet), 0 };
+      p.hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::SET_SAMPLE_RATE, subdev, flags, sizeof(p), 0 };
       //FIXME: rate setting needs to be done in MCU from rate_samples_sec, not here
       p.rate = std::min(1000, std::max(1, (int)std::lround(160.0e6 / rate_samples_sec)));
       send_packet(p);
@@ -403,12 +403,12 @@ class udp_tx {
     }
 
     void set_rx_antenna(const std::string ant, const uint8_t subdev = 0, const uint8_t flags = 0) {
-      //FIXME: implement      
+      //FIXME: implement
     }
 
     void set_tx_enable(const bool enabled, const uint8_t subdev = 0, const uint8_t flags = 0) {
       radio_rf_enable_packet p;
-      p.hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::SET_RF_ENABLED, subdev, flags, sizeof(packet_header), 0 };
+      p.hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::SET_RF_ENABLED, subdev, flags, sizeof(p), 0 };
       if(enabled) {
         p.enabled = 1;
       }
@@ -420,7 +420,7 @@ class udp_tx {
 
     void set_rx_enable(const bool enabled, const uint8_t subdev = 0, const uint8_t flags = 0) {
       radio_rf_enable_packet p;
-      p.hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::SET_RF_ENABLED, subdev, flags, sizeof(packet_header), 0 };
+      p.hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::SET_RF_ENABLED, subdev, flags, sizeof(p), 0 };
       if(enabled) {
         p.enabled = 1;
       }
@@ -476,7 +476,7 @@ class udp_tx {
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
       //set_rx_rate(rx_rate);
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
-      
+
       // send a START_NOW_UNTIL_STOP
       //send_tx_start_now_until_stop(tx_subdev);
       send_rx_start_now_until_stop(rx_subdev);
