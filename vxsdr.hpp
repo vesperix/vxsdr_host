@@ -116,25 +116,25 @@ class vxsdr {
           bool has_stream_id = (q.hdr.flags | FLAGS::STREAM_ID_PRESENT);
           if(not has_time and not has_stream_id) {
             auto *p = reinterpret_cast<data_packet *>(&q);
-            size_t data_size = std::min(MAX_DATA_LENGTH_SAMPLES, 
+            size_t data_size = std::min(MAX_DATA_LENGTH_SAMPLES,
                   (p->hdr.packet_size - sizeof(packet_header)) / sizeof(std::complex<int16_t>));
             std::copy_n(std::begin(p->data), data_size, std::back_inserter(data));
           }
           else if(has_time and not has_stream_id) {
             auto *p = reinterpret_cast<data_packet_time *>(&q);
-            size_t data_size = std::min(MAX_DATA_LENGTH_SAMPLES, 
+            size_t data_size = std::min(MAX_DATA_LENGTH_SAMPLES,
                   (p->hdr.packet_size - sizeof(packet_header) - sizeof(time_spec_t)) / sizeof(std::complex<int16_t>));
             std::copy_n(std::begin(p->data), data_size, std::back_inserter(data));
           }
           else if(has_stream_id and not has_time) {
             auto *p = reinterpret_cast<data_packet_stream *>(&q);
-            size_t data_size = std::min(MAX_DATA_LENGTH_SAMPLES, 
+            size_t data_size = std::min(MAX_DATA_LENGTH_SAMPLES,
                   (p->hdr.packet_size - sizeof(packet_header) - sizeof(stream_spec_t)) / sizeof(std::complex<int16_t>));
             std::copy_n(std::begin(p->data), data_size, std::back_inserter(data));
           }
           else {
             auto *p = reinterpret_cast<data_packet_time_stream *>(&q);
-            size_t data_size = std::min(MAX_DATA_LENGTH_SAMPLES, 
+            size_t data_size = std::min(MAX_DATA_LENGTH_SAMPLES,
                   (p->hdr.packet_size - sizeof(packet_header) - sizeof(time_spec_t) - sizeof(stream_spec_t)) / sizeof(std::complex<int16_t>));
             std::copy_n(std::begin(p->data), data_size, std::back_inserter(data));
           }
@@ -206,7 +206,7 @@ class vxsdr {
     void tx_start_now_for_n_samples(const uint64_t n, const uint8_t subdev = 0, const uint8_t flags = 0) {
       largest_cmd_or_rsp_packet q;
       auto *p = reinterpret_cast<stream_ctrl_packet_time_samples *>(&q);
-      p->hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::START_NOW_FOR_N_SAMPLES, subdev, flags, sizeof(stream_ctrl_packet_time_samples), 0 };
+      p->hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::START_NOW_FOR_N_SAMPLES, subdev, flags, sizeof(*p), 0 };
       p->n_samples = n;
       command_queue.push(q);
     }
@@ -214,7 +214,7 @@ class vxsdr {
     void rx_start_now_for_n_samples(const uint64_t n, const uint8_t subdev = 0, const uint8_t flags = 0) {
       largest_cmd_or_rsp_packet q;
       auto *p = reinterpret_cast<stream_ctrl_packet_time_samples *>(&q);
-      p->hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::START_NOW_FOR_N_SAMPLES, subdev, flags, sizeof(stream_ctrl_packet_time_samples), 0 };
+      p->hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::START_NOW_FOR_N_SAMPLES, subdev, flags, sizeof(*p), 0 };
       p->n_samples = n;
       command_queue.push(q);
     }
@@ -235,16 +235,16 @@ class vxsdr {
       LOGGER(debug) << "set_tx_freq() entered with freq = " << freq;
       largest_cmd_or_rsp_packet q;
       auto *p = reinterpret_cast<radio_rf_freq_packet *>(&q);
-      p->hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::SET_RF_FREQ, subdev, flags, sizeof(packet_header), 0 };
+      p->hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::SET_RF_FREQ, subdev, flags, sizeof(*p), 0 };
       p->freq = freq;
       // FIXME: output_sel needs to be set by the MCU, not the user
       if(freq >= 13.5e9) {
-        p->output_sel = 1;
+        p->output_sel = 2;
       }
       else {
         //FIXME: disable doubler until HW fix
-        p->output_sel = 1;
-        //p.output_sel = 2;
+        p->output_sel = 2;
+        //p.output_sel = 1;
       }
       p->rtol = 1e-9;
       command_queue.push(q);
@@ -254,16 +254,16 @@ class vxsdr {
       LOGGER(debug) << "set_rx_freq() entered with freq = " << freq;
       largest_cmd_or_rsp_packet q;
       auto *p = reinterpret_cast<radio_rf_freq_packet *>(&q);
-      p->hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::SET_RF_FREQ, subdev, flags, sizeof(packet_header), 0 };
+      p->hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::SET_RF_FREQ, subdev, flags, sizeof(*p), 0 };
       p->freq = freq;
       // FIXME: output_sel needs to be set by the MCU, not the user
       if(freq >= 13.5e9) {
-        p->output_sel = 1;
+        p->output_sel = 2;
       }
       else {
         //FIXME: disable doubler until HW fix
-        p->output_sel = 1;
-        //p.output_sel = 2;
+        p->output_sel = 2;
+        //p.output_sel = 1;
       }
       p->rtol = 1e-9;
       command_queue.push(q);
@@ -273,7 +273,7 @@ class vxsdr {
       LOGGER(debug) << "set_tx_gain() entered with gain = " << gain_db;
       largest_cmd_or_rsp_packet q;
       auto *p = reinterpret_cast<radio_rf_gain_packet *>(&q);
-      p->hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::SET_RF_GAIN, subdev, flags, sizeof(packet_header), 0 };
+      p->hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::SET_RF_GAIN, subdev, flags, sizeof(*p), 0 };
       //FIXME: gain setting needs to be done in MCU from gain_db, not here
       p->gain = -std::min(0, std::max(31, (int)std::lround(2 * gain_db)));
       command_queue.push(q);
@@ -283,7 +283,7 @@ class vxsdr {
       LOGGER(debug) << "set_rx_gain() entered with gain = " << gain_db;
       largest_cmd_or_rsp_packet q;
       auto *p = reinterpret_cast<radio_rf_gain_packet *>(&q);
-      p->hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::SET_RF_GAIN, subdev, flags, sizeof(packet_header), 0 };
+      p->hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::SET_RF_GAIN, subdev, flags, sizeof(*p), 0 };
       //FIXME: gain setting needs to be done in MCU from gain_db, not here
       //FIXME: attenuator cannot be set to 0, only 0.5 db
       p->gain = -1;
@@ -298,7 +298,7 @@ class vxsdr {
       LOGGER(debug) << "set_tx_rate() entered with rate = " << rate_samples_sec;
       largest_cmd_or_rsp_packet q;
       auto *p = reinterpret_cast<radio_rf_sample_rate_packet *>(&q);
-      p->hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::SET_SAMPLE_RATE, subdev, flags, sizeof(packet_header), 0 };
+      p->hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::SET_SAMPLE_RATE, subdev, flags, sizeof(*p), 0 };
       //FIXME: rate setting needs to be done in MCU from rate_samples_sec, not here
       p->rate = std::min(1000, std::max(1, (int)std::lround(160.0e6 / rate_samples_sec)));
       command_queue.push(q);
@@ -308,7 +308,7 @@ class vxsdr {
       LOGGER(debug) << "set_rx_rate() entered with rate = " << rate_samples_sec;
       largest_cmd_or_rsp_packet q;
       auto *p = reinterpret_cast<radio_rf_sample_rate_packet *>(&q);
-      p->hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::SET_SAMPLE_RATE, subdev, flags, sizeof(packet_header), 0 };
+      p->hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::SET_SAMPLE_RATE, subdev, flags, sizeof(*p), 0 };
       //FIXME: rate setting needs to be done in MCU from rate_samples_sec, not here
       p->rate = std::min(1000, std::max(1, (int)std::lround(160.0e6 / rate_samples_sec)));
       command_queue.push(q);
@@ -319,7 +319,7 @@ class vxsdr {
     }
 
     void set_rx_antenna(const std::string ant, const uint8_t subdev = 0, const uint8_t flags = 0) {
-      //FIXME: implement      
+      //FIXME: implement
     }
 
   private:
