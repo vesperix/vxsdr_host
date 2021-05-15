@@ -378,7 +378,7 @@ class udp_tx {
       //FIXME: attenuator cannot be set to 0, only 0.5 db
       p.gain = -1;
       send_packet(p);
-      p.gain = 63;
+      p.gain = std::max(0, std::min(63, (int)std::lround(2 * gain_db)));
       send_packet(p);
     }
 
@@ -467,7 +467,7 @@ class udp_tx {
       std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
       double rx_freq = 5.0e9;
-      double rx_gain = 0.0;
+      double rx_gain = 30.0;
       double rx_rate = 160.0e6;
 
       set_rx_freq(rx_freq);
