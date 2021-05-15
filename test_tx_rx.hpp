@@ -331,7 +331,7 @@ class udp_tx {
 
    void set_tx_freq(const double freq, const uint8_t subdev = 0, const uint8_t flags = 0) {
       radio_rf_freq_packet p;
-      p.hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::SET_RF_FREQ, subdev, flags, sizeof(packet_header), 0 };
+      p.hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::SET_RF_FREQ, subdev, flags, sizeof(radio_rf_freq_packet), 0 };
       p.freq = freq;
       // FIXME: output_sel needs to be set by the MCU, not the user
       if(freq >= 13.5e9) {
@@ -348,24 +348,24 @@ class udp_tx {
 
     void set_rx_freq(const double freq, const uint8_t subdev = 0, const uint8_t flags = 0) {
       radio_rf_freq_packet p;
-      p.hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::SET_RF_FREQ, subdev, flags, sizeof(packet_header), 0 };
+      p.hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::SET_RF_FREQ, subdev, flags, sizeof(radio_rf_freq_packet), 0 };
       p.freq = freq;
+      p.rtol = 1e-9;
       // FIXME: output_sel needs to be set by the MCU, not the user
       if(freq >= 13.5e9) {
-        p.output_sel = 1;
+        p.output_sel = 2; // LMX2594_OUTPUT_B
       }
       else {
         //FIXME: disable doubler until HW fix
-        p.output_sel = 1;
+        p.output_sel = 2;
         //p.output_sel = 2;
       }
-      p.rtol = 1e-9;
       send_packet(p);
     }
 
     void set_tx_gain(const double gain_db, const uint8_t subdev = 0, const uint8_t flags = 0) {
       radio_rf_gain_packet p;
-      p.hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::SET_RF_GAIN, subdev, flags, sizeof(packet_header), 0 };
+      p.hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::SET_RF_GAIN, subdev, flags, sizeof(radio_rf_gain_packet), 0 };
       //FIXME: gain setting needs to be done in MCU from gain_db, not here
       p.gain = -std::min(0, std::max(31, (int)std::lround(2 * gain_db)));
       send_packet(p);
@@ -373,7 +373,7 @@ class udp_tx {
 
     void set_rx_gain(const double gain_db, const uint8_t subdev = 0, const uint8_t flags = 0) {
       radio_rf_gain_packet p;
-      p.hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::SET_RF_GAIN, subdev, flags, sizeof(packet_header), 0 };
+      p.hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::SET_RF_GAIN, subdev, flags, sizeof(radio_rf_gain_packet), 0 };
       //FIXME: gain setting needs to be done in MCU from gain_db, not here
       //FIXME: attenuator cannot be set to 0, only 0.5 db
       p.gain = -1;
@@ -384,7 +384,7 @@ class udp_tx {
 
     void set_tx_rate(const double rate_samples_sec, const uint8_t subdev = 0, const uint8_t flags = 0) {
       radio_rf_sample_rate_packet p;
-      p.hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::SET_SAMPLE_RATE, subdev, flags, sizeof(packet_header), 0 };
+      p.hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::SET_SAMPLE_RATE, subdev, flags, sizeof(radio_rf_sample_rate_packet), 0 };
       //FIXME: rate setting needs to be done in MCU from rate_samples_sec, not here
       p.rate = std::min(1000, std::max(1, (int)std::lround(160.0e6 / rate_samples_sec)));
       send_packet(p);
@@ -392,7 +392,7 @@ class udp_tx {
 
     void set_rx_rate(const double rate_samples_sec, const uint8_t subdev = 0, const uint8_t flags = 0) {
       radio_rf_sample_rate_packet p;
-      p.hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::SET_SAMPLE_RATE, subdev, flags, sizeof(packet_header), 0 };
+      p.hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::SET_SAMPLE_RATE, subdev, flags, sizeof(radio_rf_sample_rate_packet), 0 };
       //FIXME: rate setting needs to be done in MCU from rate_samples_sec, not here
       p.rate = std::min(1000, std::max(1, (int)std::lround(160.0e6 / rate_samples_sec)));
       send_packet(p);
