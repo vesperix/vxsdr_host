@@ -364,8 +364,7 @@ class udp_tx {
       // send a START_NOW_UNTIL_STOP
       send_tx_start_now_until_stop(tx_subdev);
       send_rx_start_now_until_stop(rx_subdev);
-      //send_tx_start_now_for_n_samples(1000000 * 2048ull, tx_subdev);
-      //send_rx_start_now_until_stop(rx_subdev);
+      //send_tx_start_now_for_n_samples(180000 * 2048ull, tx_subdev);
       //send_rx_start_now_for_n_samples(180000 * 2048ull, rx_subdev);
 
       uint64_t last_check = 0;
