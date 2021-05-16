@@ -22,20 +22,23 @@ void define_options(boost::program_options::options_description &desc)
 {
   desc.add_options()
     ("help,H", "show help message")
-    ("config_file,C", boost::program_options::value<std::string>(), "configuration file giving command line options")
-    ("local_address,A", boost::program_options::value<std::string>()->default_value(""), "IPv4 address of local interface")
-    ("local_receive_port,L", boost::program_options::value<unsigned>()->default_value(1030), "port to receive on local interface")
-    ("local_send_port,M", boost::program_options::value<unsigned>()->default_value(55123), "port to send on local interface")
-    ("destination_address,D", boost::program_options::value<std::string>()->default_value(""), "IPv4 address of destination (including broadcast/multicast)")
-    ("netmask,K", boost::program_options::value<std::string>()->default_value("255.255.255.0"), "IPv4 netmask of local interface")
-    ("broadcast,B", boost::program_options::bool_switch()->default_value(false), "flag to enable broadcast")
-    ("destination_port,P", boost::program_options::value<unsigned>()->default_value(1030), "port to use on destination")
-    ("packet_size,S", boost::program_options::value<size_t>()->default_value(8200), "packet size in bytes")
+    ("config_file", boost::program_options::value<std::string>(), "configuration file giving command line options")
+    ("local_address", boost::program_options::value<std::string>()->default_value(""), "IPv4 address of local interface")
+    ("local_receive_port", boost::program_options::value<unsigned>()->default_value(1030), "port to receive on local interface")
+    ("local_send_port", boost::program_options::value<unsigned>()->default_value(55123), "port to send on local interface")
+    ("destination_address", boost::program_options::value<std::string>()->default_value(""), "IPv4 address of destination (including broadcast/multicast)")
+    ("netmask", boost::program_options::value<std::string>()->default_value("255.255.255.0"), "IPv4 netmask of local interface")
+    ("broadcast", boost::program_options::bool_switch()->default_value(false), "flag to enable broadcast")
+    ("destination_port", boost::program_options::value<unsigned>()->default_value(1030), "port to use on destination")
+    ("packet_size", boost::program_options::value<size_t>()->default_value(8200), "packet size in bytes")
     //("num_packets,N", boost::program_options::value<uint64_t>()->default_value(1024), "number of packets to send")
-    ("rate,R", boost::program_options::value<double>()->required(), "TX/RX sample rate in Hz")
-    ("freq,F", boost::program_options::value<double>()->required(), "TX/RX center frequency in Hz")
-    ("rx_gain,G", boost::program_options::value<double>()->required(), "RX gain in dB")
+    ("rate", boost::program_options::value<double>()->default_value(160e6), "TX/RX sample rate in Hz")
+    ("freq", boost::program_options::value<double>()->required(), "TX/RX center frequency in Hz")
+    ("rx_gain", boost::program_options::value<double>()->required(), "RX gain in dB")
     ("duration", boost::program_options::value<double>()->required(), "duration in seconds")
+    ("prefix", boost::program_options::value<std::string>()->default_value("test-"), "prefix for the output file")
+    ("suffix", boost::program_options::value<std::string>()->default_value(".dat"), "suffix for the output file")
+    ("no_filename_time", "do not include time in output filenames")
   ;
 }
 
@@ -95,9 +98,18 @@ int main(int argc, char *argv[])
     init_options(desc, vm, argc, argv);
     check_options(vm);
 
-    std::string filename = "test-";
-    filename.append(make_filename_time(std::chrono::system_clock::now(), vm["freq"].as<double>(), vm["rate"].as<double>()));
-    filename.append(".dat");
+    std::string filename = vm["prefix"].as<std::string>();
+    if(vm.count("no_filename_time"))
+      filename.append(make_filename_no_time(vm["freq"].as<double>(), vm["rate"].as<double>()));
+    else
+      filename.append(make_filename_time(std::chrono::system_clock::now(), vm["freq"].as<double>(), vm["rate"].as<double>()));
+    filename.append(vm["suffix"].as<std::string>());
+
+    //FIXME!!!
+    global_kludge_rx_freq = vm["freq"].as<double>();
+    global_kludge_rx_gain = vm["rx_gain"].as<double>();
+    global_kludge_rx_rate = vm["rate"].as<double>();
+
 
     LOGGER(info) << "Output filename: " << filename;
 
@@ -116,15 +128,15 @@ int main(int argc, char *argv[])
 
     uint64_t num_packets = std::llround(vm["rate"].as<double>() * vm["duration"].as<double>() / 2048);
 
-    std::thread generator_thread(std::ref(generator), num_packets, vm["packet_size"].as<size_t>());
+    //std::thread generator_thread(std::ref(generator), num_packets, vm["packet_size"].as<size_t>());
     std::thread writer_thread(std::ref(writer), std::ref(filename), num_packets);
     std::thread receiver_thread(std::ref(receiver), std::ref(io_context), std::cref(local_receive_endpoint));
     std::thread response_logger_thread(std::ref(response_packet_printer));
     std::thread sender_thread(std::ref(sender), std::ref(io_context), std::cref(local_send_endpoint), std::cref(destination_endpoint), vm["broadcast"].as<bool>());
 
-    generator_thread.join();
+    //generator_thread.join();
     // allow time for the packets in tx queue to be sent
-    //std::this_thread::sleep_for(std::chrono::milliseconds(std::llround(1100 * vm["duration"].as<double>())));
+    std::this_thread::sleep_for(std::chrono::milliseconds(std::llround(1000 * vm["duration"].as<double>() + 100)));
     set_tx_stop_flag();
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     set_rx_stop_flag();

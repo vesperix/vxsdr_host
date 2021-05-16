@@ -16,6 +16,12 @@
 #ifndef UDP_TX_RX_HPP
 #define UDP_TX_RX_HPP
 
+//FIXME!!! Disgusting temporary kludge...
+
+double global_kludge_rx_freq = 6.0e9;
+double global_kludge_rx_gain =  30.0;
+double global_kludge_rx_rate = 160e6;
+
 // parameters of the internal ring buffers
 
 static constexpr size_t rx_data_queue_length           =     4096;    // slots in rx data queue
@@ -452,23 +458,24 @@ class udp_tx {
 
       send_tx_stop_now(tx_subdev);
       send_rx_stop_now(rx_subdev);
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
       // get device buffer sizes
       send_device_get_buffer_info(device_subdev);
       // wait for the response come back and be processed
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
       // clear the status registers
       send_device_clear_status(device_subdev);
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
       send_device_get_status(device_subdev);
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
       set_rx_enable(true);
-      std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+      std::this_thread::sleep_for(std::chrono::milliseconds(150));
 
-      double rx_freq = 5.0e9;
-      double rx_gain = 30.0;
-      double rx_rate = 160.0e6;
+      double rx_freq = global_kludge_rx_freq;
+      double rx_gain = global_kludge_rx_gain;
+      //double rx_rate = global_kludge_rx_rate;
 
       set_rx_freq(rx_freq);
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
