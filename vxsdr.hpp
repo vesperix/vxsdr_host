@@ -289,7 +289,7 @@ class vxsdr {
       p->gain = -1;
       command_queue.push(q);
       if(gain_db > 0.0) {
-        p->gain = std::min(0, std::max(63, (int)std::lround(2 * gain_db)));
+        p->gain = 63 - std::min(0, std::max(63, (int)std::lround(2 * gain_db)));
         command_queue.push(q);
       }
     }
