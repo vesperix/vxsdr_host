@@ -392,7 +392,7 @@ class udp_tx {
       radio_rf_sample_rate_packet p;
       p.hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::SET_SAMPLE_RATE, subdev, flags, sizeof(p), 0 };
       //FIXME: rate setting needs to be done in MCU from rate_samples_sec, not here
-      p.rate = std::min(1000, std::max(1, (int)std::lround(160.0e6 / rate_samples_sec)));
+      p.rate = std::min(128, std::max(1, (int)std::lround(160.0e6 / rate_samples_sec)));
       send_packet(p);
     }
 
@@ -400,7 +400,7 @@ class udp_tx {
       radio_rf_sample_rate_packet p;
       p.hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::SET_SAMPLE_RATE, subdev, flags, sizeof(p), 0 };
       //FIXME: rate setting needs to be done in MCU from rate_samples_sec, not here
-      p.rate = std::min(1000, std::max(1, (int)std::lround(160.0e6 / rate_samples_sec)));
+      p.rate = std::min(128, std::max(1, (int)std::lround(160.0e6 / rate_samples_sec)));
       send_packet(p);
     }
 
@@ -475,13 +475,13 @@ class udp_tx {
 
       double rx_freq = global_kludge_rx_freq;
       double rx_gain = global_kludge_rx_gain;
-      //double rx_rate = global_kludge_rx_rate;
+      double rx_rate = global_kludge_rx_rate;
 
       set_rx_freq(rx_freq);
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
       set_rx_gain(rx_gain);
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
-      //set_rx_rate(rx_rate);
+      set_rx_rate(rx_rate);
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
       // send a START_NOW_UNTIL_STOP
