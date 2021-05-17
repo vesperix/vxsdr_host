@@ -22,6 +22,10 @@ double global_kludge_rx_freq = 6.0e9;
 double global_kludge_rx_gain =  30.0;
 double global_kludge_rx_rate = 160e6;
 
+double global_kludge_tx_freq = 6.0e9;
+double global_kludge_tx_gain =  30.0;
+double global_kludge_tx_rate = 160e6;
+
 // parameters of the internal ring buffers
 
 static constexpr size_t rx_data_queue_length           =     4096;    // slots in rx data queue
@@ -473,16 +477,19 @@ class udp_tx {
       set_rx_enable(true);
       std::this_thread::sleep_for(std::chrono::milliseconds(150));
 
-      double rx_freq = global_kludge_rx_freq;
-      double rx_gain = global_kludge_rx_gain;
-      double rx_rate = global_kludge_rx_rate;
+      set_rx_freq(global_kludge_rx_freq);
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      set_rx_gain(global_kludge_rx_gain);
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      set_rx_rate(global_kludge_rx_rate);
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
-      set_rx_freq(rx_freq);
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
-      set_rx_gain(rx_gain);
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
-      set_rx_rate(rx_rate);
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      //set_tx_freq(global_kludge_tx_freq);
+      //std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      //set_tx_gain(global_kludge_tx_gain);
+      //std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      //set_tx_rate(global_kludge_tx_rate);
+      //std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
       // send a START_NOW_UNTIL_STOP
       //send_tx_start_now_until_stop(tx_subdev);

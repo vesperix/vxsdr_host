@@ -35,6 +35,7 @@ void define_options(boost::program_options::options_description &desc)
     ("rate", boost::program_options::value<double>()->default_value(160e6), "TX/RX sample rate in Hz")
     ("freq", boost::program_options::value<double>()->required(), "TX/RX center frequency in Hz")
     ("rx_gain", boost::program_options::value<double>()->required(), "RX gain in dB")
+    //("tx_gain", boost::program_options::value<double>()->required(), "TX gain in dB")
     ("duration", boost::program_options::value<double>()->required(), "duration in seconds")
     ("prefix", boost::program_options::value<std::string>()->default_value("test-"), "prefix for the output file")
     ("suffix", boost::program_options::value<std::string>()->default_value(".dat"), "suffix for the output file")
@@ -107,9 +108,13 @@ int main(int argc, char *argv[])
 
     //FIXME!!!
     global_kludge_rx_freq = vm["freq"].as<double>();
-    global_kludge_rx_gain = vm["rx_gain"].as<double>();
-    global_kludge_rx_rate = vm["rate"].as<double>();
+    global_kludge_tx_freq = vm["freq"].as<double>();
 
+    global_kludge_rx_gain = vm["rx_gain"].as<double>();
+    //global_kludge_tx_gain = vm["tx_gain"].as<double>();
+
+    global_kludge_rx_rate = vm["rate"].as<double>();
+    global_kludge_tx_rate = vm["rate"].as<double>();
 
     LOGGER(info) << "Output filename: " << filename;
 
