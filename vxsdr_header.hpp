@@ -298,9 +298,6 @@ class radio_rf_freq_packet : public cmd_or_rsp_packet {
   public:
     double                 freq = 0.0;
     double                 rtol = 0.0;
-    //FIXME: this is OK for testing, but we want the MCU to manage output_sel when done testing
-    uint32_t               output_sel = 0; //(doubler)output A = 1, output B = 2
-    uint32_t               reserved = 0;
 };
 
 //negative gain value sets attenuator (0 to -15.5dB) parameter range [0 to -31]
