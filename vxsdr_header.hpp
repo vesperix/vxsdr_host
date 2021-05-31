@@ -153,7 +153,8 @@ namespace RADIO_CMD_RSP {
   static constexpr uint8_t GET_RF_GAIN_RSP              = 0x12;
   static constexpr uint8_t GET_SAMPLE_RATE_RSP          = 0x13;
   static constexpr uint8_t GET_RF_BW_RSP                = 0x14;
-  static constexpr uint8_t GET_RF_IO_RSP                = 0x15;
+  static constexpr uint8_t GET_RF_ENABLED_RSP           = 0x15;
+  static constexpr uint8_t GET_RF_PORT_RSP              = 0x16;
 }
 
 namespace RADIO_CMD_ERR {
