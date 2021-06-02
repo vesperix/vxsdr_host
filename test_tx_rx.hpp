@@ -361,15 +361,6 @@ class udp_tx {
       p.hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::SET_RF_FREQ, subdev, flags, sizeof(p), 0 };
       p.freq = freq;
       p.rtol = 1e-9;
-      // FIXME: output_sel needs to be set by the MCU, not the user
-      if(freq >= 13.5e9) {
-        p.output_sel = 2; // LMX2594_OUTPUT_B
-      }
-      else {
-        //FIXME: disable doubler until HW fix
-        p.output_sel = 2;
-        //p.output_sel = 2;
-      }
       send_packet(p);
     }
 
