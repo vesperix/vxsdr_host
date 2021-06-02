@@ -343,15 +343,6 @@ class udp_tx {
       radio_rf_freq_packet p;
       p.hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::SET_RF_FREQ, subdev, flags, sizeof(p), 0 };
       p.freq = freq;
-      // FIXME: output_sel needs to be set by the MCU, not the user
-      if(freq >= 13.5e9) {
-        p.output_sel = 1;
-      }
-      else {
-        //FIXME: disable doubler until HW fix
-        p.output_sel = 1;
-        //p.output_sel = 2;
-      }
       p.rtol = 1e-9;
       send_packet(p);
     }
