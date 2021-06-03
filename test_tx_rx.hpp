@@ -361,7 +361,7 @@ class udp_tx {
       radio_rf_gain_packet p;
       p.hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::SET_RF_GAIN, subdev, flags, sizeof(p), 0 };
       //FIXME: gain setting needs to be done in MCU from gain_db, not here
-      p.gain = -std::min(0, std::max(31, (int)std::lround(2 * gain_db)));
+      p.gain = 63 - std::min(0, std::max(31, (int)std::lround(2 * gain_db)));
       send_packet(p);
     }
 
