@@ -133,7 +133,7 @@ int main(int argc, char *argv[])
 
     uint64_t num_packets = std::llround(vm["rate"].as<double>() * vm["duration"].as<double>() / 2048);
 
-    //std::thread generator_thread(std::ref(generator), num_packets, vm["packet_size"].as<size_t>());
+    //std::thread generator_thread(std::ref(generator), num_packets, vm["packet_size"].as<size_t>(), 4000, 0);
     std::thread writer_thread(std::ref(writer), std::ref(filename), num_packets);
     std::thread receiver_thread(std::ref(receiver), std::ref(io_context), std::cref(local_receive_endpoint));
     std::thread response_logger_thread(std::ref(response_packet_printer));

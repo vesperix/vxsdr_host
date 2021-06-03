@@ -132,16 +132,17 @@ int main(int argc, char *argv[])
     boost::asio::io_context io_context;
 
     uint64_t num_packets = std::llround(vm["rate"].as<double>() * vm["duration"].as<double>() / 2048);
-
-    std::thread generator_thread(std::ref(generator), num_packets, vm["packet_size"].as<size_t>());
+    unsigned ncycles = 0;
+    double a = 4000;
+    std::thread generator_thread(std::ref(generator), num_packets, vm["packet_size"].as<size_t>(), a, ncycles);
     std::thread counter_thread(std::ref(data_packet_counter), num_packets);
     std::thread receiver_thread(std::ref(receiver), std::ref(io_context), std::cref(local_receive_endpoint));
     std::thread response_logger_thread(std::ref(response_packet_printer));
     std::thread sender_thread(std::ref(sender), std::ref(io_context), std::cref(local_send_endpoint), std::cref(destination_endpoint), true, false);
 
-    generator_thread.join();
     // allow time for the packets in tx queue to be sent
     std::this_thread::sleep_for(std::chrono::milliseconds(std::llround(1000 * vm["duration"].as<double>() + 100)));
+    generator_thread.join();
     set_tx_stop_flag();
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     set_rx_stop_flag();

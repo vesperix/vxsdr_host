@@ -165,8 +165,8 @@ class udp_rx {
                   rx_buffer_used = r->rx_buffer_used_bytes;
                   tx_buffer_fill_percent = std::min(100., (100. * tx_buffer_used) / tx_buffer_size);
                   rx_buffer_fill_percent = std::min(100., (100. * rx_buffer_used) / rx_buffer_size);
-                  auto *p = reinterpret_cast<largest_cmd_or_rsp_packet *>(&recv_buffer);
-                  response_queue.push(*p);
+                  //auto *p = reinterpret_cast<largest_cmd_or_rsp_packet *>(&recv_buffer);
+                  //response_queue.push(*p);
                 }
                 break;
               case DEVICE_CMD_RSP::GET_BUFFER_INFO_RSP:
@@ -700,7 +700,7 @@ inline void multicast_receiver(boost::asio::io_context &io_context, const boost:
   LOGGER(debug) << "multicast receiver thread finished";
 }
 
-inline void generator(const uint64_t max_packets, const size_t requested_packet_size) {
+inline void generator(const uint64_t max_packets, const size_t requested_packet_size, const double a, const unsigned ncycles) {
   std::array<largest_data_packet, 17> buf;
   static constexpr size_t data_buffer_max_bytes = sizeof(largest_data_packet);
   LOGGER(debug) << "generator thread started";
@@ -711,8 +711,6 @@ inline void generator(const uint64_t max_packets, const size_t requested_packet_
     packet_size = data_buffer_max_bytes;
   }
 
-  const double a = 4000;
-  const float ncycles = 9117.; // number of cycles in buf.size() buffers; must be integer to avoid skips
   const double w = (2 * M_PI * ncycles) / (buf.size() * MAX_DATA_LENGTH_SAMPLES);
 
   for(unsigned i = 0; i < buf.size(); i++) {
