@@ -133,13 +133,13 @@ int main(int argc, char *argv[])
 
     uint64_t num_packets = std::llround(vm["rate"].as<double>() * vm["duration"].as<double>() / 2048);
 
-    std::thread generator_thread(std::ref(generator), num_packets, vm["packet_size"].as<size_t>());
+    //std::thread generator_thread(std::ref(generator), num_packets, vm["packet_size"].as<size_t>());
     std::thread writer_thread(std::ref(writer), std::ref(filename), num_packets);
     std::thread receiver_thread(std::ref(receiver), std::ref(io_context), std::cref(local_receive_endpoint));
     std::thread response_logger_thread(std::ref(response_packet_printer));
     std::thread sender_thread(std::ref(sender), std::ref(io_context), std::cref(local_send_endpoint), std::cref(destination_endpoint), false, true);
 
-    generator_thread.join();
+    //generator_thread.join();
     // allow time for the packets in tx queue to be sent
     std::this_thread::sleep_for(std::chrono::milliseconds(std::llround(1000 * vm["duration"].as<double>() + 100)));
     set_tx_stop_flag();
