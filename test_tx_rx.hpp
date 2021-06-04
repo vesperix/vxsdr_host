@@ -165,8 +165,8 @@ class udp_rx {
                   rx_buffer_used = r->rx_buffer_used_bytes;
                   tx_buffer_fill_percent = std::min(100., (100. * tx_buffer_used) / tx_buffer_size);
                   rx_buffer_fill_percent = std::min(100., (100. * rx_buffer_used) / rx_buffer_size);
-                  auto *p = reinterpret_cast<largest_cmd_or_rsp_packet *>(&recv_buffer);
-                  response_queue.push(*p);
+                  //auto *p = reinterpret_cast<largest_cmd_or_rsp_packet *>(&recv_buffer);
+                  //response_queue.push(*p);
                 }
                 break;
               case DEVICE_CMD_RSP::GET_BUFFER_INFO_RSP:
@@ -232,11 +232,11 @@ class udp_tx {
   public:
     udp_tx(boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint,
       const boost::asio::ip::udp::endpoint &destination_endpoint,
-      const bool broadcast) : socket(io_context, local_endpoint) {
+      const bool tx_enable, const bool rx_enable) : socket(io_context, local_endpoint) {
       destination = destination_endpoint;
-      socket.set_option(boost::asio::socket_base::broadcast(broadcast));
       socket.set_option(boost::asio::socket_base::send_buffer_size(network_send_buffer_bytes));
-
+      enable_rx = rx_enable;
+      enable_tx = tx_enable;
       boost::asio::socket_base::send_buffer_size option;
       socket.get_option(option);
       int network_buffer_size = option.value();
@@ -246,6 +246,8 @@ class udp_tx {
         start_send();
     }
   private:
+    bool enable_rx;
+    bool enable_tx;
     boost::asio::ip::udp::socket socket;
     boost::asio::ip::udp::endpoint destination;
     static constexpr size_t send_buffer_size = 16;
@@ -451,26 +453,32 @@ class udp_tx {
       send_device_get_status(device_subdev);
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
-      set_rx_enable(true);
-      std::this_thread::sleep_for(std::chrono::milliseconds(150));
-
-      set_rx_freq(global_kludge_rx_freq);
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
-      set_rx_gain(global_kludge_rx_gain);
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
-      set_rx_rate(global_kludge_rx_rate);
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
-
-      //set_tx_freq(global_kludge_tx_freq);
-      //std::this_thread::sleep_for(std::chrono::milliseconds(10));
-      //set_tx_gain(global_kludge_tx_gain);
-      //std::this_thread::sleep_for(std::chrono::milliseconds(10));
-      //set_tx_rate(global_kludge_tx_rate);
-      //std::this_thread::sleep_for(std::chrono::milliseconds(10));
-
+      if(this->enable_rx) {
+        set_rx_enable(true);
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        set_rx_freq(global_kludge_rx_freq);
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        set_rx_gain(global_kludge_rx_gain);
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        set_rx_rate(global_kludge_rx_rate);
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      }
+      if(this->enable_tx) {
+        set_tx_enable(true);
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        set_tx_freq(global_kludge_tx_freq);
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        set_tx_gain(global_kludge_tx_gain);
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        set_tx_rate(global_kludge_tx_rate);
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      }
       // send a START_NOW_UNTIL_STOP
-      //send_tx_start_now_until_stop(tx_subdev);
-      send_rx_start_now_until_stop(rx_subdev);
+      if(this->enable_rx)
+        send_rx_start_now_until_stop(rx_subdev);
+      if(this->enable_tx)
+        send_tx_start_now_until_stop(tx_subdev);
+
       //send_tx_start_now_for_n_samples(1000000 * 2048ull, tx_subdev);
       //send_rx_start_now_for_n_samples(180000 * 2048ull, rx_subdev);
 
@@ -485,7 +493,7 @@ class udp_tx {
 
             if(packets_sent - last_check > buffer_check_interval) {
               last_check = packets_sent;
-              //send_device_get_buffer_use(device_subdev);
+              send_device_get_buffer_use(device_subdev);
               send_buffer[i].hdr.flags |= FLAGS::REQUEST_ACK;
               send_packet(send_buffer[i]);
               //send_buffer[i].hdr.flags = 0;
@@ -512,10 +520,15 @@ class udp_tx {
       send_device_get_status(device_subdev);
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
       // send a stop
-      send_tx_stop_now(tx_subdev, FLAGS::REQUEST_ACK);
+      if(this->enable_tx) {
+        send_tx_stop_now(tx_subdev, FLAGS::REQUEST_ACK);
+        set_tx_enable(false);
+      }
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
-      send_rx_stop_now(rx_subdev);
-      set_rx_enable(false);
+      if(this->enable_rx) {
+        send_rx_stop_now(rx_subdev);
+        set_rx_enable(false);
+      }
       LOGGER(info) << "start_send exiting; " << packets_sent << " packets sent, " << send_errors << " send errors";
       for(unsigned i = 0; i < packet_types_processed.size(); i++)
         if(packet_types_processed[i] > 0)
@@ -682,7 +695,7 @@ inline void multicast_receiver(boost::asio::io_context &io_context, const boost:
   LOGGER(debug) << "multicast receiver thread finished";
 }
 
-inline void generator(const uint64_t max_packets, const size_t requested_packet_size) {
+inline void generator(const uint64_t max_packets, const size_t requested_packet_size, const double a, const unsigned ncycles) {
   std::array<largest_data_packet, 17> buf;
   static constexpr size_t data_buffer_max_bytes = sizeof(largest_data_packet);
   LOGGER(debug) << "generator thread started";
@@ -693,8 +706,6 @@ inline void generator(const uint64_t max_packets, const size_t requested_packet_
     packet_size = data_buffer_max_bytes;
   }
 
-  const double a = 4000;
-  const float ncycles = 9117.; // number of cycles in buf.size() buffers; must be integer to avoid skips
   const double w = (2 * M_PI * ncycles) / (buf.size() * MAX_DATA_LENGTH_SAMPLES);
 
   for(unsigned i = 0; i < buf.size(); i++) {
@@ -735,7 +746,7 @@ inline void generator(const uint64_t max_packets, const size_t requested_packet_
 }
 
 inline void sender(boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint,
-      const boost::asio::ip::udp::endpoint &destination_endpoint, const bool broadcast)
+      const boost::asio::ip::udp::endpoint &destination_endpoint, const bool tx_enable, const bool rx_enable)
 {
   LOGGER(debug) << "sender thread started";
 
@@ -745,7 +756,7 @@ inline void sender(boost::asio::io_context &io_context, const boost::asio::ip::u
   if(set_current_thread_affinity(2) != 0)
     LOGGER(error) << "unable to set sender thread CPU affinity";
 
-  udp_tx server(io_context, local_endpoint, destination_endpoint, broadcast);
+  udp_tx server(io_context, local_endpoint, destination_endpoint, tx_enable, rx_enable);
   io_context.run();
 
   LOGGER(debug) << "sender thread finished";

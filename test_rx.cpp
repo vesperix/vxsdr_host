@@ -34,8 +34,8 @@ void define_options(boost::program_options::options_description &desc)
     //("num_packets,N", boost::program_options::value<uint64_t>()->default_value(1024), "number of packets to send")
     ("rate", boost::program_options::value<double>()->default_value(160e6), "TX/RX sample rate in Hz")
     ("freq", boost::program_options::value<double>()->required(), "TX/RX center frequency in Hz")
-    ("rx_gain", boost::program_options::value<double>()->required(), "RX gain in dB")
-    //("tx_gain", boost::program_options::value<double>()->required(), "TX gain in dB")
+    ("rx_gain", boost::program_options::value<double>()->default_value(0), "RX gain in dB")
+    ("tx_gain", boost::program_options::value<double>()->default_value(0), "TX gain in dB")
     ("duration", boost::program_options::value<double>()->required(), "duration in seconds")
     ("prefix", boost::program_options::value<std::string>()->default_value("test-"), "prefix for the output file")
     ("suffix", boost::program_options::value<std::string>()->default_value(".dat"), "suffix for the output file")
@@ -111,7 +111,7 @@ int main(int argc, char *argv[])
     global_kludge_tx_freq = vm["freq"].as<double>();
 
     global_kludge_rx_gain = vm["rx_gain"].as<double>();
-    //global_kludge_tx_gain = vm["tx_gain"].as<double>();
+    global_kludge_tx_gain = vm["tx_gain"].as<double>();
 
     global_kludge_rx_rate = vm["rate"].as<double>();
     global_kludge_tx_rate = vm["rate"].as<double>();
@@ -133,11 +133,11 @@ int main(int argc, char *argv[])
 
     uint64_t num_packets = std::llround(vm["rate"].as<double>() * vm["duration"].as<double>() / 2048);
 
-    //std::thread generator_thread(std::ref(generator), num_packets, vm["packet_size"].as<size_t>());
+    //std::thread generator_thread(std::ref(generator), num_packets, vm["packet_size"].as<size_t>(), 4000, 0);
     std::thread writer_thread(std::ref(writer), std::ref(filename), num_packets);
     std::thread receiver_thread(std::ref(receiver), std::ref(io_context), std::cref(local_receive_endpoint));
     std::thread response_logger_thread(std::ref(response_packet_printer));
-    std::thread sender_thread(std::ref(sender), std::ref(io_context), std::cref(local_send_endpoint), std::cref(destination_endpoint), vm["broadcast"].as<bool>());
+    std::thread sender_thread(std::ref(sender), std::ref(io_context), std::cref(local_send_endpoint), std::cref(destination_endpoint), false, true);
 
     //generator_thread.join();
     // allow time for the packets in tx queue to be sent
