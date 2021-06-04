@@ -695,8 +695,8 @@ inline void multicast_receiver(boost::asio::io_context &io_context, const boost:
   LOGGER(debug) << "multicast receiver thread finished";
 }
 
-inline void generator(const uint64_t max_packets, const size_t requested_packet_size, const double a, const unsigned ncycles) {
-  std::array<largest_data_packet, 17> buf;
+inline void generator(const uint64_t max_packets, const size_t requested_packet_size, const double a, const int ncycles) {
+  std::array<largest_data_packet, 16> buf;
   static constexpr size_t data_buffer_max_bytes = sizeof(largest_data_packet);
   LOGGER(debug) << "generator thread started";
 
@@ -716,8 +716,8 @@ inline void generator(const uint64_t max_packets, const size_t requested_packet_
     buf[i].hdr.packet_size = packet_size;
     size_t n_samples = (packet_size - sizeof(packet_header)) / sizeof(std::complex<int16_t>);
     for(unsigned j = 0; j < n_samples; j++) {
-      buf[i].data[j].real(std::round(a * cos(w * (MAX_DATA_LENGTH_SAMPLES * i + j))));
-      buf[i].data[j].imag(std::round(a * sin(w * (MAX_DATA_LENGTH_SAMPLES * i + j))));
+      buf[i].data[j].real( std::round(a * cos(w * (MAX_DATA_LENGTH_SAMPLES * i + j))));
+      buf[i].data[j].imag(-std::round(a * sin(w * (MAX_DATA_LENGTH_SAMPLES * i + j))));
     }
   }
 
