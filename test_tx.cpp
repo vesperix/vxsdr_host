@@ -31,7 +31,8 @@ void define_options(boost::program_options::options_description &desc)
     ("broadcast", boost::program_options::bool_switch()->default_value(false), "flag to enable broadcast")
     ("destination_port", boost::program_options::value<unsigned>()->default_value(1030), "port to use on destination")
     ("packet_size", boost::program_options::value<size_t>()->default_value(8200), "packet size in bytes")
-    //("num_packets,N", boost::program_options::value<uint64_t>()->default_value(1024), "number of packets to send")
+    ("amplitude", boost::program_options::value<double>()->default_value(16000), "signal amplitude in DAC counts")
+    ("modulation_freq", boost::program_options::value<double>()->default_value(0), "modulation frequency in Hz")
     ("rate", boost::program_options::value<double>()->default_value(160e6), "TX/RX sample rate in Hz")
     ("freq", boost::program_options::value<double>()->required(), "TX/RX center frequency in Hz")
     ("rx_gain", boost::program_options::value<double>()->default_value(0), "RX gain in dB")
@@ -132,9 +133,10 @@ int main(int argc, char *argv[])
     boost::asio::io_context io_context;
 
     uint64_t num_packets = std::llround(vm["rate"].as<double>() * vm["duration"].as<double>() / 2048);
-    int ncycles = 1000;
-    double a = 16000;
-    std::thread generator_thread(std::ref(generator), num_packets, vm["packet_size"].as<size_t>(), a, ncycles);
+    // nearest number of full cycles which fit into the generator buffer (= multiples of 125 Hz at 160 MSPS)
+    int ncycles = std::lround((2048 * 625) / (vm["rate"].as<double>() / vm["modulation_freq"].as<double>()));
+
+    std::thread generator_thread(std::ref(generator), num_packets, vm["packet_size"].as<size_t>(), vm["amplitude"].as<double>(), ncycles);
     std::thread counter_thread(std::ref(data_packet_counter), num_packets);
     std::thread receiver_thread(std::ref(receiver), std::ref(io_context), std::cref(local_receive_endpoint));
     std::thread response_logger_thread(std::ref(response_packet_printer));

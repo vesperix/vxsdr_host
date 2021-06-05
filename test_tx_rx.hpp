@@ -696,7 +696,7 @@ inline void multicast_receiver(boost::asio::io_context &io_context, const boost:
 }
 
 inline void generator(const uint64_t max_packets, const size_t requested_packet_size, const double a, const int ncycles) {
-  std::array<largest_data_packet, 16> buf;
+  std::array<largest_data_packet, 625> buf;
   static constexpr size_t data_buffer_max_bytes = sizeof(largest_data_packet);
   LOGGER(debug) << "generator thread started";
 
