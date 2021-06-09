@@ -2,5 +2,6 @@
 *.dat
 host_tx_throttle
 test_rx
+test_tx
 vxsdr_test
 .vscode
