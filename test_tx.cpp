@@ -100,13 +100,6 @@ int main(int argc, char *argv[])
     init_options(desc, vm, argc, argv);
     check_options(vm);
 
-    std::string filename = vm["prefix"].as<std::string>();
-    if(vm.count("no_filename_time"))
-      filename.append(make_filename_no_time(vm["freq"].as<double>(), vm["rate"].as<double>()));
-    else
-      filename.append(make_filename_time(std::chrono::system_clock::now(), vm["freq"].as<double>(), vm["rate"].as<double>()));
-    filename.append(vm["suffix"].as<std::string>());
-
     //FIXME!!!
     global_kludge_rx_freq = vm["freq"].as<double>();
     global_kludge_tx_freq = vm["freq"].as<double>();
@@ -116,8 +109,6 @@ int main(int argc, char *argv[])
 
     global_kludge_rx_rate = vm["rate"].as<double>();
     global_kludge_tx_rate = vm["rate"].as<double>();
-
-    LOGGER(info) << "Output filename: " << filename;
 
     boost::asio::ip::address_v4 local_ip = boost::asio::ip::address_v4::from_string(vm["local_address"].as<std::string>());
     boost::asio::ip::address_v4 destination_ip = boost::asio::ip::address_v4::from_string(vm["destination_address"].as<std::string>());
