@@ -134,11 +134,11 @@ int main(int argc, char *argv[])
     std::thread sender_thread(std::ref(sender), std::ref(io_context), std::cref(local_send_endpoint), std::cref(destination_endpoint), true, false);
 
     // allow time for the packets in tx queue to be sent
-    std::this_thread::sleep_for(std::chrono::milliseconds(std::llround(1000 * vm["duration"].as<double>() + 100)));
+    std::this_thread::sleep_for(std::chrono::milliseconds(std::llround(1000 * vm["duration"].as<double>() + 10)));
     generator_thread.join();
-    set_tx_stop_flag();
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
     set_rx_stop_flag();
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    set_tx_stop_flag();
     receiver_thread.join();
     sender_thread.join();
     counter_thread.join();

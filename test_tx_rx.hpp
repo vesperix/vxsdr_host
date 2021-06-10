@@ -526,7 +526,7 @@ class udp_tx {
       }
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
       if(this->enable_rx) {
-        send_rx_stop_now(rx_subdev);
+        send_rx_stop_now(rx_subdev, FLAGS::REQUEST_ACK);
         set_rx_enable(false);
       }
       LOGGER(info) << "start_send exiting; " << packets_sent << " packets sent, " << send_errors << " send errors";
