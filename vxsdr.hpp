@@ -391,7 +391,7 @@ class vxsdr {
         uint64_t packets_received = 0, seq_errors = 0;
         std::array<uint64_t, UINT8_MAX + 1> packet_types_received = { 0 };
         uint16_t seq = 0, last_seq = 0;
-        //unsigned percent, min_buffer_percent = 100, max_buffer_percent = 0;
+        // FIXME: diagnostic info gathering: remove when unneeded
         std::vector<std::chrono::time_point<std::chrono::system_clock> > seq_error_times;
         std::vector<uint8_t> seq_error_packet_type;
         std::vector<uint16_t> seq_error_counter;
@@ -399,7 +399,7 @@ class vxsdr {
 
         void start_receive() {
           LOGGER(debug) << "start_receive started";
-
+          // FIXME: need to use async read, handler, and deadline timer to implement timeout
           while(not sdrptr->rx_stop_flag) {
             socket.receive_from(boost::asio::buffer(&recv_buffer, sizeof(recv_buffer)), remote);
             packets_received++;
