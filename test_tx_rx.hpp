@@ -41,7 +41,7 @@ static constexpr int    rx_data_queue_clear_sleep_us   =    10000;
 static constexpr int    send_thread_sleep_us           =       10;
 
 // parameters for the receive thread
-static constexpr int    receive_thread_sleep_us        =        0;
+static constexpr int    receive_thread_sleep_us        =        1;
 
 // parameters for the generator thread
 static constexpr int    tx_generator_thread_sleep_us   =        1;
@@ -125,93 +125,96 @@ class udp_rx {
 
     void start_receive() {
       LOGGER(debug) << "start_receive started";
-      // FIXME: need to add timeout if no packets are coming in
+    boost::asio::socket_base::bytes_readable check_for_bytes(true);
+    socket.io_control(check_for_bytes);
       while(not rx_stop_flag) {
-        socket.receive_from(boost::asio::buffer(&recv_buffer, sizeof(recv_buffer)), remote);
-        packets_received++;
-        packet_types_received[recv_buffer.hdr.packet_type]++;
-        if(packets_received > 1 and recv_buffer.hdr.sequence_counter != (uint16_t)(last_seq + 1)) {
-          seq_errors++;
-          seq_error_times.push_back(std::chrono::system_clock::now());
-          seq_error_packet_type.push_back(recv_buffer.hdr.packet_type);
-          seq_error_counter.push_back(recv_buffer.hdr.sequence_counter);
-          seq_error_expected.push_back((uint16_t)(last_seq + 1));
-        }
-        last_seq = recv_buffer.hdr.sequence_counter;
-        switch(recv_buffer.hdr.packet_type) {
-          // receive buffers go into the rx data queue
-          case PACKET_TYPES::RX_SIGNAL_DATA:
-            rx_data_queue.push(recv_buffer);
-            break;
-          // tx sginal data acks special cased since they contain throttling information
-          case PACKET_TYPES::TX_SIGNAL_DATA_ACK:
-            {
-              auto *r = reinterpret_cast<tx_signal_data_ack_packet *>(&recv_buffer);
-              tx_buffer_used = r->tx_buffer_used_bytes;
-              tx_buffer_fill_percent = std::min(100., (100. * tx_buffer_used) / tx_buffer_size);
+        while(check_for_bytes.get() > 0) {
+          socket.receive_from(boost::asio::buffer(&recv_buffer, sizeof(recv_buffer)), remote);
+          packets_received++;
+          packet_types_received[recv_buffer.hdr.packet_type]++;
+          if(packets_received > 1 and recv_buffer.hdr.sequence_counter != (uint16_t)(last_seq + 1)) {
+            seq_errors++;
+            seq_error_times.push_back(std::chrono::system_clock::now());
+            seq_error_packet_type.push_back(recv_buffer.hdr.packet_type);
+            seq_error_counter.push_back(recv_buffer.hdr.sequence_counter);
+            seq_error_expected.push_back((uint16_t)(last_seq + 1));
+          }
+          last_seq = recv_buffer.hdr.sequence_counter;
+          switch(recv_buffer.hdr.packet_type) {
+            // receive buffers go into the rx data queue
+            case PACKET_TYPES::RX_SIGNAL_DATA:
+              rx_data_queue.push(recv_buffer);
+              break;
+            // tx sginal data acks special cased since they contain throttling information
+            case PACKET_TYPES::TX_SIGNAL_DATA_ACK:
+              {
+                auto *r = reinterpret_cast<tx_signal_data_ack_packet *>(&recv_buffer);
+                tx_buffer_used = r->tx_buffer_used_bytes;
+                tx_buffer_fill_percent = std::min(100., (100. * tx_buffer_used) / tx_buffer_size);
+                if(forward_acks) {
+                  auto *p = reinterpret_cast<largest_cmd_or_rsp_packet *>(&recv_buffer);
+                  response_queue.push(*p);
+                }
+              }
+              break;
+            // the buffer info commands are special cased since they can also be used for TX throttling
+            case PACKET_TYPES::DEVICE_CMD_RSP:
+              switch(recv_buffer.hdr.command) {
+                case DEVICE_CMD_RSP::GET_BUFFER_USE_RSP:
+                  {
+                    auto *r = reinterpret_cast<get_buffer_use_rsp_packet *>(&recv_buffer);
+                    tx_buffer_used = r->tx_buffer_used_bytes;
+                    rx_buffer_used = r->rx_buffer_used_bytes;
+                    tx_buffer_fill_percent = std::min(100., (100. * tx_buffer_used) / tx_buffer_size);
+                    rx_buffer_fill_percent = std::min(100., (100. * rx_buffer_used) / rx_buffer_size);
+                    //auto *p = reinterpret_cast<largest_cmd_or_rsp_packet *>(&recv_buffer);
+                    //response_queue.push(*p);
+                  }
+                  break;
+                case DEVICE_CMD_RSP::GET_BUFFER_INFO_RSP:
+                  {
+                    auto *r = reinterpret_cast<get_buffer_info_rsp_packet *>(&recv_buffer);
+                    tx_buffer_size = r->tx_buffer_size_bytes;
+                    rx_buffer_size = r->rx_buffer_size_bytes;
+                    auto *p = reinterpret_cast<largest_cmd_or_rsp_packet *>(&recv_buffer);
+                    response_queue.push(*p);
+                  }
+                  break;
+                default:
+                  {
+                    auto *p = reinterpret_cast<largest_cmd_or_rsp_packet *>(&recv_buffer);
+                    response_queue.push(*p);
+                  }
+                  break;
+              }
+              break;
+            case PACKET_TYPES::DEVICE_CMD_ACK:
+            case PACKET_TYPES::RX_RADIO_CMD_ACK:
+            case PACKET_TYPES::TX_RADIO_CMD_ACK:
               if(forward_acks) {
                 auto *p = reinterpret_cast<largest_cmd_or_rsp_packet *>(&recv_buffer);
                 response_queue.push(*p);
               }
-            }
-            break;
-          // the buffer info commands are special cased since they can also be used for TX throttling
-          case PACKET_TYPES::DEVICE_CMD_RSP:
-            switch(recv_buffer.hdr.command) {
-              case DEVICE_CMD_RSP::GET_BUFFER_USE_RSP:
-                {
-                  auto *r = reinterpret_cast<get_buffer_use_rsp_packet *>(&recv_buffer);
-                  tx_buffer_used = r->tx_buffer_used_bytes;
-                  rx_buffer_used = r->rx_buffer_used_bytes;
-                  tx_buffer_fill_percent = std::min(100., (100. * tx_buffer_used) / tx_buffer_size);
-                  rx_buffer_fill_percent = std::min(100., (100. * rx_buffer_used) / rx_buffer_size);
-                  //auto *p = reinterpret_cast<largest_cmd_or_rsp_packet *>(&recv_buffer);
-                  //response_queue.push(*p);
-                }
-                break;
-              case DEVICE_CMD_RSP::GET_BUFFER_INFO_RSP:
-                {
-                  auto *r = reinterpret_cast<get_buffer_info_rsp_packet *>(&recv_buffer);
-                  tx_buffer_size = r->tx_buffer_size_bytes;
-                  rx_buffer_size = r->rx_buffer_size_bytes;
-                  auto *p = reinterpret_cast<largest_cmd_or_rsp_packet *>(&recv_buffer);
-                  response_queue.push(*p);
-                }
-                break;
-              default:
-                {
-                  auto *p = reinterpret_cast<largest_cmd_or_rsp_packet *>(&recv_buffer);
-                  response_queue.push(*p);
-                }
-                break;
-            }
-            break;
-          case PACKET_TYPES::DEVICE_CMD_ACK:
-          case PACKET_TYPES::RX_RADIO_CMD_ACK:
-          case PACKET_TYPES::TX_RADIO_CMD_ACK:
-            if(forward_acks) {
-              auto *p = reinterpret_cast<largest_cmd_or_rsp_packet *>(&recv_buffer);
-              response_queue.push(*p);
-            }
-            break;
-          // DEVICE_CMD_RSP handled above
-          case PACKET_TYPES::DEVICE_CMD_ERR:
-          case PACKET_TYPES::RX_RADIO_CMD_RSP:
-          case PACKET_TYPES::RX_RADIO_CMD_ERR:
-          case PACKET_TYPES::TX_RADIO_CMD_RSP:
-          case PACKET_TYPES::TX_RADIO_CMD_ERR:
-            {
-              auto *p = reinterpret_cast<largest_cmd_or_rsp_packet *>(&recv_buffer);
-              response_queue.push(*p);
-            }
-            break;
-          // packet types that should never show up at the host are dropped
-          case PACKET_TYPES::TX_SIGNAL_DATA:
-          case PACKET_TYPES::DEVICE_CMD:
-          case PACKET_TYPES::RX_RADIO_CMD:
-          case PACKET_TYPES::TX_RADIO_CMD:
-          default: // unrecognized packet types
-            break;
+              break;
+            // DEVICE_CMD_RSP handled above
+            case PACKET_TYPES::DEVICE_CMD_ERR:
+            case PACKET_TYPES::RX_RADIO_CMD_RSP:
+            case PACKET_TYPES::RX_RADIO_CMD_ERR:
+            case PACKET_TYPES::TX_RADIO_CMD_RSP:
+            case PACKET_TYPES::TX_RADIO_CMD_ERR:
+              {
+                auto *p = reinterpret_cast<largest_cmd_or_rsp_packet *>(&recv_buffer);
+                response_queue.push(*p);
+              }
+              break;
+            // packet types that should never show up at the host are dropped
+            case PACKET_TYPES::TX_SIGNAL_DATA:
+            case PACKET_TYPES::DEVICE_CMD:
+            case PACKET_TYPES::RX_RADIO_CMD:
+            case PACKET_TYPES::TX_RADIO_CMD:
+            default: // unrecognized packet types
+              break;
+          }
         }
         if(receive_thread_sleep_us > 0)
           std::this_thread::sleep_for(std::chrono::microseconds(receive_thread_sleep_us));
@@ -485,7 +488,6 @@ class udp_tx {
       uint64_t last_check = 0;
       constexpr uint64_t buffer_check_interval = 100; // current buffer size is about 1000 data packets
 
-      // FIXME: is a timeout needed?
       while(not tx_stop_flag) {
         if(tx_data_queue.read_available() > 0 and tx_buffer_fill_percent < throttle_halt_percent) {
           size_t n_popped = tx_data_queue.pop(&send_buffer.front(), send_buffer.size());
