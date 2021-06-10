@@ -125,8 +125,8 @@ class udp_rx {
 
     void start_receive() {
       LOGGER(debug) << "start_receive started";
-    boost::asio::socket_base::bytes_readable check_for_bytes(true);
-    socket.io_control(check_for_bytes);
+      boost::asio::socket_base::bytes_readable check_for_bytes(true);
+      socket.io_control(check_for_bytes);
       while(not rx_stop_flag) {
         while(check_for_bytes.get() > 0) {
           socket.receive_from(boost::asio::buffer(&recv_buffer, sizeof(recv_buffer)), remote);
