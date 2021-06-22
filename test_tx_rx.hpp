@@ -748,7 +748,7 @@ inline void generator(const uint64_t max_packets, const size_t requested_packet_
 inline void intermod_generator(const uint64_t max_packets, const size_t requested_packet_size, const double a, const int ncycles1, const int ncycles2) {
   std::array<largest_data_packet, 625> buf;
   static constexpr size_t data_buffer_max_bytes = sizeof(largest_data_packet);
-  LOGGER(debug) << "generator thread started";
+  LOGGER(debug) << "intermod_generator thread started";
 
   size_t packet_size = requested_packet_size;
   if(requested_packet_size > data_buffer_max_bytes) {
@@ -794,7 +794,7 @@ inline void intermod_generator(const uint64_t max_packets, const size_t requeste
   auto t1 = std::chrono::steady_clock::now();
   std::chrono::duration<double> dt = t1 - t0;
   LOGGER(info) << (nsent - 1) << " buffers (" << ((nsent - 1) * packet_size) << " bytes) generated in " << dt.count() << " seconds";
-  LOGGER(debug) << "generator thread finished";
+  LOGGER(debug) << "intermod_generator thread finished";
 }
 
 inline void sender(boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint,
