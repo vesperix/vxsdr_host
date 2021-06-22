@@ -745,6 +745,58 @@ inline void generator(const uint64_t max_packets, const size_t requested_packet_
   LOGGER(debug) << "generator thread finished";
 }
 
+inline void intermod_generator(const uint64_t max_packets, const size_t requested_packet_size, const double a, const int ncycles1, const int ncycles2) {
+  std::array<largest_data_packet, 625> buf;
+  static constexpr size_t data_buffer_max_bytes = sizeof(largest_data_packet);
+  LOGGER(debug) << "generator thread started";
+
+  size_t packet_size = requested_packet_size;
+  if(requested_packet_size > data_buffer_max_bytes) {
+    LOGGER(error) << "requested packet size is greater than maximum (" << data_buffer_max_bytes <<"); setting to maximum";
+    packet_size = data_buffer_max_bytes;
+  }
+
+  const double w1 = (2 * M_PI * ncycles1) / (buf.size() * MAX_DATA_LENGTH_SAMPLES);
+  const double w2 = (2 * M_PI * ncycles2) / (buf.size() * MAX_DATA_LENGTH_SAMPLES);
+
+  for(unsigned i = 0; i < buf.size(); i++) {
+    buf[i].hdr.packet_type = PACKET_TYPES::TX_SIGNAL_DATA;
+    buf[i].hdr.command = 0;
+    buf[i].hdr.target_subdevice = 0;
+    buf[i].hdr.flags = 0;
+    buf[i].hdr.packet_size = packet_size;
+    size_t n_samples = (packet_size - sizeof(packet_header)) / sizeof(std::complex<int16_t>);
+    for(unsigned j = 0; j < n_samples; j++) {
+      unsigned t = MAX_DATA_LENGTH_SAMPLES * i + j;
+      buf[i].data[j].real( std::round(a * (cos(w1 * t) + cos(w2 * t))));
+      buf[i].data[j].imag(-std::round(a * (sin(w1 * t) + sin(w2 * t))));
+    }
+  }
+
+  auto t0 = std::chrono::steady_clock::now();
+
+  uint64_t nsent = 0;
+
+  while(true) {
+    // wait for room in the tx queue
+    while(tx_data_queue.write_available() == 0) {
+      if(tx_generator_thread_sleep_us > 0)
+        std::this_thread::sleep_for(std::chrono::microseconds(tx_generator_thread_sleep_us));
+    }
+    while(tx_data_queue.write_available() > 0 and nsent <= max_packets) {
+      tx_data_queue.push(buf[nsent++ % buf.size()]);
+    }
+    if(tx_stop_flag or nsent > max_packets) {
+      break;
+    }
+  }
+
+  auto t1 = std::chrono::steady_clock::now();
+  std::chrono::duration<double> dt = t1 - t0;
+  LOGGER(info) << (nsent - 1) << " buffers (" << ((nsent - 1) * packet_size) << " bytes) generated in " << dt.count() << " seconds";
+  LOGGER(debug) << "generator thread finished";
+}
+
 inline void sender(boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint,
       const boost::asio::ip::udp::endpoint &destination_endpoint, const bool tx_enable, const bool rx_enable)
 {
