@@ -706,7 +706,7 @@ inline void generator(const uint64_t max_packets, const size_t requested_packet_
     packet_size = data_buffer_max_bytes;
   }
 
-  const double w = (2 * M_PI * ncycles) / (buf.size() * MAX_DATA_LENGTH_SAMPLES);
+  const double w = (-2 * M_PI * ncycles) / (buf.size() * MAX_DATA_LENGTH_SAMPLES);
 
   for(unsigned i = 0; i < buf.size(); i++) {
     buf[i].hdr.packet_type = PACKET_TYPES::TX_SIGNAL_DATA;
@@ -716,8 +716,8 @@ inline void generator(const uint64_t max_packets, const size_t requested_packet_
     buf[i].hdr.packet_size = packet_size;
     size_t n_samples = (packet_size - sizeof(packet_header)) / sizeof(std::complex<int16_t>);
     for(unsigned j = 0; j < n_samples; j++) {
-      buf[i].data[j].real( std::round(a * cos(w * (MAX_DATA_LENGTH_SAMPLES * i + j))));
-      buf[i].data[j].imag(-std::round(a * sin(w * (MAX_DATA_LENGTH_SAMPLES * i + j))));
+      buf[i].data[j].real(std::round(a * cos(w * (MAX_DATA_LENGTH_SAMPLES * i + j))));
+      buf[i].data[j].imag(std::round(a * sin(w * (MAX_DATA_LENGTH_SAMPLES * i + j))));
     }
   }
 
