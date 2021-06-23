@@ -1,5 +1,7 @@
 *.o
 *.dat
+*.sh
+*.pdf
 host_tx_throttle
 test_rx
 test_tx
