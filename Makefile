@@ -1,4 +1,4 @@
-CC = gcc
+CC = clang
 
 CC_DEFINES =
 CC_BASEFLAGS = -Wall -pedantic -std=gnu11
@@ -6,15 +6,15 @@ CC_OPTFLAGS = -O3
 CC_DBGFLAGS = -g -Og
 CC_LDFLAGS = -lpthread -lm
 
-CXX = g++
+CXX = clang++
 
 CXX_DEFINES = -DBOOST_LOG_DYN_LINK -DBOOST_BIND_GLOBAL_PLACEHOLDERS
 CXX_BASEFLAGS = -Wall -pedantic -std=c++14
 CXX_OPTFLAGS = -O3
-CXX_DBGFLAGS = -g -Og
+CXX_DBGFLAGS = -g -Og -fsanitize-address
 CXX_LDFLAGS = -lpthread -lboost_log -lboost_program_options -lboost_system
 
-#DEBUG = 1
+DEBUG = 1
 
 ifdef DEBUG
 	CC_FLAGS = $(CC_BASEFLAGS) $(CC_DBGFLAGS) $(CC_DEFINES)
