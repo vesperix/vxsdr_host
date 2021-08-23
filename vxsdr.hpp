@@ -150,9 +150,19 @@ class vxsdr {
     }
 
     size_t put_tx_data(std::vector<std::complex<int16_t> > data, const size_t n_desired = 0, const uint8_t subdev = 0) {
+      // puts a plain data_packet (no time, no stream)
       size_t n_put = 0;
-      largest_data_packet q;
-
+      for(size_t i = 0; i < data.size(); i += MAX_DATA_LENGTH_SAMPLES) {
+        largest_data_packet q;
+        auto *p = reinterpret_cast<data_packet *>(&q);
+        int n_samples = std::min(MAX_DATA_LENGTH_SAMPLES, data.size() - i);
+        int n_data_bytes = n_samples * sizeof(std::complex<int16_t>);
+        uint16_t packet_size = sizeof(packet_header) + n_data_bytes;
+        p->hdr = { PACKET_TYPES::TX_SIGNAL_DATA, 0, subdev, 0, packet_size, 0 };
+        for(unsigned j = 0; j < n_samples; j++)
+          p->data[j] = data[i + j];
+        n_put += tx_data_queue.push(q);
+      }
       return n_put;
     }
 
@@ -391,7 +401,7 @@ class vxsdr {
         largest_cmd_or_rsp_packet cmd_buffer;
         uint64_t packets_received = 0, seq_errors = 0;
         std::array<uint64_t, UINT8_MAX + 1> packet_types_received = { 0 };
-        uint16_t seq = 0, last_seq = 0;
+        uint16_t last_seq = 0;
         // FIXME: diagnostic info gathering: remove when unneeded
         std::vector<std::chrono::time_point<std::chrono::system_clock> > seq_error_times;
         std::vector<uint8_t> seq_error_packet_type;

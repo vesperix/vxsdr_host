@@ -11,7 +11,7 @@ CXX = clang++
 CXX_DEFINES = -DBOOST_LOG_DYN_LINK -DBOOST_BIND_GLOBAL_PLACEHOLDERS
 CXX_BASEFLAGS = -Wall -pedantic -std=c++14
 CXX_OPTFLAGS = -O3
-CXX_DBGFLAGS = -g -Og -fsanitize-address
+CXX_DBGFLAGS = -g -Og -fsanitize=address
 CXX_LDFLAGS = -lpthread -lboost_log -lboost_program_options -lboost_system
 
 DEBUG = 1
