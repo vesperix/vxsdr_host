@@ -36,12 +36,6 @@ class vxsdr {
     static constexpr size_t tx_data_queue_length           =     4096;    // slots in tx data queue
     static constexpr size_t msg_queue_length               =     1024;    // slots in command and response msg queues
 
-    // parameters for the send thread
-    static constexpr int    send_thread_sleep_us           =       10;
-
-    // parameters for the receive thread
-    static constexpr int    receive_thread_sleep_us        =        0;
-
     // parameters used to set the OS's network buffer
     static constexpr unsigned network_send_buffer_bytes    =   4194304;
     static constexpr unsigned network_receive_buffer_bytes =   4194304;
@@ -409,6 +403,7 @@ class vxsdr {
         std::vector<uint16_t> seq_error_expected;
 
         void start_receive() {
+          constexpr int    receive_thread_sleep_us        =        0;
           LOGGER(debug) << "start_receive started";
           // FIXME: need to use async read, handler, and deadline timer to implement timeout
           while(not sdrptr->rx_stop_flag) {
@@ -580,11 +575,12 @@ class vxsdr {
           std::array<largest_data_packet, data_buffer_size> data_buffer;
           std::array<largest_cmd_or_rsp_packet, cmd_buffer_size> cmd_buffer;
 
-          constexpr float throttle_halt_percent  = 90;
-          constexpr float throttle_on_percent    = 75;
-          constexpr float throttle_off_percent   = 50;
+          constexpr float throttle_halt_percent   = 90;
+          constexpr float throttle_on_percent     = 75;
+          constexpr float throttle_off_percent    = 50;
           bool throttling = false;
-          constexpr unsigned throttle_amount_us  = 10; // send time for 8200 bytes over 10 GbE is about 6.7 us
+          constexpr unsigned throttle_amount_us   = 10; // send time for 8200 bytes over 10 GbE is about 6.7 us
+          constexpr unsigned send_thread_sleep_us = 10;
 
           const uint8_t device_subdev = 0, tx_subdev = 0;
 
