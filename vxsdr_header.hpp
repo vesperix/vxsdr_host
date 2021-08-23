@@ -215,6 +215,7 @@ class cmd_or_rsp_packet_time_stream : public cmd_or_rsp_packet {
 };
 
 class largest_cmd_or_rsp_packet : public cmd_or_rsp_packet_time_stream {
+    [[maybe_unused]]
     uint8_t                payload[MAX_PAYLOAD_LENGTH_BYTES];
 };
 

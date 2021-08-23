@@ -113,7 +113,7 @@ class udp_rx {
     largest_cmd_or_rsp_packet cmd_buffer;
     uint64_t packets_received = 0, seq_errors = 0;
     std::array<uint64_t, UINT8_MAX + 1> packet_types_received = { 0 };
-    uint16_t seq = 0, last_seq = 0;
+    uint16_t last_seq = 0;
     //unsigned percent, min_buffer_percent = 100, max_buffer_percent = 0;
     std::vector<std::chrono::time_point<std::chrono::system_clock> > seq_error_times;
     std::vector<uint8_t> seq_error_packet_type;

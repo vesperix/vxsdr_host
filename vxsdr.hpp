@@ -149,8 +149,8 @@ class vxsdr {
       for(size_t i = 0; i < data.size(); i += MAX_DATA_LENGTH_SAMPLES) {
         largest_data_packet q;
         auto *p = reinterpret_cast<data_packet *>(&q);
-        int n_samples = std::min(MAX_DATA_LENGTH_SAMPLES, data.size() - i);
-        int n_data_bytes = n_samples * sizeof(std::complex<int16_t>);
+        unsigned n_samples = std::min(MAX_DATA_LENGTH_SAMPLES, data.size() - i);
+        unsigned n_data_bytes = n_samples * sizeof(std::complex<int16_t>);
         uint16_t packet_size = sizeof(packet_header) + n_data_bytes;
         p->hdr = { PACKET_TYPES::TX_SIGNAL_DATA, 0, subdev, 0, packet_size, 0 };
         for(unsigned j = 0; j < n_samples; j++)
