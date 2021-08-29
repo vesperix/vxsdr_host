@@ -493,9 +493,10 @@ class vxsdr {
               default: // unrecognized packet types
                 break;
             }
+
+            if constexpr(receive_thread_sleep_us > 0)
+              std::this_thread::sleep_for(std::chrono::microseconds(receive_thread_sleep_us));
           }
-          if(receive_thread_sleep_us > 0)
-            std::this_thread::sleep_for(std::chrono::microseconds(receive_thread_sleep_us));
 
           LOGGER(info) << "start_receive exiting; " << packets_received << " packets received, " << seq_errors << " sequence errors";
           for(unsigned i =0; i < seq_error_times.size(); i++) {
@@ -630,7 +631,7 @@ class vxsdr {
               }
             }
             else {
-              if(send_thread_sleep_us > 0)
+              if constexpr(send_thread_sleep_us > 0)
                 std::this_thread::sleep_for(std::chrono::microseconds(send_thread_sleep_us));
             }
           }
