@@ -5,6 +5,6 @@
 host_tx_throttle
 test_rx
 test_tx
-test_tx_seq_only
+test_rx_seq_only
 vxsdr_test
 .vscode
