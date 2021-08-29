@@ -70,6 +70,7 @@ class vxsdr {
       LOGGER(debug) << "vxsdr constructor entered";
       receiver_thread = std::thread(&vxsdr::receiver, this, std::ref(io_context), std::cref(local_receive_endpoint));
       sender_thread = std::thread(&vxsdr::sender, this, std::ref(io_context), std::cref(local_send_endpoint), std::cref(destination_endpoint));
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
       tx_stop_flag = false;
       rx_stop_flag = false;
       tx_buffer_size = 0;
@@ -78,11 +79,29 @@ class vxsdr {
       rx_buffer_used = 0;
       tx_buffer_fill_percent = 0.0;
       rx_buffer_fill_percent = 0.0;
+      device_reset();
+      device_clear_status();
+      device_hello();
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      if(response_queue.read_available() == 0) {
+        LOGGER(error) << "no reponse to device hello";
+      }
+      else {
+        largest_cmd_or_rsp_packet p;
+        response_queue.pop(&p);
+        log_packet_info(p);
+        LOGGER(debug) << "got reponse to device hello";
+      }
+      set_tx_enable(true);
+      set_rx_enable(true);
       LOGGER(debug) << "vxsdr constructor complete";
     };
     // destructor
     ~vxsdr() {
       LOGGER(debug) << "vxsdr destructor entered";
+      set_tx_enable(false);
+      set_rx_enable(false);
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
       rx_stop_flag = true;
       tx_stop_flag = true;
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -108,9 +127,9 @@ class vxsdr {
         n_desired = data.size();
       }
 
-      size_t n_packets = n_desired / MAX_DATA_LENGTH_SAMPLES;
-
-      while(not tx_stop_flag and n_popped < n_packets) {
+      size_t n_packets = std::ceil(n_desired / (double)MAX_DATA_LENGTH_SAMPLES);
+      LOGGER(debug) << "n_packets = " << n_packets << " n_popped = " << n_popped;
+      while(n_popped < n_packets) {
         if(rx_data_queue.read_available() > 0) {
           rx_data_queue.pop(&q);
           bool has_time = (bool)(q.hdr.flags | FLAGS::TIME_PRESENT);
@@ -139,10 +158,11 @@ class vxsdr {
                   (p->hdr.packet_size - sizeof(packet_header) - sizeof(time_spec_t) - sizeof(stream_spec_t)) / sizeof(std::complex<int16_t>));
             std::copy_n(std::begin(p->data), data_size, std::back_inserter(data));
           }
-          if(n_popped % 100 == 0) {
-            LOGGER(debug) << "n_popped = " << n_popped;
-          }
           n_popped++;
+        }
+        else {
+          LOGGER(debug) << "no data in rx_data_queue()";
+          std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         }
       }
       LOGGER(debug) << "get_rx_data() complete";
@@ -167,37 +187,37 @@ class vxsdr {
       return n_put;
     }
 
-    void devce_hello(const uint8_t subdev = 0, const uint8_t flags = 0) {
+    void device_hello(const uint8_t subdev = 0, const uint8_t flags = 0) {
       largest_cmd_or_rsp_packet p;
       p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::HELLO, subdev, flags, sizeof(packet_header), 0 };
       command_queue.push(p);
     }
 
-    void devce_reset(const uint8_t subdev = 0, const uint8_t flags = 0) {
+    void device_reset(const uint8_t subdev = 0, const uint8_t flags = 0) {
       largest_cmd_or_rsp_packet p;
       p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::RESET, subdev, flags, sizeof(packet_header), 0 };
       command_queue.push(p);
     }
 
-    void devce_open_session(const uint8_t subdev = 0, const uint8_t flags = 0) {
+    void device_open_session(const uint8_t subdev = 0, const uint8_t flags = 0) {
       largest_cmd_or_rsp_packet p;
       p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::OPEN_SESSION, subdev, flags, sizeof(packet_header), 0 };
       command_queue.push(p);
     }
 
-    void devce_close_session(const uint8_t subdev = 0, const uint8_t flags = 0) {
+    void device_close_session(const uint8_t subdev = 0, const uint8_t flags = 0) {
       largest_cmd_or_rsp_packet p;
       p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::CLOSE_SESSION, subdev, flags, sizeof(packet_header), 0 };
       command_queue.push(p);
     }
 
-    void devce_clear_status(const uint8_t subdev = 0, const uint8_t flags = 0) {
+    void device_clear_status(const uint8_t subdev = 0, const uint8_t flags = 0) {
       largest_cmd_or_rsp_packet p;
       p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::CLEAR_STATUS, subdev, flags, sizeof(packet_header), 0 };
       command_queue.push(p);
     }
 
-    void devce_get_status(const uint8_t subdev = 0, const uint8_t flags = 0) {
+    void device_get_status(const uint8_t subdev = 0, const uint8_t flags = 0) {
       largest_cmd_or_rsp_packet p;
       p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::GET_STATUS, subdev, flags, sizeof(packet_header), 0 };
       command_queue.push(p);
@@ -308,6 +328,32 @@ class vxsdr {
       command_queue.push(q);
     }
 
+    void set_tx_enable(const bool enabled, const uint8_t subdev = 0, const uint8_t flags = 0) {
+      largest_cmd_or_rsp_packet q;
+      auto *p = reinterpret_cast<radio_rf_enable_packet *>(&q);
+      p->hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::SET_RF_ENABLED, subdev, flags, sizeof(p), 0 };
+      if(enabled) {
+        p->enabled = 1;
+      }
+      else {
+        p->enabled = 0;
+      }
+      command_queue.push(q);
+    }
+
+    void set_rx_enable(const bool enabled, const uint8_t subdev = 0, const uint8_t flags = 0) {
+      largest_cmd_or_rsp_packet q;
+      auto *p = reinterpret_cast<radio_rf_enable_packet *>(&q);
+      p->hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::SET_RF_ENABLED, subdev, flags, sizeof(p), 0 };
+      if(enabled) {
+        p->enabled = 1;
+      }
+      else {
+        p->enabled = 0;
+      }
+      command_queue.push(q);
+    }
+
     void set_tx_antenna(const std::string &ant, const uint8_t subdev = 0, const uint8_t flags = 0) {
       //FIXME: implement
     }
@@ -318,13 +364,13 @@ class vxsdr {
 
   private:
 
-    void devce_get_buffer_info(const uint8_t subdev = 0, const uint8_t flags = 0) {
+    void device_get_buffer_info(const uint8_t subdev = 0, const uint8_t flags = 0) {
       largest_cmd_or_rsp_packet p;
       p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::GET_BUFFER_INFO, subdev, flags, sizeof(packet_header), 0 };
       command_queue.push(p);
     }
 
-    void devce_get_buffer_use(const uint8_t subdev = 0, const uint8_t flags = 0) {
+    void device_get_buffer_use(const uint8_t subdev = 0, const uint8_t flags = 0) {
       largest_cmd_or_rsp_packet p;
       p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::GET_BUFFER_USE, subdev, flags, sizeof(packet_header), 0 };
       command_queue.push(p);
@@ -579,17 +625,17 @@ class vxsdr {
         void initialize_tx(const uint8_t device_subdev, const uint8_t tx_subdev) {
           sdrptr->tx_stop_now(tx_subdev);
           // get device buffer sizes
-          sdrptr->devce_get_buffer_info(device_subdev);
+          sdrptr->device_get_buffer_info(device_subdev);
           // wait for the response come back and be processed
           std::this_thread::sleep_for(std::chrono::milliseconds(100));
           // clear the status registers
-          sdrptr->devce_clear_status(device_subdev);
-          sdrptr->devce_get_status(device_subdev);
+          sdrptr->device_clear_status(device_subdev);
+          sdrptr->device_get_status(device_subdev);
         }
 
         void close_tx(const uint8_t device_subdev, const uint8_t tx_subdev) {
           // get the status at the end
-          sdrptr->devce_get_status(device_subdev);
+          sdrptr->device_get_status(device_subdev);
           // send a stop, requesting an ack so that the rx will see an incoming packet
           sdrptr->tx_stop_now(tx_subdev, FLAGS::REQUEST_ACK);
         }

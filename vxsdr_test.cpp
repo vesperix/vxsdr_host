@@ -62,9 +62,21 @@ int main(int argc, char *argv[])
 
     size_t n_samp = std::llround(vm["duration"].as<double>() * vm["rate"].as<double>());
 
-    LOGGER(info) << boost::format("Acquiring data for %.3f seconds (%lld samples)") % vm["duration"].as<double>() % n_samp;
+    LOGGER(info) << boost::format("Data length %.3f seconds (%lld samples)") % vm["duration"].as<double>() % n_samp;
 
     std::vector<std::complex<int16_t> > data(n_samp);
+
+    for(size_t i = 0; i < n_samp; i++) {
+      data[i] = std::complex<int16_t>(10000,0);
+    }
+
+    LOGGER(info) << "Sending data...";
+
+    radio->tx_start_now_for_n_samples(n_samp);
+    radio->put_tx_data(data, n_samp);
+    radio->tx_stop_now();
+
+    LOGGER(info) << "Send complete";
 
     std::string filename = vm["prefix"].as<std::string>();
     filename.append(make_filename_time(std::chrono::system_clock::now(), vm["freq"].as<double>(), vm["rate"].as<double>()));
@@ -81,13 +93,6 @@ int main(int argc, char *argv[])
     size_t n_written = write_cplx_16(filename, data);
     LOGGER(info) << n_written << "samples written";
 
-    LOGGER(info) << "Sending data...";
-
-    radio->tx_start_now_for_n_samples(n_samp);
-    radio->put_tx_data(data, n_samp);
-    radio->tx_stop_now();
-
-    LOGGER(info) << "Send complete";
   }
   catch (std::exception& e) {
     LOGGER(fatal) << "exception caught: " << e.what();
