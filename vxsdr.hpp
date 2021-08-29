@@ -576,12 +576,11 @@ class vxsdr {
           std::array<largest_data_packet, data_buffer_size> data_buffer;
           std::array<largest_cmd_or_rsp_packet, cmd_buffer_size> cmd_buffer;
 
-          constexpr float throttle_halt_percent   = 90;
           constexpr float throttle_on_percent     = 75;
           constexpr float throttle_off_percent    = 50;
           bool throttling = false;
           constexpr unsigned throttle_amount_us   = 10; // send time for 8200 bytes over 10 GbE is about 6.7 us
-          constexpr unsigned send_thread_sleep_us = 10;
+          constexpr unsigned send_thread_sleep_us =  5;
 
           const uint8_t device_subdev = 0, tx_subdev = 0;
 
@@ -619,9 +618,6 @@ class vxsdr {
                   send_packet(data_buffer[i]);
                 }
                 // throttle if needed
-                //FIXME: needs a timeout!!
-                //while(sdrptr->tx_buffer_fill_percent > throttle_halt_percent)
-                //  std::this_thread::sleep_for(std::chrono::microseconds(throttle_amount_us));
                 if(sdrptr->tx_buffer_fill_percent > throttle_on_percent)
                   throttling = true;
                 else if(sdrptr->tx_buffer_fill_percent <= throttle_off_percent)
