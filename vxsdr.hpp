@@ -605,7 +605,7 @@ class vxsdr {
               }
             }
             // FIXME: is a timeout needed?
-            else if(sdrptr->tx_data_queue.read_available() > 0 and sdrptr->tx_buffer_fill_percent < throttle_halt_percent) {
+            else if(sdrptr->tx_data_queue.read_available() > 0) {
               size_t n_popped = sdrptr->tx_data_queue.pop(&data_buffer.front(), data_buffer.size());
               for(size_t i = 0; i < n_popped; i++) {
                 if(packets_sent - last_check > buffer_check_interval) {
