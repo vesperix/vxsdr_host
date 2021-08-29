@@ -125,7 +125,7 @@ int main(int argc, char *argv[])
 
     uint64_t num_packets = std::llround(vm["rate"].as<double>() * vm["duration"].as<double>() / 2048);
     // nearest number of full cycles which fit into the generator buffer (= multiples of 125 Hz at 160 MSPS)
-    int ncycles = std::lround((2048 * 625) / (vm["rate"].as<double>() / vm["modulation_freq"].as<double>()));
+    long ncycles = std::lround((2048 * 625) / (vm["rate"].as<double>() / vm["modulation_freq"].as<double>()));
 
     std::thread generator_thread(std::ref(generator), num_packets, vm["packet_size"].as<size_t>(), vm["amplitude"].as<double>(), ncycles);
     std::thread counter_thread(std::ref(data_packet_counter), num_packets);

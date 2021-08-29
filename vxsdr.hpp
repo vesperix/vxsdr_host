@@ -52,6 +52,9 @@ class vxsdr {
     boost::lockfree::spsc_queue<largest_cmd_or_rsp_packet, boost::lockfree::capacity<msg_queue_length> > command_queue;
     boost::lockfree::spsc_queue<largest_cmd_or_rsp_packet, boost::lockfree::capacity<msg_queue_length> > response_queue;
 
+    // Boost context
+    boost::asio::io_context io_context;
+
     // threads used for sending and receiving
     std::thread sender_thread;
     std::thread receiver_thread;
@@ -65,12 +68,16 @@ class vxsdr {
           const boost::asio::ip::udp::endpoint &local_send_endpoint,
           const boost::asio::ip::udp::endpoint &destination_endpoint) {
       LOGGER(debug) << "vxsdr constructor entered";
-      boost::asio::io_context io_context;
       receiver_thread = std::thread(&vxsdr::receiver, this, std::ref(io_context), std::cref(local_receive_endpoint));
       sender_thread = std::thread(&vxsdr::sender, this, std::ref(io_context), std::cref(local_send_endpoint), std::cref(destination_endpoint));
       tx_stop_flag = false;
       rx_stop_flag = false;
-      //FIXME: more init needed
+      tx_buffer_size = 0;
+      tx_buffer_used = 0;
+      rx_buffer_size = 0;
+      rx_buffer_used = 0;
+      tx_buffer_fill_percent = 0.0;
+      rx_buffer_fill_percent = 0.0;
       LOGGER(debug) << "vxsdr constructor complete";
     };
     // destructor
@@ -81,7 +88,6 @@ class vxsdr {
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
       receiver_thread.join();
       sender_thread.join();
-      //FIXME:
       LOGGER(debug) << "vxsdr destructor complete";
     };
     // copy constructor
@@ -107,8 +113,8 @@ class vxsdr {
       while(not tx_stop_flag and n_popped < n_packets) {
         if(rx_data_queue.read_available() > 0) {
           rx_data_queue.pop(&q);
-          bool has_time = (q.hdr.flags | FLAGS::TIME_PRESENT);
-          bool has_stream_id = (q.hdr.flags | FLAGS::STREAM_ID_PRESENT);
+          bool has_time = (bool)(q.hdr.flags | FLAGS::TIME_PRESENT);
+          bool has_stream_id = (bool)(q.hdr.flags | FLAGS::STREAM_ID_PRESENT);
           if(not has_time and not has_stream_id) {
             auto *p = reinterpret_cast<data_packet *>(&q);
             size_t data_size = std::min(MAX_DATA_LENGTH_SAMPLES,
@@ -133,9 +139,9 @@ class vxsdr {
                   (p->hdr.packet_size - sizeof(packet_header) - sizeof(time_spec_t) - sizeof(stream_spec_t)) / sizeof(std::complex<int16_t>));
             std::copy_n(std::begin(p->data), data_size, std::back_inserter(data));
           }
-          if(n_popped % 100 == 0)
+          if(n_popped % 100 == 0) {
             LOGGER(debug) << "n_popped = " << n_popped;
-
+          }
           n_popped++;
         }
       }
@@ -143,7 +149,7 @@ class vxsdr {
       return data.size();
     }
 
-    size_t put_tx_data(std::vector<std::complex<int16_t> > data, const size_t n_desired = 0, const uint8_t subdev = 0) {
+    size_t put_tx_data(std::vector<std::complex<int16_t> > data, const uint8_t subdev = 0) {
       // puts a plain data_packet (no time, no stream)
       size_t n_put = 0;
       for(size_t i = 0; i < data.size(); i += MAX_DATA_LENGTH_SAMPLES) {
@@ -153,9 +159,10 @@ class vxsdr {
         unsigned n_data_bytes = n_samples * sizeof(std::complex<int16_t>);
         uint16_t packet_size = sizeof(packet_header) + n_data_bytes;
         p->hdr = { PACKET_TYPES::TX_SIGNAL_DATA, 0, subdev, 0, packet_size, 0 };
-        for(unsigned j = 0; j < n_samples; j++)
+        for(unsigned j = 0; j < n_samples; j++) {
           p->data[j] = data[i + j];
-        n_put += tx_data_queue.push(q);
+        }
+        n_put += static_cast<unsigned long>(tx_data_queue.push(q));
       }
       return n_put;
     }
@@ -301,11 +308,11 @@ class vxsdr {
       command_queue.push(q);
     }
 
-    void set_tx_antenna(const std::string ant, const uint8_t subdev = 0, const uint8_t flags = 0) {
+    void set_tx_antenna(const std::string &ant, const uint8_t subdev = 0, const uint8_t flags = 0) {
       //FIXME: implement
     }
 
-    void set_rx_antenna(const std::string ant, const uint8_t subdev = 0, const uint8_t flags = 0) {
+    void set_rx_antenna(const std::string &ant, const uint8_t subdev = 0, const uint8_t flags = 0) {
       //FIXME: implement
     }
 
@@ -327,13 +334,17 @@ class vxsdr {
     {
       LOGGER(debug) << "receiver thread started";
 
-      if(thread_set_priority)
-        if(set_current_thread_priority_realtime(receive_thread_priority) != 0)
+      if(thread_set_priority) {
+        if(set_current_thread_priority_realtime(receive_thread_priority) != 0) {
           LOGGER(error) << "unable to set receiver thread realtime priority";
+        }
+      }
 
-      if(thread_set_affinity)
-        if(set_current_thread_affinity(receive_thread_cpu) != 0)
+      if(thread_set_affinity) {
+        if(set_current_thread_affinity(receive_thread_cpu) != 0) {
           LOGGER(error) << "unable to set receiver thread CPU affinity";
+        }
+      }
 
       udp_rx server(this, io_context, local_endpoint);
       io_context.run();
@@ -345,13 +356,17 @@ class vxsdr {
     {
       LOGGER(debug) << "sender thread started";
 
-      if(thread_set_priority)
-        if(set_current_thread_priority_realtime(send_thread_priority) != 0)
+      if(thread_set_priority) {
+        if(set_current_thread_priority_realtime(send_thread_priority) != 0) {
           LOGGER(error) << "unable to set sender thread realtime priority";
+        }
+      }
 
-      if(thread_set_affinity)
-        if(set_current_thread_affinity(send_thread_cpu) != 0)
+      if(thread_set_affinity) {
+        if(set_current_thread_affinity(send_thread_cpu) != 0) {
           LOGGER(error) << "unable to set sender thread CPU affinity";
+        }
+      }
 
       udp_tx server(this, io_context, local_endpoint, destination_endpoint);
       io_context.run();
@@ -373,12 +388,14 @@ class vxsdr {
           int network_buffer_size = option.value();
           LOGGER(info) << "network receive buffer size set to " << network_buffer_size;
 
-          if(not sdrptr->rx_stop_flag)
+          if(not sdrptr->rx_stop_flag) {
             start_receive();
+          }
         }
         // destructor
         ~udp_rx() {
-          //FIXME
+          //FIXME: stop rx to be sure
+          //FIXME: socket.close() may throw exception?
           socket.close();
         }
         // copy constructor
@@ -494,8 +511,9 @@ class vxsdr {
                 break;
             }
 
-            if constexpr(receive_thread_sleep_us > 0)
+            if constexpr(receive_thread_sleep_us > 0) {
               std::this_thread::sleep_for(std::chrono::microseconds(receive_thread_sleep_us));
+            }
           }
 
           LOGGER(info) << "start_receive exiting; " << packets_received << " packets received, " << seq_errors << " sequence errors";
@@ -503,9 +521,11 @@ class vxsdr {
             LOGGER(info) << boost::format(" %30s %20s %8d %8d") % format_time(seq_error_times[i]) % packet_type_to_name(seq_error_packet_type[i])
                                                                     % seq_error_counter[i] % seq_error_expected[i];
           }
-          for(unsigned i = 0; i < packet_types_received.size(); i++)
-            if(packet_types_received[i] > 0)
+          for(unsigned i = 0; i < packet_types_received.size(); i++) {
+            if(packet_types_received[i] > 0) {
               LOGGER(info) << (boost::format("   %12d %20s (%d)") % packet_types_received[i] % packet_type_to_name(i) % i);
+            }
+          }
         }
     };
 
@@ -524,13 +544,16 @@ class vxsdr {
           int network_buffer_size = option.value();
           LOGGER(info) << "network send buffer size set to " << network_buffer_size;
 
-          if(not sdrptr->tx_stop_flag)
+          if(not sdrptr->tx_stop_flag) {
             start_send();
+          }
         }
         // destructor
         ~udp_tx() {
+          // FIXME: stop tx to be sure
+
+          //FIXME: socket.close() may throw exception?
           socket.close();
-          //FIXME
         }
         // copy constructor
         // copy assignment
@@ -547,8 +570,9 @@ class vxsdr {
           packet_types_processed[packet.hdr.packet_type]++;
           packet.hdr.sequence_counter = (uint16_t)(packets_sent++ % (UINT16_MAX + 1));
           size_t bytes = socket.send_to(boost::asio::buffer(&packet, packet.hdr.packet_size), destination);
-          if(bytes != packet.hdr.packet_size)
+          if(bytes != packet.hdr.packet_size) {
             send_errors++;
+          }
           bytes_sent += bytes;
         }
 
@@ -618,26 +642,31 @@ class vxsdr {
                   send_packet(data_buffer[i]);
                 }
                 // throttle if needed
-                if(sdrptr->tx_buffer_fill_percent > throttle_on_percent)
+                if(sdrptr->tx_buffer_fill_percent > throttle_on_percent) {
                   throttling = true;
-                else if(sdrptr->tx_buffer_fill_percent <= throttle_off_percent)
+                }
+                else if(sdrptr->tx_buffer_fill_percent <= throttle_off_percent) {
                   throttling = false;
-                if(throttling)
+                }
+                if(throttling) {
                   std::this_thread::sleep_for(std::chrono::microseconds(throttle_amount_us));
+                }
               }
             }
             else {
-              if constexpr(send_thread_sleep_us > 0)
+              if constexpr(send_thread_sleep_us > 0) {
                 std::this_thread::sleep_for(std::chrono::microseconds(send_thread_sleep_us));
+              }
             }
           }
           close_tx(device_subdev, tx_subdev);
           std::this_thread::sleep_for(std::chrono::milliseconds(100));
           LOGGER(info) << "start_send exiting; " << packets_sent << " packets sent, " << send_errors << " send errors";
-          for(unsigned i = 0; i < packet_types_processed.size(); i++)
-            if(packet_types_processed[i] > 0)
+          for(unsigned i = 0; i < packet_types_processed.size(); i++) {
+            if(packet_types_processed[i] > 0) {
               LOGGER(info) << (boost::format("   %12d %20s (%d)") % packet_types_processed[i] % packet_type_to_name(i) % i);
-
+            }
+          }
         }
     };
 };

@@ -100,10 +100,12 @@ int main(int argc, char *argv[])
     check_options(vm);
 
     std::string filename = vm["prefix"].as<std::string>();
-    if(vm.count("no_filename_time"))
+    if(vm.count("no_filename_time") > 0) {
       filename.append(make_filename_no_time(vm["freq"].as<double>(), vm["rate"].as<double>()));
-    else
+    }
+    else {
       filename.append(make_filename_time(std::chrono::system_clock::now(), vm["freq"].as<double>(), vm["rate"].as<double>()));
+    }
     filename.append(vm["suffix"].as<std::string>());
 
     //FIXME!!!
