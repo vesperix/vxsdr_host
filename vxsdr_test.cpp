@@ -48,6 +48,7 @@ int main(int argc, char *argv[])
     LOGGER(info) << "using local receive IP " << local_receive_endpoint.address().to_string() << " and port " << local_receive_endpoint.port();
     boost::asio::ip::udp::endpoint destination_endpoint(destination_ip, vm["destination_port"].as<unsigned>());
     LOGGER(info) << "using destination IP " << destination_endpoint.address().to_string() << " and port " << destination_endpoint.port();
+
     auto radio = std::make_shared<vxsdr>(local_send_endpoint, local_receive_endpoint, destination_endpoint);
 
     set_common_options(vm, radio);
@@ -69,19 +70,24 @@ int main(int argc, char *argv[])
     filename.append(make_filename_time(std::chrono::system_clock::now(), vm["freq"].as<double>(), vm["rate"].as<double>()));
     filename.append(vm["suffix"].as<std::string>());
 
-    LOGGER(info) << "Saving data to file " << filename;
-
-    LOGGER(info) << "Starting...";
+    LOGGER(info) << "Receiving data to file..." << filename;
 
     radio->rx_start_now_for_n_samples(n_samp);
     radio->get_rx_data(data, n_samp);
     radio->rx_stop_now();
 
-    LOGGER(info) << "Acquisition complete";
+    LOGGER(info) << "Receive complete";
 
     size_t n_written = write_cplx_16(filename, data);
     LOGGER(info) << n_written << "samples written";
 
+    LOGGER(info) << "Sending data...";
+
+    radio->tx_start_now_for_n_samples(n_samp);
+    radio->put_tx_data(data, n_samp);
+    radio->tx_stop_now();
+
+    LOGGER(info) << "Send complete";
   }
   catch (std::exception& e) {
     LOGGER(fatal) << "exception caught: " << e.what();
