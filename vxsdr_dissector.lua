@@ -113,11 +113,14 @@ local radio_cmd_rsps = {
 }
 
 local errors = {
-    [1] = "BAD_CMD",
-    [2] = "BUSY",
-    [3] = "NO_SUCH_SUBDEVICE",
-    [4] = "TIMEOUT",
-    [5] = "BAD_PARAMETER"
+    [0x01] = "BAD_CMD",
+    [0x02] = "BUSY",
+    [0x03] = "NO_SUCH_SUBDEVICE",
+    [0x04] = "TIMEOUT",
+    [0x05] = "BAD_PARAMETER",
+    [0x06] = "OUT_OF_SEQUENCE",
+    [0x07] = "DATA_BUFFER_OVERFLOW",
+    [0x08] = "CTRL_BUFFER_OVERFLOW"
 }
 
 
