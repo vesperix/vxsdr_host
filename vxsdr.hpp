@@ -88,9 +88,9 @@ class vxsdr {
       LOGGER(debug) << "vxsdr destructor entered";
       set_tx_enable(false);
       set_rx_enable(false);
-      tx_stop_flag = true;
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
       rx_stop_flag = true;
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      tx_stop_flag = true;
       receiver_thread.join();
       sender_thread.join();
       LOGGER(debug) << "vxsdr destructor complete";

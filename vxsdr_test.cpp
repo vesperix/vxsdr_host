@@ -51,10 +51,10 @@ int main(int argc, char *argv[])
 
     auto radio = std::make_shared<vxsdr>(local_send_endpoint, local_receive_endpoint, destination_endpoint);
 
-    LOGGER(info) << "frequency = " << vm["duration"].as<double>();
-    LOGGER(info) << "rate      = " << vm["rate"].as<double>();
-    LOGGER(info) << "tx_gain   = " << vm["tx_gain"].as<double>();
-    LOGGER(info) << "rx_gain   = " << vm["rx_gain"].as<double>();
+    LOGGER(info) << "using frequency " << vm["freq"].as<double>();
+    LOGGER(info) << "using rate      " << vm["rate"].as<double>();
+    LOGGER(info) << "using tx_gain   " << vm["tx_gain"].as<double>();
+    LOGGER(info) << "using rx_gain   " << vm["rx_gain"].as<double>();
 
     set_common_options(vm, radio);
     set_rx_1ch_options(vm, radio);
