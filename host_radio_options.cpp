@@ -11,7 +11,7 @@ void add_rx_1ch_options(boost::program_options::options_description &desc)
   desc.add_options()
    // ("rx_rate", boost::program_options::value<double>(), "RX sample rate in Hz")
    // ("rx_freq", boost::program_options::value<double>(), "RX center frequency in Hz")
-    ("rx_gain", boost::program_options::value<double>(), "RX gain in dB")
+    ("rx_gain", boost::program_options::value<double>()->default_value(0.0), "RX gain in dB")
     ("rx_ant", boost::program_options::value<std::string>(), "RX antenna input selection")
   ;
 }
@@ -21,7 +21,7 @@ void add_tx_1ch_options(boost::program_options::options_description &desc)
   desc.add_options()
    // ("tx_rate", boost::program_options::value<double>(), "TX sample rate in Hz")
    // ("tx_freq", boost::program_options::value<double>(), "TX center frequency in Hz")
-    ("tx_gain", boost::program_options::value<double>(), "TX gain in dB")
+    ("tx_gain", boost::program_options::value<double>()->default_value(0.0), "TX gain in dB")
     ("tx_ant", boost::program_options::value<std::string>(), "TX antenna input selection")
   ;
 }
@@ -33,7 +33,7 @@ void add_common_options(boost::program_options::options_description &desc)
     ("config_file", boost::program_options::value<std::string>(), "configuration file name")
     ("prefix", boost::program_options::value<std::string>()->default_value("test-"), "prefix for the output file")
     ("suffix", boost::program_options::value<std::string>()->default_value(".dat"), "suffix for the output file")
-    ("duration", boost::program_options::value<double>()->default_value(0.0), "duration in seconds")
+    ("duration", boost::program_options::value<double>()->default_value(1.0), "duration in seconds")
  //   ("startup_delay", boost::program_options::value<int>()->default_value(5), "startup delay in (integer) seconds")
     ("no_filename_time", "do not include time in output filenames")
     ("clock_source", boost::program_options::value<std::string>(), "source for frequency reference")
@@ -81,13 +81,13 @@ void init_vm(boost::program_options::options_description &desc, boost::program_o
   }
 }
 
-int set_common_options(boost::program_options::variables_map &vm, std::shared_ptr<vxsdr> radio)
+int set_common_options(boost::program_options::variables_map &vm, const std::shared_ptr<vxsdr> &radio)
 {
   // options currently set in specific sections even when they are defined as common
   return 0;
 }
 
-int set_rx_1ch_options(boost::program_options::variables_map &vm, std::shared_ptr<vxsdr> radio)
+int set_rx_1ch_options(boost::program_options::variables_map &vm, const std::shared_ptr<vxsdr> &radio)
 {
   if(vm.count("rate") > 0)
     radio->set_rx_rate(vm["rate"].as<double>());
@@ -116,7 +116,7 @@ int set_rx_1ch_options(boost::program_options::variables_map &vm, std::shared_pt
   return 0;
 }
 
-int set_tx_1ch_options(boost::program_options::variables_map &vm, std::shared_ptr<vxsdr> radio)
+int set_tx_1ch_options(boost::program_options::variables_map &vm, const std::shared_ptr<vxsdr> &radio)
 {
   if(vm.count("rate") > 0)
     radio->set_tx_rate(vm["rate"].as<double>());
@@ -145,7 +145,7 @@ int set_tx_1ch_options(boost::program_options::variables_map &vm, std::shared_pt
   return 0;
 }
 
-int set_time_options(boost::program_options::variables_map &vm, std::shared_ptr<vxsdr> radio)
+int set_time_options(boost::program_options::variables_map &vm, const std::shared_ptr<vxsdr> &radio)
 {
   /*
   if(vm.count("time_source") > 0)
