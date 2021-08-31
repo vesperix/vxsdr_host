@@ -47,7 +47,7 @@ local device_cmds = {
     [0x50] = "GET_TIMING_INFO",   -- unimplemented
     [0x51] = "GET_TIMING_STATUS",
     [0x52] = "GET_TIMING_REF",  -- unimplemented
-    [0x53] = "SET_TIMING_REF",  -- unimplemented (
+    [0x53] = "SET_TIMING_REF",  -- unimplemented
     [0x60] = "READ_DAC_REG",
     [0x61] = "WRITE_DAC_REG",
     [0x62] = "READ_ADC_REG",
@@ -55,6 +55,27 @@ local device_cmds = {
     -- 0x64-0xFD reserved
     [0xFE] = "STOP",  -- unimplemented
     [0xFF] = "RESET"  -- unimplemented
+}
+
+local device_cmd_rsps = {
+    [0x00] = "HELLO_RSP",
+    [0x03] = "GET_TIME_RSP",
+    [0x04] = "GET_STATUS_RSP",
+    [0x06] = "GET_BUFFER_INFO_RSP",
+    [0x07] = "GET_BUFFER_USE_RSP",
+    [0x08] = "OPEN_SESSION_RSP",  -- unimplemented
+    [0x09] = "CLOSE_SESSION_RSP", --unimplemented
+    -- 0x0A-0x0F reserved
+    [0x10] = "GET_TRANSPORT_INFO_RSP", -- unimplemented
+    [0x11] = "GET_TRANSPORT_ADDR_RSP",
+    [0x12] = "GET_TRANSPORT_PKTSIZ_RSP",
+    [0x30] = "GET_CHANNEL_INFO_RSP",  -- unimplemented
+    -- 0x31-0x4F reserved
+    [0x50] = "GET_TIMING_INFO_RSP",   -- unimplemented
+    [0x51] = "GET_TIMING_STATUS_RSP",
+    [0x52] = "GET_TIMING_REF_RSP",  -- unimplemented
+    [0x60] = "READ_DAC_REG_RSP",
+    [0x62] = "READ_ADC_REG_RSP"
 }
 
 local radio_cmds = {
@@ -81,6 +102,16 @@ local radio_cmds = {
     -- 0x27-0xFF reserved
 }
 
+local radio_cmd_rsps = {
+    [0x10] = "GET_RF_INFO_RSP",  -- unimplemented
+    [0x11] = "GET_RF_FREQ_RSP",  -- unimplemented
+    [0x12] = "GET_RF_GAIN_RSP",  -- unimplemented
+    [0x13] = "GET_SAMPLE_RATE_RSP",
+    [0x14] = "GET_RF_BW_RSP",  -- unimplemented
+    [0x15] = "GET_RF_ENABLED_RSP",  -- unimplemented
+    [0x16] = "GET_RF_PORT_RSP"  -- unimplemented
+}
+
 local errors = {
     [1] = "BAD_CMD",
     [2] = "BUSY",
@@ -97,10 +128,14 @@ local pf_flags             = ProtoField.uint8("vxsdr.flags", "Flags", base.HEX)
 local pf_packet_size       = ProtoField.uint16("vxsdr.packet_size", "Packet Size", base.DEC)
 local pf_sequence_counter  = ProtoField.uint16("vxsdr.sequence_counter", "Sequence Counter", base.DEC)
 
-local pf_device_command    = ProtoField.uint8("vxsdr.device_command", "Device Command", base.HEX, device_cmds)
-local pf_radio_command     = ProtoField.uint8("vxsdr.radio_command", "Radio Command", base.HEX, radio_cmds)
+local pf_device_command     = ProtoField.uint8("vxsdr.device_command", "Device Command", base.HEX, device_cmds)
+local pf_device_command_rsp = ProtoField.uint8("vxsdr.device_command_rsp", "Device Command Response", base.HEX, device_cmd_rsps)
+local pf_radio_command      = ProtoField.uint8("vxsdr.radio_command", "Radio Command", base.HEX, radio_cmds)
+local pf_radio_command_rsp  = ProtoField.uint8("vxsdr.device_command", "Radio Command Response", base.HEX, radio_cmd_rsps)
+local pf_command_error      = ProtoField.uint8("vxsdr.error", "Command Error", base.HEX, errors)
 
-vxsdr.fields = { pf_packet_type, pf_command, pf_target_subdevice, pf_flags, pf_packet_size, pf_sequence_counter, pf_device_command, pf_radio_command }
+vxsdr.fields = { pf_packet_type, pf_command, pf_target_subdevice, pf_flags, pf_packet_size, pf_sequence_counter,
+                 pf_device_command, pf_radio_command, pf_error, pf_device_command_rsp, pf_radio_command_rsp, pf_command_error }
 
 function vxsdr.dissector(tvbuf, pktinfo, root)
 
@@ -116,9 +151,15 @@ function vxsdr.dissector(tvbuf, pktinfo, root)
 
     tree:add(   pf_packet_type,      tvbuf:range(0, 1))
     if pkt_type == 0x02 then
-        tree:add(   pf_device_command,          tvbuf:range(1, 1))
+        tree:add(   pf_device_command,         tvbuf:range(1, 1))
+    elseif pkt_type == 0x0D then
+        tree:add(   pf_device_command_rsp,     tvbuf:range(1, 1))
     elseif pkt_type == 0x03 or pkt_type == 0x04 then
         tree:add(   pf_radio_command,          tvbuf:range(1, 1))
+    elseif pkt_type == 0x0E or pkt_type == 0x0F then
+        tree:add(   pf_radio_command_rsp,      tvbuf:range(1, 1))
+    elseif pkt_type == 0x0A or pkt_type == 0x0B or pkt_type == 0x0C then
+        tree:add(   pf_command_error,          tvbuf:range(1, 1))
     else
         tree:add(   pf_command,          tvbuf:range(1, 1))
     end
