@@ -79,8 +79,6 @@ class vxsdr {
       rx_buffer_used = 0;
       tx_buffer_fill_percent = 0.0;
       rx_buffer_fill_percent = 0.0;
-      device_reset();
-      device_clear_status();
       device_hello();
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
       if(response_queue.read_available() == 0) {
@@ -622,8 +620,10 @@ class vxsdr {
           bytes_sent += bytes;
         }
 
-        void initialize_tx(const uint8_t device_subdev, const uint8_t tx_subdev) {
+        void initialize_sdr(const uint8_t device_subdev, const uint8_t tx_subdev, const uint8_t rx_subdev) {
+          sdrptr->device_reset();
           sdrptr->tx_stop_now(tx_subdev);
+          sdrptr->rx_stop_now(rx_subdev);
           // get device buffer sizes
           sdrptr->device_get_buffer_info(device_subdev);
           // wait for the response come back and be processed
@@ -633,11 +633,12 @@ class vxsdr {
           sdrptr->device_get_status(device_subdev);
         }
 
-        void close_tx(const uint8_t device_subdev, const uint8_t tx_subdev) {
+        void close_sdr(const uint8_t device_subdev, const uint8_t tx_subdev, const uint8_t rx_subdev) {
           // get the status at the end
           sdrptr->device_get_status(device_subdev);
           // send a stop, requesting an ack so that the rx will see an incoming packet
           sdrptr->tx_stop_now(tx_subdev, FLAGS::REQUEST_ACK);
+          sdrptr->rx_stop_now(rx_subdev, FLAGS::REQUEST_ACK);
         }
 
         void start_send() {
@@ -652,9 +653,9 @@ class vxsdr {
           constexpr unsigned throttle_amount_us   = 10; // send time for 8200 bytes over 10 GbE is about 6.7 us
           constexpr unsigned send_thread_sleep_us =  5;
 
-          const uint8_t device_subdev = 0, tx_subdev = 0;
+          const uint8_t device_subdev = 0, tx_subdev = 0, rx_subdev = 0;
 
-          initialize_tx(device_subdev, tx_subdev);
+          initialize_sdr(device_subdev, tx_subdev, rx_subdev);
 
           uint64_t last_check = 0;
           constexpr uint64_t buffer_check_interval = 100; // current buffer size is about 1000 data packets
@@ -705,7 +706,7 @@ class vxsdr {
               }
             }
           }
-          close_tx(device_subdev, tx_subdev);
+          close_sdr(device_subdev, tx_subdev, rx_subdev);
           std::this_thread::sleep_for(std::chrono::milliseconds(100));
           LOGGER(info) << "start_send exiting; " << packets_sent << " packets sent, " << send_errors << " send errors";
           for(unsigned i = 0; i < packet_types_processed.size(); i++) {
