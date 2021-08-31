@@ -1,4 +1,5 @@
 #include <fstream>
+#include <iostream>
 
 #include <boost/program_options.hpp>
 
@@ -68,7 +69,7 @@ void init_vm(boost::program_options::options_description &desc, boost::program_o
   if (vm.count("config_file") > 0) {
     std::ifstream ifs(vm["config_file"].as<std::string>().c_str());
     if (!ifs) {
-      std::cerr << "Error: cannot open config file " << vm["config_file"].as<std::string>() << "!" << std::endl;
+      LOGGER(fatal) << "Error: cannot open config file " << vm["config_file"].as<std::string>();
       throw std::runtime_error("Specified config file not found.");
     }
     boost::program_options::store(boost::program_options::parse_config_file(ifs, desc), vm);
@@ -76,6 +77,7 @@ void init_vm(boost::program_options::options_description &desc, boost::program_o
   }
 
   if(vm.count("help") > 0) {
+    // just write help to stderr, not to log
     std::cerr << desc << std::endl;
     exit(EXIT_SUCCESS);
   }
@@ -185,7 +187,7 @@ int set_time_options(boost::program_options::variables_map &vm, std::shared_ptr<
   if(vm.count("clock_source") > 0) {
     radio->set_clock_source(vm["clock_source"].as<string>());
     if(vm.count("no_ext_ref") > 0)
-      UHD_LOGGER_WARNING("SETUP_RADIO") << "Both clock_source and no_ext_ref specified; clock_source takes precedence";
+      LOGGER(warning) << "Both clock_source and no_ext_ref specified; clock_source takes precedence";
   }
   else if(vm.count("no_ext_ref") > 0) {
     radio->set_internal_freq_ref();
