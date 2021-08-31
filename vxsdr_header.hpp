@@ -6,7 +6,7 @@
 
 /*
   SDR packet definitions
-  Version 0.2.1 13 May 2021
+  Version 0.2.2 31 Aug 2021
   FROZEN EXCEPT FOR ADDITIONS UNTIL INITIAL IMPLEMENTATION COMPLETE AND TESTED
 */
 
@@ -104,9 +104,9 @@ namespace DEVICE_CMD_RSP {
   static constexpr uint8_t GET_BUFFER_USE_RSP           = 0x07;
   static constexpr uint8_t OPEN_SESSION_RSP             = 0x08;
   static constexpr uint8_t CLOSE_SESSION_RSP            = 0x09;
-  static constexpr uint8_t GET_TRANSPORT_INFO_RSP       = 0x0A;
-  static constexpr uint8_t GET_TRANSPORT_ADDR_RSP       = 0x10;
-  static constexpr uint8_t GET_TRANSPORT_PKTSIZ_RSP     = 0x11;
+  static constexpr uint8_t GET_TRANSPORT_INFO_RSP       = 0x10; // fixed to match command
+  static constexpr uint8_t GET_TRANSPORT_ADDR_RSP       = 0x11; // fixed to match command
+  static constexpr uint8_t GET_TRANSPORT_PKTSIZ_RSP     = 0x12; // fixed to match command
   static constexpr uint8_t GET_CHANNEL_INFO_RSP         = 0x30;
   static constexpr uint8_t GET_TIMING_INFO_RSP          = 0x50;
   static constexpr uint8_t GET_TIMING_STATUS_RSP        = 0x51;
