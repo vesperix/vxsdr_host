@@ -317,7 +317,7 @@ class vxsdr {
     void set_tx_enable(const bool enabled, const uint8_t subdev = 0, const uint8_t flags = 0) {
       largest_cmd_or_rsp_packet q;
       auto *p = reinterpret_cast<radio_rf_enable_packet *>(&q);
-      p->hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::SET_RF_ENABLED, subdev, flags, sizeof(p), 0 };
+      p->hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::SET_RF_ENABLED, subdev, flags, sizeof(*p), 0 };
       if(enabled) {
         p->enabled = 1;
       }
@@ -330,7 +330,7 @@ class vxsdr {
     void set_rx_enable(const bool enabled, const uint8_t subdev = 0, const uint8_t flags = 0) {
       largest_cmd_or_rsp_packet q;
       auto *p = reinterpret_cast<radio_rf_enable_packet *>(&q);
-      p->hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::SET_RF_ENABLED, subdev, flags, sizeof(p), 0 };
+      p->hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::SET_RF_ENABLED, subdev, flags, sizeof(*p), 0 };
       if(enabled) {
         p->enabled = 1;
       }
