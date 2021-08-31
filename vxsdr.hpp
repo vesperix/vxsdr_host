@@ -79,17 +79,6 @@ class vxsdr {
       rx_buffer_used = 0;
       tx_buffer_fill_percent = 0.0;
       rx_buffer_fill_percent = 0.0;
-      device_hello();
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
-      if(response_queue.read_available() == 0) {
-        LOGGER(error) << "no reponse to device hello";
-      }
-      else {
-        largest_cmd_or_rsp_packet p;
-        response_queue.pop(&p);
-        log_packet_info(p);
-        LOGGER(debug) << "got reponse to device hello";
-      }
       set_tx_enable(true);
       set_rx_enable(true);
       LOGGER(debug) << "vxsdr constructor complete";
@@ -99,10 +88,9 @@ class vxsdr {
       LOGGER(debug) << "vxsdr destructor entered";
       set_tx_enable(false);
       set_rx_enable(false);
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
-      rx_stop_flag = true;
       tx_stop_flag = true;
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      rx_stop_flag = true;
       receiver_thread.join();
       sender_thread.join();
       LOGGER(debug) << "vxsdr destructor complete";
@@ -621,7 +609,7 @@ class vxsdr {
         }
 
         void initialize_sdr(const uint8_t device_subdev, const uint8_t tx_subdev, const uint8_t rx_subdev) {
-          sdrptr->device_reset();
+          // FIXME: implement reset    sdrptr->device_reset();
           sdrptr->tx_stop_now(tx_subdev);
           sdrptr->rx_stop_now(rx_subdev);
           // get device buffer sizes
