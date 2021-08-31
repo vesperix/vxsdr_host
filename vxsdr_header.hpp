@@ -314,6 +314,8 @@ class radio_rf_gain_packet : public cmd_or_rsp_packet {
     double                 gain = 0.0;
 };
 
+//FIXME: this needs to be a double, and the integer divisor needs to be figured
+//       out by the MCU!!
 class radio_rf_sample_rate_packet : public cmd_or_rsp_packet {
   public:
     uint32_t               rate = 0;

@@ -387,10 +387,9 @@ class udp_tx {
 
             if(packets_sent - last_check > buffer_check_interval) {
               last_check = packets_sent;
-              //send_device_get_buffer_use(device_subdev);
+              // request an ack to get buffer use
               send_buffer[i].hdr.flags |= FLAGS::REQUEST_ACK;
               send_packet(send_buffer[i]);
-              //send_buffer[i].hdr.flags = 0;
             }
             else {
               send_packet(send_buffer[i]);
