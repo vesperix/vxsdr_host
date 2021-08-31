@@ -137,14 +137,22 @@ local pf_radio_command      = ProtoField.uint8("vxsdr.radio_command", "Radio Com
 local pf_radio_command_rsp  = ProtoField.uint8("vxsdr.device_command", "Radio Command Response", base.HEX, radio_cmd_rsps)
 local pf_command_error      = ProtoField.uint8("vxsdr.error", "Command Error", base.HEX, errors)
 
+local pf_uint16_data        = ProtoField.uint16("vxsdr.data", "UInt16 Data", base.DEC)
+local pf_uint32_data        = ProtoField.uint32("vxsdr.data", "UInt32 Data", base.DEC)
+local pf_uint64_data        = ProtoField.uint64("vxsdr.data", "UInt64 Data", base.DEC)
+local pf_double_data        = ProtoField.double("vxsdr.data", "Double Data")
+
 vxsdr.fields = { pf_packet_type, pf_command, pf_target_subdevice, pf_flags, pf_packet_size, pf_sequence_counter,
-                 pf_device_command, pf_radio_command, pf_error, pf_device_command_rsp, pf_radio_command_rsp, pf_command_error }
+                 pf_device_command, pf_radio_command, pf_error, pf_device_command_rsp, pf_radio_command_rsp, pf_command_error,
+                 pf_uint16_data, pf_uint32_data, pf_uint64_data, pf_double_data }
 
 function vxsdr.dissector(tvbuf, pktinfo, root)
 
     pktinfo.cols.protocol:set("VXSDR")
     local pkt_len = tvbuf:reported_length_remaining()
     local pkt_type = tvbuf:range(0, 1):uint()
+    local pkt_cmd  = tvbuf:range(1, 1):uint()
+    local pkt_size = tvbuf:range(4, 2):uint()
 
     local tree = root:add(vxsdr, tvbuf:range(0, pktlen))
 
@@ -170,6 +178,42 @@ function vxsdr.dissector(tvbuf, pktinfo, root)
     tree:add(   pf_flags,            tvbuf:range(3, 1))
     tree:add_le(pf_packet_size,      tvbuf:range(4, 2))
     tree:add_le(pf_sequence_counter, tvbuf:range(6, 2))
+    if pkt_size > 8 then
+        -- device command responses
+        if pkt_type == 0x0D then
+            if pkt_cmd == 0x00 or pkt_cmd == 0x06 or pkt_cmd == 0x07 then
+                -- hello, buffer info, buffer use response
+                tree:add_le(pf_uint32_data, tvbuf:range( 8, 4))
+                tree:add_le(pf_uint32_data, tvbuf:range(12, 4))
+            elseif pkt_cmd == 0x04 then
+                -- status response
+                tree:add_le(pf_uint16_data, tvbuf:range( 8, 2))
+                tree:add_le(pf_uint16_data, tvbuf:range(10, 2))
+                tree:add_le(pf_uint32_data, tvbuf:range(12, 4))
+                tree:add_le(pf_uint32_data, tvbuf:range(16, 4))
+                tree:add_le(pf_uint32_data, tvbuf:range(20, 4))
+                tree:add_le(pf_uint32_data, tvbuf:range(24, 4))
+                tree:add_le(pf_uint32_data, tvbuf:range(28, 4))
+            end
+        -- radio commands
+        elseif (pkt_type == 0x03 or pkt_type == 0x04) then
+            -- set rf_enabled
+            if pkt_cmd == 0x25 then
+                tree:add_le(pf_uint32_data, tvbuf:range(8, 4))
+            -- set freq, or gain
+            elseif pkt_cmd == 0x21 or pkt_cmd == 0x22 then
+                tree:add_le(pf_double_data, tvbuf:range(8, 8))
+            elseif  pkt_cmd == 0x23 then
+                -- set rate
+                tree:add_le(pf_uint32_data, tvbuf:range(8, 4))
+            end
+        elseif pkt_type == 0x80 then
+            -- tx signal data ack
+            tree:add_le(pf_uint64_data, tvbuf:range( 8, 8))
+            tree:add_le(pf_uint32_data, tvbuf:range(16, 4))
+            tree:add_le(pf_uint32_data, tvbuf:range(20, 4))
+        end
+    end
 end
 
 local udp_port = DissectorTable.get("udp.port")
