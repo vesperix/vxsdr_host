@@ -121,6 +121,9 @@ namespace DEVICE_CMD_ERR {
   static constexpr uint8_t NO_SUCH_SUBDEVICE            = 0x03;  // the specified subdevice doesn't exist
   static constexpr uint8_t TIMEOUT                      = 0x04;  // tried to do command but something didn't answer
   static constexpr uint8_t BAD_PARAMETER                = 0x05;  // command parameter is out of allowed range
+  static constexpr uint8_t OUT_OF_SEQUENCE              = 0x06;  // command received with sequence error
+  static constexpr uint8_t DATA_BUFFER_OVERFLOW         = 0x07;  // overflow data buffer
+  static constexpr uint8_t CTRL_BUFFER_OVERFLOW         = 0x08;  // overflow control buffer
 }
 
 namespace RADIO_CMD {
