@@ -53,17 +53,19 @@ int main(int argc, char *argv[])
 
     LOGGER(info) << "using frequency " << vm["freq"].as<double>();
     LOGGER(info) << "using rate      " << vm["rate"].as<double>();
-    LOGGER(info) << "using tx_gain   " << vm["tx_gain"].as<double>();
+    LOGGER(info) << "using tx_gain   " << vm["tx_gain"].as<double>() << std::endl;
     LOGGER(info) << "using rx_gain   " << vm["rx_gain"].as<double>();
-
-    set_common_options(vm, radio);
-    set_rx_1ch_options(vm, radio);
-    set_tx_1ch_options(vm, radio);
 
     if(vm["duration"].as<double>() <= 0.0) {
       LOGGER(fatal) << "Duration must be positive";
       return EXIT_CMD_LINE_ERROR;
     }
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+
+    set_common_options(vm, radio);
+    set_rx_1ch_options(vm, radio);
+    set_tx_1ch_options(vm, radio);
 
     size_t n_samp = std::llround(vm["duration"].as<double>() * vm["rate"].as<double>());
 
