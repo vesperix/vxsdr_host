@@ -1,10 +1,10 @@
 
-CXX = clang++
+CXX = clang++-10
 
 CXX_DEFINES = -DBOOST_LOG_DYN_LINK -DBOOST_BIND_GLOBAL_PLACEHOLDERS
 CXX_BASEFLAGS = -Wall -pedantic -std=c++17
 CXX_OPTFLAGS = -O3
-CXX_DBGFLAGS = -g -Og -fsanitize=address
+CXX_DBGFLAGS = -g -Og -fsanitize=memory
 CXX_LDFLAGS = -lpthread -lboost_log -lboost_program_options -lboost_system
 
 DEBUG = 1
@@ -36,7 +36,7 @@ test_rx_seq_only: test_rx_seq_only.cpp test_tx_rx.hpp $(COMMON_INCLUDES)
 test_tx: test_tx.cpp test_tx_rx.hpp $(COMMON_INCLUDES)
 	$(CXX) $(CXX_FLAGS) -o $@ $< $(COMMON_SRC) $(CXX_LDFLAGS)
 
-vxsdr_test: vxsdr_test.cpp vxsdr.hpp $(COMMON_INCLUDES)
+vxsdr_test: vxsdr_test.cpp host_radio_options.cpp vxsdr.hpp $(COMMON_INCLUDES)
 	$(CXX) $(CXX_FLAGS) -o $@ $< host_radio_options.cpp $(COMMON_SRC) $(CXX_LDFLAGS)
 
 clean:
