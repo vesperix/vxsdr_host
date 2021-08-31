@@ -81,13 +81,13 @@ void init_vm(boost::program_options::options_description &desc, boost::program_o
   }
 }
 
-int set_common_options(boost::program_options::variables_map &vm, const std::shared_ptr<vxsdr> &radio)
+int set_common_options(boost::program_options::variables_map &vm, std::shared_ptr<vxsdr> radio)
 {
   // options currently set in specific sections even when they are defined as common
   return 0;
 }
 
-int set_rx_1ch_options(boost::program_options::variables_map &vm, const std::shared_ptr<vxsdr> &radio)
+int set_rx_1ch_options(boost::program_options::variables_map &vm, std::shared_ptr<vxsdr> radio)
 {
   if(vm.count("rate") > 0)
     radio->set_rx_rate(vm["rate"].as<double>());
@@ -116,7 +116,7 @@ int set_rx_1ch_options(boost::program_options::variables_map &vm, const std::sha
   return 0;
 }
 
-int set_tx_1ch_options(boost::program_options::variables_map &vm, const std::shared_ptr<vxsdr> &radio)
+int set_tx_1ch_options(boost::program_options::variables_map &vm, std::shared_ptr<vxsdr> radio)
 {
   if(vm.count("rate") > 0)
     radio->set_tx_rate(vm["rate"].as<double>());
@@ -145,7 +145,7 @@ int set_tx_1ch_options(boost::program_options::variables_map &vm, const std::sha
   return 0;
 }
 
-int set_time_options(boost::program_options::variables_map &vm, const std::shared_ptr<vxsdr> &radio)
+int set_time_options(boost::program_options::variables_map &vm, std::shared_ptr<vxsdr> radio)
 {
   /*
   if(vm.count("time_source") > 0)
