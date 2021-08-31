@@ -16,7 +16,7 @@ else
 endif
 
 COMMON_INCLUDES = packet_proc.cpp vxsdr_header.hpp host_radio_options.hpp utility.hpp
-COMMON_SRC = host_radio_options.cpp packet_proc.cpp utility.cpp
+COMMON_SRC = packet_proc.cpp utility.cpp
 
 PROGS = host_tx_throttle vxsdr_test test_rx test_tx test_rx_seq_only
 
@@ -37,7 +37,7 @@ test_tx: test_tx.cpp test_tx_rx.hpp $(COMMON_INCLUDES)
 	$(CXX) $(CXX_FLAGS) -o $@ $< $(COMMON_SRC) $(CXX_LDFLAGS)
 
 vxsdr_test: vxsdr_test.cpp vxsdr.hpp $(COMMON_INCLUDES)
-	$(CXX) $(CXX_FLAGS) -o $@ $< $(COMMON_SRC) $(CXX_LDFLAGS)
+	$(CXX) $(CXX_FLAGS) -o $@ $< host_radio_options.cpp $(COMMON_SRC) $(CXX_LDFLAGS)
 
 clean:
 	rm -f $(PROGS) *.o *~
