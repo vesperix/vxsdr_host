@@ -89,58 +89,82 @@ int set_common_options(boost::program_options::variables_map &vm, std::shared_pt
 
 int set_rx_1ch_options(boost::program_options::variables_map &vm, std::shared_ptr<vxsdr> radio)
 {
-  if(vm.count("rate") > 0)
+  if(vm.count("rate") > 0) {
     radio->set_rx_rate(vm["rate"].as<double>());
-  else if(vm.count("rx_rate") > 0)
+    if(vm.count("rx_rate") > 0) {
+      LOGGER(warning) << "Global option --rate overrides --rx_rate";
+    }
+  }
+  else if(vm.count("rx_rate") > 0) {
     radio->set_rx_rate(vm["rx_rate"].as<double>());
+  }
   else {
     LOGGER(fatal) << "Please specify the global sample rate with --rate or the RX sample rate with --rx_rate";
     exit(EXIT_CMD_LINE_ERROR);
   }
 
-  if(vm.count("freq") > 0)
+  if(vm.count("freq") > 0) {
     radio->set_rx_freq(vm["freq"].as<double>());
-  else if(vm.count("rx_freq") > 0)
+    if(vm.count("rx_freq") > 0) {
+      LOGGER(warning) << "Global option --freq overrides --rx_freq";
+    }
+  }
+  else if(vm.count("rx_freq") > 0) {
     radio->set_rx_freq(vm["rx_freq"].as<double>());
+  }
   else {
     LOGGER(fatal) << "Please specify the global center frequency with --freq or the RX center frequency with --rx_freq";
     exit(EXIT_CMD_LINE_ERROR);
   }
 
-  if (vm.count("rx_ant") > 0)
+  if (vm.count("rx_ant") > 0) {
     radio->set_rx_antenna(vm["rx_ant"].as<std::string>());
+  }
 
-  if (vm.count("rx_gain") > 0)
-      radio->set_rx_gain(vm["rx_gain"].as<double>());
+  if (vm.count("rx_gain") > 0) {
+    radio->set_rx_gain(vm["rx_gain"].as<double>());
+  }
 
   return 0;
 }
 
 int set_tx_1ch_options(boost::program_options::variables_map &vm, std::shared_ptr<vxsdr> radio)
 {
-  if(vm.count("rate") > 0)
+  if(vm.count("rate") > 0) {
     radio->set_tx_rate(vm["rate"].as<double>());
-  else if(vm.count("tx_rate") > 0)
+    if(vm.count("tx_rate") > 0) {
+      LOGGER(warning) << "Global option --rate overrides --tx_rate";
+    }
+  }
+  else if(vm.count("tx_rate") > 0) {
     radio->set_tx_rate(vm["tx_rate"].as<double>());
+  }
   else {
     LOGGER(fatal) << "Please specify the global sample rate with --rate or the TX sample rate with --tx_rate";
     exit(EXIT_CMD_LINE_ERROR);
   }
 
-  if(vm.count("freq") > 0)
+  if(vm.count("freq") > 0) {
     radio->set_tx_freq(vm["freq"].as<double>());
-  else if(vm.count("tx_freq") > 0)
+    if(vm.count("tx_freq") > 0) {
+      LOGGER(warning) << "Global option --freq overrides --tx_freq";
+    }
+  }
+  else if(vm.count("tx_freq") > 0) {
     radio->set_tx_freq(vm["tx_freq"].as<double>());
+  }
   else {
     LOGGER(fatal) << "Please specify the global center frequency with --freq or the TX center frequency with --tx_freq";
     exit(EXIT_CMD_LINE_ERROR);
   }
 
-  if(vm.count("tx_ant") > 0)
+  if(vm.count("tx_ant") > 0) {
     radio->set_tx_antenna(vm["tx_ant"].as<std::string>());
+  }
 
-  if(vm.count("tx_gain") > 0)
+  if(vm.count("tx_gain") > 0) {
     radio->set_tx_gain(vm["tx_gain"].as<double>());
+  }
 
   return 0;
 }
@@ -148,31 +172,38 @@ int set_tx_1ch_options(boost::program_options::variables_map &vm, std::shared_pt
 int set_time_options(boost::program_options::variables_map &vm, std::shared_ptr<vxsdr> radio)
 {
   /*
-  if(vm.count("time_source") > 0)
+  if(vm.count("time_source") > 0) {
     radio->set_time_source(vm["clock_source"].as<string>());
-  else if(vm.count("no_ext_time") > 0)
+  }
+  else if(vm.count("no_ext_time") > 0) {
     radio->set_no_time_ref();
-  else
+  }
+  else {
     radio->set_external_time_ref();
+  }
 
   if(vm.count("clock_source") > 0) {
     radio->set_clock_source(vm["clock_source"].as<string>());
     if(vm.count("no_ext_ref") > 0)
       UHD_LOGGER_WARNING("SETUP_RADIO") << "Both clock_source and no_ext_ref specified; clock_source takes precedence";
   }
-  else if(vm.count("no_ext_ref") > 0)
+  else if(vm.count("no_ext_ref") > 0) {
     radio->set_internal_freq_ref();
-  else
+  }
+  else {
     radio->set_external_freq_ref();
+  }
 
   radio->check_reference_lock();
 
   radio->check_lo_lock();
 
-  if(vm.count("no_time_synch") == 0 and vm.count("no_ext_time") == 0)
+  if(vm.count("no_time_synch") == 0 and vm.count("no_ext_time") == 0) {
     radio->synch_external_time_ref(0, true);
-  else
+  }
+  else {
     radio->synch_system_time();
+  }
   */
   return 0;
 }
