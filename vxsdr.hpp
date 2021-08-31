@@ -70,7 +70,7 @@ class vxsdr {
       LOGGER(debug) << "vxsdr constructor entered";
       receiver_thread = std::thread(&vxsdr::receiver, this, std::ref(io_context), std::cref(local_receive_endpoint));
       sender_thread = std::thread(&vxsdr::sender, this, std::ref(io_context), std::cref(local_send_endpoint), std::cref(destination_endpoint));
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
       tx_stop_flag = false;
       rx_stop_flag = false;
       tx_buffer_size = 0;
@@ -470,7 +470,9 @@ class vxsdr {
             switch(recv_buffer.hdr.packet_type) {
               // receive buffers go into the rx data queue
               case PACKET_TYPES::RX_SIGNAL_DATA:
-                sdrptr->rx_data_queue.push(recv_buffer);
+                if(sdrptr->rx_data_queue.push(recv_buffer) == 0) {
+                  LOGGER(error) << "error pushing to rx_data_queue";
+                }
                 break;
               // tx sginal data acks special cased since they contain throttling information
               case PACKET_TYPES::TX_SIGNAL_DATA_ACK:
