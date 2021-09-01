@@ -18,7 +18,7 @@
 #ifndef VXSDR_HPP
 #define VXSDR_HPP
 
-class vxsdr: std::enable_shared_from_this<vxsdr> {
+class vxsdr: public std::enable_shared_from_this<vxsdr> {
 
   private:
     // thread realtime priority settings
@@ -382,7 +382,7 @@ class vxsdr: std::enable_shared_from_this<vxsdr> {
         }
       }
 
-      udp_receiver server(shared_from_this(), io_context, local_endpoint);
+      udp_receiver server(this, io_context, local_endpoint);
       io_context.run();
       LOGGER(debug) << "receiver thread finished";
     }
@@ -404,7 +404,7 @@ class vxsdr: std::enable_shared_from_this<vxsdr> {
         }
       }
 
-      udp_sender server(shared_from_this(), io_context, local_endpoint, destination_endpoint);
+      udp_sender server(this, io_context, local_endpoint, destination_endpoint);
       io_context.run();
       LOGGER(debug) << "sender thread finished";
     }
@@ -413,11 +413,11 @@ class vxsdr: std::enable_shared_from_this<vxsdr> {
 
       public:
         // constructor
-        udp_receiver(std::shared_ptr<vxsdr> p, boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint)
+        udp_receiver(vxsdr *p, boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint)
           : socket(io_context, local_endpoint) {
           socket.set_option(boost::asio::ip::udp::socket::reuse_address(true));
           socket.set_option(boost::asio::socket_base::receive_buffer_size(network_receive_buffer_bytes));
-          sdrptr = std::move(p);
+          sdrptr = p;
           boost::asio::socket_base::receive_buffer_size option;
           socket.get_option(option);
           int network_buffer_size = option.value();
@@ -437,7 +437,7 @@ class vxsdr: std::enable_shared_from_this<vxsdr> {
 
       private:
         const bool forward_acks = false;
-        std::shared_ptr<vxsdr> sdrptr;
+        vxsdr *sdrptr;
         boost::asio::ip::udp::socket socket;
         boost::asio::ip::udp::endpoint remote;
         largest_data_packet recv_buffer;
@@ -566,9 +566,9 @@ class vxsdr: std::enable_shared_from_this<vxsdr> {
 
       public:
         // constructor
-        udp_sender(std::shared_ptr<vxsdr> p, boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint,
+        udp_sender(vxsdr *p, boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint,
           const boost::asio::ip::udp::endpoint &destination_endpoint) : socket(io_context, local_endpoint) {
-          sdrptr = std::move(p);
+          sdrptr = p;
           destination = destination_endpoint;
           socket.set_option(boost::asio::socket_base::send_buffer_size(network_send_buffer_bytes));
 
@@ -589,7 +589,7 @@ class vxsdr: std::enable_shared_from_this<vxsdr> {
         udp_sender(const udp_sender &&) = delete;
         udp_sender& operator=(const udp_sender &&) = delete;
       private:
-        std::shared_ptr<vxsdr> sdrptr;
+        vxsdr *sdrptr;
         boost::asio::ip::udp::socket socket;
         boost::asio::ip::udp::endpoint destination;
         std::array<uint64_t, UINT8_MAX + 1> packet_types_processed = { 0 };
