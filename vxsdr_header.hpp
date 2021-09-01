@@ -169,15 +169,17 @@ namespace RADIO_CMD_ERR {
 }
 
 namespace CAPABILITIES {
-  static constexpr uint64_t HAS_LOCK_DETECT             = 0x0000000000000001;
-  static constexpr uint64_t HAS_EXTERNAL_REF            = 0x0000000000000002;
-  static constexpr uint64_t HAS_AGC                     = 0x0000000000000004;
-  static constexpr uint64_t HAS_LIMITER                 = 0x0000000000000008;
-  static constexpr uint64_t HAS_LIMIT_DETECT            = 0x0000000000000010;
-  static constexpr uint64_t HAS_IQ_OFFSET_CORR          = 0x0000000000000020;
-  static constexpr uint64_t HAS_IQ_BALANCE_CORR         = 0x0000000000000040;
-  static constexpr uint64_t HAS_TEMP_MEASURE            = 0x0000000000000080;
-  static constexpr uint64_t HAS_POWER_MEASURE           = 0x0000000000000100;
+  static constexpr uint64_t HAS_LOCK_DETECT             = 0x0000000000000001ull;
+  static constexpr uint64_t HAS_EXTERNAL_REF            = 0x0000000000000002ull;
+  static constexpr uint64_t HAS_AGC                     = 0x0000000000000004ull;
+  static constexpr uint64_t HAS_LIMITER                 = 0x0000000000000008ull;
+  static constexpr uint64_t HAS_LIMIT_DETECT            = 0x0000000000000010ull;
+  static constexpr uint64_t HAS_MANUAL_IQ_OFFSET_CORR   = 0x0000000000000020ull;
+  static constexpr uint64_t HAS_MANUAL_IQ_BALANCE_CORR  = 0x0000000000000040ull;
+  static constexpr uint64_t HAS_AUTO_IQ_OFFSET_CORR     = 0x0000000000000080ull;
+  static constexpr uint64_t HAS_AUTO_IQ_BALANCE_CORR    = 0x0000000000000100ull;
+  static constexpr uint64_t HAS_TEMP_MEASURE            = 0x0000000000000200ull;
+  static constexpr uint64_t HAS_POWER_MEASURE           = 0x0000000000000400ull;
 }
 
 static constexpr size_t   MAX_DATA_LENGTH_SAMPLES  = 2048;
