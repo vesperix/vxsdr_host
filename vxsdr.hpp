@@ -34,11 +34,12 @@ class vxsdr: public std::enable_shared_from_this<vxsdr> {
     // parameters of the internal spsc queues (ring buffers)
     static constexpr size_t rx_data_queue_length           =     4096;    // slots in rx data queue
     static constexpr size_t tx_data_queue_length           =     4096;    // slots in tx data queue
-    static constexpr size_t msg_queue_length               =     1024;    // slots in command and response msg queues
+    static constexpr size_t cmd_queue_length               =       16;    // slots in command msg queue
+    static constexpr size_t rsp_queue_length               =       64;    // slots in response msg queue
 
     // parameters used to set the OS's network buffer
-    static constexpr unsigned network_send_buffer_bytes    =   4194304;
-    static constexpr unsigned network_receive_buffer_bytes =   4194304;
+    static constexpr unsigned network_send_buffer_bytes    =   4194304;   //  ~6 ms at 160 MSPS
+    static constexpr unsigned network_receive_buffer_bytes =  16777216;   // ~24 ms at 160 MSPS
 
     // parameters used to monitor status of the radio's internal buffers (on the other end of the network connection)
     std::atomic<unsigned> tx_buffer_size, tx_buffer_used;
@@ -49,8 +50,8 @@ class vxsdr: public std::enable_shared_from_this<vxsdr> {
     boost::lockfree::spsc_queue<largest_data_packet, boost::lockfree::capacity<rx_data_queue_length> > rx_data_queue;
     boost::lockfree::spsc_queue<largest_data_packet, boost::lockfree::capacity<tx_data_queue_length> > tx_data_queue;
     // command and response queues
-    boost::lockfree::spsc_queue<largest_cmd_or_rsp_packet, boost::lockfree::capacity<msg_queue_length> > command_queue;
-    boost::lockfree::spsc_queue<largest_cmd_or_rsp_packet, boost::lockfree::capacity<msg_queue_length> > response_queue;
+    boost::lockfree::spsc_queue<largest_cmd_or_rsp_packet, boost::lockfree::capacity<cmd_queue_length> > command_queue;
+    boost::lockfree::spsc_queue<largest_cmd_or_rsp_packet, boost::lockfree::capacity<rsp_queue_length> > response_queue;
 
     // Boost context
     boost::asio::io_context io_context;
@@ -60,7 +61,7 @@ class vxsdr: public std::enable_shared_from_this<vxsdr> {
     std::thread receiver_thread;
 
     // flags used for orderly shutdown
-    std::atomic<bool> rx_stop_flag, tx_stop_flag;
+    std::atomic<bool> sender_thread_stop_flag, receiver_thread_stop_flag;
 
   public:
     // constructor
@@ -68,17 +69,18 @@ class vxsdr: public std::enable_shared_from_this<vxsdr> {
           const boost::asio::ip::udp::endpoint &local_send_endpoint,
           const boost::asio::ip::udp::endpoint &destination_endpoint) {
       LOGGER(debug) << "vxsdr constructor entered";
-      tx_stop_flag = false;
-      rx_stop_flag = false;
+      sender_thread_stop_flag   = false;
+      receiver_thread_stop_flag = false;
       tx_buffer_size = 0;
       tx_buffer_used = 0;
       rx_buffer_size = 0;
       rx_buffer_used = 0;
       tx_buffer_fill_percent = 0.0;
       rx_buffer_fill_percent = 0.0;
-      receiver_thread = std::thread(&vxsdr::receiver, this, std::ref(io_context), std::cref(local_receive_endpoint));
-      sender_thread = std::thread(&vxsdr::sender, this, std::ref(io_context), std::cref(local_send_endpoint), std::cref(destination_endpoint));
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      //sender_thread = std::thread(&vxsdr::sender, this, std::ref(io_context), std::cref(local_send_endpoint), std::cref(destination_endpoint));
+      sender_thread = std::thread([=] { sender(io_context, local_send_endpoint, destination_endpoint); });
+      //receiver_thread = std::thread(&vxsdr::receiver, this, std::ref(io_context), std::cref(local_receive_endpoint));
+      receiver_thread = std::thread([=] { receiver(io_context, local_receive_endpoint); });
       set_tx_enable(true);
       set_rx_enable(true);
       LOGGER(debug) << "vxsdr constructor complete";
@@ -88,11 +90,15 @@ class vxsdr: public std::enable_shared_from_this<vxsdr> {
       LOGGER(debug) << "vxsdr destructor entered";
       set_tx_enable(false);
       set_rx_enable(false);
-      rx_stop_flag = true;
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
-      tx_stop_flag = true;
-      receiver_thread.join();
-      sender_thread.join();
+      receiver_thread_stop_flag = true;
+      if(receiver_thread.joinable()) {
+        receiver_thread.join();
+      }
+      sender_thread_stop_flag = true;
+      if(sender_thread.joinable()) {
+        sender_thread.join();
+      }
       LOGGER(debug) << "vxsdr destructor complete";
     };
     // copy constructor deleted
@@ -172,7 +178,13 @@ class vxsdr: public std::enable_shared_from_this<vxsdr> {
         for(unsigned j = 0; j < n_samples; j++) {
           p->data[j] = data[i + j];
         }
-        n_put += static_cast<unsigned long>(tx_data_queue.push(q));
+        if(tx_data_queue.push(q)) {
+          n_put += n_samples;
+        }
+        else {
+          // if a push fails, return the number of samples actually pushed
+          break;
+        }
       }
       return n_put;
     }
@@ -423,7 +435,7 @@ class vxsdr: public std::enable_shared_from_this<vxsdr> {
           int network_buffer_size = option.value();
           LOGGER(info) << "network receive buffer size set to " << network_buffer_size;
 
-          if(not sdrptr->rx_stop_flag) {
+          if(not sdrptr->receiver_thread_stop_flag) {
             start_receive();
           }
         }
@@ -455,7 +467,7 @@ class vxsdr: public std::enable_shared_from_this<vxsdr> {
           constexpr int    receive_thread_sleep_us        =        0;
           LOGGER(debug) << "start_receive started";
           // FIXME: need to use async read, handler, and deadline timer to implement timeout
-          while(not sdrptr->rx_stop_flag) {
+          while(not sdrptr->receiver_thread_stop_flag) {
             socket.receive_from(boost::asio::buffer(&recv_buffer, sizeof(recv_buffer)), remote);
             packets_received++;
             packet_types_received[recv_buffer.hdr.packet_type]++;
@@ -577,7 +589,7 @@ class vxsdr: public std::enable_shared_from_this<vxsdr> {
           int network_buffer_size = option.value();
           LOGGER(info) << "network send buffer size set to " << network_buffer_size;
 
-          if(not sdrptr->tx_stop_flag) {
+          if(not sdrptr->sender_thread_stop_flag) {
             start_send();
           }
         }
@@ -645,7 +657,7 @@ class vxsdr: public std::enable_shared_from_this<vxsdr> {
           uint64_t last_check = 0;
           constexpr uint64_t buffer_check_interval = 100; // current buffer size is about 1000 data packets
 
-          while(not sdrptr->tx_stop_flag) {
+          while(not sdrptr->sender_thread_stop_flag) {
             if(sdrptr->command_queue.read_available() > 0) {
               size_t n_popped = sdrptr->command_queue.pop(&cmd_buffer.front(), cmd_buffer.size());
               for(size_t i = 0; i < n_popped; i++) {
