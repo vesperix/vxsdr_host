@@ -104,11 +104,12 @@ class vxsdr {
       LOGGER(debug) << "vxsdr destructor entered";
       set_tx_enable(false);
       set_rx_enable(false);
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      LOGGER(debug) << "joining receiver_thread";
       receiver_thread_stop_flag = true;
       if(receiver_thread.joinable()) {
         receiver_thread.join();
       }
+      LOGGER(debug) << "joining sender thread";
       sender_thread_stop_flag = true;
       if(sender_thread.joinable()) {
         sender_thread.join();
@@ -497,7 +498,9 @@ class vxsdr {
           LOGGER(debug) << "start_receive started";
           // FIXME: need to use async read, handler, and deadline timer to implement timeout
           while(not sdrptr->receiver_thread_stop_flag) {
+            LOGGER(debug) << "waiting for receive";
             socket.receive_from(boost::asio::buffer(&recv_buffer, sizeof(recv_buffer)), remote);
+            LOGGER(debug) << "packet received";
             packets_received++;
             packet_types_received[recv_buffer.hdr.packet_type]++;
             if(packets_received > 1 and recv_buffer.hdr.sequence_counter != (uint16_t)(last_seq + 1)) {

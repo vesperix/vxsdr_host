@@ -85,7 +85,7 @@ int main(int argc, char *argv[])
     radio->tx_stop_now();
 
     LOGGER(info) << "Send complete";
-
+/*
     std::string filename = vm["prefix"].as<std::string>();
     filename.append(make_filename_time(std::chrono::system_clock::now(), vm["freq"].as<double>(), vm["rate"].as<double>()));
     filename.append(vm["suffix"].as<std::string>());
@@ -100,7 +100,7 @@ int main(int argc, char *argv[])
 
     size_t n_written = write_cplx_16(filename, data);
     LOGGER(info) << n_written << "samples written";
-
+*/
   }
   catch (std::exception& e) {
     LOGGER(fatal) << "exception caught: " << e.what();
