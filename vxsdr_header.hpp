@@ -143,11 +143,13 @@ namespace RADIO_CMD {
   // 0x17-0x20 reserved
   static constexpr uint8_t SET_RF_FREQ                  = 0x21;
   static constexpr uint8_t SET_RF_GAIN                  = 0x22;
-  static constexpr uint8_t SET_SAMPLE_RATE              = 0x23;  // sets CIC interpolation/decimation rate (valid 1-128)
+  static constexpr uint8_t SET_SAMPLE_RATE              = 0x23;  // FIXME: sets CIC interpolation/decimation rate (valid 1-128)
   static constexpr uint8_t SET_RF_BW                    = 0x24;  // unimplemented
   static constexpr uint8_t SET_RF_ENABLED               = 0x25;  // enables(0x1) or disables(0x0) RX/TX RF path
   static constexpr uint8_t SET_RF_PORT                  = 0x26;  // FIXME: this selects input and output ports
-  // 0x27-0xFF reserved
+  // 0x27-0x30 reserved
+  static constexpr uint8_t GET_NUM_SUBDEVS              = 0x31;  //unimplemented // return the number of subdevices
+  // 0x32-0xFF reserved
 }
 
 namespace RADIO_CMD_RSP {
@@ -169,17 +171,18 @@ namespace RADIO_CMD_ERR {
 }
 
 namespace CAPABILITIES {
-  static constexpr uint64_t HAS_LOCK_DETECT             = 0x0000000000000001ull;
-  static constexpr uint64_t HAS_EXTERNAL_REF            = 0x0000000000000002ull;
-  static constexpr uint64_t HAS_AGC                     = 0x0000000000000004ull;
-  static constexpr uint64_t HAS_LIMITER                 = 0x0000000000000008ull;
-  static constexpr uint64_t HAS_LIMIT_DETECT            = 0x0000000000000010ull;
-  static constexpr uint64_t HAS_MANUAL_IQ_OFFSET_CORR   = 0x0000000000000020ull;
-  static constexpr uint64_t HAS_MANUAL_IQ_BALANCE_CORR  = 0x0000000000000040ull;
-  static constexpr uint64_t HAS_AUTO_IQ_OFFSET_CORR     = 0x0000000000000080ull;
-  static constexpr uint64_t HAS_AUTO_IQ_BALANCE_CORR    = 0x0000000000000100ull;
-  static constexpr uint64_t HAS_TEMP_MEASURE            = 0x0000000000000200ull;
-  static constexpr uint64_t HAS_POWER_MEASURE           = 0x0000000000000400ull;
+  static constexpr uint32_t HAS_LOCK_DETECT             = 0x00000001;
+  static constexpr uint32_t HAS_EXTERNAL_REF            = 0x00000002;
+  static constexpr uint32_t HAS_AGC                     = 0x00000004;
+  static constexpr uint32_t HAS_LIMITER                 = 0x00000008;
+  static constexpr uint32_t HAS_LIMIT_DETECT            = 0x00000010;
+  static constexpr uint32_t HAS_MANUAL_IQ_OFFSET_CORR   = 0x00000020;
+  static constexpr uint32_t HAS_MANUAL_IQ_BALANCE_CORR  = 0x00000040;
+  static constexpr uint32_t HAS_AUTO_IQ_OFFSET_CORR     = 0x00000080;
+  static constexpr uint32_t HAS_AUTO_IQ_BALANCE_CORR    = 0x00000100;
+  static constexpr uint32_t HAS_TEMP_MEASURE            = 0x00000200;
+  static constexpr uint32_t HAS_POWER_MEASURE           = 0x00000400;
+  static constexpr uint32_t HAS_EXTERNAL_LO             = 0x00000800;
 }
 
 static constexpr size_t   MAX_DATA_LENGTH_SAMPLES  = 2048;
@@ -323,7 +326,9 @@ class radio_rf_info_packet : public cmd_or_rsp_packet {
     double                 max_rate = 0.0;
     double                 min_bw   = 0.0;
     double                 max_bw   = 0.0;
-    uint64_t               capabilities = 0;
+    uint16_t               num_ports = 0;
+    uint16_t               reserved = 0;
+    uint32_t               capabilities = 0;
 };
 
 class radio_rf_freq_packet : public cmd_or_rsp_packet {
