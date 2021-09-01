@@ -18,7 +18,7 @@
 #ifndef VXSDR_HPP
 #define VXSDR_HPP
 
-class vxsdr {
+class vxsdr: std::enable_shared_from_this<vxsdr> {
 
   private:
     // thread realtime priority settings
@@ -99,8 +99,10 @@ class vxsdr {
     vxsdr(const vxsdr &) = delete;
     // copy assignment deleted
     vxsdr& operator=(const vxsdr &) = delete;
-    // move constructor: don't need to delete since we have an explicit copy constructor
-    // move assignment: don't need to delete since we have an explicit copy assignment
+    // move constructor deleted
+    vxsdr(const vxsdr &&) = delete;
+    // move assignment deleted
+    vxsdr& operator=(const vxsdr &&) = delete;
 
     size_t get_rx_data(std::vector<std::complex<int16_t> > &data, size_t n_desired = 0) {
       LOGGER(debug) << "get_rx_data() entered";
@@ -380,7 +382,7 @@ class vxsdr {
         }
       }
 
-      udp_receiver server(this, io_context, local_endpoint);
+      udp_receiver server(shared_from_this(), io_context, local_endpoint);
       io_context.run();
       LOGGER(debug) << "receiver thread finished";
     }
@@ -402,7 +404,7 @@ class vxsdr {
         }
       }
 
-      udp_sender server(this, io_context, local_endpoint, destination_endpoint);
+      udp_sender server(shared_from_this(), io_context, local_endpoint, destination_endpoint);
       io_context.run();
       LOGGER(debug) << "sender thread finished";
     }
@@ -411,12 +413,11 @@ class vxsdr {
 
       public:
         // constructor
-        udp_receiver(vxsdr *p, boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint)
+        udp_receiver(std::shared_ptr<vxsdr> p, boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint)
           : socket(io_context, local_endpoint) {
-          sdrptr = p;
           socket.set_option(boost::asio::ip::udp::socket::reuse_address(true));
           socket.set_option(boost::asio::socket_base::receive_buffer_size(network_receive_buffer_bytes));
-
+          sdrptr = std::move(p);
           boost::asio::socket_base::receive_buffer_size option;
           socket.get_option(option);
           int network_buffer_size = option.value();
@@ -427,21 +428,16 @@ class vxsdr {
           }
         }
         // destructor
-        ~udp_receiver() {
-          //FIXME: stop rx to be sure
-          //FIXME: socket.close() may throw exception?
-          socket.close();
-        }
-        // copy constructor deleted
+        ~udp_receiver() = default;
+        // disable copy and move
         udp_receiver(const udp_receiver &) = delete;
-        // copy assignment deleted
         udp_receiver& operator=(const udp_receiver &) = delete;
-        // move constructor: don't need to delete since we have an explicit copy constructor
-        // move assignment: don't need to delete since we have an explicit copy assignment
+        udp_receiver(const udp_receiver &&) = delete;
+        udp_receiver& operator=(const udp_receiver &&) = delete;
 
       private:
         const bool forward_acks = false;
-        vxsdr *sdrptr;
+        std::shared_ptr<vxsdr> sdrptr;
         boost::asio::ip::udp::socket socket;
         boost::asio::ip::udp::endpoint remote;
         largest_data_packet recv_buffer;
@@ -473,7 +469,7 @@ class vxsdr {
             switch(recv_buffer.hdr.packet_type) {
               // receive buffers go into the rx data queue
               case PACKET_TYPES::RX_SIGNAL_DATA:
-                if(sdrptr->rx_data_queue.push(recv_buffer) == 0) {
+                if(not sdrptr->rx_data_queue.push(recv_buffer)) {
                   LOGGER(error) << "error pushing to rx_data_queue";
                 }
                 break;
@@ -570,9 +566,9 @@ class vxsdr {
 
       public:
         // constructor
-        udp_sender(vxsdr *p, boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint,
+        udp_sender(std::shared_ptr<vxsdr> p, boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint,
           const boost::asio::ip::udp::endpoint &destination_endpoint) : socket(io_context, local_endpoint) {
-          sdrptr = p;
+          sdrptr = std::move(p);
           destination = destination_endpoint;
           socket.set_option(boost::asio::socket_base::send_buffer_size(network_send_buffer_bytes));
 
@@ -586,20 +582,14 @@ class vxsdr {
           }
         }
         // destructor
-        ~udp_sender() {
-          // FIXME: stop tx to be sure
-
-          //FIXME: socket.close() may throw exception?
-          socket.close();
-        }
-        // copy constructor deleted
+        ~udp_sender() = default;
+        // disable copy and move
         udp_sender(const udp_sender &) = delete;
-        // copy assignment deleted
         udp_sender& operator=(const udp_sender &) = delete;
-        // move constructor: don't need to delete since we have an explicit copy constructor
-        // move assignment: don't need to delete since we have an explicit copy assignment
+        udp_sender(const udp_sender &&) = delete;
+        udp_sender& operator=(const udp_sender &&) = delete;
       private:
-        vxsdr *sdrptr;
+        std::shared_ptr<vxsdr> sdrptr;
         boost::asio::ip::udp::socket socket;
         boost::asio::ip::udp::endpoint destination;
         std::array<uint64_t, UINT8_MAX + 1> packet_types_processed = { 0 };
