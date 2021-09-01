@@ -139,11 +139,15 @@ int main(int argc, char *argv[])
     set_rx_stop_flag();
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
     set_tx_stop_flag();
-    receiver_thread.join();
-    sender_thread.join();
-    counter_thread.join();
+    if(receiver_thread.joinable())
+      receiver_thread.join();
+    if(sender_thread.joinable())
+      sender_thread.join();
+    if(counter_thread.joinable())
+      counter_thread.join();
     set_complete_flag();
-    response_logger_thread.join();
+    if(response_logger_thread.joinable())
+      response_logger_thread.join();
   }
   catch (std::exception& e) {
     LOGGER(fatal) << "exception caught: " << e.what();

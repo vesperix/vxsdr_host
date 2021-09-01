@@ -13,8 +13,8 @@
 #include "vxsdr_header.hpp"
 #include "packet_proc.hpp"
 
-#ifndef UDP_TX_RX_HPP
-#define UDP_TX_RX_HPP
+#ifndef TEST_TX_RX_HPP
+#define TEST_TX_RX_HPP
 
 //FIXME!!! Disgusting temporary kludge...
 
@@ -77,9 +77,9 @@ static boost::lockfree::spsc_queue<largest_cmd_or_rsp_packet, boost::lockfree::c
 static boost::lockfree::spsc_queue<largest_cmd_or_rsp_packet, boost::lockfree::capacity<msg_queue_length> > response_queue;
 
 
-class udp_rx {
+class udp_receiver {
   public:
-    udp_rx(boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint)
+    udp_receiver(boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint)
       : socket(io_context, local_endpoint) {
       socket.set_option(boost::asio::ip::udp::socket::reuse_address(true));
       socket.set_option(boost::asio::socket_base::receive_buffer_size(network_receive_buffer_bytes));
@@ -92,7 +92,7 @@ class udp_rx {
       if(not rx_stop_flag)
         start_receive();
     }
-    udp_rx(boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint,
+    udp_receiver(boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint,
                const boost::asio::ip::address_v4 &multicast_ip)
       : socket(io_context, local_endpoint.protocol()) {
       socket.set_option(boost::asio::ip::udp::socket::reuse_address(true));
@@ -229,9 +229,9 @@ class udp_rx {
     }
 };
 
-class udp_tx {
+class udp_sender {
   public:
-    udp_tx(boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint,
+    udp_sender(boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint,
       const boost::asio::ip::udp::endpoint &destination_endpoint,
       const bool tx_enable, const bool rx_enable) : socket(io_context, local_endpoint) {
       destination = destination_endpoint;
@@ -675,7 +675,7 @@ inline void receiver(boost::asio::io_context &io_context, const boost::asio::ip:
   if(set_current_thread_affinity(0) != 0)
     LOGGER(error) << "unable to set receiver thread CPU affinity";
 
-  udp_rx server(io_context, local_endpoint);
+  udp_receiver server(io_context, local_endpoint);
   io_context.run();
   LOGGER(debug) << "receiver thread finished";
 }
@@ -690,7 +690,7 @@ inline void multicast_receiver(boost::asio::io_context &io_context, const boost:
   if(set_current_thread_affinity(0) != 0)
     LOGGER(error) << "unable to set thread CPU affinity";
 
-  udp_rx server(io_context, local_endpoint, multicast_ip);
+  udp_receiver server(io_context, local_endpoint, multicast_ip);
   io_context.run();
   LOGGER(debug) << "multicast receiver thread finished";
 }
@@ -808,10 +808,10 @@ inline void sender(boost::asio::io_context &io_context, const boost::asio::ip::u
   if(set_current_thread_affinity(2) != 0)
     LOGGER(error) << "unable to set sender thread CPU affinity";
 
-  udp_tx server(io_context, local_endpoint, destination_endpoint, tx_enable, rx_enable);
+  udp_sender server(io_context, local_endpoint, destination_endpoint, tx_enable, rx_enable);
   io_context.run();
 
   LOGGER(debug) << "sender thread finished";
 }
 
-#endif // UDP_TX_RX_HPP
+#endif // TEST_TX_RX_HPP
