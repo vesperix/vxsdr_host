@@ -18,7 +18,7 @@
 #ifndef VXSDR_HPP
 #define VXSDR_HPP
 
-class vxsdr: public std::enable_shared_from_this<vxsdr> {
+class vxsdr {
 
   private:
     // thread realtime priority settings
@@ -34,12 +34,26 @@ class vxsdr: public std::enable_shared_from_this<vxsdr> {
     // parameters of the internal spsc queues (ring buffers)
     static constexpr size_t rx_data_queue_length           =     4096;    // slots in rx data queue
     static constexpr size_t tx_data_queue_length           =     4096;    // slots in tx data queue
-    static constexpr size_t cmd_queue_length               =       16;    // slots in command msg queue
-    static constexpr size_t rsp_queue_length               =       64;    // slots in response msg queue
+    static constexpr size_t cmd_queue_length               =       64;    // slots in command msg queue
+    static constexpr size_t rsp_queue_length               =      256;    // slots in response msg queue
+
+    // timeouts and waits between tries for queue push/pop
+
+    static constexpr unsigned tx_data_queue_timeout_us     =   100000;
+    static constexpr unsigned tx_data_queue_wait_us        =     1000;
+
+    static constexpr unsigned rx_data_queue_timeout_us     =   100000;
+    static constexpr unsigned rx_data_queue_wait_us        =     1000;
+
+    static constexpr unsigned cmd_queue_timeout_us         =   100000;
+    static constexpr unsigned cmd_queue_wait_us            =      100;
+
+    static constexpr unsigned rsp_queue_timeout_us         =   100000;
+    static constexpr unsigned rsp_queue_wait_us            =     1000;
 
     // parameters used to set the OS's network buffer
-    static constexpr unsigned network_send_buffer_bytes    =   4194304;   //  ~6 ms at 160 MSPS
-    static constexpr unsigned network_receive_buffer_bytes =  16777216;   // ~24 ms at 160 MSPS
+    static constexpr unsigned network_send_buffer_bytes    =   4194304;   // ~6 ms at 160 MSPS
+    static constexpr unsigned network_receive_buffer_bytes =   4194304;   // ~6 ms at 160 MSPS
 
     // parameters used to monitor status of the radio's internal buffers (on the other end of the network connection)
     std::atomic<unsigned> tx_buffer_size, tx_buffer_used;
@@ -189,171 +203,186 @@ class vxsdr: public std::enable_shared_from_this<vxsdr> {
       return n_put;
     }
 
+    void command_queue_wait_push(largest_cmd_or_rsp_packet &p) {
+      constexpr unsigned max_tries = cmd_queue_timeout_us / cmd_queue_wait_us;
+      unsigned n_tries = 0;
+      while(command_queue.write_available() == 0 and n_tries < max_tries) {
+        std::this_thread::sleep_for(std::chrono::microseconds(cmd_queue_wait_us));
+        n_tries++;
+      }
+      if(n_tries < max_tries) {
+        command_queue.push(p);
+      }
+      else {
+        LOGGER(error) << "timeout pushing to command queue";
+      }
+    }
+
     void device_hello(const uint8_t subdev = 0, const uint8_t flags = 0) {
       largest_cmd_or_rsp_packet p;
       p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::HELLO, subdev, flags, sizeof(packet_header), 0 };
-      command_queue.push(p);
+      command_queue_wait_push(p);
     }
 
     void device_reset(const uint8_t subdev = 0, const uint8_t flags = 0) {
       largest_cmd_or_rsp_packet p;
       p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::RESET, subdev, flags, sizeof(packet_header), 0 };
-      command_queue.push(p);
+      command_queue_wait_push(p);
     }
 
     void device_open_session(const uint8_t subdev = 0, const uint8_t flags = 0) {
       largest_cmd_or_rsp_packet p;
       p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::OPEN_SESSION, subdev, flags, sizeof(packet_header), 0 };
-      command_queue.push(p);
+      command_queue_wait_push(p);
     }
 
     void device_close_session(const uint8_t subdev = 0, const uint8_t flags = 0) {
       largest_cmd_or_rsp_packet p;
       p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::CLOSE_SESSION, subdev, flags, sizeof(packet_header), 0 };
-      command_queue.push(p);
+      command_queue_wait_push(p);
     }
 
     void device_clear_status(const uint8_t subdev = 0, const uint8_t flags = 0) {
       largest_cmd_or_rsp_packet p;
       p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::CLEAR_STATUS, subdev, flags, sizeof(packet_header), 0 };
-      command_queue.push(p);
+      command_queue_wait_push(p);
     }
 
     void device_get_status(const uint8_t subdev = 0, const uint8_t flags = 0) {
       largest_cmd_or_rsp_packet p;
       p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::GET_STATUS, subdev, flags, sizeof(packet_header), 0 };
-      command_queue.push(p);
+      command_queue_wait_push(p);
     }
 
     void tx_start_now_until_stop(const uint8_t subdev = 0, const uint8_t flags = 0) {
       largest_cmd_or_rsp_packet p;
       p.hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::START_NOW_UNTIL_STOP, subdev, flags, sizeof(packet_header), 0 };
-      command_queue.push(p);
+      command_queue_wait_push(p);
     }
 
     void rx_start_now_until_stop(const uint8_t subdev = 0, const uint8_t flags = 0) {
       largest_cmd_or_rsp_packet p;
       p.hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::START_NOW_UNTIL_STOP, subdev, flags, sizeof(packet_header), 0 };
-      command_queue.push(p);
+      command_queue_wait_push(p);
     }
 
     void tx_start_now_for_n_samples(const uint64_t n, const uint8_t subdev = 0, const uint8_t flags = 0) {
-      largest_cmd_or_rsp_packet q;
-      auto *p = reinterpret_cast<stream_ctrl_packet_time_samples *>(&q);
-      p->hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::START_NOW_FOR_N_SAMPLES, subdev, flags, sizeof(*p), 0 };
-      p->n_samples = n;
-      command_queue.push(q);
+      largest_cmd_or_rsp_packet p;
+      auto *q = reinterpret_cast<stream_ctrl_packet_time_samples *>(&p);
+      q->hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::START_NOW_FOR_N_SAMPLES, subdev, flags, sizeof(*q), 0 };
+      q->n_samples = n;
+      command_queue_wait_push(p);
     }
 
     void rx_start_now_for_n_samples(const uint64_t n, const uint8_t subdev = 0, const uint8_t flags = 0) {
-      largest_cmd_or_rsp_packet q;
-      auto *p = reinterpret_cast<stream_ctrl_packet_time_samples *>(&q);
-      p->hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::START_NOW_FOR_N_SAMPLES, subdev, flags, sizeof(*p), 0 };
-      p->n_samples = n;
-      command_queue.push(q);
+      largest_cmd_or_rsp_packet p;
+      auto *q = reinterpret_cast<stream_ctrl_packet_time_samples *>(&p);
+      q->hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::START_NOW_FOR_N_SAMPLES, subdev, flags, sizeof(*q), 0 };
+      q->n_samples = n;
+      command_queue_wait_push(p);
     }
 
     void tx_stop_now(const uint8_t subdev = 0, const uint8_t flags = 0) {
       largest_cmd_or_rsp_packet p;
       p.hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::STOP_NOW, subdev, flags, sizeof(packet_header), 0 };
-      command_queue.push(p);
+      command_queue_wait_push(p);
     }
 
     void rx_stop_now(const uint8_t subdev = 0, const uint8_t flags = 0) {
       largest_cmd_or_rsp_packet p;
       p.hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::STOP_NOW, subdev, flags, sizeof(packet_header), 0 };
-      command_queue.push(p);
+      command_queue_wait_push(p);
     }
 
     void set_tx_freq(const double freq, const uint8_t subdev = 0, const uint8_t flags = 0) {
       LOGGER(debug) << "set_tx_freq() entered with freq = " << freq;
-      largest_cmd_or_rsp_packet q;
-      auto *p = reinterpret_cast<radio_rf_freq_packet *>(&q);
-      p->hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::SET_RF_FREQ, subdev, flags, sizeof(*p), 0 };
-      p->freq = freq;
-      p->rtol = 1e-9;
-      command_queue.push(q);
+      largest_cmd_or_rsp_packet p;
+      auto *q = reinterpret_cast<radio_rf_freq_packet *>(&p);
+      q->hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::SET_RF_FREQ, subdev, flags, sizeof(*q), 0 };
+      q->freq = freq;
+      q->rtol = 1e-9;
+      command_queue_wait_push(p);
     }
 
     void set_rx_freq(const double freq, const uint8_t subdev = 0, const uint8_t flags = 0) {
       LOGGER(debug) << "set_rx_freq() entered with freq = " << freq;
-      largest_cmd_or_rsp_packet q;
-      auto *p = reinterpret_cast<radio_rf_freq_packet *>(&q);
-      p->hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::SET_RF_FREQ, subdev, flags, sizeof(*p), 0 };
-      p->freq = freq;
-      p->rtol = 1e-9;
-      command_queue.push(q);
+      largest_cmd_or_rsp_packet p;
+      auto *q = reinterpret_cast<radio_rf_freq_packet *>(&p);
+      q->hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::SET_RF_FREQ, subdev, flags, sizeof(*q), 0 };
+      q->freq = freq;
+      q->rtol = 1e-9;
+      command_queue_wait_push(p);
     }
 
     void set_tx_gain(const double gain_db, const uint8_t subdev = 0, const uint8_t flags = 0) {
       LOGGER(debug) << "set_tx_gain() entered with gain = " << gain_db;
-      largest_cmd_or_rsp_packet q;
-      auto *p = reinterpret_cast<radio_rf_gain_packet *>(&q);
-      p->hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::SET_RF_GAIN, subdev, flags, sizeof(*p), 0 };
+      largest_cmd_or_rsp_packet p;
+      auto *q = reinterpret_cast<radio_rf_gain_packet *>(&p);
+      q->hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::SET_RF_GAIN, subdev, flags, sizeof(*q), 0 };
       //FIXME: gain setting needs to be done in MCU from gain_db, not here
-      p->gain = -std::min(0, std::max(31, (int)std::lround(2 * gain_db)));
-      command_queue.push(q);
+      q->gain = -std::min(0, std::max(31, (int)std::lround(2 * gain_db)));
+      command_queue_wait_push(p);
     }
 
     void set_rx_gain(const double gain_db, const uint8_t subdev = 0, const uint8_t flags = 0) {
       LOGGER(debug) << "set_rx_gain() entered with gain = " << gain_db;
-      largest_cmd_or_rsp_packet q;
-      auto *p = reinterpret_cast<radio_rf_gain_packet *>(&q);
-      p->hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::SET_RF_GAIN, subdev, flags, sizeof(*p), 0 };
+      largest_cmd_or_rsp_packet p;
+      auto *q = reinterpret_cast<radio_rf_gain_packet *>(&p);
+      q->hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::SET_RF_GAIN, subdev, flags, sizeof(*q), 0 };
       //FIXME: gain setting needs to be done in MCU from gain_db, not here
       //FIXME: attenuator cannot be set to 0, only 0.5 db
-      p->gain = -1;
-      command_queue.push(q);
+      q->gain = -1;
+      command_queue_wait_push(p);
       if(gain_db > 0.0) {
-        p->gain = 63 - std::min(0, std::max(63, (int)std::lround(2 * gain_db)));
-        command_queue.push(q);
+        q->gain = 63 - std::min(0, std::max(63, (int)std::lround(2 * gain_db)));
+        command_queue_wait_push(p);
       }
     }
 
     void set_tx_rate(const double rate_samples_sec, const uint8_t subdev = 0, const uint8_t flags = 0) {
       LOGGER(debug) << "set_tx_rate() entered with rate = " << rate_samples_sec;
-      largest_cmd_or_rsp_packet q;
-      auto *p = reinterpret_cast<radio_rf_sample_rate_packet *>(&q);
-      p->hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::SET_SAMPLE_RATE, subdev, flags, sizeof(*p), 0 };
+      largest_cmd_or_rsp_packet p;
+      auto *q = reinterpret_cast<radio_rf_sample_rate_packet *>(&p);
+      q->hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::SET_SAMPLE_RATE, subdev, flags, sizeof(*q), 0 };
       //FIXME: rate setting needs to be done in MCU from rate_samples_sec, not here
-      p->rate = std::min(1000, std::max(1, (int)std::lround(160.0e6 / rate_samples_sec)));
-      command_queue.push(q);
+      q->rate = std::min(1000, std::max(1, (int)std::lround(160.0e6 / rate_samples_sec)));
+      command_queue_wait_push(p);
     }
 
     void set_rx_rate(const double rate_samples_sec, const uint8_t subdev = 0, const uint8_t flags = 0) {
       LOGGER(debug) << "set_rx_rate() entered with rate = " << rate_samples_sec;
-      largest_cmd_or_rsp_packet q;
-      auto *p = reinterpret_cast<radio_rf_sample_rate_packet *>(&q);
-      p->hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::SET_SAMPLE_RATE, subdev, flags, sizeof(*p), 0 };
+      largest_cmd_or_rsp_packet p;
+      auto *q = reinterpret_cast<radio_rf_sample_rate_packet *>(&p);
+      q->hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::SET_SAMPLE_RATE, subdev, flags, sizeof(*q), 0 };
       //FIXME: rate setting needs to be done in MCU from rate_samples_sec, not here
-      p->rate = std::min(1000, std::max(1, (int)std::lround(160.0e6 / rate_samples_sec)));
-      command_queue.push(q);
+      q->rate = std::min(1000, std::max(1, (int)std::lround(160.0e6 / rate_samples_sec)));
+      command_queue_wait_push(p);
     }
 
     void set_tx_enable(const bool enabled, const uint8_t subdev = 0, const uint8_t flags = 0) {
-      largest_cmd_or_rsp_packet q;
-      auto *p = reinterpret_cast<radio_rf_enable_packet *>(&q);
-      p->hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::SET_RF_ENABLED, subdev, flags, sizeof(*p), 0 };
+      largest_cmd_or_rsp_packet p;
+      auto *q = reinterpret_cast<radio_rf_enable_packet *>(&p);
+      q->hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::SET_RF_ENABLED, subdev, flags, sizeof(*q), 0 };
       if(enabled) {
-        p->enabled = 1;
+        q->enabled = 1;
       }
       else {
-        p->enabled = 0;
+        q->enabled = 0;
       }
-      command_queue.push(q);
+      command_queue_wait_push(p);
     }
 
     void set_rx_enable(const bool enabled, const uint8_t subdev = 0, const uint8_t flags = 0) {
-      largest_cmd_or_rsp_packet q;
-      auto *p = reinterpret_cast<radio_rf_enable_packet *>(&q);
-      p->hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::SET_RF_ENABLED, subdev, flags, sizeof(*p), 0 };
+      largest_cmd_or_rsp_packet p;
+      auto *q = reinterpret_cast<radio_rf_enable_packet *>(&p);
+      q->hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::SET_RF_ENABLED, subdev, flags, sizeof(*q), 0 };
       if(enabled) {
-        p->enabled = 1;
+        q->enabled = 1;
       }
       else {
-        p->enabled = 0;
+        q->enabled = 0;
       }
-      command_queue.push(q);
+      command_queue_wait_push(p);
     }
 
     void set_tx_antenna(const std::string &ant, const uint8_t subdev = 0, const uint8_t flags = 0) {
@@ -369,13 +398,13 @@ class vxsdr: public std::enable_shared_from_this<vxsdr> {
     void device_get_buffer_info(const uint8_t subdev = 0, const uint8_t flags = 0) {
       largest_cmd_or_rsp_packet p;
       p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::GET_BUFFER_INFO, subdev, flags, sizeof(packet_header), 0 };
-      command_queue.push(p);
+      command_queue_wait_push(p);
     }
 
     void device_get_buffer_use(const uint8_t subdev = 0, const uint8_t flags = 0) {
       largest_cmd_or_rsp_packet p;
       p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::GET_BUFFER_USE, subdev, flags, sizeof(packet_header), 0 };
-      command_queue.push(p);
+      command_queue_wait_push(p);
     }
 
     void receiver(boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint)
