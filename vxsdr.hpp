@@ -43,7 +43,7 @@ class vxsdr: std::enable_shared_from_this<vxsdr> {
     // parameters used to monitor status of the radio's internal buffers (on the other end of the network connection)
     std::atomic<unsigned> tx_buffer_size, tx_buffer_used;
     std::atomic<unsigned> rx_buffer_size, rx_buffer_used;
-    std::atomic<float> tx_buffer_fill_percent, rx_buffer_fill_percent;
+    std::atomic<unsigned> tx_buffer_fill_percent, rx_buffer_fill_percent;
 
     // data queues
     boost::lockfree::spsc_queue<largest_data_packet, boost::lockfree::capacity<rx_data_queue_length> > rx_data_queue;
@@ -478,7 +478,7 @@ class vxsdr: std::enable_shared_from_this<vxsdr> {
                 {
                   auto *r = reinterpret_cast<tx_signal_data_ack_packet *>(&recv_buffer);
                   sdrptr->tx_buffer_used = r->tx_buffer_used_bytes;
-                  sdrptr->tx_buffer_fill_percent = std::min(100., (100. * sdrptr->tx_buffer_used) / sdrptr->tx_buffer_size);
+                  sdrptr->tx_buffer_fill_percent = std::min(100u, (100u * sdrptr->tx_buffer_used) / sdrptr->tx_buffer_size);
                   if(forward_acks) {
                     auto *p = reinterpret_cast<largest_cmd_or_rsp_packet *>(&recv_buffer);
                     sdrptr->response_queue.push(*p);
@@ -493,8 +493,8 @@ class vxsdr: std::enable_shared_from_this<vxsdr> {
                       auto *r = reinterpret_cast<get_buffer_use_rsp_packet *>(&recv_buffer);
                       sdrptr->tx_buffer_used = r->tx_buffer_used_bytes;
                       sdrptr->rx_buffer_used = r->rx_buffer_used_bytes;
-                      sdrptr->tx_buffer_fill_percent = std::min(100., (100. * sdrptr->tx_buffer_used) / sdrptr->tx_buffer_size);
-                      sdrptr->rx_buffer_fill_percent = std::min(100., (100. * sdrptr->rx_buffer_used) / sdrptr->rx_buffer_size);
+                      sdrptr->tx_buffer_fill_percent = std::min(100u, (100u * sdrptr->tx_buffer_used) / sdrptr->tx_buffer_size);
+                      sdrptr->rx_buffer_fill_percent = std::min(100u, (100u *  sdrptr->rx_buffer_used) / sdrptr->rx_buffer_size);
                       auto *p = reinterpret_cast<largest_cmd_or_rsp_packet *>(&recv_buffer);
                       sdrptr->response_queue.push(*p);
                     }
