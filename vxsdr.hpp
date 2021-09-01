@@ -462,7 +462,6 @@ class vxsdr {
           while(not sdrptr->rx_stop_flag) {
             socket.receive_from(boost::asio::buffer(&recv_buffer, sizeof(recv_buffer)), remote);
             packets_received++;
-            LOGGER(debug) << "received packet type " << recv_buffer.hdr.packet_type;
             packet_types_received[recv_buffer.hdr.packet_type]++;
             if(packets_received > 1 and recv_buffer.hdr.sequence_counter != (uint16_t)(last_seq + 1)) {
               seq_error_times.push_back(std::chrono::system_clock::now());
