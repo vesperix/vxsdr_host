@@ -50,7 +50,7 @@ int main(int argc, char *argv[])
     boost::asio::ip::udp::endpoint destination_endpoint(destination_ip, vm["destination_port"].as<unsigned>());
     LOGGER(info) << "using destination IP " << destination_endpoint.address().to_string() << " and port " << destination_endpoint.port();
 
-    auto radio = std::make_shared<vxsdr>(local_send_endpoint, local_receive_endpoint, destination_endpoint);
+    auto radio = std::make_unique<vxsdr>(local_send_endpoint, local_receive_endpoint, destination_endpoint);
 
     LOGGER(info) << "using frequency " << vm["freq"].as<double>();
     LOGGER(info) << "using rate      " << vm["rate"].as<double>();

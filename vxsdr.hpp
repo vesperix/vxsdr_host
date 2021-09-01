@@ -95,12 +95,14 @@ class vxsdr {
       sender_thread.join();
       LOGGER(debug) << "vxsdr destructor complete";
     };
-    // copy constructor
-    // copy assignment
-    // move constructor
-    // move assignment
+    // copy constructor deleted
+    vxsdr(const vxsdr &) = delete;
+    // copy assignment deleted
+    vxsdr& operator=(const vxsdr &) = delete;
+    // move constructor: don't need to delete since we have an explicit copy constructor
+    // move assignment: don't need to delete since we have an explicit copy assignment
 
-    size_t get_rx_data(std::vector<std::complex<int16_t> > &data, size_t n_desired = 0, const uint8_t subdev = 0) {
+    size_t get_rx_data(std::vector<std::complex<int16_t> > &data, size_t n_desired = 0) {
       LOGGER(debug) << "get_rx_data() entered";
       size_t n_popped = 0;
       largest_data_packet q;
@@ -378,7 +380,7 @@ class vxsdr {
         }
       }
 
-      udp_rx server(this, io_context, local_endpoint);
+      udp_receiver server(this, io_context, local_endpoint);
       io_context.run();
       LOGGER(debug) << "receiver thread finished";
     }
@@ -400,16 +402,16 @@ class vxsdr {
         }
       }
 
-      udp_tx server(this, io_context, local_endpoint, destination_endpoint);
+      udp_sender server(this, io_context, local_endpoint, destination_endpoint);
       io_context.run();
       LOGGER(debug) << "sender thread finished";
     }
 
-    class udp_rx {
+    class udp_receiver {
 
       public:
         // constructor
-        udp_rx(vxsdr *p, boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint)
+        udp_receiver(vxsdr *p, boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint)
           : socket(io_context, local_endpoint) {
           sdrptr = p;
           socket.set_option(boost::asio::ip::udp::socket::reuse_address(true));
@@ -425,15 +427,17 @@ class vxsdr {
           }
         }
         // destructor
-        ~udp_rx() {
+        ~udp_receiver() {
           //FIXME: stop rx to be sure
           //FIXME: socket.close() may throw exception?
           socket.close();
         }
-        // copy constructor
-        // copy assignment
-        // move constructor
-        // move assignment
+        // copy constructor deleted
+        udp_receiver(const udp_receiver &) = delete;
+        // copy assignment deleted
+        udp_receiver& operator=(const udp_receiver &) = delete;
+        // move constructor: don't need to delete since we have an explicit copy constructor
+        // move assignment: don't need to delete since we have an explicit copy assignment
 
       private:
         const bool forward_acks = false;
@@ -563,11 +567,11 @@ class vxsdr {
         }
     };
 
-    class udp_tx {
+    class udp_sender {
 
       public:
         // constructor
-        udp_tx(vxsdr *p, boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint,
+        udp_sender(vxsdr *p, boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint,
           const boost::asio::ip::udp::endpoint &destination_endpoint) : socket(io_context, local_endpoint) {
           sdrptr = p;
           destination = destination_endpoint;
@@ -583,16 +587,18 @@ class vxsdr {
           }
         }
         // destructor
-        ~udp_tx() {
+        ~udp_sender() {
           // FIXME: stop tx to be sure
 
           //FIXME: socket.close() may throw exception?
           socket.close();
         }
-        // copy constructor
-        // copy assignment
-        // move constructor
-        // move assignment
+        // copy constructor deleted
+        udp_sender(const udp_sender &) = delete;
+        // copy assignment deleted
+        udp_sender& operator=(const udp_sender &) = delete;
+        // move constructor: don't need to delete since we have an explicit copy constructor
+        // move assignment: don't need to delete since we have an explicit copy assignment
       private:
         vxsdr *sdrptr;
         boost::asio::ip::udp::socket socket;
