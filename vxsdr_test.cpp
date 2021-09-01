@@ -36,6 +36,7 @@ int main(int argc, char *argv[])
 
     add_common_options(desc);
     add_network_options(desc);
+    add_tx_1ch_options(desc);
     add_rx_1ch_options(desc);
 
     init_vm(desc, vm, argc, argv);
