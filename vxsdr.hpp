@@ -68,9 +68,6 @@ class vxsdr {
           const boost::asio::ip::udp::endpoint &local_send_endpoint,
           const boost::asio::ip::udp::endpoint &destination_endpoint) {
       LOGGER(debug) << "vxsdr constructor entered";
-      receiver_thread = std::thread(&vxsdr::receiver, this, std::ref(io_context), std::cref(local_receive_endpoint));
-      sender_thread = std::thread(&vxsdr::sender, this, std::ref(io_context), std::cref(local_send_endpoint), std::cref(destination_endpoint));
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
       tx_stop_flag = false;
       rx_stop_flag = false;
       tx_buffer_size = 0;
@@ -79,6 +76,9 @@ class vxsdr {
       rx_buffer_used = 0;
       tx_buffer_fill_percent = 0.0;
       rx_buffer_fill_percent = 0.0;
+      receiver_thread = std::thread(&vxsdr::receiver, this, std::ref(io_context), std::cref(local_receive_endpoint));
+      sender_thread = std::thread(&vxsdr::sender, this, std::ref(io_context), std::cref(local_send_endpoint), std::cref(destination_endpoint));
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
       set_tx_enable(true);
       set_rx_enable(true);
       LOGGER(debug) << "vxsdr constructor complete";
