@@ -168,6 +168,18 @@ namespace RADIO_CMD_ERR {
   static constexpr uint8_t BAD_PARAMETER                = 0x05;
 }
 
+namespace CAPABILITIES {
+  static constexpr uint64_t HAS_LOCK_DETECT             = 0x0000000000000001;
+  static constexpr uint64_t HAS_EXTERNAL_REF            = 0x0000000000000002;
+  static constexpr uint64_t HAS_AGC                     = 0x0000000000000004;
+  static constexpr uint64_t HAS_LIMITER                 = 0x0000000000000008;
+  static constexpr uint64_t HAS_LIMIT_DETECT            = 0x0000000000000010;
+  static constexpr uint64_t HAS_IQ_OFFSET_CORR          = 0x0000000000000020;
+  static constexpr uint64_t HAS_IQ_BALANCE_CORR         = 0x0000000000000040;
+  static constexpr uint64_t HAS_TEMP_MEASURE            = 0x0000000000000080;
+  static constexpr uint64_t HAS_POWER_MEASURE           = 0x0000000000000100;
+}
+
 static constexpr size_t   MAX_DATA_LENGTH_SAMPLES  = 2048;
 static constexpr size_t   MAX_PAYLOAD_LENGTH_BYTES = 32;  // maximum length of a CMD or RSP packet, excluding header
 
@@ -297,6 +309,19 @@ class dataflow_status_packet : public status_packet {
     uint16_t               tx_radio_status = 0;
     uint16_t               rx_radio_status = 0;
     uint32_t               device_status = 0;
+};
+
+class radio_rf_info_packet : public cmd_or_rsp_packet {
+  public:
+    double                 min_freq = 0.0;
+    double                 max_freq = 0.0;
+    double                 min_gain = 0.0;
+    double                 max_gain = 0.0;
+    double                 min_rate = 0.0;
+    double                 max_rate = 0.0;
+    double                 min_bw   = 0.0;
+    double                 max_bw   = 0.0;
+    uint64_t               capabilities = 0;
 };
 
 class radio_rf_freq_packet : public cmd_or_rsp_packet {
