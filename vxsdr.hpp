@@ -442,7 +442,7 @@ class vxsdr {
         boost::asio::ip::udp::endpoint remote;
         largest_data_packet recv_buffer;
         largest_cmd_or_rsp_packet cmd_buffer;
-        uint64_t packets_received = 0, seq_errors = 0;
+        uint64_t packets_received = 0;
         std::array<uint64_t, UINT8_MAX + 1> packet_types_received = { 0 };
         uint16_t last_seq = 0;
         // FIXME: diagnostic info gathering: remove when unneeded
@@ -458,9 +458,9 @@ class vxsdr {
           while(not sdrptr->rx_stop_flag) {
             socket.receive_from(boost::asio::buffer(&recv_buffer, sizeof(recv_buffer)), remote);
             packets_received++;
+            LOGGER(debug) << "received packet type " << recv_buffer.hdr.packet_type;
             packet_types_received[recv_buffer.hdr.packet_type]++;
             if(packets_received > 1 and recv_buffer.hdr.sequence_counter != (uint16_t)(last_seq + 1)) {
-              seq_errors++;
               seq_error_times.push_back(std::chrono::system_clock::now());
               seq_error_packet_type.push_back(recv_buffer.hdr.packet_type);
               seq_error_counter.push_back(recv_buffer.hdr.sequence_counter);
@@ -550,7 +550,7 @@ class vxsdr {
             }
           }
 
-          LOGGER(info) << "start_receive exiting; " << packets_received << " packets received, " << seq_errors << " sequence errors";
+          LOGGER(info) << "start_receive exiting; " << packets_received << " packets received, " << seq_error_times.size() << " sequence errors";
           for(unsigned i =0; i < seq_error_times.size(); i++) {
             LOGGER(info) << boost::format(" %30s %20s %8d %8d") % format_time(seq_error_times[i]) % packet_type_to_name(seq_error_packet_type[i])
                                                                     % seq_error_counter[i] % seq_error_expected[i];
