@@ -38,16 +38,16 @@ class vxsdr {
     // timeouts and waits between tries for queue push/pop
 
     static constexpr unsigned tx_data_queue_timeout_us     =   100000;
-    static constexpr unsigned tx_data_queue_wait_us        =     1000;
+    static constexpr unsigned tx_data_queue_wait_us        =       10;
 
     static constexpr unsigned rx_data_queue_timeout_us     =   100000;
-    static constexpr unsigned rx_data_queue_wait_us        =     1000;
+    static constexpr unsigned rx_data_queue_wait_us        =       10;
 
-    static constexpr unsigned cmd_queue_timeout_us         =   100000;
-    static constexpr unsigned cmd_queue_wait_us            =      100;
+    static constexpr unsigned command_queue_timeout_us     =   100000;
+    static constexpr unsigned command_queue_wait_us        =       10;
 
-    static constexpr unsigned rsp_queue_timeout_us         =   100000;
-    static constexpr unsigned rsp_queue_wait_us            =     1000;
+    static constexpr unsigned response_queue_timeout_us    =   100000;
+    static constexpr unsigned response_queue_wait_us       =       10;
 
     // parameters used to set the OS's network buffer
     static constexpr unsigned network_send_buffer_bytes    =   4194304;   // ~6 ms at 160 MSPS
@@ -81,6 +81,10 @@ class vxsdr {
           const boost::asio::ip::udp::endpoint &local_send_endpoint,
           const boost::asio::ip::udp::endpoint &destination_endpoint) {
       LOGGER(debug) << "vxsdr constructor entered";
+      tx_data_queue.reset();
+      rx_data_queue.reset();
+      command_queue.reset();
+      response_queue.reset();
       sender_thread_stop_flag   = false;
       receiver_thread_stop_flag = false;
       tx_buffer_size = 0;
@@ -136,17 +140,20 @@ class vxsdr {
         n_desired = data.size();
       }
 
-      constexpr unsigned max_tries = rx_data_queue_timeout_us / rx_data_queue_wait_us;
       size_t n_packets = std::ceil(n_desired / (double)MAX_DATA_LENGTH_SAMPLES);
       LOGGER(debug) << "n_packets = " << n_packets << " n_popped = " << n_popped;
+
       while(n_popped < n_packets) {
-        unsigned n_tries = 0;
-        while(rx_data_queue.write_available() == 0 and n_tries < max_tries) {
-          std::this_thread::sleep_for(std::chrono::microseconds(rx_data_queue_wait_us));
-          n_tries++;
+        unsigned wait_time_us = 0;
+        // setting rx_data_queue_wait_us = 0 results in a busy wait with no timeout
+        while(rx_data_queue.read_available() == 0 and wait_time_us < rx_data_queue_timeout_us) {
+          if constexpr(rx_data_queue_wait_us > 0) {
+            std::this_thread::sleep_for(std::chrono::microseconds(rx_data_queue_wait_us));
+            wait_time_us += rx_data_queue_wait_us;
+          }
         }
-        if(n_tries < max_tries) {
-          rx_data_queue.pop(&q);
+
+        if(rx_data_queue.pop(q)) {
           bool has_time = (bool)(q.hdr.flags | FLAGS::TIME_PRESENT);
           bool has_stream_id = (bool)(q.hdr.flags | FLAGS::STREAM_ID_PRESENT);
           if(not has_time and not has_stream_id) {
@@ -198,14 +205,16 @@ class vxsdr {
           p->data[j] = data[i + j];
         }
 
-        constexpr unsigned max_tries = tx_data_queue_timeout_us / tx_data_queue_wait_us;
-        unsigned n_tries = 0;
-        while(tx_data_queue.write_available() == 0 and n_tries < max_tries) {
-          std::this_thread::sleep_for(std::chrono::microseconds(tx_data_queue_wait_us));
-          n_tries++;
+        unsigned wait_time_us = 0;
+        // setting tx_data_queue_wait_us = 0 results in a busy wait with no timeout
+        while(tx_data_queue.write_available() == 0 and wait_time_us < tx_data_queue_timeout_us) {
+          if constexpr(tx_data_queue_wait_us > 0) {
+            std::this_thread::sleep_for(std::chrono::microseconds(tx_data_queue_wait_us));
+            wait_time_us += tx_data_queue_wait_us;
+          }
         }
-        if(n_tries < max_tries) {
-          tx_data_queue.push(q);
+
+        if(tx_data_queue.push(q)) {
           n_put += n_samples;
         }
         else {
@@ -217,19 +226,18 @@ class vxsdr {
     }
 
     void cmd_queue_push(packet &p) {
-      constexpr unsigned max_tries = cmd_queue_timeout_us / cmd_queue_wait_us;
-      unsigned n_tries = 0;
-      while(command_queue.write_available() == 0 and n_tries < max_tries) {
-        std::this_thread::sleep_for(std::chrono::microseconds(cmd_queue_wait_us));
-        n_tries++;
+      largest_cmd_or_rsp_packet q;
+      std::memcpy(&q, &p, p.hdr.packet_size);
+      unsigned wait_time_us = 0;
+      // setting command_queue_wait_us = 0 results in a busy wait with no timeout
+      while(command_queue.write_available() == 0 and wait_time_us < command_queue_timeout_us) {
+        if constexpr(command_queue_wait_us > 0) {
+          std::this_thread::sleep_for(std::chrono::microseconds(command_queue_wait_us));
+          wait_time_us += command_queue_wait_us;
+        }
       }
-      if(n_tries < max_tries) {
-        largest_cmd_or_rsp_packet q;
-        std::memset(&q, 0, sizeof(q));
-        std::memcpy(&p, &q, p.hdr.packet_size);
-        command_queue.push(q);
-      }
-      else {
+
+      if(not command_queue.push(q)) {
         LOGGER(error) << "timeout pushing to command queue";
       }
     }
@@ -705,7 +713,7 @@ class vxsdr {
               }
             }
             // FIXME: is a timeout needed?
-            else if(sdrptr->tx_data_queue.read_available() > 0) {
+            if(sdrptr->tx_data_queue.read_available() > 0) {
               size_t n_popped = sdrptr->tx_data_queue.pop(&data_buffer.front(), data_buffer.size());
               for(size_t i = 0; i < n_popped; i++) {
                 if(packets_sent - last_check > buffer_check_interval) {
