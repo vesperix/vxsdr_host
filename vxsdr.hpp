@@ -227,7 +227,7 @@ class vxsdr {
 
     void cmd_queue_push(packet &p) {
       largest_cmd_or_rsp_packet q;
-      std::memcpy(&q, &p, p.hdr.packet_size);
+      std::memcpy(&q, &p, std::min((size_t)p.hdr.packet_size, sizeof(q)));
       unsigned wait_time_us = 0;
       // setting command_queue_wait_us = 0 results in a busy wait with no timeout
       while(command_queue.write_available() == 0 and wait_time_us < command_queue_timeout_us) {
