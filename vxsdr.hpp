@@ -122,9 +122,9 @@ class vxsdr {
     // copy assignment deleted
     vxsdr& operator=(const vxsdr &) = delete;
     // move constructor deleted
-    vxsdr(const vxsdr &&) = delete;
+    vxsdr(vxsdr &&) = delete;
     // move assignment deleted
-    vxsdr& operator=(const vxsdr &&) = delete;
+    vxsdr& operator=(vxsdr &&) = delete;
 
     size_t get_rx_data(std::vector<std::complex<int16_t> > &data, size_t n_desired = 0) {
       LOGGER(debug) << "get_rx_data() entered";
@@ -469,8 +469,8 @@ class vxsdr {
         // disable copy and move
         udp_receiver(const udp_receiver &) = delete;
         udp_receiver& operator=(const udp_receiver &) = delete;
-        udp_receiver(const udp_receiver &&) = delete;
-        udp_receiver& operator=(const udp_receiver &&) = delete;
+        udp_receiver(udp_receiver &&) = delete;
+        udp_receiver& operator=(udp_receiver &&) = delete;
 
       private:
         const bool forward_acks = false;
@@ -625,8 +625,8 @@ class vxsdr {
         // disable copy and move
         udp_sender(const udp_sender &) = delete;
         udp_sender& operator=(const udp_sender &) = delete;
-        udp_sender(const udp_sender &&) = delete;
-        udp_sender& operator=(const udp_sender &&) = delete;
+        udp_sender(udp_sender &&) = delete;
+        udp_sender& operator=(udp_sender &&) = delete;
       private:
         vxsdr *sdrptr;
         boost::asio::ip::udp::socket socket;
