@@ -242,37 +242,37 @@ class vxsdr {
       }
     }
 
-    void device_hello(const uint8_t subdev, const uint8_t flags = 0) {
+    void device_hello(const uint8_t subdev = 0, const uint8_t flags = 0) {
       cmd_packet p;
       p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::HELLO, subdev, flags, sizeof(p), 0 };
       cmd_queue_push(p);
     }
 
-    void device_reset(const uint8_t subdev, const uint8_t flags = 0) {
+    void device_reset(const uint8_t subdev = 0, const uint8_t flags = 0) {
       cmd_packet p;
       p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::RESET, subdev, flags, sizeof(p), 0 };
       cmd_queue_push(p);
     }
 
-    void device_open_session(const uint8_t subdev, const uint8_t flags = 0) {
+    void device_open_session(const uint8_t subdev = 0, const uint8_t flags = 0) {
       cmd_packet p;
       p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::OPEN_SESSION, subdev, flags, sizeof(p), 0 };
       cmd_queue_push(p);
     }
 
-    void device_close_session(const uint8_t subdev, const uint8_t flags = 0) {
+    void device_close_session(const uint8_t subdev = 0, const uint8_t flags = 0) {
       cmd_packet p;
       p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::CLOSE_SESSION, subdev, flags, sizeof(p), 0 };
       cmd_queue_push(p);
     }
 
-    void device_clear_status(const uint8_t subdev, const uint8_t flags = 0) {
+    void device_clear_status(const uint8_t subdev = 0, const uint8_t flags = 0) {
       cmd_packet p;
       p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::CLEAR_STATUS, subdev, flags, sizeof(p), 0 };
       cmd_queue_push(p);
     }
 
-    void device_get_status(const uint8_t subdev, const uint8_t flags = 0) {
+    void device_get_status(const uint8_t subdev = 0, const uint8_t flags = 0) {
       cmd_packet p;
       p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::GET_STATUS, subdev, flags, sizeof(p), 0 };
       cmd_queue_push(p);
