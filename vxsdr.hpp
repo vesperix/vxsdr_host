@@ -1,15 +1,12 @@
 #include <complex>
 #include <vector>
 #include <cstring>
-#include <functional>
 
 #include <boost/lockfree/spsc_queue.hpp>
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
-#include <boost/shared_ptr.hpp>
 
 #include "logging.hpp"
-#include "cycle_counter.h"
 #include "thread_utils.h"
 #include "utility.hpp"
 
@@ -479,15 +476,16 @@ class vxsdr {
         boost::asio::ip::udp::endpoint remote;
         largest_data_packet recv_buffer;
         largest_cmd_or_rsp_packet cmd_buffer;
-        uint64_t packets_received = 0;
+        uint64_t packets_received = 0, sequence_errors = 0;
         std::array<uint64_t, UINT8_MAX + 1> packet_types_received = { 0 };
         uint16_t last_seq = 0;
         // FIXME: diagnostic info gathering: remove when unneeded
+#ifdef SEQUENCE_ERROR_DIAGNOSTICS
         std::vector<std::chrono::time_point<std::chrono::system_clock> > seq_error_times;
         std::vector<uint8_t> seq_error_packet_type;
         std::vector<uint16_t> seq_error_counter;
         std::vector<uint16_t> seq_error_expected;
-
+#endif // SEQUENCE_ERROR_DIAGNOSTICS
         void start_receive() {
           constexpr int    receive_thread_sleep_us        =        0;
           LOGGER(debug) << "start_receive started";
@@ -498,12 +496,17 @@ class vxsdr {
             LOGGER(debug) << "packet received";
             packets_received++;
             packet_types_received[recv_buffer.hdr.packet_type]++;
+
             if(packets_received > 1 and recv_buffer.hdr.sequence_counter != (uint16_t)(last_seq + 1)) {
+              sequence_errors++;
+#ifdef SEQUENCE_ERROR_DIAGNOSTICS
               seq_error_times.push_back(std::chrono::system_clock::now());
               seq_error_packet_type.push_back(recv_buffer.hdr.packet_type);
               seq_error_counter.push_back(recv_buffer.hdr.sequence_counter);
               seq_error_expected.push_back((uint16_t)(last_seq + 1));
+#endif // SEQUENCE_ERROR_DIAGNOSTICS
             }
+
             last_seq = recv_buffer.hdr.sequence_counter;
             switch(recv_buffer.hdr.packet_type) {
               // receive buffers go into the rx data queue
@@ -588,11 +591,13 @@ class vxsdr {
             }
           }
 
-          LOGGER(info) << "start_receive exiting; " << packets_received << " packets received, " << seq_error_times.size() << " sequence errors";
+          LOGGER(info) << "start_receive exiting; " << packets_received << " packets received, " << sequence_errors << " sequence errors";
+#ifdef SEQUENCE_ERROR_DIAGNOSTICS
           for(unsigned i =0; i < seq_error_times.size(); i++) {
             LOGGER(info) << boost::format(" %30s %20s %8d %8d") % format_time(seq_error_times[i]) % packet_type_to_name(seq_error_packet_type[i])
                                                                     % seq_error_counter[i] % seq_error_expected[i];
           }
+#endif // SEQUENCE_ERROR_DIAGNOSTICS
           for(unsigned i = 0; i < packet_types_received.size(); i++) {
             if(packet_types_received[i] > 0) {
               LOGGER(info) << (boost::format("   %12d %20s (%d)") % packet_types_received[i] % packet_type_to_name(i) % i);

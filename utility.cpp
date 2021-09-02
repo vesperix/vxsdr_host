@@ -3,12 +3,10 @@
 #include <fstream>
 #include <iomanip>
 #include <cmath>
+#include <complex>
+#include <cctype>
 
 #include <boost/format.hpp>
-
-#include "vxsdr_header.hpp"
-#include "logging.hpp"
-#include "errors.hpp"
 
 std::string format_time(const std::chrono::time_point<std::chrono::system_clock> t, const int digits, const bool use_utc, const std::string fmt) {
   std::stringstream output;
@@ -69,14 +67,14 @@ size_t read_cplx_16(const std::string &name, std::vector<std::complex<int16_t> >
     infile.seekg(0, infile.end);
     size_t num_elem = infile.tellg() / sizeof(std::complex<int16_t>);
     infile.seekg(0, infile.beg);
-    
+
     if(num_elem > data.size())
       data.resize(num_elem);
 
     if(infile.good())
       infile.read((char *)&data.front(), sizeof(std::complex<int16_t>) * num_elem);
     infile.close();
-    
+
     for(size_t i = num_elem; i < data.size(); i++)
       data[i] = std::complex<int16_t>(0, 0);
     return num_elem;
