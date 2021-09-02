@@ -119,9 +119,9 @@ class vxsdr {
     // copy assignment deleted
     vxsdr& operator=(const vxsdr &) = delete;
     // move constructor deleted
-    vxsdr(const vxsdr &&) = delete;
+    vxsdr(vxsdr &&) = delete;
     // move assignment deleted
-    vxsdr& operator=(const vxsdr &&) = delete;
+    vxsdr& operator=(vxsdr &&) = delete;
 
     size_t get_rx_data(std::vector<std::complex<int16_t> > &data, size_t n_desired = 0) {
       LOGGER(debug) << "get_rx_data() entered";
@@ -354,11 +354,11 @@ class vxsdr {
       cmd_queue_push(p);
     }
 
-    void set_tx_antenna(const std::string ant, const uint8_t subdev = 0, const uint8_t flags = 0) {
+    void set_tx_antenna(const std::string &ant, const uint8_t subdev = 0, const uint8_t flags = 0) {
       //FIXME: implement
     }
 
-    void set_rx_antenna(const std::string ant, const uint8_t subdev = 0, const uint8_t flags = 0) {
+    void set_rx_antenna(const std::string &ant, const uint8_t subdev = 0, const uint8_t flags = 0) {
       //FIXME: implement
     }
 
@@ -466,8 +466,8 @@ class vxsdr {
         // disable copy and move
         udp_receiver(const udp_receiver &) = delete;
         udp_receiver& operator=(const udp_receiver &) = delete;
-        udp_receiver(const udp_receiver &&) = delete;
-        udp_receiver& operator=(const udp_receiver &&) = delete;
+        udp_receiver(udp_receiver &&) = delete;
+        udp_receiver& operator=(udp_receiver &&) = delete;
 
       private:
         const bool forward_acks = false;
@@ -520,7 +520,7 @@ class vxsdr {
                 {
                   auto *r = reinterpret_cast<tx_signal_data_ack_packet *>(&recv_buffer);
                   sdrptr->tx_buffer_used = r->tx_buffer_used_bytes;
-                  sdrptr->tx_buffer_fill_percent = std::min(100u, (100u * sdrptr->tx_buffer_used) / sdrptr->tx_buffer_size);
+                  sdrptr->tx_buffer_fill_percent = std::min(100U, (100U * sdrptr->tx_buffer_used) / sdrptr->tx_buffer_size);
                   if(forward_acks) {
                     auto *p = reinterpret_cast<largest_cmd_or_rsp_packet *>(&recv_buffer);
                     sdrptr->response_queue.push(*p);
@@ -535,8 +535,8 @@ class vxsdr {
                       auto *r = reinterpret_cast<get_buffer_use_rsp_packet *>(&recv_buffer);
                       sdrptr->tx_buffer_used = r->tx_buffer_used_bytes;
                       sdrptr->rx_buffer_used = r->rx_buffer_used_bytes;
-                      sdrptr->tx_buffer_fill_percent = std::min(100u, (100u * sdrptr->tx_buffer_used) / sdrptr->tx_buffer_size);
-                      sdrptr->rx_buffer_fill_percent = std::min(100u, (100u *  sdrptr->rx_buffer_used) / sdrptr->rx_buffer_size);
+                      sdrptr->tx_buffer_fill_percent = std::min(100U, (100U * sdrptr->tx_buffer_used) / sdrptr->tx_buffer_size);
+                      sdrptr->rx_buffer_fill_percent = std::min(100U, (100U *  sdrptr->rx_buffer_used) / sdrptr->rx_buffer_size);
                       auto *p = reinterpret_cast<largest_cmd_or_rsp_packet *>(&recv_buffer);
                       sdrptr->response_queue.push(*p);
                     }
@@ -630,8 +630,8 @@ class vxsdr {
         // disable copy and move
         udp_sender(const udp_sender &) = delete;
         udp_sender& operator=(const udp_sender &) = delete;
-        udp_sender(const udp_sender &&) = delete;
-        udp_sender& operator=(const udp_sender &&) = delete;
+        udp_sender(udp_sender &&) = delete;
+        udp_sender& operator=(udp_sender &&) = delete;
       private:
         vxsdr *sdrptr;
         boost::asio::ip::udp::socket socket;
