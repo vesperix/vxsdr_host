@@ -125,7 +125,7 @@ class udp_receiver {
 
     void start_receive() {
       LOGGER(debug) << "start_receive started";
-      boost::asio::socket_base::bytes_readable check_for_bytes(true);
+      //boost::asio::socket_base::bytes_readable check_for_bytes(true);
       // FIXME: need to use async read, handler, and deadline timer to implement timeout
       while(not rx_stop_flag) {
         socket.receive_from(boost::asio::buffer(&recv_buffer, sizeof(recv_buffer)), remote);
@@ -215,8 +215,8 @@ class udp_receiver {
             break;
         }
       }
-      if(receive_thread_sleep_us > 0)
-        std::this_thread::sleep_for(std::chrono::microseconds(receive_thread_sleep_us));
+      //if(receive_thread_sleep_us > 0)
+      //  std::this_thread::sleep_for(std::chrono::microseconds(receive_thread_sleep_us));
 
       LOGGER(info) << "start_receive exiting; " << packets_received << " packets received, " << seq_errors << " sequence errors";
       for(unsigned i =0; i < seq_error_times.size(); i++) {

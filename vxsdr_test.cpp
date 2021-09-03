@@ -54,7 +54,7 @@ int main(int argc, char *argv[])
 
     LOGGER(info) << "using frequency " << vm["freq"].as<double>();
     LOGGER(info) << "using rate      " << vm["rate"].as<double>();
-    LOGGER(info) << "using tx_gain   " << vm["tx_gain"].as<double>() << std::endl;
+    LOGGER(info) << "using tx_gain   " << vm["tx_gain"].as<double>();
     LOGGER(info) << "using rx_gain   " << vm["rx_gain"].as<double>();
 
     if(vm["duration"].as<double>() <= 0.0) {
@@ -62,7 +62,8 @@ int main(int argc, char *argv[])
       return EXIT_CMD_LINE_ERROR;
     }
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    // let radio complete initialization
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
     set_common_options(vm, radio);
     set_rx_1ch_options(vm, radio);
@@ -70,7 +71,7 @@ int main(int argc, char *argv[])
 
     size_t n_samp = std::llround(vm["duration"].as<double>() * vm["rate"].as<double>());
 
-    LOGGER(info) << boost::format("Data length %.3f seconds (%lld samples)") % vm["duration"].as<double>() % n_samp;
+    LOGGER(info) << boost::format("preparing %.3f seconds (%lld samples) of data") % vm["duration"].as<double>() % n_samp;
 
     std::vector<std::complex<int16_t> > data(n_samp);
 

@@ -4,8 +4,9 @@
 #include <future>
 
 #include <boost/lockfree/spsc_queue.hpp>
-#include <boost/asio.hpp>
-#include <boost/bind.hpp>
+#include <boost/asio/io_service.hpp>
+#include <boost/asio/ip/udp.hpp>
+#include <boost/asio/use_future.hpp>
 
 #include "logging.hpp"
 #include "thread_utils.h"
@@ -21,7 +22,7 @@ class vxsdr {
 
   private:
     // socket_receive_timeout setting
-    static constexpr int receive_socket_timeout_ms = 100;
+    static constexpr unsigned receive_socket_timeout_ms    =      100;
 
     // thread realtime priority settings
     static constexpr bool thread_set_priority = true;
@@ -85,8 +86,8 @@ class vxsdr {
 
   public:
     // constructor
-    vxsdr(const boost::asio::ip::udp::endpoint &local_receive_endpoint,
-          const boost::asio::ip::udp::endpoint &local_send_endpoint,
+    vxsdr(const boost::asio::ip::udp::endpoint &local_send_endpoint,
+          const boost::asio::ip::udp::endpoint &local_receive_endpoint,
           const boost::asio::ip::udp::endpoint &destination_endpoint) {
       LOGGER(debug) << "vxsdr constructor entered";
       tx_data_queue.reset();
@@ -462,12 +463,12 @@ class vxsdr {
         // constructor
         udp_receiver(vxsdr *p, boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_receive_endpoint)
           : socket(io_context, local_receive_endpoint) {
-          sdrptr = p;
           socket.set_option(boost::asio::ip::udp::socket::reuse_address(true));
           socket.set_option(boost::asio::socket_base::receive_buffer_size(network_receive_buffer_bytes));
+
           boost::asio::socket_base::receive_buffer_size option;
           socket.get_option(option);
-          int network_buffer_size = option.value();
+          unsigned network_buffer_size = option.value();
           if(network_buffer_size != network_receive_buffer_bytes) {
             LOGGER(error) << "cannot set network receive buffer size to "
                           << network_receive_buffer_bytes << " (got " << network_buffer_size << ")";
@@ -476,6 +477,7 @@ class vxsdr {
             LOGGER(info) << "network receive buffer size set to " << network_buffer_size;
           }
 
+          sdrptr = p;
           start_receive();
           socket.close();
         }
@@ -505,13 +507,29 @@ class vxsdr {
         std::vector<uint16_t> seq_error_expected;
 #endif // SEQUENCE_ERROR_DIAGNOSTICS
         void start_receive() {
-          constexpr int    receive_thread_sleep_us        =        0;
           LOGGER(debug) << "start_receive started";
           while(not sdrptr->receiver_thread_stop_flag) {
 
 //            size_t bytes_received = socket.receive_from(boost::asio::buffer(&recv_buffer, sizeof(recv_buffer)), remote);
+/*
+https://www.boost.org/doc/libs/1_62_0/doc/html/boost_asio/example/cpp11/futures/daytime_client.cpp
+
+    std::array<char, 128> recv_buf;
+    udp::endpoint sender_endpoint;
+    std::future<std::size_t> recv_length =
+      socket.async_receive_from(
+          boost::asio::buffer(recv_buf),
+          sender_endpoint,
+          boost::asio::use_future);
+
+    // Do other things here while the receive completes.
+
+    std::cout.write(
+        recv_buf.data(),
+        recv_length.get()); // Blocks until receive is complete.
+*/
             size_t bytes_received = 0;
-            std::future<size_t> result = socket.async_receive(boost::asio::buffer(&recv_buffer, sizeof(recv_buffer)), boost::asio::use_future);
+            std::future<size_t> result = socket.async_receive_from(boost::asio::buffer(&recv_buffer, sizeof(recv_buffer)), remote, boost::asio::use_future);
             if(result.wait_for(std::chrono::milliseconds(receive_socket_timeout_ms)) == std::future_status::timeout) {
               bytes_received = 0;
               //LOGGER(debug) << "timeout";
@@ -520,6 +538,7 @@ class vxsdr {
               bytes_received = result.get();
               LOGGER(debug) << "packet received";
             }
+
             if(bytes_received >= sizeof(packet)) {
               packets_received++;
               packet_types_received[recv_buffer.hdr.packet_type]++;
@@ -620,10 +639,6 @@ class vxsdr {
                 case PACKET_TYPES::TX_RADIO_CMD:
                 default: // unrecognized packet types
                   break;
-              }
-
-              if constexpr(receive_thread_sleep_us > 0) {
-                std::this_thread::sleep_for(std::chrono::microseconds(receive_thread_sleep_us));
               }
             }
           }
