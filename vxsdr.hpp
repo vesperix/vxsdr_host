@@ -460,13 +460,13 @@ class vxsdr {
           : socket(io_context, local_endpoint) {
           sdrptr = p;
           socket.set_option(boost::asio::ip::udp::socket::reuse_address(true));
-          socket.set_option(boost::asio::socket_base::receive_buffer_size(sdrptr->network_receive_buffer_bytes));
+          socket.set_option(boost::asio::socket_base::receive_buffer_size(network_receive_buffer_bytes));
           boost::asio::socket_base::receive_buffer_size option;
           socket.get_option(option);
           int network_buffer_size = option.value();
-          if(network_buffer_size != sdrptr->network_receive_buffer_bytes) {
+          if(network_buffer_size != network_receive_buffer_bytes) {
             LOGGER(error) << "cannot set network receive buffer size to "
-                          << sdrptr->network_receive_buffer_bytes << "(got " << network_buffer_size << ")";
+                          << network_receive_buffer_bytes << "(got " << network_buffer_size << ")";
           }
           else {
             LOGGER(info) << "network receive buffer size set to " << network_buffer_size;
@@ -668,9 +668,9 @@ class vxsdr {
           socket.get_option(option);
           int network_buffer_size = option.value();
 
-          if(network_buffer_size != sdrptr->network_send_buffer_bytes) {
+          if(network_buffer_size != network_send_buffer_bytes) {
             LOGGER(error) << "cannot set network send buffer size to "
-                          << sdrptr->network_send_buffer_bytes << "(got " << network_buffer_size << ")";
+                          << network_send_buffer_bytes << "(got " << network_buffer_size << ")";
           }
           else {
             LOGGER(info) << "network send buffer size set to " << network_buffer_size;
