@@ -488,6 +488,17 @@ class vxsdr {
         uint64_t packets_received = 0, sequence_errors = 0;
         std::array<uint64_t, UINT8_MAX + 1> packet_types_received = { 0 };
         uint16_t last_seq = 0;
+
+        static int set_receive_timeout_ms(boost::asio::ip::udp::socket &socket, const unsigned timeout_ms) {
+#if defined(TARGET_UNIX) || defined(TARGET_MACOS)
+          struct timeval timeout = { timeout_ms / 1000, 1000 * (timeout_ms % 1000)};
+#endif
+#if defined(TARGET_WINDOWS)
+          DWORD timeout = timeout_ms;
+#endif
+          return ::setsockopt(socket.native_handle(), SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+        }
+
         // FIXME: diagnostic info gathering: remove when unneeded
 #ifdef SEQUENCE_ERROR_DIAGNOSTICS
         std::vector<std::chrono::time_point<std::chrono::system_clock> > seq_error_times;
@@ -499,12 +510,11 @@ class vxsdr {
           constexpr int    receive_thread_sleep_us        =        0;
           LOGGER(debug) << "start_receive started";
           // FIXME: do we want to use the boost::asio suggested way, or stick with this?
-          const int timeout = 100; // milliseconds
-          ::setsockopt(socket.native_handle(), SOL_SOCKET, SO_RCVTIMEO, (const char *)&timeout, sizeof(timeout));
+          set_receive_timeout_ms(socket, 100);
           while(not sdrptr->receiver_thread_stop_flag) {
             LOGGER(debug) << "waiting for receive";
             size_t bytes_received = socket.receive_from(boost::asio::buffer(&recv_buffer, sizeof(recv_buffer)), remote);
-            if(bytes_received > 8) {
+            if(bytes_received >= sizeof(packet)) {
               LOGGER(debug) << "packet received";
               packets_received++;
               packet_types_received[recv_buffer.hdr.packet_type]++;
