@@ -1,6 +1,7 @@
 #ifndef THREAD_UTILS_H
 #define THREAD_UTILS_H
 
+//FIXME: need to add Windows and MacOS!
 #define HAVE_PTHREADS // quick kludge for the moment
 
 #ifdef __cplusplus
