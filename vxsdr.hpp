@@ -1,6 +1,7 @@
 #include <complex>
 #include <vector>
 #include <cstring>
+#include <future>
 
 #include <boost/lockfree/spsc_queue.hpp>
 #include <boost/asio.hpp>
@@ -19,6 +20,9 @@
 class vxsdr {
 
   private:
+    // socket_receive_timeout setting
+    static constexpr int receive_socket_timeout_ms = 100;
+
     // thread realtime priority settings
     static constexpr bool thread_set_priority = true;
     static constexpr int send_thread_priority = 20;
@@ -477,6 +481,7 @@ class vxsdr {
 
           if(not sdrptr->receiver_thread_stop_flag) {
             start_receive();
+            socket.close();
           }
         }
         // destructor
@@ -497,24 +502,6 @@ class vxsdr {
         uint64_t packets_received = 0, sequence_errors = 0;
         std::array<uint64_t, UINT8_MAX + 1> packet_types_received = { 0 };
         uint16_t last_seq = 0;
-
-        int set_receive_timeout_ms(const unsigned timeout_ms) {
-#if defined(TARGET_UNIX) || defined(TARGET_MACOS)
-          struct timeval timeout = { timeout_ms / 1000, 1000 * (timeout_ms % 1000)};
-#endif
-#if defined(TARGET_WINDOWS)
-          DWORD timeout = timeout_ms;
-#endif
-          int ret = ::setsockopt(socket.native_handle(), SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
-          if(ret != 0) {
-            LOGGER(error) << "error setting socket receive timeout: " << errno;
-          }
-          else {
-            LOGGER(debug) << "socket receive timeout set to " << timeout_ms << " ms";
-          }
-          return ret;
-        }
-
         // FIXME: diagnostic info gathering: remove when unneeded
 #ifdef SEQUENCE_ERROR_DIAGNOSTICS
         std::vector<std::chrono::time_point<std::chrono::system_clock> > seq_error_times;
@@ -525,17 +512,20 @@ class vxsdr {
         void start_receive() {
           constexpr int    receive_thread_sleep_us        =        0;
           LOGGER(debug) << "start_receive started";
-          // FIXME: do we want to use the boost::asio suggested way, or stick with this?
-          set_receive_timeout_ms(100);
-          LOGGER(debug) << "sdrptr->receiver_thread_stop_flag = " << sdrptr->receiver_thread_stop_flag;
           while(not sdrptr->receiver_thread_stop_flag) {
-            LOGGER(debug) << "waiting for receive (" << sizeof(recv_buffer) <<" bytes in buffer)";
-            size_t bytes_received = socket.receive_from(boost::asio::buffer(&recv_buffer, sizeof(recv_buffer)), remote);
-            if(bytes_received == 0) {
-              LOGGER(debug) << "timeout";
+
+//            size_t bytes_received = socket.receive_from(boost::asio::buffer(&recv_buffer, sizeof(recv_buffer)), remote);
+            size_t bytes_received = 0;
+            std::future<size_t> result = socket.async_receive(boost::asio::buffer(&recv_buffer, sizeof(recv_buffer)), boost::asio::use_future);
+            if(result.wait_for(std::chrono::milliseconds(receive_socket_timeout_ms)) == std::future_status::timeout) {
+              bytes_received = 0;
+              //LOGGER(debug) << "timeout";
+            }
+            else {
+              bytes_received = result.get();
+              LOGGER(debug) << "packet received";
             }
             if(bytes_received >= sizeof(packet)) {
-              LOGGER(debug) << "packet received";
               packets_received++;
               packet_types_received[recv_buffer.hdr.packet_type]++;
 
@@ -681,6 +671,7 @@ class vxsdr {
 
           if(not sdrptr->sender_thread_stop_flag) {
             start_send();
+            socket.close();
           }
         }
         // destructor
