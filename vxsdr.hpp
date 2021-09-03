@@ -498,117 +498,120 @@ class vxsdr {
         void start_receive() {
           constexpr int    receive_thread_sleep_us        =        0;
           LOGGER(debug) << "start_receive started";
-          // FIXME: need to use async read, handler, and deadline timer to implement timeout
+          // FIXME: do we want to use the boost::asio suggested way, or stick with this?
+          const int timeout = 100; // milliseconds
+          ::setsockopt(socket.native_handle(), SOL_SOCKET, SO_RCVTIMEO, (const char *)&timeout, sizeof(timeout));
           while(not sdrptr->receiver_thread_stop_flag) {
             LOGGER(debug) << "waiting for receive";
-            socket.receive_from(boost::asio::buffer(&recv_buffer, sizeof(recv_buffer)), remote);
-            LOGGER(debug) << "packet received";
-            packets_received++;
-            packet_types_received[recv_buffer.hdr.packet_type]++;
+            size_t bytes_received = socket.receive_from(boost::asio::buffer(&recv_buffer, sizeof(recv_buffer)), remote);
+            if(bytes_received > 8) {
+              LOGGER(debug) << "packet received";
+              packets_received++;
+              packet_types_received[recv_buffer.hdr.packet_type]++;
 
-            if(packets_received > 1 and recv_buffer.hdr.sequence_counter != (uint16_t)(last_seq + 1)) {
-              sequence_errors++;
-#ifdef SEQUENCE_ERROR_DIAGNOSTICS
-              seq_error_times.push_back(std::chrono::system_clock::now());
-              seq_error_packet_type.push_back(recv_buffer.hdr.packet_type);
-              seq_error_counter.push_back(recv_buffer.hdr.sequence_counter);
-              seq_error_expected.push_back((uint16_t)(last_seq + 1));
-#endif // SEQUENCE_ERROR_DIAGNOSTICS
-            }
+              if(packets_received > 1 and recv_buffer.hdr.sequence_counter != (uint16_t)(last_seq + 1)) {
+                sequence_errors++;
+  #ifdef SEQUENCE_ERROR_DIAGNOSTICS
+                seq_error_times.push_back(std::chrono::system_clock::now());
+                seq_error_packet_type.push_back(recv_buffer.hdr.packet_type);
+                seq_error_counter.push_back(recv_buffer.hdr.sequence_counter);
+                seq_error_expected.push_back((uint16_t)(last_seq + 1));
+  #endif // SEQUENCE_ERROR_DIAGNOSTICS
+              }
 
-            last_seq = recv_buffer.hdr.sequence_counter;
-            switch(recv_buffer.hdr.packet_type) {
-              // receive buffers go into the rx data queue
-              case PACKET_TYPES::RX_SIGNAL_DATA:
-                if(not sdrptr->rx_data_queue.push(recv_buffer)) {
-                  LOGGER(error) << "error pushing to rx_data_queue";
-                }
-                break;
-              // tx sginal data acks special cased since they contain throttling information
-              case PACKET_TYPES::TX_SIGNAL_DATA_ACK:
-                {
-                  tx_signal_data_ack_packet r;
-                  std::memcpy(&r, &recv_buffer, std::min(sizeof(r), sizeof(recv_buffer)));
-                  sdrptr->tx_buffer_used = r.tx_buffer_used_bytes;
-                  sdrptr->tx_buffer_fill_percent = std::min(100U, (100U * sdrptr->tx_buffer_used) / sdrptr->tx_buffer_size);
+              last_seq = recv_buffer.hdr.sequence_counter;
+              switch(recv_buffer.hdr.packet_type) {
+                // receive buffers go into the rx data queue
+                case PACKET_TYPES::RX_SIGNAL_DATA:
+                  if(not sdrptr->rx_data_queue.push(recv_buffer)) {
+                    LOGGER(error) << "error pushing to rx_data_queue";
+                  }
+                  break;
+                // tx sginal data acks special cased since they contain throttling information
+                case PACKET_TYPES::TX_SIGNAL_DATA_ACK:
+                  {
+                    tx_signal_data_ack_packet r;
+                    std::memcpy(&r, &recv_buffer, std::min(sizeof(r), sizeof(recv_buffer)));
+                    sdrptr->tx_buffer_used = r.tx_buffer_used_bytes;
+                    sdrptr->tx_buffer_fill_percent = std::min(100U, (100U * sdrptr->tx_buffer_used) / sdrptr->tx_buffer_size);
+                    if(forward_acks) {
+                      response_queue_element p;
+                      std::memcpy(&p, &r, std::min(sizeof(p), sizeof(r)));
+                      sdrptr->response_queue.push(p);
+                    }
+                  }
+                  break;
+                // the buffer info commands are special cased since they can also be used for TX throttling
+                case PACKET_TYPES::DEVICE_CMD_RSP:
+                  switch(recv_buffer.hdr.command) {
+                    case DEVICE_CMD_RSP::GET_BUFFER_USE_RSP:
+                      {
+                        get_buffer_use_rsp_packet r;
+                        std::memcpy(&r, &recv_buffer, std::min(sizeof(r), sizeof(recv_buffer)));
+                        sdrptr->tx_buffer_used = r.tx_buffer_used_bytes;
+                        sdrptr->rx_buffer_used = r.rx_buffer_used_bytes;
+                        sdrptr->tx_buffer_fill_percent = std::min(100U, (100U * sdrptr->tx_buffer_used) / sdrptr->tx_buffer_size);
+                        sdrptr->rx_buffer_fill_percent = std::min(100U, (100U *  sdrptr->rx_buffer_used) / sdrptr->rx_buffer_size);
+                        response_queue_element p;
+                        std::memcpy(&p, &r, std::min(sizeof(p), sizeof(r)));
+                        sdrptr->response_queue.push(p);
+                      }
+                      break;
+                    case DEVICE_CMD_RSP::GET_BUFFER_INFO_RSP:
+                      {
+                        get_buffer_info_rsp_packet r;
+                        std::memcpy(&r, &recv_buffer, sizeof(r));
+                        sdrptr->tx_buffer_size = r.tx_buffer_size_bytes;
+                        sdrptr->rx_buffer_size = r.rx_buffer_size_bytes;
+                        response_queue_element p;
+                        std::memcpy(&p, &r, std::min(sizeof(p), sizeof(r)));
+                        sdrptr->response_queue.push(p);
+                      }
+                      break;
+                    default:
+                      {
+                        response_queue_element p;
+                        std::memcpy(&p, &recv_buffer, std::min(sizeof(p), sizeof(recv_buffer)));
+                        sdrptr->response_queue.push(p);
+                      }
+                      break;
+                  }
+                  break;
+                case PACKET_TYPES::DEVICE_CMD_ACK:
+                case PACKET_TYPES::RX_RADIO_CMD_ACK:
+                case PACKET_TYPES::TX_RADIO_CMD_ACK:
                   if(forward_acks) {
                     response_queue_element p;
-                    std::memcpy(&p, &r, std::min(sizeof(p), sizeof(r)));
+                    std::memcpy(&p, &recv_buffer, std::min(sizeof(p), sizeof(recv_buffer)));
                     sdrptr->response_queue.push(p);
                   }
-                }
-                break;
-              // the buffer info commands are special cased since they can also be used for TX throttling
-              case PACKET_TYPES::DEVICE_CMD_RSP:
-                switch(recv_buffer.hdr.command) {
-                  case DEVICE_CMD_RSP::GET_BUFFER_USE_RSP:
-                    {
-                      get_buffer_use_rsp_packet r;
-                      std::memcpy(&r, &recv_buffer, std::min(sizeof(r), sizeof(recv_buffer)));
-                      sdrptr->tx_buffer_used = r.tx_buffer_used_bytes;
-                      sdrptr->rx_buffer_used = r.rx_buffer_used_bytes;
-                      sdrptr->tx_buffer_fill_percent = std::min(100U, (100U * sdrptr->tx_buffer_used) / sdrptr->tx_buffer_size);
-                      sdrptr->rx_buffer_fill_percent = std::min(100U, (100U *  sdrptr->rx_buffer_used) / sdrptr->rx_buffer_size);
-                      response_queue_element p;
-                      std::memcpy(&p, &r, std::min(sizeof(p), sizeof(r)));
-                      sdrptr->response_queue.push(p);
-                    }
-                    break;
-                  case DEVICE_CMD_RSP::GET_BUFFER_INFO_RSP:
-                    {
-                      get_buffer_info_rsp_packet r;
-                      std::memcpy(&r, &recv_buffer, sizeof(r));
-                      sdrptr->tx_buffer_size = r.tx_buffer_size_bytes;
-                      sdrptr->rx_buffer_size = r.rx_buffer_size_bytes;
-                      response_queue_element p;
-                      std::memcpy(&p, &r, std::min(sizeof(p), sizeof(r)));
-                      sdrptr->response_queue.push(p);
-                    }
-                    break;
-                  default:
-                    {
-                      response_queue_element p;
-                      std::memcpy(&p, &recv_buffer, std::min(sizeof(p), sizeof(recv_buffer)));
-                      sdrptr->response_queue.push(p);
-                    }
-                    break;
-                }
-                break;
-              case PACKET_TYPES::DEVICE_CMD_ACK:
-              case PACKET_TYPES::RX_RADIO_CMD_ACK:
-              case PACKET_TYPES::TX_RADIO_CMD_ACK:
-                if(forward_acks) {
-                  response_queue_element p;
-                  std::memcpy(&p, &recv_buffer, std::min(sizeof(p), sizeof(recv_buffer)));
-                  sdrptr->response_queue.push(p);
-                }
-                break;
-              // DEVICE_CMD_RSP handled above
-              case PACKET_TYPES::DEVICE_CMD_ERR:
-              case PACKET_TYPES::RX_RADIO_CMD_RSP:
-              case PACKET_TYPES::RX_RADIO_CMD_ERR:
-              case PACKET_TYPES::TX_RADIO_CMD_RSP:
-              case PACKET_TYPES::TX_RADIO_CMD_ERR:
-                {
-                  response_queue_element p;
-                  std::memcpy(&p, &recv_buffer, std::min(sizeof(p), sizeof(recv_buffer)));
-                  sdrptr->response_queue.push(p);
-                }
-                break;
-              // packet types that should never show up at the host are dropped
-              case PACKET_TYPES::TX_SIGNAL_DATA:
-              case PACKET_TYPES::DEVICE_CMD:
-              case PACKET_TYPES::RX_RADIO_CMD:
-              case PACKET_TYPES::TX_RADIO_CMD:
-              default: // unrecognized packet types
-                break;
-            }
+                  break;
+                // DEVICE_CMD_RSP handled above
+                case PACKET_TYPES::DEVICE_CMD_ERR:
+                case PACKET_TYPES::RX_RADIO_CMD_RSP:
+                case PACKET_TYPES::RX_RADIO_CMD_ERR:
+                case PACKET_TYPES::TX_RADIO_CMD_RSP:
+                case PACKET_TYPES::TX_RADIO_CMD_ERR:
+                  {
+                    response_queue_element p;
+                    std::memcpy(&p, &recv_buffer, std::min(sizeof(p), sizeof(recv_buffer)));
+                    sdrptr->response_queue.push(p);
+                  }
+                  break;
+                // packet types that should never show up at the host are dropped
+                case PACKET_TYPES::TX_SIGNAL_DATA:
+                case PACKET_TYPES::DEVICE_CMD:
+                case PACKET_TYPES::RX_RADIO_CMD:
+                case PACKET_TYPES::TX_RADIO_CMD:
+                default: // unrecognized packet types
+                  break;
+              }
 
-            if constexpr(receive_thread_sleep_us > 0) {
-              std::this_thread::sleep_for(std::chrono::microseconds(receive_thread_sleep_us));
+              if constexpr(receive_thread_sleep_us > 0) {
+                std::this_thread::sleep_for(std::chrono::microseconds(receive_thread_sleep_us));
+              }
             }
           }
-
           LOGGER(info) << "start_receive exiting; " << packets_received << " packets received, " << sequence_errors << " sequence errors";
 #ifdef SEQUENCE_ERROR_DIAGNOSTICS
           for(unsigned i =0; i < seq_error_times.size(); i++) {
