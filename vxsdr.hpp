@@ -94,12 +94,11 @@ class vxsdr {
       command_queue.reset();
       response_queue.reset();
 
-      receiver_thread = std::thread(&vxsdr::receiver, this, std::ref(io_context), std::cref(local_receive_endpoint));
-      //receiver_thread = std::thread([=] { receiver(io_context, local_receive_endpoint); });
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
-      sender_thread = std::thread(&vxsdr::sender, this, std::ref(io_context), std::cref(local_send_endpoint), std::cref(destination_endpoint));
-      //sender_thread = std::thread([=] { sender(io_context, local_send_endpoint, destination_endpoint); });
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      //receiver_thread = std::thread(&vxsdr::receiver, this, std::ref(io_context), std::cref(local_receive_endpoint));
+      receiver_thread = std::thread([=] { receiver(io_context, local_receive_endpoint); });
+      //sender_thread = std::thread(&vxsdr::sender, this, std::ref(io_context), std::cref(local_send_endpoint), std::cref(destination_endpoint));
+      sender_thread = std::thread([=] { sender(io_context, local_send_endpoint, destination_endpoint); });
+      std::this_thread::sleep_for(std::chrono::milliseconds(1));
       set_tx_enable(true);
       set_rx_enable(true);
       LOGGER(debug) << "vxsdr constructor complete";
@@ -107,8 +106,6 @@ class vxsdr {
     // destructor
     ~vxsdr() {
       LOGGER(debug) << "vxsdr destructor entered";
-      set_tx_enable(false);
-      set_rx_enable(false);
       LOGGER(debug) << "joining receiver_thread";
       receiver_thread_stop_flag = true;
       if(receiver_thread.joinable()) {
@@ -473,16 +470,14 @@ class vxsdr {
           int network_buffer_size = option.value();
           if(network_buffer_size != network_receive_buffer_bytes) {
             LOGGER(error) << "cannot set network receive buffer size to "
-                          << network_receive_buffer_bytes << "(got " << network_buffer_size << ")";
+                          << network_receive_buffer_bytes << " (got " << network_buffer_size << ")";
           }
           else {
             LOGGER(info) << "network receive buffer size set to " << network_buffer_size;
           }
 
-          if(not sdrptr->receiver_thread_stop_flag) {
-            start_receive();
-            socket.close();
-          }
+          start_receive();
+          socket.close();
         }
         // destructor
         ~udp_receiver() = default;
@@ -669,10 +664,8 @@ class vxsdr {
             LOGGER(info) << "network send buffer size set to " << network_buffer_size;
           }
 
-          if(not sdrptr->sender_thread_stop_flag) {
-            start_send();
-            socket.close();
-          }
+          start_send();
+          socket.close();
         }
         // destructor
         ~udp_sender() = default;
