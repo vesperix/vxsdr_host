@@ -458,13 +458,19 @@ class vxsdr {
         // constructor
         udp_receiver(vxsdr *p, boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint)
           : socket(io_context, local_endpoint) {
-          socket.set_option(boost::asio::ip::udp::socket::reuse_address(true));
-          socket.set_option(boost::asio::socket_base::receive_buffer_size(network_receive_buffer_bytes));
           sdrptr = p;
+          socket.set_option(boost::asio::ip::udp::socket::reuse_address(true));
+          socket.set_option(boost::asio::socket_base::receive_buffer_size(sdrptr->network_receive_buffer_bytes));
           boost::asio::socket_base::receive_buffer_size option;
           socket.get_option(option);
           int network_buffer_size = option.value();
-          LOGGER(info) << "network receive buffer size set to " << network_buffer_size;
+          if(network_buffer_size != sdrptr->network_receive_buffer_bytes) {
+            LOGGER(error) << "cannot set network receive buffer size to "
+                          << sdrptr->network_receive_buffer_bytes << "(got " << network_buffer_size << ")";
+          }
+          else {
+            LOGGER(info) << "network receive buffer size set to " << network_buffer_size;
+          }
 
           if(not sdrptr->receiver_thread_stop_flag) {
             start_receive();
@@ -489,14 +495,21 @@ class vxsdr {
         std::array<uint64_t, UINT8_MAX + 1> packet_types_received = { 0 };
         uint16_t last_seq = 0;
 
-        static int set_receive_timeout_ms(boost::asio::ip::udp::socket &socket, const unsigned timeout_ms) {
+        int set_receive_timeout_ms(const unsigned timeout_ms) {
 #if defined(TARGET_UNIX) || defined(TARGET_MACOS)
           struct timeval timeout = { timeout_ms / 1000, 1000 * (timeout_ms % 1000)};
 #endif
 #if defined(TARGET_WINDOWS)
           DWORD timeout = timeout_ms;
 #endif
-          return ::setsockopt(socket.native_handle(), SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+          int ret = ::setsockopt(socket.native_handle(), SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+          if(ret != 0) {
+            LOGGER(error) << "error setting socket receive timeout: " << errno;
+          }
+          else {
+            LOGGER(debug) << "socket receive timeout set to " << timeout_ms << " ms";
+          }
+          return ret;
         }
 
         // FIXME: diagnostic info gathering: remove when unneeded
@@ -510,10 +523,14 @@ class vxsdr {
           constexpr int    receive_thread_sleep_us        =        0;
           LOGGER(debug) << "start_receive started";
           // FIXME: do we want to use the boost::asio suggested way, or stick with this?
-          set_receive_timeout_ms(socket, 100);
+          set_receive_timeout_ms(100);
+          LOGGER(debug) << "sdrptr->receiver_thread_stop_flag = " << sdrptr->receiver_thread_stop_flag;
           while(not sdrptr->receiver_thread_stop_flag) {
-            LOGGER(debug) << "waiting for receive";
+            LOGGER(debug) << "waiting for receive (" << sizeof(recv_buffer) <<" bytes in buffer)";
             size_t bytes_received = socket.receive_from(boost::asio::buffer(&recv_buffer, sizeof(recv_buffer)), remote);
+            if(bytes_received == 0) {
+              LOGGER(debug) << "timeout";
+            }
             if(bytes_received >= sizeof(packet)) {
               LOGGER(debug) << "packet received";
               packets_received++;
@@ -650,7 +667,14 @@ class vxsdr {
           boost::asio::socket_base::send_buffer_size option;
           socket.get_option(option);
           int network_buffer_size = option.value();
-          LOGGER(info) << "network send buffer size set to " << network_buffer_size;
+
+          if(network_buffer_size != sdrptr->network_send_buffer_bytes) {
+            LOGGER(error) << "cannot set network send buffer size to "
+                          << sdrptr->network_send_buffer_bytes << "(got " << network_buffer_size << ")";
+          }
+          else {
+            LOGGER(info) << "network send buffer size set to " << network_buffer_size;
+          }
 
           if(not sdrptr->sender_thread_stop_flag) {
             start_send();
