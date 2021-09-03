@@ -32,8 +32,8 @@ class vxsdr {
     // parameters of the internal spsc queues (ring buffers)
     static constexpr size_t rx_data_queue_length           =     4096;    // slots in rx data queue
     static constexpr size_t tx_data_queue_length           =     4096;    // slots in tx data queue
-    static constexpr size_t cmd_queue_length               =       64;    // slots in command msg queue
-    static constexpr size_t rsp_queue_length               =      256;    // slots in response msg queue
+    static constexpr size_t command_queue_length           =       64;    // slots in command msg queue
+    static constexpr size_t response_queue_length          =      256;    // slots in response msg queue
 
     // timeouts and waits between tries for queue push/pop
 
@@ -54,16 +54,20 @@ class vxsdr {
     static constexpr unsigned network_receive_buffer_bytes =   4194304;   // ~6 ms at 160 MSPS
 
     // parameters used to monitor status of the radio's internal buffers (on the other end of the network connection)
-    std::atomic<unsigned> tx_buffer_size, tx_buffer_used;
-    std::atomic<unsigned> rx_buffer_size, rx_buffer_used;
-    std::atomic<unsigned> tx_buffer_fill_percent, rx_buffer_fill_percent;
+    std::atomic<unsigned> tx_buffer_size = 0, tx_buffer_used = 0;
+    std::atomic<unsigned> rx_buffer_size = 0, rx_buffer_used = 0;
+    std::atomic<unsigned> tx_buffer_fill_percent = 0, rx_buffer_fill_percent = 0;
+
+    using data_queue_element = largest_data_packet;
+    using command_queue_element = largest_cmd_or_rsp_packet;
+    using response_queue_element = largest_cmd_or_rsp_packet;
 
     // data queues
-    boost::lockfree::spsc_queue<largest_data_packet, boost::lockfree::capacity<rx_data_queue_length> > rx_data_queue;
-    boost::lockfree::spsc_queue<largest_data_packet, boost::lockfree::capacity<tx_data_queue_length> > tx_data_queue;
+    boost::lockfree::spsc_queue<data_queue_element, boost::lockfree::capacity<rx_data_queue_length> > rx_data_queue;
+    boost::lockfree::spsc_queue<data_queue_element, boost::lockfree::capacity<tx_data_queue_length> > tx_data_queue;
     // command and response queues
-    boost::lockfree::spsc_queue<largest_cmd_or_rsp_packet, boost::lockfree::capacity<cmd_queue_length> > command_queue;
-    boost::lockfree::spsc_queue<largest_cmd_or_rsp_packet, boost::lockfree::capacity<rsp_queue_length> > response_queue;
+    boost::lockfree::spsc_queue<command_queue_element, boost::lockfree::capacity<command_queue_length> > command_queue;
+    boost::lockfree::spsc_queue<response_queue_element, boost::lockfree::capacity<response_queue_length> > response_queue;
 
     // Boost context
     boost::asio::io_context io_context;
@@ -73,7 +77,7 @@ class vxsdr {
     std::thread receiver_thread;
 
     // flags used for orderly shutdown
-    std::atomic<bool> sender_thread_stop_flag, receiver_thread_stop_flag;
+    std::atomic<bool> sender_thread_stop_flag = false, receiver_thread_stop_flag = false;
 
   public:
     // constructor
@@ -85,14 +89,6 @@ class vxsdr {
       rx_data_queue.reset();
       command_queue.reset();
       response_queue.reset();
-      sender_thread_stop_flag   = false;
-      receiver_thread_stop_flag = false;
-      tx_buffer_size = 0;
-      tx_buffer_used = 0;
-      rx_buffer_size = 0;
-      rx_buffer_used = 0;
-      tx_buffer_fill_percent = 0.0;
-      rx_buffer_fill_percent = 0.0;
       //sender_thread = std::thread(&vxsdr::sender, this, std::ref(io_context), std::cref(local_send_endpoint), std::cref(destination_endpoint));
       sender_thread = std::thread([=] { sender(io_context, local_send_endpoint, destination_endpoint); });
       //receiver_thread = std::thread(&vxsdr::receiver, this, std::ref(io_context), std::cref(local_receive_endpoint));
@@ -130,7 +126,7 @@ class vxsdr {
     size_t get_rx_data(std::vector<std::complex<int16_t> > &data, size_t n_desired = 0) {
       LOGGER(debug) << "get_rx_data() entered";
       size_t n_popped = 0;
-      largest_data_packet q;
+      data_queue_element q;
 
       data.clear();
       if(n_desired > 0) {
@@ -157,28 +153,32 @@ class vxsdr {
           bool has_time = (bool)(q.hdr.flags | FLAGS::TIME_PRESENT);
           bool has_stream_id = (bool)(q.hdr.flags | FLAGS::STREAM_ID_PRESENT);
           if(not has_time and not has_stream_id) {
-            auto *p = reinterpret_cast<data_packet *>(&q);
+            data_packet p;
+            std::memcpy(&p, &q, std::min(sizeof(q), sizeof(p)));
             size_t data_size = std::min(MAX_DATA_LENGTH_SAMPLES,
-                  (p->hdr.packet_size - sizeof(packet_header)) / sizeof(std::complex<int16_t>));
-            std::copy_n(std::begin(p->data), data_size, std::back_inserter(data));
+                  (p.hdr.packet_size - sizeof(packet_header)) / sizeof(std::complex<int16_t>));
+            std::copy_n(std::begin(p.data), data_size, std::back_inserter(data));
           }
           else if(has_time and not has_stream_id) {
-            auto *p = reinterpret_cast<data_packet_time *>(&q);
+            data_packet_time p;
+            std::memcpy(&p, &q, std::min(sizeof(q), sizeof(p)));
             size_t data_size = std::min(MAX_DATA_LENGTH_SAMPLES,
-                  (p->hdr.packet_size - sizeof(packet_header) - sizeof(time_spec_t)) / sizeof(std::complex<int16_t>));
-            std::copy_n(std::begin(p->data), data_size, std::back_inserter(data));
+                  (p.hdr.packet_size - sizeof(packet_header) - sizeof(time_spec_t)) / sizeof(std::complex<int16_t>));
+            std::copy_n(std::begin(p.data), data_size, std::back_inserter(data));
           }
           else if(has_stream_id and not has_time) {
-            auto *p = reinterpret_cast<data_packet_stream *>(&q);
+            data_packet_stream p;
+            std::memcpy(&p, &q, std::min(sizeof(q), sizeof(p)));
             size_t data_size = std::min(MAX_DATA_LENGTH_SAMPLES,
-                  (p->hdr.packet_size - sizeof(packet_header) - sizeof(stream_spec_t)) / sizeof(std::complex<int16_t>));
-            std::copy_n(std::begin(p->data), data_size, std::back_inserter(data));
+                  (p.hdr.packet_size - sizeof(packet_header) - sizeof(stream_spec_t)) / sizeof(std::complex<int16_t>));
+            std::copy_n(std::begin(p.data), data_size, std::back_inserter(data));
           }
           else {
-            auto *p = reinterpret_cast<data_packet_time_stream *>(&q);
+            data_packet_time_stream p;
+            std::memcpy(&p, &q, std::min(sizeof(q), sizeof(p)));
             size_t data_size = std::min(MAX_DATA_LENGTH_SAMPLES,
-                  (p->hdr.packet_size - sizeof(packet_header) - sizeof(time_spec_t) - sizeof(stream_spec_t)) / sizeof(std::complex<int16_t>));
-            std::copy_n(std::begin(p->data), data_size, std::back_inserter(data));
+                  (p.hdr.packet_size - sizeof(packet_header) - sizeof(time_spec_t) - sizeof(stream_spec_t)) / sizeof(std::complex<int16_t>));
+            std::copy_n(std::begin(p.data), data_size, std::back_inserter(data));
           }
           n_popped++;
         }
@@ -195,15 +195,16 @@ class vxsdr {
       // puts plain data_packets (no time, no stream)
       size_t n_put = 0;
       for(size_t i = 0; i < data.size(); i += MAX_DATA_LENGTH_SAMPLES) {
-        largest_data_packet q;
-        auto *p = reinterpret_cast<data_packet *>(&q);
+        data_queue_element q;
+        data_packet p;
         unsigned n_samples = std::min(MAX_DATA_LENGTH_SAMPLES, data.size() - i);
         unsigned n_data_bytes = n_samples * sizeof(std::complex<int16_t>);
         uint16_t packet_size = sizeof(packet_header) + n_data_bytes;
-        p->hdr = { PACKET_TYPES::TX_SIGNAL_DATA, 0, subdev, 0, packet_size, 0 };
+        p.hdr = { PACKET_TYPES::TX_SIGNAL_DATA, 0, subdev, 0, packet_size, 0 };
         for(unsigned j = 0; j < n_samples; j++) {
-          p->data[j] = data[i + j];
+          p.data[j] = data[i + j];
         }
+        std::memcpy(&q, &p, std::min(sizeof(q), sizeof(p)));
 
         unsigned wait_time_us = 0;
         // setting tx_data_queue_wait_us = 0 results in a busy wait with no timeout
@@ -226,7 +227,7 @@ class vxsdr {
     }
 
     void cmd_queue_push(packet &p) {
-      largest_cmd_or_rsp_packet q;
+      command_queue_element q;
       std::memcpy(&q, &p, std::min((size_t)p.hdr.packet_size, sizeof(q)));
       unsigned wait_time_us = 0;
       // setting command_queue_wait_us = 0 results in a busy wait with no timeout
@@ -482,8 +483,8 @@ class vxsdr {
         vxsdr *sdrptr;
         boost::asio::ip::udp::socket socket;
         boost::asio::ip::udp::endpoint remote;
-        largest_data_packet recv_buffer;
-        largest_cmd_or_rsp_packet cmd_buffer;
+        data_queue_element recv_buffer;
+        command_queue_element cmd_buffer;
         uint64_t packets_received = 0, sequence_errors = 0;
         std::array<uint64_t, UINT8_MAX + 1> packet_types_received = { 0 };
         uint16_t last_seq = 0;
@@ -526,12 +527,14 @@ class vxsdr {
               // tx sginal data acks special cased since they contain throttling information
               case PACKET_TYPES::TX_SIGNAL_DATA_ACK:
                 {
-                  auto *r = reinterpret_cast<tx_signal_data_ack_packet *>(&recv_buffer);
-                  sdrptr->tx_buffer_used = r->tx_buffer_used_bytes;
+                  tx_signal_data_ack_packet r;
+                  std::memcpy(&r, &recv_buffer, std::min(sizeof(r), sizeof(recv_buffer)));
+                  sdrptr->tx_buffer_used = r.tx_buffer_used_bytes;
                   sdrptr->tx_buffer_fill_percent = std::min(100U, (100U * sdrptr->tx_buffer_used) / sdrptr->tx_buffer_size);
                   if(forward_acks) {
-                    auto *p = reinterpret_cast<largest_cmd_or_rsp_packet *>(&recv_buffer);
-                    sdrptr->response_queue.push(*p);
+                    response_queue_element p;
+                    std::memcpy(&p, &r, std::min(sizeof(p), sizeof(r)));
+                    sdrptr->response_queue.push(p);
                   }
                 }
                 break;
@@ -540,28 +543,33 @@ class vxsdr {
                 switch(recv_buffer.hdr.command) {
                   case DEVICE_CMD_RSP::GET_BUFFER_USE_RSP:
                     {
-                      auto *r = reinterpret_cast<get_buffer_use_rsp_packet *>(&recv_buffer);
-                      sdrptr->tx_buffer_used = r->tx_buffer_used_bytes;
-                      sdrptr->rx_buffer_used = r->rx_buffer_used_bytes;
+                      get_buffer_use_rsp_packet r;
+                      std::memcpy(&r, &recv_buffer, std::min(sizeof(r), sizeof(recv_buffer)));
+                      sdrptr->tx_buffer_used = r.tx_buffer_used_bytes;
+                      sdrptr->rx_buffer_used = r.rx_buffer_used_bytes;
                       sdrptr->tx_buffer_fill_percent = std::min(100U, (100U * sdrptr->tx_buffer_used) / sdrptr->tx_buffer_size);
                       sdrptr->rx_buffer_fill_percent = std::min(100U, (100U *  sdrptr->rx_buffer_used) / sdrptr->rx_buffer_size);
-                      auto *p = reinterpret_cast<largest_cmd_or_rsp_packet *>(&recv_buffer);
-                      sdrptr->response_queue.push(*p);
+                      response_queue_element p;
+                      std::memcpy(&p, &r, std::min(sizeof(p), sizeof(r)));
+                      sdrptr->response_queue.push(p);
                     }
                     break;
                   case DEVICE_CMD_RSP::GET_BUFFER_INFO_RSP:
                     {
-                      auto *r = reinterpret_cast<get_buffer_info_rsp_packet *>(&recv_buffer);
-                      sdrptr->tx_buffer_size = r->tx_buffer_size_bytes;
-                      sdrptr->rx_buffer_size = r->rx_buffer_size_bytes;
-                      auto *p = reinterpret_cast<largest_cmd_or_rsp_packet *>(&recv_buffer);
-                      sdrptr->response_queue.push(*p);
+                      get_buffer_info_rsp_packet r;
+                      std::memcpy(&r, &recv_buffer, sizeof(r));
+                      sdrptr->tx_buffer_size = r.tx_buffer_size_bytes;
+                      sdrptr->rx_buffer_size = r.rx_buffer_size_bytes;
+                      response_queue_element p;
+                      std::memcpy(&p, &r, std::min(sizeof(p), sizeof(r)));
+                      sdrptr->response_queue.push(p);
                     }
                     break;
                   default:
                     {
-                      auto *p = reinterpret_cast<largest_cmd_or_rsp_packet *>(&recv_buffer);
-                      sdrptr->response_queue.push(*p);
+                      response_queue_element p;
+                      std::memcpy(&p, &recv_buffer, std::min(sizeof(p), sizeof(recv_buffer)));
+                      sdrptr->response_queue.push(p);
                     }
                     break;
                 }
@@ -570,8 +578,9 @@ class vxsdr {
               case PACKET_TYPES::RX_RADIO_CMD_ACK:
               case PACKET_TYPES::TX_RADIO_CMD_ACK:
                 if(forward_acks) {
-                  auto *p = reinterpret_cast<largest_cmd_or_rsp_packet *>(&recv_buffer);
-                  sdrptr->response_queue.push(*p);
+                  response_queue_element p;
+                  std::memcpy(&p, &recv_buffer, std::min(sizeof(p), sizeof(recv_buffer)));
+                  sdrptr->response_queue.push(p);
                 }
                 break;
               // DEVICE_CMD_RSP handled above
@@ -581,8 +590,9 @@ class vxsdr {
               case PACKET_TYPES::TX_RADIO_CMD_RSP:
               case PACKET_TYPES::TX_RADIO_CMD_ERR:
                 {
-                  auto *p = reinterpret_cast<largest_cmd_or_rsp_packet *>(&recv_buffer);
-                  sdrptr->response_queue.push(*p);
+                  response_queue_element p;
+                  std::memcpy(&p, &recv_buffer, std::min(sizeof(p), sizeof(recv_buffer)));
+                  sdrptr->response_queue.push(p);
                 }
                 break;
               // packet types that should never show up at the host are dropped
@@ -681,8 +691,8 @@ class vxsdr {
         void start_send() {
           LOGGER(debug) << "start_send started";
           static constexpr size_t data_buffer_size = 16, cmd_buffer_size = 16;
-          std::array<largest_data_packet, data_buffer_size> data_buffer;
-          std::array<largest_cmd_or_rsp_packet, cmd_buffer_size> cmd_buffer;
+          std::array<data_queue_element, data_buffer_size> data_buffer;
+          std::array<command_queue_element, cmd_buffer_size> cmd_buffer;
 
           constexpr float throttle_on_percent     = 75;
           constexpr float throttle_off_percent    = 50;
