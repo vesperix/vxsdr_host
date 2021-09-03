@@ -89,10 +89,13 @@ class vxsdr {
       rx_data_queue.reset();
       command_queue.reset();
       response_queue.reset();
-      //sender_thread = std::thread(&vxsdr::sender, this, std::ref(io_context), std::cref(local_send_endpoint), std::cref(destination_endpoint));
-      sender_thread = std::thread([=] { sender(io_context, local_send_endpoint, destination_endpoint); });
-      //receiver_thread = std::thread(&vxsdr::receiver, this, std::ref(io_context), std::cref(local_receive_endpoint));
-      receiver_thread = std::thread([=] { receiver(io_context, local_receive_endpoint); });
+
+      receiver_thread = std::thread(&vxsdr::receiver, this, std::ref(io_context), std::cref(local_receive_endpoint));
+      //receiver_thread = std::thread([=] { receiver(io_context, local_receive_endpoint); });
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      sender_thread = std::thread(&vxsdr::sender, this, std::ref(io_context), std::cref(local_send_endpoint), std::cref(destination_endpoint));
+      //sender_thread = std::thread([=] { sender(io_context, local_send_endpoint, destination_endpoint); });
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
       set_tx_enable(true);
       set_rx_enable(true);
       LOGGER(debug) << "vxsdr constructor complete";
@@ -409,7 +412,7 @@ class vxsdr {
       cmd_queue_push(p);
     }
 
-    void receiver(boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint)
+    void receiver(boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_receive_endpoint)
     {
       LOGGER(debug) << "receiver thread started";
 
@@ -425,12 +428,12 @@ class vxsdr {
         }
       }
 
-      udp_receiver server(this, io_context, local_endpoint);
+      udp_receiver server(this, io_context, local_receive_endpoint);
       io_context.run();
       LOGGER(debug) << "receiver thread finished";
     }
 
-    void sender(boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint,
+    void sender(boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_send_endpoint,
           const boost::asio::ip::udp::endpoint &destination_endpoint)
     {
       LOGGER(debug) << "sender thread started";
@@ -447,7 +450,7 @@ class vxsdr {
         }
       }
 
-      udp_sender server(this, io_context, local_endpoint, destination_endpoint);
+      udp_sender server(this, io_context, local_send_endpoint, destination_endpoint);
       io_context.run();
       LOGGER(debug) << "sender thread finished";
     }
@@ -456,8 +459,8 @@ class vxsdr {
 
       public:
         // constructor
-        udp_receiver(vxsdr *p, boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint)
-          : socket(io_context, local_endpoint) {
+        udp_receiver(vxsdr *p, boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_receive_endpoint)
+          : socket(io_context, local_receive_endpoint) {
           sdrptr = p;
           socket.set_option(boost::asio::ip::udp::socket::reuse_address(true));
           socket.set_option(boost::asio::socket_base::receive_buffer_size(network_receive_buffer_bytes));
@@ -658,8 +661,8 @@ class vxsdr {
 
       public:
         // constructor
-        udp_sender(vxsdr *p, boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint,
-          const boost::asio::ip::udp::endpoint &destination_endpoint) : socket(io_context, local_endpoint) {
+        udp_sender(vxsdr *p, boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_send_endpoint,
+          const boost::asio::ip::udp::endpoint &destination_endpoint) : socket(io_context, local_send_endpoint) {
           sdrptr = p;
           destination = destination_endpoint;
           socket.set_option(boost::asio::socket_base::send_buffer_size(network_send_buffer_bytes));
