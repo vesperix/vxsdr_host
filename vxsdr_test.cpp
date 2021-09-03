@@ -20,7 +20,7 @@
 #include "vxsdr.hpp"
 #include "host_radio_options.hpp"
 
-extern "C" void sig_int_handler(int sig_num) {
+extern "C" void sig_int_handler(int /* sig_num */) {
   LOGGER(fatal) << "terminated by SIGINT (ctrl-C)";
   exit(EXIT_USER_TERMINATED);
 }
@@ -29,7 +29,7 @@ int main(int argc, char *argv[])
 {
   INIT_LOGGER();
   try {
-    LOGGER(info) << argv[0] << " started";
+    LOGGER(info) << "started";
     signal(SIGINT, &sig_int_handler);
     boost::program_options::options_description desc("Command line options");
     boost::program_options::variables_map vm;
@@ -58,7 +58,7 @@ int main(int argc, char *argv[])
     LOGGER(info) << "using rx_gain   " << vm["rx_gain"].as<double>();
 
     if(vm["duration"].as<double>() <= 0.0) {
-      LOGGER(fatal) << "Duration must be positive";
+      LOGGER(fatal) << "duration must be positive";
       return EXIT_CMD_LINE_ERROR;
     }
 
@@ -78,13 +78,13 @@ int main(int argc, char *argv[])
       data[i] = std::complex<int16_t>(10000,0);
     }
 
-    LOGGER(info) << "Sending data...";
+    LOGGER(info) << "sending data...";
 
     radio->tx_start_now_for_n_samples(n_samp);
     radio->put_tx_data(data, n_samp);
     radio->tx_stop_now();
 
-    LOGGER(info) << "Send complete";
+    LOGGER(info) << "send complete";
 /*
     std::string filename = vm["prefix"].as<std::string>();
     filename.append(make_filename_time(std::chrono::system_clock::now(), vm["freq"].as<double>(), vm["rate"].as<double>()));
@@ -107,6 +107,6 @@ int main(int argc, char *argv[])
     return EXIT_INTERNAL_ERROR;
   }
 
-  LOGGER(info) << argv[0] << " finished";
+  LOGGER(info) << "finished";
   return EXIT_SUCCESS;
 }
