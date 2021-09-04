@@ -22,7 +22,7 @@ class vxsdr {
 
   private:
     // socket_receive_timeout setting
-    static constexpr unsigned receive_socket_timeout_ms    =      100;
+    static constexpr unsigned receiver_socket_timeout_ms    =      100;
 
     // thread realtime priority settings
     static constexpr bool thread_set_priority = true;
@@ -81,24 +81,49 @@ class vxsdr {
     std::thread sender_thread;
     std::thread receiver_thread;
 
+    boost::asio::ip::udp::endpoint destination_endpoint;
+
     // flags used for orderly shutdown
     std::atomic<bool> sender_thread_stop_flag = false, receiver_thread_stop_flag = false;
+
+    const bool forward_acks = false;
+
+    uint64_t send_errors = 0, packets_sent = 0, bytes_sent = 0;
+    std::array<uint64_t, UINT8_MAX + 1> packet_types_sent = { 0 };
+
+    uint64_t packets_received = 0, sequence_errors = 0;
+    std::array<uint64_t, UINT8_MAX + 1> packet_types_received = { 0 };
+
+    // FIXME: diagnostic info gathering: remove when unneeded
+#ifdef SEQUENCE_ERROR_DIAGNOSTICS
+    std::vector<std::chrono::time_point<std::chrono::system_clock> > seq_error_times;
+    std::vector<uint8_t> seq_error_packet_type;
+    std::vector<uint16_t> seq_error_counter;
+    std::vector<uint16_t> seq_error_expected;
+#endif // SEQUENCE_ERROR_DIAGNOSTICS
+
+
+
+
+
 
   public:
     // constructor
     vxsdr(const boost::asio::ip::udp::endpoint &local_send_endpoint,
           const boost::asio::ip::udp::endpoint &local_receive_endpoint,
-          const boost::asio::ip::udp::endpoint &destination_endpoint) {
+          const boost::asio::ip::udp::endpoint &radio_endpoint) :
+          sender_socket(context, local_send_endpoint),
+          receiver_socket(context, local_receive_endpoint) {
       LOGGER(debug) << "vxsdr constructor entered";
       tx_data_queue.reset();
       rx_data_queue.reset();
       command_queue.reset();
       response_queue.reset();
-
+      destination_endpoint = radio_endpoint;
       //receiver_thread = std::thread(&vxsdr::receiver, this, std::ref(context), std::cref(local_receive_endpoint));
-      receiver_thread = std::thread([=] { receiver(context, local_receive_endpoint); });
+      receiver_thread = std::thread([=] { receiver(); });
       //sender_thread = std::thread(&vxsdr::sender, this, std::ref(context), std::cref(local_send_endpoint), std::cref(destination_endpoint));
-      sender_thread = std::thread([=] { sender(context, local_send_endpoint, destination_endpoint); });
+      sender_thread = std::thread([=] { sender(); });
       std::this_thread::sleep_for(std::chrono::milliseconds(1));
       set_tx_enable(true);
       set_rx_enable(true);
@@ -401,6 +426,8 @@ class vxsdr {
     }
 
   private:
+    boost::asio::ip::udp::socket sender_socket;
+    boost::asio::ip::udp::socket receiver_socket;
 
     void device_get_buffer_info(const uint8_t subdev, const uint8_t flags = 0) {
       cmd_packet p;
@@ -414,7 +441,7 @@ class vxsdr {
       cmd_queue_push(p);
     }
 
-    void receiver(boost::asio::io_context &context, const boost::asio::ip::udp::endpoint &local_receive_endpoint)
+    void receiver()
     {
       LOGGER(debug) << "receiver thread started";
 
@@ -430,13 +457,12 @@ class vxsdr {
         }
       }
 
-      udp_receiver server(this, context, local_receive_endpoint);
+      udp_receiver();
       context.run();
       LOGGER(debug) << "receiver thread finished";
     }
 
-    void sender(boost::asio::io_context &context, const boost::asio::ip::udp::endpoint &local_send_endpoint,
-          const boost::asio::ip::udp::endpoint &destination_endpoint)
+    void sender()
     {
       LOGGER(debug) << "sender thread started";
 
@@ -452,359 +478,310 @@ class vxsdr {
         }
       }
 
-      udp_sender server(this, context, local_send_endpoint, destination_endpoint);
+      udp_sender();
       context.run();
       LOGGER(debug) << "sender thread finished";
     }
 
-    class udp_receiver {
+    void udp_receiver() {
 
-      public:
-        // constructor
-        udp_receiver(vxsdr *p, boost::asio::io_context &context, const boost::asio::ip::udp::endpoint &local_receive_endpoint)
-          : receive_socket(context, local_receive_endpoint) {
-          receive_socket.set_option(boost::asio::ip::udp::socket::reuse_address(true));
-          receive_socket.set_option(boost::asio::socket_base::receive_buffer_size(network_receive_buffer_bytes));
+      receiver_socket.set_option(boost::asio::ip::udp::socket::reuse_address(true));
+      receiver_socket.set_option(boost::asio::socket_base::receive_buffer_size(network_receive_buffer_bytes));
+      boost::asio::socket_base::receive_buffer_size option;
+      receiver_socket.get_option(option);
+      unsigned network_buffer_size = option.value();
+      if(network_buffer_size != network_receive_buffer_bytes) {
+        LOGGER(error) << "cannot set network receive buffer size to "
+                      << network_receive_buffer_bytes << " (got " << network_buffer_size << ")";
+      }
+      else {
+        LOGGER(info) << "network receive buffer size set to " << network_buffer_size;
+      }
 
-          boost::asio::socket_base::receive_buffer_size option;
-          receive_socket.get_option(option);
-          unsigned network_buffer_size = option.value();
-          if(network_buffer_size != network_receive_buffer_bytes) {
-            LOGGER(error) << "cannot set network receive buffer size to "
-                          << network_receive_buffer_bytes << " (got " << network_buffer_size << ")";
-          }
-          else {
-            LOGGER(info) << "network receive buffer size set to " << network_buffer_size;
-          }
+      start_receive();
+      receiver_socket.close();
+    }
 
-          sdrptr = p;
-          start_receive();
-          receive_socket.close();
-        }
-        // destructor
-        ~udp_receiver() = default;
-        // disable copy and move
-        udp_receiver(const udp_receiver &) = delete;
-        udp_receiver& operator=(const udp_receiver &) = delete;
-        udp_receiver(udp_receiver &&) = delete;
-        udp_receiver& operator=(udp_receiver &&) = delete;
+    void start_receive() {
+      LOGGER(debug) << "start_receive started";
+      boost::asio::ip::udp::endpoint remote_endpoint;
+      uint16_t last_seq = 0;
 
-      private:
-        const bool forward_acks = false;
-        vxsdr *sdrptr;
-        boost::asio::ip::udp::socket receive_socket;
-        boost::asio::ip::udp::endpoint remote;
+      while(not receiver_thread_stop_flag) {
 
-        uint64_t packets_received = 0, sequence_errors = 0;
-        std::array<uint64_t, UINT8_MAX + 1> packet_types_received = { 0 };
-
-        // FIXME: diagnostic info gathering: remove when unneeded
-#ifdef SEQUENCE_ERROR_DIAGNOSTICS
-        std::vector<std::chrono::time_point<std::chrono::system_clock> > seq_error_times;
-        std::vector<uint8_t> seq_error_packet_type;
-        std::vector<uint16_t> seq_error_counter;
-        std::vector<uint16_t> seq_error_expected;
-#endif // SEQUENCE_ERROR_DIAGNOSTICS
-        void start_receive() {
-          LOGGER(debug) << "start_receive started";
-
-          uint16_t last_seq = 0;
-
-          while(not sdrptr->receiver_thread_stop_flag) {
-
-//            size_t bytes_received = receive_socket.receive_from(boost::asio::buffer(&recv_buffer, sizeof(recv_buffer)), remote);
+//            size_t bytes_received = receiver_socket.receive_from(boost::asio::buffer(&recv_buffer, sizeof(recv_buffer)), remote);
 /*
 https://www.boost.org/doc/libs/1_62_0/doc/html/boost_asio/example/cpp11/futures/daytime_client.cpp
 
-    std::array<char, 128> recv_buf;
-    udp::endpoint sender_endpoint;
-    std::future<std::size_t> recv_length =
-      socket.async_receive_from(
-          boost::asio::buffer(recv_buf),
-          sender_endpoint,
-          boost::asio::use_future);
+std::array<char, 128> recv_buf;
+udp::endpoint sender_endpoint;
+std::future<std::size_t> recv_length =
+  socket.async_receive_from(
+      boost::asio::buffer(recv_buf),
+      sender_endpoint,
+      boost::asio::use_future);
 
-    // Do other things here while the receive completes.
+// Do other things here while the receive completes.
 
-    std::cout.write(
-        recv_buf.data(),
-        recv_length.get()); // Blocks until receive is complete.
+std::cout.write(
+    recv_buf.data(),
+    recv_length.get()); // Blocks until receive is complete.
 */
-            static data_queue_element recv_buffer;
-            size_t bytes_received = 0;
-            std::future<size_t> result = receive_socket.async_receive_from(boost::asio::buffer(&recv_buffer, sizeof(recv_buffer)), remote, boost::asio::use_future);
-            if(result.wait_for(std::chrono::milliseconds(receive_socket_timeout_ms)) == std::future_status::timeout) {
-              bytes_received = 0;
-              //LOGGER(debug) << "timeout";
-            }
-            else {
-              bytes_received = result.get();
-              LOGGER(debug) << "packet received";
-            }
+        data_queue_element recv_buffer;
+        size_t bytes_received = 0;
+        std::future<size_t> result = receiver_socket.async_receive_from(boost::asio::buffer(&recv_buffer, sizeof(recv_buffer)), remote_endpoint, boost::asio::use_future);
+        if(result.wait_for(std::chrono::milliseconds(receiver_socket_timeout_ms)) == std::future_status::timeout) {
+          bytes_received = 0;
+          //LOGGER(debug) << "timeout";
+        }
+        else {
+          bytes_received = result.get();
+          LOGGER(debug) << "packet received";
+        }
 
-            if(bytes_received >= sizeof(packet)) {
-              packets_received++;
-              packet_types_received[recv_buffer.hdr.packet_type]++;
+        if(bytes_received >= sizeof(packet) and remote_endpoint == destination_endpoint) {
+          packets_received++;
+          packet_types_received[recv_buffer.hdr.packet_type]++;
 
-              if(packets_received > 1 and recv_buffer.hdr.sequence_counter != (uint16_t)(last_seq + 1)) {
-                sequence_errors++;
-  #ifdef SEQUENCE_ERROR_DIAGNOSTICS
-                seq_error_times.push_back(std::chrono::system_clock::now());
-                seq_error_packet_type.push_back(recv_buffer.hdr.packet_type);
-                seq_error_counter.push_back(recv_buffer.hdr.sequence_counter);
-                seq_error_expected.push_back((uint16_t)(last_seq + 1));
-  #endif // SEQUENCE_ERROR_DIAGNOSTICS
-              }
-
-              last_seq = recv_buffer.hdr.sequence_counter;
-              switch(recv_buffer.hdr.packet_type) {
-                // receive buffers go into the rx data queue
-                case PACKET_TYPES::RX_SIGNAL_DATA:
-                  if(not sdrptr->rx_data_queue.push(recv_buffer)) {
-                    LOGGER(error) << "error pushing to rx_data_queue";
-                  }
-                  break;
-                // tx sginal data acks special cased since they contain throttling information
-                case PACKET_TYPES::TX_SIGNAL_DATA_ACK:
-                  {
-                    tx_signal_data_ack_packet r;
-                    std::memcpy(&r, &recv_buffer, std::min(sizeof(r), sizeof(recv_buffer)));
-                    sdrptr->tx_buffer_used = r.tx_buffer_used_bytes;
-                    sdrptr->tx_buffer_fill_percent = std::min(100U, (100U * sdrptr->tx_buffer_used) / sdrptr->tx_buffer_size);
-                    if(forward_acks) {
-                      response_queue_element p;
-                      std::memcpy(&p, &r, std::min(sizeof(p), sizeof(r)));
-                      sdrptr->response_queue.push(p);
-                    }
-                  }
-                  break;
-                // the buffer info commands are special cased since they can also be used for TX throttling
-                case PACKET_TYPES::DEVICE_CMD_RSP:
-                  switch(recv_buffer.hdr.command) {
-                    case DEVICE_CMD_RSP::GET_BUFFER_USE_RSP:
-                      {
-                        get_buffer_use_rsp_packet r;
-                        std::memcpy(&r, &recv_buffer, std::min(sizeof(r), sizeof(recv_buffer)));
-                        sdrptr->tx_buffer_used = r.tx_buffer_used_bytes;
-                        sdrptr->rx_buffer_used = r.rx_buffer_used_bytes;
-                        sdrptr->tx_buffer_fill_percent = std::min(100U, (100U * sdrptr->tx_buffer_used) / sdrptr->tx_buffer_size);
-                        sdrptr->rx_buffer_fill_percent = std::min(100U, (100U *  sdrptr->rx_buffer_used) / sdrptr->rx_buffer_size);
-                        response_queue_element p;
-                        std::memcpy(&p, &r, std::min(sizeof(p), sizeof(r)));
-                        sdrptr->response_queue.push(p);
-                      }
-                      break;
-                    case DEVICE_CMD_RSP::GET_BUFFER_INFO_RSP:
-                      {
-                        get_buffer_info_rsp_packet r;
-                        std::memcpy(&r, &recv_buffer, sizeof(r));
-                        sdrptr->tx_buffer_size = r.tx_buffer_size_bytes;
-                        sdrptr->rx_buffer_size = r.rx_buffer_size_bytes;
-                        response_queue_element p;
-                        std::memcpy(&p, &r, std::min(sizeof(p), sizeof(r)));
-                        sdrptr->response_queue.push(p);
-                      }
-                      break;
-                    default:
-                      {
-                        response_queue_element p;
-                        std::memcpy(&p, &recv_buffer, std::min(sizeof(p), sizeof(recv_buffer)));
-                        sdrptr->response_queue.push(p);
-                      }
-                      break;
-                  }
-                  break;
-                case PACKET_TYPES::DEVICE_CMD_ACK:
-                case PACKET_TYPES::RX_RADIO_CMD_ACK:
-                case PACKET_TYPES::TX_RADIO_CMD_ACK:
-                  if(forward_acks) {
-                    response_queue_element p;
-                    std::memcpy(&p, &recv_buffer, std::min(sizeof(p), sizeof(recv_buffer)));
-                    sdrptr->response_queue.push(p);
-                  }
-                  break;
-                // DEVICE_CMD_RSP handled above
-                case PACKET_TYPES::DEVICE_CMD_ERR:
-                case PACKET_TYPES::RX_RADIO_CMD_RSP:
-                case PACKET_TYPES::RX_RADIO_CMD_ERR:
-                case PACKET_TYPES::TX_RADIO_CMD_RSP:
-                case PACKET_TYPES::TX_RADIO_CMD_ERR:
-                  {
-                    response_queue_element p;
-                    std::memcpy(&p, &recv_buffer, std::min(sizeof(p), sizeof(recv_buffer)));
-                    sdrptr->response_queue.push(p);
-                  }
-                  break;
-                // packet types that should never show up at the host are dropped
-                case PACKET_TYPES::TX_SIGNAL_DATA:
-                case PACKET_TYPES::DEVICE_CMD:
-                case PACKET_TYPES::RX_RADIO_CMD:
-                case PACKET_TYPES::TX_RADIO_CMD:
-                default: // unrecognized packet types
-                  break;
-              }
-            }
-          }
-          LOGGER(info) << "start_receive exiting; " << packets_received << " packets received, " << sequence_errors << " sequence errors";
+          if(packets_received > 1 and recv_buffer.hdr.sequence_counter != (uint16_t)(last_seq + 1)) {
+            sequence_errors++;
 #ifdef SEQUENCE_ERROR_DIAGNOSTICS
-          for(unsigned i =0; i < seq_error_times.size(); i++) {
-            LOGGER(info) << boost::format(" %30s %20s %8d %8d") % format_time(seq_error_times[i]) % packet_type_to_name(seq_error_packet_type[i])
-                                                                    % seq_error_counter[i] % seq_error_expected[i];
-          }
+            seq_error_times.push_back(std::chrono::system_clock::now());
+            seq_error_packet_type.push_back(recv_buffer.hdr.packet_type);
+            seq_error_counter.push_back(recv_buffer.hdr.sequence_counter);
+            seq_error_expected.push_back((uint16_t)(last_seq + 1));
 #endif // SEQUENCE_ERROR_DIAGNOSTICS
-          for(unsigned i = 0; i < packet_types_received.size(); i++) {
-            if(packet_types_received[i] > 0) {
-              LOGGER(info) << (boost::format("   %12d %20s (%d)") % packet_types_received[i] % packet_type_to_name(i) % i);
-            }
-          }
-        }
-    };
-
-    class udp_sender {
-
-      public:
-        // constructor
-        udp_sender(vxsdr *p, boost::asio::io_context &context, const boost::asio::ip::udp::endpoint &local_send_endpoint,
-          const boost::asio::ip::udp::endpoint &destination_endpoint) : send_socket(context, local_send_endpoint) {
-          sdrptr = p;
-          destination = destination_endpoint;
-          send_socket.set_option(boost::asio::socket_base::send_buffer_size(network_send_buffer_bytes));
-
-          boost::asio::socket_base::send_buffer_size option;
-          send_socket.get_option(option);
-          int network_buffer_size = option.value();
-
-          if(network_buffer_size != network_send_buffer_bytes) {
-            LOGGER(error) << "cannot set network send buffer size to "
-                          << network_send_buffer_bytes << "(got " << network_buffer_size << ")";
-          }
-          else {
-            LOGGER(info) << "network send buffer size set to " << network_buffer_size;
           }
 
-          start_send();
-          send_socket.close();
-        }
-        // destructor
-        ~udp_sender() = default;
-        // disable copy and move
-        udp_sender(const udp_sender &) = delete;
-        udp_sender& operator=(const udp_sender &) = delete;
-        udp_sender(udp_sender &&) = delete;
-        udp_sender& operator=(udp_sender &&) = delete;
-      private:
-        vxsdr *sdrptr;
-        boost::asio::ip::udp::socket send_socket;
-        boost::asio::ip::udp::endpoint destination;
-        std::array<uint64_t, UINT8_MAX + 1> packet_types_processed = { 0 };
-        uint64_t send_errors = 0, packets_sent = 0, bytes_sent = 0;
-
-        void send_packet(packet &packet) {
-          packet_types_processed[packet.hdr.packet_type]++;
-          packet.hdr.sequence_counter = (uint16_t)(packets_sent++ % (UINT16_MAX + 1));
-          size_t bytes = send_socket.send_to(boost::asio::buffer(&packet, packet.hdr.packet_size), destination);
-          if(bytes != packet.hdr.packet_size) {
-            send_errors++;
-          }
-          bytes_sent += bytes;
-        }
-
-        void initialize_sdr(const uint8_t device_subdev, const uint8_t tx_subdev, const uint8_t rx_subdev) {
-          // FIXME: implement reset    sdrptr->device_reset();
-          sdrptr->tx_stop_now(tx_subdev);
-          sdrptr->rx_stop_now(rx_subdev);
-          // get device buffer sizes
-          sdrptr->device_get_buffer_info(device_subdev);
-          // wait for the response come back and be processed
-          std::this_thread::sleep_for(std::chrono::milliseconds(100));
-          // clear the status registers
-          sdrptr->device_clear_status(device_subdev);
-          sdrptr->device_get_status(device_subdev);
-        }
-
-        void close_sdr(const uint8_t device_subdev, const uint8_t tx_subdev, const uint8_t rx_subdev) {
-          // get the status at the end
-          sdrptr->device_get_status(device_subdev);
-          // send a stop, requesting an ack so that the rx will see an incoming packet
-          sdrptr->tx_stop_now(tx_subdev, FLAGS::REQUEST_ACK);
-          sdrptr->rx_stop_now(rx_subdev, FLAGS::REQUEST_ACK);
-        }
-
-        void start_send() {
-          LOGGER(debug) << "start_send started";
-          static constexpr size_t data_buffer_size = 16, cmd_buffer_size = 16;
-          std::array<data_queue_element, data_buffer_size> data_buffer;
-          std::array<command_queue_element, cmd_buffer_size> cmd_buffer;
-
-          constexpr float throttle_on_percent     = 75;
-          constexpr float throttle_off_percent    = 50;
-          bool throttling = false;
-          constexpr unsigned throttle_amount_us   = 10; // send time for 8200 bytes over 10 GbE is about 6.7 us
-          constexpr unsigned send_thread_sleep_us =  5;
-
-          const uint8_t device_subdev = 0, tx_subdev = 0, rx_subdev = 0;
-
-          initialize_sdr(device_subdev, tx_subdev, rx_subdev);
-
-          uint64_t last_check = 0;
-          constexpr uint64_t buffer_check_interval = 100; // current buffer size is about 1000 data packets
-
-          while(not sdrptr->sender_thread_stop_flag) {
-            if(sdrptr->command_queue.read_available() > 0) {
-              size_t n_popped = sdrptr->command_queue.pop(&cmd_buffer.front(), cmd_buffer.size());
-              for(size_t i = 0; i < n_popped; i++) {
-                if(packets_sent - last_check > buffer_check_interval) {
-                  // request ack to update buffer use
-                  cmd_buffer[i].hdr.flags |= FLAGS::REQUEST_ACK;
-                  send_packet(cmd_buffer[i]);
-                  last_check = packets_sent;
-                }
-                else {
-                  send_packet(cmd_buffer[i]);
+          last_seq = recv_buffer.hdr.sequence_counter;
+          switch(recv_buffer.hdr.packet_type) {
+            // receive buffers go into the rx data queue
+            case PACKET_TYPES::RX_SIGNAL_DATA:
+              if(not rx_data_queue.push(recv_buffer)) {
+                LOGGER(error) << "error pushing to rx_data_queue";
+              }
+              break;
+            // tx sginal data acks special cased since they contain throttling information
+            case PACKET_TYPES::TX_SIGNAL_DATA_ACK:
+              {
+                tx_signal_data_ack_packet r;
+                std::memcpy(&r, &recv_buffer, std::min(sizeof(r), sizeof(recv_buffer)));
+                tx_buffer_used = r.tx_buffer_used_bytes;
+                tx_buffer_fill_percent = std::min(100U, (100U * tx_buffer_used) / tx_buffer_size);
+                if(forward_acks) {
+                  response_queue_element p;
+                  std::memcpy(&p, &r, std::min(sizeof(p), sizeof(r)));
+                  response_queue.push(p);
                 }
               }
-            }
-            // FIXME: is a timeout needed?
-            else if(sdrptr->tx_data_queue.read_available() > 0) {
-              size_t n_popped = sdrptr->tx_data_queue.pop(&data_buffer.front(), data_buffer.size());
-              for(size_t i = 0; i < n_popped; i++) {
-                if(packets_sent - last_check > buffer_check_interval) {
-                  // request ack to update buffer use
-                  data_buffer[i].hdr.flags |= FLAGS::REQUEST_ACK;
-                  send_packet(data_buffer[i]);
-                  last_check = packets_sent;
-                }
-                else {
-                  send_packet(data_buffer[i]);
-                }
-                // throttle if needed
-                if(sdrptr->tx_buffer_fill_percent > throttle_on_percent) {
-                  throttling = true;
-                }
-                else if(sdrptr->tx_buffer_fill_percent <= throttle_off_percent) {
-                  throttling = false;
-                }
-                if(throttling) {
-                  std::this_thread::sleep_for(std::chrono::microseconds(throttle_amount_us));
-                }
+              break;
+            // the buffer info commands are special cased since they can also be used for TX throttling
+            case PACKET_TYPES::DEVICE_CMD_RSP:
+              switch(recv_buffer.hdr.command) {
+                case DEVICE_CMD_RSP::GET_BUFFER_USE_RSP:
+                  {
+                    get_buffer_use_rsp_packet r;
+                    std::memcpy(&r, &recv_buffer, std::min(sizeof(r), sizeof(recv_buffer)));
+                    tx_buffer_used = r.tx_buffer_used_bytes;
+                    rx_buffer_used = r.rx_buffer_used_bytes;
+                    tx_buffer_fill_percent = std::min(100U, (100U * tx_buffer_used) / tx_buffer_size);
+                    rx_buffer_fill_percent = std::min(100U, (100U *  rx_buffer_used) / rx_buffer_size);
+                    response_queue_element p;
+                    std::memcpy(&p, &r, std::min(sizeof(p), sizeof(r)));
+                    response_queue.push(p);
+                  }
+                  break;
+                case DEVICE_CMD_RSP::GET_BUFFER_INFO_RSP:
+                  {
+                    get_buffer_info_rsp_packet r;
+                    std::memcpy(&r, &recv_buffer, sizeof(r));
+                    tx_buffer_size = r.tx_buffer_size_bytes;
+                    rx_buffer_size = r.rx_buffer_size_bytes;
+                    response_queue_element p;
+                    std::memcpy(&p, &r, std::min(sizeof(p), sizeof(r)));
+                    response_queue.push(p);
+                  }
+                  break;
+                default:
+                  {
+                    response_queue_element p;
+                    std::memcpy(&p, &recv_buffer, std::min(sizeof(p), sizeof(recv_buffer)));
+                    response_queue.push(p);
+                  }
+                  break;
               }
+              break;
+            case PACKET_TYPES::DEVICE_CMD_ACK:
+            case PACKET_TYPES::RX_RADIO_CMD_ACK:
+            case PACKET_TYPES::TX_RADIO_CMD_ACK:
+              if(forward_acks) {
+                response_queue_element p;
+                std::memcpy(&p, &recv_buffer, std::min(sizeof(p), sizeof(recv_buffer)));
+                response_queue.push(p);
+              }
+              break;
+            // DEVICE_CMD_RSP handled above
+            case PACKET_TYPES::DEVICE_CMD_ERR:
+            case PACKET_TYPES::RX_RADIO_CMD_RSP:
+            case PACKET_TYPES::RX_RADIO_CMD_ERR:
+            case PACKET_TYPES::TX_RADIO_CMD_RSP:
+            case PACKET_TYPES::TX_RADIO_CMD_ERR:
+              {
+                response_queue_element p;
+                std::memcpy(&p, &recv_buffer, std::min(sizeof(p), sizeof(recv_buffer)));
+                response_queue.push(p);
+              }
+              break;
+            // packet types that should never show up at the host are dropped
+            case PACKET_TYPES::TX_SIGNAL_DATA:
+            case PACKET_TYPES::DEVICE_CMD:
+            case PACKET_TYPES::RX_RADIO_CMD:
+            case PACKET_TYPES::TX_RADIO_CMD:
+            default: // unrecognized packet types
+              break;
+          }
+        }
+      }
+      LOGGER(info) << "start_receive exiting; " << packets_received << " packets received, " << sequence_errors << " sequence errors";
+#ifdef SEQUENCE_ERROR_DIAGNOSTICS
+      for(unsigned i =0; i < seq_error_times.size(); i++) {
+        LOGGER(info) << boost::format(" %30s %20s %8d %8d") % format_time(seq_error_times[i]) % packet_type_to_name(seq_error_packet_type[i])
+                                                                % seq_error_counter[i] % seq_error_expected[i];
+      }
+#endif // SEQUENCE_ERROR_DIAGNOSTICS
+      for(unsigned i = 0; i < packet_types_received.size(); i++) {
+        if(packet_types_received[i] > 0) {
+          LOGGER(info) << (boost::format("   %12d %20s (%d)") % packet_types_received[i] % packet_type_to_name(i) % i);
+        }
+      }
+    }
+
+    void udp_sender()
+    {
+
+      sender_socket.set_option(boost::asio::socket_base::send_buffer_size(network_send_buffer_bytes));
+
+      boost::asio::socket_base::send_buffer_size option;
+      sender_socket.get_option(option);
+      int network_buffer_size = option.value();
+
+      if(network_buffer_size != network_send_buffer_bytes) {
+        LOGGER(error) << "cannot set network send buffer size to "
+                      << network_send_buffer_bytes << "(got " << network_buffer_size << ")";
+      }
+      else {
+        LOGGER(info) << "network send buffer size set to " << network_buffer_size;
+      }
+
+      start_send();
+      sender_socket.close();
+    }
+
+    void send_packet(packet &packet) {
+      packet_types_sent[packet.hdr.packet_type]++;
+      packet.hdr.sequence_counter = (uint16_t)(packets_sent++ % (UINT16_MAX + 1));
+      size_t bytes = sender_socket.send_to(boost::asio::buffer(&packet, packet.hdr.packet_size), destination_endpoint);
+      if(bytes != packet.hdr.packet_size) {
+        send_errors++;
+      }
+      bytes_sent += bytes;
+    }
+
+    void initialize_sdr(const uint8_t device_subdev, const uint8_t tx_subdev, const uint8_t rx_subdev) {
+      // FIXME: implement reset    device_reset();
+      tx_stop_now(tx_subdev);
+      rx_stop_now(rx_subdev);
+      // get device buffer sizes
+      device_get_buffer_info(device_subdev);
+      // wait for the response come back and be processed
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      // clear the status registers
+      device_clear_status(device_subdev);
+      device_get_status(device_subdev);
+    }
+
+    void close_sdr(const uint8_t device_subdev, const uint8_t tx_subdev, const uint8_t rx_subdev) {
+      // get the status at the end
+      device_get_status(device_subdev);
+      // send a stop, requesting an ack so that the rx will see an incoming packet
+      tx_stop_now(tx_subdev, FLAGS::REQUEST_ACK);
+      rx_stop_now(rx_subdev, FLAGS::REQUEST_ACK);
+    }
+
+    void start_send() {
+      LOGGER(debug) << "start_send started";
+      static constexpr size_t data_buffer_size = 16, cmd_buffer_size = 16;
+      std::array<data_queue_element, data_buffer_size> data_buffer;
+      std::array<command_queue_element, cmd_buffer_size> cmd_buffer;
+
+      constexpr float throttle_on_percent     = 75;
+      constexpr float throttle_off_percent    = 50;
+      bool throttling = false;
+      constexpr unsigned throttle_amount_us   = 10; // send time for 8200 bytes over 10 GbE is about 6.7 us
+      constexpr unsigned send_thread_sleep_us =  5;
+
+      const uint8_t device_subdev = 0, tx_subdev = 0, rx_subdev = 0;
+
+      initialize_sdr(device_subdev, tx_subdev, rx_subdev);
+
+      uint64_t last_check = 0;
+      constexpr uint64_t buffer_check_interval = 100; // current buffer size is about 1000 data packets
+
+      while(not sender_thread_stop_flag) {
+        if(command_queue.read_available() > 0) {
+          size_t n_popped = command_queue.pop(&cmd_buffer.front(), cmd_buffer.size());
+          for(size_t i = 0; i < n_popped; i++) {
+            if(packets_sent - last_check > buffer_check_interval) {
+              // request ack to update buffer use
+              cmd_buffer[i].hdr.flags |= FLAGS::REQUEST_ACK;
+              send_packet(cmd_buffer[i]);
+              last_check = packets_sent;
             }
             else {
-              if constexpr(send_thread_sleep_us > 0) {
-                std::this_thread::sleep_for(std::chrono::microseconds(send_thread_sleep_us));
-              }
-            }
-          }
-          close_sdr(device_subdev, tx_subdev, rx_subdev);
-          std::this_thread::sleep_for(std::chrono::milliseconds(100));
-          LOGGER(info) << "start_send exiting; " << packets_sent << " packets sent, " << send_errors << " send errors";
-          for(unsigned i = 0; i < packet_types_processed.size(); i++) {
-            if(packet_types_processed[i] > 0) {
-              LOGGER(info) << (boost::format("   %12d %20s (%d)") % packet_types_processed[i] % packet_type_to_name(i) % i);
+              send_packet(cmd_buffer[i]);
             }
           }
         }
-    };
+        // FIXME: is a timeout needed?
+        else if(tx_data_queue.read_available() > 0) {
+          size_t n_popped = tx_data_queue.pop(&data_buffer.front(), data_buffer.size());
+          for(size_t i = 0; i < n_popped; i++) {
+            if(packets_sent - last_check > buffer_check_interval) {
+              // request ack to update buffer use
+              data_buffer[i].hdr.flags |= FLAGS::REQUEST_ACK;
+              send_packet(data_buffer[i]);
+              last_check = packets_sent;
+            }
+            else {
+              send_packet(data_buffer[i]);
+            }
+            // throttle if needed
+            if(tx_buffer_fill_percent > throttle_on_percent) {
+              throttling = true;
+            }
+            else if(tx_buffer_fill_percent <= throttle_off_percent) {
+              throttling = false;
+            }
+            if(throttling) {
+              std::this_thread::sleep_for(std::chrono::microseconds(throttle_amount_us));
+            }
+          }
+        }
+        else {
+          if constexpr(send_thread_sleep_us > 0) {
+            std::this_thread::sleep_for(std::chrono::microseconds(send_thread_sleep_us));
+          }
+        }
+      }
+      close_sdr(device_subdev, tx_subdev, rx_subdev);
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      LOGGER(info) << "start_send exiting; " << packets_sent << " packets sent, " << send_errors << " send errors";
+      for(unsigned i = 0; i < packet_types_sent.size(); i++) {
+        if(packet_types_sent[i] > 0) {
+          LOGGER(info) << (boost::format("   %12d %20s (%d)") % packet_types_sent[i] % packet_type_to_name(i) % i);
+        }
+      }
+    }
 };
 
 #endif // VXSDR_HPP
