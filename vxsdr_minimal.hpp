@@ -15,8 +15,8 @@
 #include "vxsdr_header.hpp"
 #include "packet_proc.hpp"
 
-#ifndef VXSDR_HPP
-#define VXSDR_HPP
+#ifndef VXSDR_MINIMAL_HPP
+#define VXSDR_MINIMAL_HPP
 
 class vxsdr {
 
@@ -340,4 +340,4 @@ class vxsdr {
     }
 };
 
-#endif // VXSDR_HPP
+#endif // VXSDR_MINIMAL_HPP
