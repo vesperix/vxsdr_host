@@ -462,12 +462,12 @@ class vxsdr {
       public:
         // constructor
         udp_receiver(vxsdr *p, boost::asio::io_context &context, const boost::asio::ip::udp::endpoint &local_receive_endpoint)
-          : socket(context, local_receive_endpoint) {
-          socket.set_option(boost::asio::ip::udp::socket::reuse_address(true));
-          socket.set_option(boost::asio::socket_base::receive_buffer_size(network_receive_buffer_bytes));
+          : receive_socket(context, local_receive_endpoint) {
+          receive_socket.set_option(boost::asio::ip::udp::socket::reuse_address(true));
+          receive_socket.set_option(boost::asio::socket_base::receive_buffer_size(network_receive_buffer_bytes));
 
           boost::asio::socket_base::receive_buffer_size option;
-          socket.get_option(option);
+          receive_socket.get_option(option);
           unsigned network_buffer_size = option.value();
           if(network_buffer_size != network_receive_buffer_bytes) {
             LOGGER(error) << "cannot set network receive buffer size to "
@@ -479,7 +479,7 @@ class vxsdr {
 
           sdrptr = p;
           start_receive();
-          socket.close();
+          receive_socket.close();
         }
         // destructor
         ~udp_receiver() = default;
@@ -492,13 +492,12 @@ class vxsdr {
       private:
         const bool forward_acks = false;
         vxsdr *sdrptr;
-        boost::asio::ip::udp::socket socket;
+        boost::asio::ip::udp::socket receive_socket;
         boost::asio::ip::udp::endpoint remote;
-        data_queue_element recv_buffer;
-        command_queue_element cmd_buffer;
+
         uint64_t packets_received = 0, sequence_errors = 0;
         std::array<uint64_t, UINT8_MAX + 1> packet_types_received = { 0 };
-        uint16_t last_seq = 0;
+
         // FIXME: diagnostic info gathering: remove when unneeded
 #ifdef SEQUENCE_ERROR_DIAGNOSTICS
         std::vector<std::chrono::time_point<std::chrono::system_clock> > seq_error_times;
@@ -508,9 +507,12 @@ class vxsdr {
 #endif // SEQUENCE_ERROR_DIAGNOSTICS
         void start_receive() {
           LOGGER(debug) << "start_receive started";
+
+          uint16_t last_seq = 0;
+
           while(not sdrptr->receiver_thread_stop_flag) {
 
-//            size_t bytes_received = socket.receive_from(boost::asio::buffer(&recv_buffer, sizeof(recv_buffer)), remote);
+//            size_t bytes_received = receive_socket.receive_from(boost::asio::buffer(&recv_buffer, sizeof(recv_buffer)), remote);
 /*
 https://www.boost.org/doc/libs/1_62_0/doc/html/boost_asio/example/cpp11/futures/daytime_client.cpp
 
@@ -528,8 +530,9 @@ https://www.boost.org/doc/libs/1_62_0/doc/html/boost_asio/example/cpp11/futures/
         recv_buf.data(),
         recv_length.get()); // Blocks until receive is complete.
 */
+            static data_queue_element recv_buffer;
             size_t bytes_received = 0;
-            std::future<size_t> result = socket.async_receive_from(boost::asio::buffer(&recv_buffer, sizeof(recv_buffer)), remote, boost::asio::use_future);
+            std::future<size_t> result = receive_socket.async_receive_from(boost::asio::buffer(&recv_buffer, sizeof(recv_buffer)), remote, boost::asio::use_future);
             if(result.wait_for(std::chrono::milliseconds(receive_socket_timeout_ms)) == std::future_status::timeout) {
               bytes_received = 0;
               //LOGGER(debug) << "timeout";
@@ -662,13 +665,13 @@ https://www.boost.org/doc/libs/1_62_0/doc/html/boost_asio/example/cpp11/futures/
       public:
         // constructor
         udp_sender(vxsdr *p, boost::asio::io_context &context, const boost::asio::ip::udp::endpoint &local_send_endpoint,
-          const boost::asio::ip::udp::endpoint &destination_endpoint) : socket(context, local_send_endpoint) {
+          const boost::asio::ip::udp::endpoint &destination_endpoint) : send_socket(context, local_send_endpoint) {
           sdrptr = p;
           destination = destination_endpoint;
-          socket.set_option(boost::asio::socket_base::send_buffer_size(network_send_buffer_bytes));
+          send_socket.set_option(boost::asio::socket_base::send_buffer_size(network_send_buffer_bytes));
 
           boost::asio::socket_base::send_buffer_size option;
-          socket.get_option(option);
+          send_socket.get_option(option);
           int network_buffer_size = option.value();
 
           if(network_buffer_size != network_send_buffer_bytes) {
@@ -680,7 +683,7 @@ https://www.boost.org/doc/libs/1_62_0/doc/html/boost_asio/example/cpp11/futures/
           }
 
           start_send();
-          socket.close();
+          send_socket.close();
         }
         // destructor
         ~udp_sender() = default;
@@ -691,7 +694,7 @@ https://www.boost.org/doc/libs/1_62_0/doc/html/boost_asio/example/cpp11/futures/
         udp_sender& operator=(udp_sender &&) = delete;
       private:
         vxsdr *sdrptr;
-        boost::asio::ip::udp::socket socket;
+        boost::asio::ip::udp::socket send_socket;
         boost::asio::ip::udp::endpoint destination;
         std::array<uint64_t, UINT8_MAX + 1> packet_types_processed = { 0 };
         uint64_t send_errors = 0, packets_sent = 0, bytes_sent = 0;
@@ -699,7 +702,7 @@ https://www.boost.org/doc/libs/1_62_0/doc/html/boost_asio/example/cpp11/futures/
         void send_packet(packet &packet) {
           packet_types_processed[packet.hdr.packet_type]++;
           packet.hdr.sequence_counter = (uint16_t)(packets_sent++ % (UINT16_MAX + 1));
-          size_t bytes = socket.send_to(boost::asio::buffer(&packet, packet.hdr.packet_size), destination);
+          size_t bytes = send_socket.send_to(boost::asio::buffer(&packet, packet.hdr.packet_size), destination);
           if(bytes != packet.hdr.packet_size) {
             send_errors++;
           }
