@@ -5,6 +5,7 @@
 
 #include <boost/lockfree/spsc_queue.hpp>
 #include <boost/asio/io_service.hpp>
+#include <boost/asio/executor.hpp>
 #include <boost/asio/ip/udp.hpp>
 #include <boost/asio/use_future.hpp>
 
@@ -120,7 +121,9 @@ class vxsdr {
     // https://www.boost.org/doc/libs/1_77_0/doc/html/boost_asio/example/cpp11/futures/daytime_client.cpp
     // We run the io_context off in its own thread so that it operates
     // completely asynchronously with respect to the rest of the program.
-    auto work = boost::asio::require(context.get_executor(), boost::asio::execution::outstanding_work.tracked);
+    // this needs Boost 1.76 or higher
+    //auto work = boost::asio::require(context.get_executor(), boost::asio::execution::outstanding_work.tracked);
+    auto work = boost::asio::make_work_guard(context);
     context_thread = std::thread([&] { context.run(); });
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
     receiver_thread = std::thread([&] { receiver(); });
