@@ -17,7 +17,7 @@
 #include "logging.hpp"
 #include "errors.hpp"
 
-#include "vxsdr.hpp"
+#include "vxsdr_minimal.hpp"
 #include "host_radio_options.hpp"
 
 extern "C" void sig_int_handler(int /* sig_num */) {
@@ -69,6 +69,10 @@ int main(int argc, char *argv[])
     set_rx_1ch_options(vm, radio);
     set_tx_1ch_options(vm, radio);
 
+    radio->device_hello();
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+
+/*
     size_t n_samp = std::llround(vm["duration"].as<double>() * vm["rate"].as<double>());
 
     LOGGER(info) << boost::format("preparing %.3f seconds (%lld samples) of data") % vm["duration"].as<double>() % n_samp;
@@ -86,7 +90,7 @@ int main(int argc, char *argv[])
     radio->tx_stop_now();
 
     LOGGER(info) << "send complete";
-/*
+
     std::string filename = vm["prefix"].as<std::string>();
     filename.append(make_filename_time(std::chrono::system_clock::now(), vm["freq"].as<double>(), vm["rate"].as<double>()));
     filename.append(vm["suffix"].as<std::string>());

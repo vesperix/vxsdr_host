@@ -137,6 +137,12 @@ class vxsdr {
     // move assignment deleted
     vxsdr& operator=(vxsdr &&) = delete;
 
+    void device_hello(const uint8_t subdev = 0, const uint8_t flags = 0) {
+      cmd_packet p;
+      p.hdr = { PACKET_TYPES::DEVICE_CMD, DEVICE_CMD::HELLO, subdev, flags, sizeof(p), 0 };
+      cmd_queue_push(p);
+    }
+
    private:
     boost::asio::ip::udp::socket sender_socket;
     boost::asio::ip::udp::socket receiver_socket;
@@ -225,13 +231,21 @@ class vxsdr {
         if(bytes_received >= sizeof(packet) and remote_endpoint == destination_endpoint) {
           LOGGER(debug) << "packet received";
           packets_received++;
+          packet_types_received[recv_buffer.hdr.packet_type]++;
           if(packets_received > 1 and recv_buffer.hdr.sequence_counter != (uint16_t)(last_seq + 1)) {
             sequence_errors++;
           }
+          LOGGER(info) << "received " << packet_type_to_name(recv_buffer.hdr.packet_type);
         }
       }
       LOGGER(info) << "start_receive exiting; " << packets_received << " packets received, "
                   << sequence_errors << " sequence errors";
+      for(unsigned i = 0; i < packet_types_received.size(); i++) {
+        if(packet_types_received[i] > 0) {
+          LOGGER(info) << (boost::format("   %12d %20s (%d)") % packet_types_received[i] % packet_type_to_name(i) % i);
+        }
+      }
+
     }
 
     void udp_sender()
@@ -263,6 +277,24 @@ class vxsdr {
         send_errors++;
       }
       bytes_sent += bytes;
+      LOGGER(debug) << "sent " << packet_type_to_name(packet.hdr.packet_type);
+    }
+
+    void cmd_queue_push(packet &p) {
+      command_queue_element q;
+      std::memcpy(&q, &p, std::min((size_t)p.hdr.packet_size, sizeof(q)));
+      unsigned wait_time_us = 0;
+      // setting command_queue_wait_us = 0 results in a busy wait with no timeout
+      while(command_queue.write_available() == 0 and wait_time_us < command_queue_timeout_us) {
+        if constexpr(command_queue_wait_us > 0) {
+          std::this_thread::sleep_for(std::chrono::microseconds(command_queue_wait_us));
+          wait_time_us += command_queue_wait_us;
+        }
+      }
+
+      if(not command_queue.push(q)) {
+        LOGGER(error) << "timeout pushing to command queue";
+      }
     }
 
     void start_send() {

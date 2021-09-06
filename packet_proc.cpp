@@ -196,8 +196,6 @@ void log_packet_info(cmd_or_rsp_packet &packet)
         LOGGER(info) << "   sequence_error_count      = " << (uint32_t)br->sequence_error_count;
       }
       break;
-    case PACKET_TYPES::RX_SIGNAL_DATA:
-      break;
     default:
       LOGGER(info) << "PACKET_TYPE: " << (int)packet.hdr.packet_type << " COMMAND " << (int)packet.hdr.command;
       break;
