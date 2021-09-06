@@ -122,10 +122,9 @@ class vxsdr {
     // completely asynchronously with respect to the rest of the program.
     auto work = boost::asio::require(context.get_executor(), boost::asio::execution::outstanding_work.tracked);
     context_thread = std::thread([=] { context.run(); });
-
-    //receiver_thread = std::thread(&vxsdr::receiver, this, std::ref(context), std::cref(local_receive_endpoint));
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
     receiver_thread = std::thread([=] { receiver(); });
-    //sender_thread = std::thread(&vxsdr::sender, this, std::ref(context), std::cref(local_send_endpoint), std::cref(destination_endpoint));
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
     sender_thread = std::thread([=] { sender(); });
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
     set_tx_enable(true);
