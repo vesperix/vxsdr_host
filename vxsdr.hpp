@@ -121,11 +121,11 @@ class vxsdr {
     // We run the io_context off in its own thread so that it operates
     // completely asynchronously with respect to the rest of the program.
     auto work = boost::asio::require(context.get_executor(), boost::asio::execution::outstanding_work.tracked);
-    context_thread = std::thread([=] { context.run(); });
+    context_thread = std::thread([&] { context.run(); });
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
-    receiver_thread = std::thread([=] { receiver(); });
+    receiver_thread = std::thread([&] { receiver(); });
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
-    sender_thread = std::thread([=] { sender(); });
+    sender_thread = std::thread([&] { sender(); });
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
     set_tx_enable(true);
     set_rx_enable(true);
