@@ -80,6 +80,7 @@ class vxsdr {
   // threads used for sending and receiving
   std::thread sender_thread;
   std::thread receiver_thread;
+  std::thread context_thread;
 
   boost::asio::ip::udp::endpoint destination_endpoint;
 
@@ -102,11 +103,6 @@ class vxsdr {
   std::vector<uint16_t> seq_error_expected;
 #endif // SEQUENCE_ERROR_DIAGNOSTICS
 
-
-
-
-
-
  public:
   // constructor
   vxsdr(const boost::asio::ip::udp::endpoint &local_send_endpoint,
@@ -120,6 +116,13 @@ class vxsdr {
     command_queue.reset();
     response_queue.reset();
     destination_endpoint = radio_endpoint;
+
+    // https://www.boost.org/doc/libs/1_77_0/doc/html/boost_asio/example/cpp11/futures/daytime_client.cpp
+    // We run the io_context off in its own thread so that it operates
+    // completely asynchronously with respect to the rest of the program.
+    auto work = boost::asio::require(context.get_executor(), boost::asio::execution::outstanding_work.tracked);
+    context_thread = std::thread([=] { context.run(); });
+
     //receiver_thread = std::thread(&vxsdr::receiver, this, std::ref(context), std::cref(local_receive_endpoint));
     receiver_thread = std::thread([=] { receiver(); });
     //sender_thread = std::thread(&vxsdr::sender, this, std::ref(context), std::cref(local_send_endpoint), std::cref(destination_endpoint));
@@ -142,6 +145,8 @@ class vxsdr {
     if(sender_thread.joinable()) {
       sender_thread.join();
     }
+    LOGGER(debug) << "joining context thread";
+    context_thread.join();
     LOGGER(debug) << "vxsdr destructor complete";
   };
   // copy constructor deleted
@@ -498,34 +503,41 @@ class vxsdr {
 
     while(not receiver_thread_stop_flag) {
 
-//            size_t bytes_received = receiver_socket.receive_from(boost::asio::buffer(&recv_buffer, sizeof(recv_buffer)), remote);
-      /*
-      https://www.boost.org/doc/libs/1_62_0/doc/html/boost_asio/example/cpp11/futures/daytime_client.cpp
-
-      std::array<char, 128> recv_buf;
-      udp::endpoint sender_endpoint;
-      std::future<std::size_t> recv_length =
-        socket.async_receive_from(
-            boost::asio::buffer(recv_buf),
-            sender_endpoint,
-            boost::asio::use_future);
-
-      // Do other things here while the receive completes.
-
-      std::cout.write(
-          recv_buf.data(),
-          recv_length.get()); // Blocks until receive is complete.
-      */
       data_queue_element recv_buffer;
       size_t bytes_received = 0;
-      std::future<size_t> result = receiver_socket.async_receive_from(boost::asio::buffer(&recv_buffer, sizeof(recv_buffer)), remote_endpoint, boost::asio::use_future);
+
+#ifdef SYNCH_RX
+      bytes_received = receiver_socket.receive_from(boost::asio::buffer(&recv_buffer, sizeof(recv_buffer)), remote_endpoint);
+#else
+/*
+    https://www.boost.org/doc/libs/1_77_0/doc/html/boost_asio/example/cpp11/futures/daytime_client.cpp
+
+    std::array<char, 128> recv_buf;
+    udp::endpoint sender_endpoint;
+    std::future<std::size_t> recv_length =
+      socket.async_receive_from(
+          boost::asio::buffer(recv_buf),
+          sender_endpoint,
+          boost::asio::use_future);
+
+    // Do other things here while the receive completes.
+
+    std::cout.write(
+        recv_buf.data(),
+        recv_length.get()); // Blocks until receive is complete.
+*/
+      std::future<size_t> result = receiver_socket.async_receive_from(boost::asio::buffer(&recv_buffer,
+                                                                      sizeof(recv_buffer)), remote_endpoint,
+                                                                      boost::asio::use_future);
       if(result.wait_for(std::chrono::milliseconds(receiver_socket_timeout_ms)) == std::future_status::timeout) {
         bytes_received = 0;
         //LOGGER(debug) << "timeout";
-      } else {
-        bytes_received = result.get();
-        LOGGER(debug) << "packet received";
       }
+      else {
+        bytes_received = result.get();
+      }
+#endif
+
 
       if(bytes_received >= sizeof(packet) and remote_endpoint == destination_endpoint) {
         packets_received++;

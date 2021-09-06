@@ -17,7 +17,7 @@
 #include "logging.hpp"
 #include "errors.hpp"
 
-#include "vxsdr_minimal.hpp"
+#include "vxsdr.hpp"
 #include "host_radio_options.hpp"
 
 extern "C" void sig_int_handler(int /* sig_num */) {
@@ -68,7 +68,7 @@ int main(int argc, char *argv[])
     set_common_options(vm, radio);
     set_rx_1ch_options(vm, radio);
     set_tx_1ch_options(vm, radio);
-
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     radio->device_hello();
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 

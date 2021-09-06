@@ -80,6 +80,7 @@ class vxsdr {
     // threads used for sending and receiving
     std::thread sender_thread;
     std::thread receiver_thread;
+    std::thread context_thread;
 
     boost::asio::ip::udp::endpoint destination_endpoint;
 
@@ -106,6 +107,13 @@ class vxsdr {
       rx_data_queue.reset();
       command_queue.reset();
       response_queue.reset();
+
+      // https://www.boost.org/doc/libs/1_77_0/doc/html/boost_asio/example/cpp11/futures/daytime_client.cpp
+      // We run the io_context off in its own thread so that it operates
+      // completely asynchronously with respect to the rest of the program.
+      auto work = boost::asio::require(context.get_executor(), boost::asio::execution::outstanding_work.tracked);
+      context_thread = std::thread([=] { context.run(); });
+
       destination_endpoint = radio_endpoint;
       receiver_thread = std::thread([=] { receiver(); });
       sender_thread = std::thread([=] { sender(); });
@@ -126,6 +134,8 @@ class vxsdr {
       if(sender_thread.joinable()) {
         sender_thread.join();
       }
+      LOGGER(debug) << "joining context thread";
+      context_thread.join();
       LOGGER(debug) << "vxsdr destructor complete";
     };
     // copy constructor deleted
@@ -217,6 +227,9 @@ class vxsdr {
 
         data_queue_element recv_buffer;
         size_t bytes_received = 0;
+#ifdef SYNCH_RX
+        bytes_received = receiver_socket.receive_from(boost::asio::buffer(&recv_buffer, sizeof(recv_buffer)), remote_endpoint);
+#else
         std::future<size_t> result = receiver_socket.async_receive_from(boost::asio::buffer(&recv_buffer,
                                                                         sizeof(recv_buffer)), remote_endpoint,
                                                                         boost::asio::use_future);
@@ -227,7 +240,7 @@ class vxsdr {
         else {
           bytes_received = result.get();
         }
-
+#endif
         if(bytes_received >= sizeof(packet) and remote_endpoint == destination_endpoint) {
           LOGGER(debug) << "packet received";
           packets_received++;

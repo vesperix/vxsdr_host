@@ -3,7 +3,7 @@
 
 #include <boost/program_options.hpp>
 
-#include "vxsdr_minimal.hpp"
+#include "vxsdr.hpp"
 
 void add_rx_1ch_options(boost::program_options::options_description &desc);
 void add_tx_1ch_options(boost::program_options::options_description &desc);
