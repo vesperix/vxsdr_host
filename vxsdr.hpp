@@ -141,15 +141,30 @@ class vxsdr {
     LOGGER(debug) << "vxsdr destructor entered";
     LOGGER(debug) << "joining receiver_thread";
     receiver_thread_stop_flag = true;
-    receiver_socket.shutdown(boost::asio::ip::udp::socket::shutdown_receive);
+    boost::system::error_code err;
+    receiver_socket.shutdown(boost::asio::ip::udp::socket::shutdown_receive, err);
+    if(err != boost::system::errc::success) {
+      LOGGER(error) << "receiver socket shutdown: " << err.message();
+    }
     if(receiver_thread.joinable()) {
       receiver_thread.join();
     }
+    receiver_socket.close(err);
+    if(err != boost::system::errc::success) {
+      LOGGER(error) << "receiver socket close: " << err.message();
+    }
     LOGGER(debug) << "joining sender thread";
-    //sender_socket.shutdown(boost::asio::ip::udp::socket::shutdown_send);
+    sender_socket.shutdown(boost::asio::ip::udp::socket::shutdown_send, err);
+    if(err != boost::system::errc::success) {
+      LOGGER(error) << "sender socket shutdown: " << err.message();
+    }
     sender_thread_stop_flag = true;
     if(sender_thread.joinable()) {
       sender_thread.join();
+    }
+    sender_socket.close(err);
+    if(err != boost::system::errc::success) {
+      LOGGER(error) << "sender socket close: " << err.message();
     }
 #ifndef SYNCH_RX
     LOGGER(debug) << "joining context thread";
@@ -501,7 +516,6 @@ class vxsdr {
     }
 
     start_receive();
-    receiver_socket.close();
   }
 
   void start_receive() {
@@ -674,7 +688,6 @@ class vxsdr {
     }
 
     start_send();
-    sender_socket.close();
   }
 
   void send_packet(packet &packet) {
