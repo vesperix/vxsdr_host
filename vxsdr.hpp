@@ -38,8 +38,8 @@ class vxsdr {
   static constexpr int receive_thread_cpu = 2;
 
   // parameters of the internal spsc queues (ring buffers)
-  static constexpr size_t rx_data_queue_length           =    16384;    // slots in rx data queue
-  static constexpr size_t tx_data_queue_length           =     4096;    // slots in tx data queue
+  static constexpr size_t rx_data_queue_length           =    16384;    // slots in rx data queue; 16384 * 2048 / 160e6 = 210 ms at 160 MSPS
+  static constexpr size_t tx_data_queue_length           =     4096;    // slots in tx data queue;  4096 * 2048 / 160e6 =  52 ms at 160 MSPS
   static constexpr size_t command_queue_length           =       64;    // slots in command msg queue
   static constexpr size_t response_queue_length          =      256;    // slots in response msg queue
 
@@ -48,7 +48,7 @@ class vxsdr {
   static constexpr unsigned tx_data_queue_timeout_us     =   100000;
   static constexpr unsigned tx_data_queue_wait_us        =       10;
 
-  static constexpr unsigned rx_data_queue_timeout_us     =   100000;
+  static constexpr unsigned rx_data_queue_timeout_us     =    40000;
   static constexpr unsigned rx_data_queue_wait_us        =       10;
 
   static constexpr unsigned command_queue_timeout_us     =   100000;
@@ -237,8 +237,8 @@ class vxsdr {
         break;
       }
     }
-    LOGGER(debug) << "get_rx_data() complete (" << data.size() << " samples)";
-    return data.size();
+    LOGGER(debug) << "get_rx_data() complete (" << n_received << " samples)";
+    return n_received;
   }
 
   size_t put_tx_data(std::vector<std::complex<int16_t> > data, const uint8_t subdev = 0) {
@@ -597,7 +597,6 @@ class vxsdr {
           }
           if(not rx_data_queue.push(recv_buffer)) {
             LOGGER(error) << "timeout pushing to rx data queue";
-            break;
           }
         }
         break;
