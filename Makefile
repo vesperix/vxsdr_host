@@ -7,7 +7,7 @@ CXX_OPTFLAGS = -O3
 CXX_DBGFLAGS = -g -Og -fsanitize=address
 CXX_LDFLAGS = -lpthread -lboost_log -lboost_program_options -lboost_system
 
-#DEBUG = 1
+DEBUG = 1
 
 ifdef DEBUG
 	CXX_FLAGS = $(CXX_BASEFLAGS) $(CXX_DBGFLAGS) $(CXX_DEFINES)
