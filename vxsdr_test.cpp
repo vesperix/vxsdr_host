@@ -68,11 +68,7 @@ int main(int argc, char *argv[])
     set_common_options(vm, radio);
     set_rx_1ch_options(vm, radio);
     set_tx_1ch_options(vm, radio);
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-    radio->device_hello();
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
-/*
     size_t n_samp = std::llround(vm["duration"].as<double>() * vm["rate"].as<double>());
 
     LOGGER(info) << boost::format("preparing %.3f seconds (%lld samples) of data") % vm["duration"].as<double>() % n_samp;
@@ -95,17 +91,16 @@ int main(int argc, char *argv[])
     filename.append(make_filename_time(std::chrono::system_clock::now(), vm["freq"].as<double>(), vm["rate"].as<double>()));
     filename.append(vm["suffix"].as<std::string>());
 
-    LOGGER(info) << "Receiving data to file..." << filename;
+    LOGGER(info) << "receiving data to file " << filename;
 
     radio->rx_start_now_for_n_samples(n_samp);
     radio->get_rx_data(data, n_samp);
     radio->rx_stop_now();
 
-    LOGGER(info) << "Receive complete";
+    LOGGER(info) << "receive complete";
 
     size_t n_written = write_cplx_16(filename, data);
-    LOGGER(info) << n_written << "samples written";
-*/
+    LOGGER(info) << n_written << " samples written";
   }
   catch (std::exception& e) {
     LOGGER(fatal) << "exception caught: " << e.what();

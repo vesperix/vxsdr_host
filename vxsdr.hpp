@@ -38,7 +38,7 @@ class vxsdr {
   static constexpr int receive_thread_cpu = 2;
 
   // parameters of the internal spsc queues (ring buffers)
-  static constexpr size_t rx_data_queue_length           =     4096;    // slots in rx data queue
+  static constexpr size_t rx_data_queue_length           =    16384;    // slots in rx data queue
   static constexpr size_t tx_data_queue_length           =     4096;    // slots in tx data queue
   static constexpr size_t command_queue_length           =       64;    // slots in command msg queue
   static constexpr size_t response_queue_length          =      256;    // slots in response msg queue
@@ -185,7 +185,7 @@ class vxsdr {
 
   size_t get_rx_data(std::vector<std::complex<int16_t> > &data, size_t n_desired = 0) {
     LOGGER(debug) << "get_rx_data() entered";
-    size_t n_popped = 0;
+    size_t n_received = 0;
     data_queue_element q;
 
     data.clear();
@@ -195,10 +195,7 @@ class vxsdr {
       n_desired = data.size();
     }
 
-    size_t n_packets = std::ceil(n_desired / (double)MAX_DATA_LENGTH_SAMPLES);
-    LOGGER(debug) << "n_packets = " << n_packets << " n_popped = " << n_popped;
-
-    while(n_popped < n_packets) {
+    while(n_received < n_desired) {
       unsigned wait_time_us = 0;
       // setting rx_data_queue_wait_us = 0 results in a busy wait with no timeout
       while(rx_data_queue.read_available() == 0 and wait_time_us < rx_data_queue_timeout_us) {
@@ -217,32 +214,35 @@ class vxsdr {
           size_t data_size = std::min(MAX_DATA_LENGTH_SAMPLES,
                                       (p.hdr.packet_size - sizeof(packet_header)) / sizeof(std::complex<int16_t>));
           std::copy_n(std::begin(p.data), data_size, std::back_inserter(data));
+          n_received += data_size;
         } else if(has_time and not has_stream_id) {
           data_packet_time p;
           std::memcpy(&p, &q, std::min(sizeof(q), sizeof(p)));
           size_t data_size = std::min(MAX_DATA_LENGTH_SAMPLES,
                                       (p.hdr.packet_size - sizeof(packet_header) - sizeof(time_spec_t)) / sizeof(std::complex<int16_t>));
           std::copy_n(std::begin(p.data), data_size, std::back_inserter(data));
+          n_received += data_size;
         } else if(has_stream_id and not has_time) {
           data_packet_stream p;
           std::memcpy(&p, &q, std::min(sizeof(q), sizeof(p)));
           size_t data_size = std::min(MAX_DATA_LENGTH_SAMPLES,
                                       (p.hdr.packet_size - sizeof(packet_header) - sizeof(stream_spec_t)) / sizeof(std::complex<int16_t>));
           std::copy_n(std::begin(p.data), data_size, std::back_inserter(data));
+          n_received += data_size;
         } else {
           data_packet_time_stream p;
           std::memcpy(&p, &q, std::min(sizeof(q), sizeof(p)));
           size_t data_size = std::min(MAX_DATA_LENGTH_SAMPLES,
                                       (p.hdr.packet_size - sizeof(packet_header) - sizeof(time_spec_t) - sizeof(stream_spec_t)) / sizeof(std::complex<int16_t>));
           std::copy_n(std::begin(p.data), data_size, std::back_inserter(data));
+          n_received += data_size;
         }
-        n_popped++;
       } else {
         LOGGER(error) << "timeout popping from rx data queue";
         break;
       }
     }
-    LOGGER(debug) << "get_rx_data() complete";
+    LOGGER(debug) << "get_rx_data() complete (" << data.size() << " samples)";
     return data.size();
   }
 
