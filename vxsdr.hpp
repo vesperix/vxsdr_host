@@ -22,8 +22,10 @@
 class vxsdr {
 
  private:
-  // socket_receive_timeout setting
+#ifdef ASYNC_RX
+  // socket_receive_timeout setting for async rx
   static constexpr unsigned receiver_socket_timeout_ms    =      100;
+#endif // ASYNC_RX
 
   // thread realtime priority settings
   static constexpr bool thread_set_priority = true;
@@ -557,7 +559,7 @@ class vxsdr {
       else {
         bytes_received = result.get();
       }
-#endif
+#endif // ASYNC_RX
 
 
       if(bytes_received >= sizeof(packet) and remote_endpoint == destination_endpoint) {
