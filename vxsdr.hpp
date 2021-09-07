@@ -57,8 +57,9 @@ class vxsdr {
   static constexpr unsigned response_queue_wait_us       =       10;
 
   // parameters used to set the OS's network buffer
-  static constexpr unsigned network_send_buffer_bytes    =  16777216;   // ~26 ms at 160 MSPS
-  static constexpr unsigned network_receive_buffer_bytes =   4194304;   // ~6.6 ms at 160 MSPS
+  static constexpr unsigned network_send_buffer_bytes    =   4194304;   // ~6.6 ms at 160 MSPS
+  static constexpr unsigned network_receive_buffer_bytes =  16777216;   // ~26 ms at 160 MSPS
+
 
   // parameters used to monitor status of the radio's internal buffers (on the other end of the network connection)
   std::atomic<unsigned> tx_buffer_size_bytes = 0, tx_buffer_used_bytes = 0;
