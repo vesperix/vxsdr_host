@@ -61,8 +61,8 @@ class vxsdr {
   static constexpr unsigned network_receive_buffer_bytes =   4194304;   // ~6 ms at 160 MSPS
 
   // parameters used to monitor status of the radio's internal buffers (on the other end of the network connection)
-  std::atomic<unsigned> tx_buffer_size = 0, tx_buffer_used = 0;
-  std::atomic<unsigned> rx_buffer_size = 0, rx_buffer_used = 0;
+  std::atomic<unsigned> tx_buffer_size_bytes = 0, tx_buffer_used_bytes = 0;
+  std::atomic<unsigned> rx_buffer_size_bytes = 0, rx_buffer_used_bytes = 0;
   std::atomic<unsigned> tx_buffer_fill_percent = 0, rx_buffer_fill_percent = 0;
 
   using data_queue_element = largest_data_packet;
@@ -91,10 +91,10 @@ class vxsdr {
 
   const bool forward_acks = false;
 
-  uint64_t send_errors = 0, packets_sent = 0, bytes_sent = 0;
+  uint64_t send_errors = 0, packets_sent = 0, samples_sent = 0, bytes_sent = 0;
   std::array<uint64_t, UINT8_MAX + 1> packet_types_sent = { 0 };
 
-  uint64_t packets_received = 0, sequence_errors = 0;
+  uint64_t sequence_errors = 0, packets_received = 0, samples_received = 0, bytes_received = 0;
   std::array<uint64_t, UINT8_MAX + 1> packet_types_received = { 0 };
 
   // FIXME: diagnostic info gathering: remove when unneeded
@@ -533,11 +533,16 @@ class vxsdr {
     boost::asio::ip::udp::endpoint remote_endpoint;
     uint16_t last_seq = 0;
 
+    bytes_received = 0;
+    samples_received = 0;
+    packets_received = 0;
+    sequence_errors = 0;
+
     while(not receiver_thread_stop_flag) {
       static data_queue_element recv_buffer;
-      size_t bytes_received = 0;
+      size_t bytes_in_packet = 0;
 #ifndef ASYNCH_RX
-      bytes_received = receiver_socket.receive_from(boost::asio::buffer(&recv_buffer, sizeof(recv_buffer)), remote_endpoint);
+      bytes_in_packet = receiver_socket.receive_from(boost::asio::buffer(&recv_buffer, sizeof(recv_buffer)), remote_endpoint);
 #else
       /*
           https://www.boost.org/doc/libs/1_77_0/doc/html/boost_asio/example/cpp11/futures/daytime_client.cpp
@@ -560,17 +565,27 @@ class vxsdr {
                                    sizeof(recv_buffer)), remote_endpoint,
                                    boost::asio::use_future);
       if(result.wait_for(std::chrono::milliseconds(receiver_socket_timeout_ms)) == std::future_status::timeout) {
-        bytes_received = 0;
+        bytes_in_packet = 0;
         //LOGGER(debug) << "timeout";
       } else {
-        bytes_received = result.get();
+        bytes_in_packet = result.get();
       }
 #endif // ASYNC_RX
 
-      if(bytes_received >= sizeof(packet) and remote_endpoint == destination_endpoint) {
+      if(bytes_in_packet >= sizeof(packet_header) and remote_endpoint == destination_endpoint) {
         packets_received++;
         packet_types_received[recv_buffer.hdr.packet_type]++;
-
+        bytes_received += bytes_in_packet;
+        if(recv_buffer.hdr.packet_type == PACKET_TYPES::RX_SIGNAL_DATA) {
+          uint16_t header_size = sizeof(packet_header);
+          if((bool)(recv_buffer.hdr.flags & FLAGS::TIME_PRESENT)) {
+            header_size += sizeof(time_spec_t);
+          }
+          if((bool)(recv_buffer.hdr.flags & FLAGS::STREAM_ID_PRESENT)) {
+            header_size += sizeof(stream_spec_t);
+          }
+          samples_received += (recv_buffer.hdr.packet_size - header_size) / sizeof(std::complex<int16_t>);
+        }
         if(packets_received > 1 and recv_buffer.hdr.sequence_counter != (uint16_t)(last_seq + 1)) {
           sequence_errors++;
 #ifdef SEQUENCE_ERROR_DIAGNOSTICS
@@ -601,8 +616,8 @@ class vxsdr {
           case PACKET_TYPES::TX_SIGNAL_DATA_ACK: {
               tx_signal_data_ack_packet r;
               std::memcpy(&r, &recv_buffer, std::min(sizeof(r), sizeof(recv_buffer)));
-              tx_buffer_used = r.tx_buffer_used_bytes;
-              tx_buffer_fill_percent = std::min(100U, (100U * tx_buffer_used) / tx_buffer_size);
+              tx_buffer_used_bytes = r.tx_buffer_used_bytes;
+              tx_buffer_fill_percent = std::min(100U, (100U * tx_buffer_used_bytes) / tx_buffer_size_bytes);
               if(forward_acks) {
                 response_queue_element p;
                 std::memcpy(&p, &r, std::min(sizeof(p), sizeof(r)));
@@ -616,10 +631,10 @@ class vxsdr {
               case DEVICE_CMD_RSP::GET_BUFFER_USE_RSP: {
                   get_buffer_use_rsp_packet r;
                   std::memcpy(&r, &recv_buffer, std::min(sizeof(r), sizeof(recv_buffer)));
-                  tx_buffer_used = r.tx_buffer_used_bytes;
-                  rx_buffer_used = r.rx_buffer_used_bytes;
-                  tx_buffer_fill_percent = std::min(100U, (100U * tx_buffer_used) / tx_buffer_size);
-                  rx_buffer_fill_percent = std::min(100U, (100U *  rx_buffer_used) / rx_buffer_size);
+                  tx_buffer_used_bytes = r.tx_buffer_used_bytes;
+                  rx_buffer_used_bytes = r.rx_buffer_used_bytes;
+                  tx_buffer_fill_percent = std::min(100U, (100U * tx_buffer_used_bytes) / tx_buffer_size_bytes);
+                  rx_buffer_fill_percent = std::min(100U, (100U * rx_buffer_used_bytes) / rx_buffer_size_bytes);
                   response_queue_element p;
                   std::memcpy(&p, &r, std::min(sizeof(p), sizeof(r)));
                   response_queue_push_wait(p);
@@ -628,8 +643,8 @@ class vxsdr {
               case DEVICE_CMD_RSP::GET_BUFFER_INFO_RSP: {
                   get_buffer_info_rsp_packet r;
                   std::memcpy(&r, &recv_buffer, sizeof(r));
-                  tx_buffer_size = r.tx_buffer_size_bytes;
-                  rx_buffer_size = r.rx_buffer_size_bytes;
+                  tx_buffer_size_bytes = r.tx_buffer_size_bytes;
+                  rx_buffer_size_bytes = r.rx_buffer_size_bytes;
                   response_queue_element p;
                   std::memcpy(&p, &r, std::min(sizeof(p), sizeof(r)));
                   response_queue_push_wait(p);
@@ -673,7 +688,10 @@ class vxsdr {
         }
       }
     }
-    LOGGER(info) << "start_receive exiting; " << packets_received << " packets received, " << sequence_errors << " sequence errors";
+    LOGGER(info) << "start_receive exiting; " << packets_received << " packets received, "
+                                              << samples_received << " samples_received, "
+                                              << bytes_received << " bytes_received, "
+                                              << sequence_errors << " sequence errors";
 #ifdef SEQUENCE_ERROR_DIAGNOSTICS
     for(unsigned i =0; i < seq_error_times.size(); i++) {
       LOGGER(info) << boost::format(" %30s %20s %8d %8d") % format_time(seq_error_times[i]) % packet_type_to_name(seq_error_packet_type[i])
@@ -712,6 +730,16 @@ class vxsdr {
     if(bytes != packet.hdr.packet_size) {
       send_errors++;
     }
+    if(packet.hdr.packet_type == PACKET_TYPES::TX_SIGNAL_DATA) {
+      uint16_t header_size = sizeof(packet_header);
+      if((bool)(packet.hdr.flags & FLAGS::TIME_PRESENT)) {
+        header_size += sizeof(time_spec_t);
+      }
+      if((bool)(packet.hdr.flags & FLAGS::STREAM_ID_PRESENT)) {
+        header_size += sizeof(stream_spec_t);
+      }
+      samples_sent += (packet.hdr.packet_size - header_size) / sizeof(std::complex<int16_t>);
+    }
     bytes_sent += bytes;
   }
 
@@ -738,6 +766,11 @@ class vxsdr {
 
   void start_send() {
     LOGGER(debug) << "start_send started";
+
+    packets_sent = 0;
+    samples_sent = 0;
+    bytes_sent = 0;
+
     static constexpr size_t data_buffer_size = 16, cmd_buffer_size = 16;
     std::array<data_queue_element, data_buffer_size> data_buffer;
     std::array<command_queue_element, cmd_buffer_size> cmd_buffer;
@@ -753,33 +786,27 @@ class vxsdr {
     initialize_sdr(device_subdev, tx_subdev, rx_subdev);
 
     uint64_t last_check = 0;
-    constexpr uint64_t buffer_check_interval = 100; // current buffer size is about 1000 data packets
+    const uint64_t buffer_check_interval_samples = tx_buffer_size_bytes / sizeof(std::complex<uint16_t>) / 32; // check every 1/32 of a buffer
 
     while(not sender_thread_stop_flag) {
       if(command_queue.read_available() > 0) {
         size_t n_popped = command_queue.pop(&cmd_buffer.front(), cmd_buffer.size());
         for(size_t i = 0; i < n_popped; i++) {
-          if(packets_sent - last_check > buffer_check_interval) {
-            // request ack to update buffer use
-            cmd_buffer[i].hdr.flags |= FLAGS::REQUEST_ACK;
-            send_packet(cmd_buffer[i]);
-            last_check = packets_sent;
-          } else {
-            send_packet(cmd_buffer[i]);
-          }
+          send_packet(cmd_buffer[i]);
         }
       }
       // FIXME: is a timeout needed?
       else if(tx_data_queue.read_available() > 0) {
         size_t n_popped = tx_data_queue.pop(&data_buffer.front(), data_buffer.size());
         for(size_t i = 0; i < n_popped; i++) {
-          if(packets_sent - last_check > buffer_check_interval) {
+          if(samples_sent - last_check >= buffer_check_interval_samples) {
             // request ack to update buffer use
             data_buffer[i].hdr.flags |= FLAGS::REQUEST_ACK;
             send_packet(data_buffer[i]);
-            last_check = packets_sent;
+            last_check = samples_sent;
           } else {
             send_packet(data_buffer[i]);
+
           }
           // throttle if needed
           if(tx_buffer_fill_percent > throttle_on_percent) {
@@ -799,7 +826,10 @@ class vxsdr {
     }
     close_sdr(device_subdev, tx_subdev, rx_subdev);
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    LOGGER(info) << "start_send exiting; " << packets_sent << " packets sent, " << send_errors << " send errors";
+    LOGGER(info) << "start_send exiting; " << packets_sent << " packets sent, "
+                                           << samples_sent << " samples_sent, "
+                                           << bytes_sent << " bytes_sent, "
+                                           << send_errors << " send errors";
     for(unsigned i = 0; i < packet_types_sent.size(); i++) {
       if(packet_types_sent[i] > 0) {
         LOGGER(info) << (boost::format("   %12d %20s (%d)") % packet_types_sent[i] % packet_type_to_name(i) % i);
