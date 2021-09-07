@@ -189,6 +189,8 @@ class vxsdr {
       n_desired = data.size();
     }
 
+    LOGGER(info) << "receiving " << n_desired << " samples";
+
     while(n_received < n_desired) {
       unsigned wait_time_us = 0;
       // setting rx_data_queue_wait_us = 0 results in a busy wait with no timeout
@@ -207,36 +209,35 @@ class vxsdr {
           std::memcpy(&p, &q, std::min(sizeof(q), sizeof(p)));
           size_t data_size = std::min(MAX_DATA_LENGTH_SAMPLES,
                                       (p.hdr.packet_size - sizeof(packet_header)) / sizeof(std::complex<int16_t>));
-          std::copy_n(std::begin(p.data), data_size, std::back_inserter(data));
+          std::copy_n(std::begin(p.data), std::min(n_desired - n_received, data_size), std::back_inserter(data));
           n_received += data_size;
         } else if(has_time and not has_stream_id) {
           data_packet_time p;
           std::memcpy(&p, &q, std::min(sizeof(q), sizeof(p)));
           size_t data_size = std::min(MAX_DATA_LENGTH_SAMPLES,
                                       (p.hdr.packet_size - sizeof(packet_header) - sizeof(time_spec_t)) / sizeof(std::complex<int16_t>));
-          std::copy_n(std::begin(p.data), data_size, std::back_inserter(data));
+          std::copy_n(std::begin(p.data), std::min(n_desired - n_received, data_size), std::back_inserter(data));
           n_received += data_size;
         } else if(has_stream_id and not has_time) {
           data_packet_stream p;
           std::memcpy(&p, &q, std::min(sizeof(q), sizeof(p)));
           size_t data_size = std::min(MAX_DATA_LENGTH_SAMPLES,
                                       (p.hdr.packet_size - sizeof(packet_header) - sizeof(stream_spec_t)) / sizeof(std::complex<int16_t>));
-          std::copy_n(std::begin(p.data), data_size, std::back_inserter(data));
+          std::copy_n(std::begin(p.data), std::min(n_desired - n_received, data_size), std::back_inserter(data));
           n_received += data_size;
         } else {
           data_packet_time_stream p;
           std::memcpy(&p, &q, std::min(sizeof(q), sizeof(p)));
           size_t data_size = std::min(MAX_DATA_LENGTH_SAMPLES,
                                       (p.hdr.packet_size - sizeof(packet_header) - sizeof(time_spec_t) - sizeof(stream_spec_t)) / sizeof(std::complex<int16_t>));
-          std::copy_n(std::begin(p.data), data_size, std::back_inserter(data));
+          std::copy_n(std::begin(p.data), std::min(n_desired - n_received, data_size), std::back_inserter(data));
           n_received += data_size;
         }
       } else {
         LOGGER(error) << "timeout popping from rx data queue";
-        break;
       }
     }
-    LOGGER(debug) << "get_rx_data() complete (" << n_received << " samples)";
+    LOGGER(debug) << "get_rx_data() complete (" << data.size() << " samples)";
     return n_received;
   }
 

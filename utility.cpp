@@ -61,7 +61,7 @@ std::string make_filename_no_time(const double freq, const double rate)
 
 size_t read_cplx_16(const std::string &name, std::vector<std::complex<int16_t> > &data)
 {
-  std::ifstream infile(name, std::ios::binary);
+  std::ifstream infile(name, std::ios::in | std::ios::binary);
 
   if(infile.is_open()) {
     infile.seekg(0, infile.end);
@@ -85,9 +85,9 @@ size_t read_cplx_16(const std::string &name, std::vector<std::complex<int16_t> >
 
 size_t write_cplx_16(const std::string &name, std::vector<std::complex<int16_t> > &data)
 {
-  std::fstream outfile(name, std::ios::binary);
+  std::fstream outfile(name, std::ios::out | std::ios::trunc | std::ios::binary);
 
-  if(outfile.is_open()) {
+  if(outfile.good()) {
     outfile.write((char *)&data.front(), sizeof(std::complex<int16_t>) * data.size());
     outfile.seekg(0, outfile.end);
     size_t num_elem = outfile.tellg() / sizeof(std::complex<int16_t>);
