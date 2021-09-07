@@ -515,14 +515,27 @@ class vxsdr {
     start_receive();
   }
 
+  void response_queue_push_wait(response_queue_element &p)
+  {
+    unsigned wait_time_us = 0;
+    while(response_queue.write_available() == 0 and wait_time_us < response_queue_timeout_us) {
+      if constexpr(response_queue_wait_us > 0) {
+        std::this_thread::sleep_for(std::chrono::microseconds(response_queue_wait_us));
+        wait_time_us += response_queue_wait_us;
+      }
+    }
+    if(not response_queue.push(p)) {
+      LOGGER(error) << "timeout pushing to response queue";
+    }
+  }
+
   void start_receive() {
     LOGGER(debug) << "start_receive started";
     boost::asio::ip::udp::endpoint remote_endpoint;
     uint16_t last_seq = 0;
 
     while(not receiver_thread_stop_flag) {
-
-      data_queue_element recv_buffer;
+      static data_queue_element recv_buffer;
       size_t bytes_received = 0;
 #ifndef ASYNCH_RX
       bytes_received = receiver_socket.receive_from(boost::asio::buffer(&recv_buffer, sizeof(recv_buffer)), remote_endpoint);
@@ -574,11 +587,20 @@ class vxsdr {
         last_seq = recv_buffer.hdr.sequence_counter;
         switch(recv_buffer.hdr.packet_type) {
         // receive buffers go into the rx data queue
-        case PACKET_TYPES::RX_SIGNAL_DATA:
-          if(not rx_data_queue.push(recv_buffer)) {
-            LOGGER(error) << "error pushing to rx_data_queue";
+        case PACKET_TYPES::RX_SIGNAL_DATA: {
+          unsigned wait_time_us = 0;
+          while(rx_data_queue.write_available() == 0 and wait_time_us < rx_data_queue_timeout_us) {
+            if constexpr(rx_data_queue_wait_us > 0) {
+              std::this_thread::sleep_for(std::chrono::microseconds(rx_data_queue_wait_us));
+              wait_time_us += rx_data_queue_wait_us;
+            }
           }
-          break;
+          if(not rx_data_queue.push(recv_buffer)) {
+            LOGGER(error) << "timeout pushing to rx data queue";
+            break;
+          }
+        }
+        break;
         // tx sginal data acks special cased since they contain throttling information
         case PACKET_TYPES::TX_SIGNAL_DATA_ACK: {
           tx_signal_data_ack_packet r;
@@ -588,7 +610,7 @@ class vxsdr {
           if(forward_acks) {
             response_queue_element p;
             std::memcpy(&p, &r, std::min(sizeof(p), sizeof(r)));
-            response_queue.push(p);
+            response_queue_push_wait(p);
           }
         }
         break;
@@ -604,7 +626,7 @@ class vxsdr {
             rx_buffer_fill_percent = std::min(100U, (100U *  rx_buffer_used) / rx_buffer_size);
             response_queue_element p;
             std::memcpy(&p, &r, std::min(sizeof(p), sizeof(r)));
-            response_queue.push(p);
+            response_queue_push_wait(p);
           }
           break;
           case DEVICE_CMD_RSP::GET_BUFFER_INFO_RSP: {
@@ -614,13 +636,13 @@ class vxsdr {
             rx_buffer_size = r.rx_buffer_size_bytes;
             response_queue_element p;
             std::memcpy(&p, &r, std::min(sizeof(p), sizeof(r)));
-            response_queue.push(p);
+            response_queue_push_wait(p);
           }
           break;
           default: {
             response_queue_element p;
             std::memcpy(&p, &recv_buffer, std::min(sizeof(p), sizeof(recv_buffer)));
-            response_queue.push(p);
+            response_queue_push_wait(p);
           }
           break;
           }
@@ -631,7 +653,7 @@ class vxsdr {
           if(forward_acks) {
             response_queue_element p;
             std::memcpy(&p, &recv_buffer, std::min(sizeof(p), sizeof(recv_buffer)));
-            response_queue.push(p);
+            response_queue_push_wait(p);
           }
           break;
         // DEVICE_CMD_RSP handled above
@@ -642,7 +664,7 @@ class vxsdr {
         case PACKET_TYPES::TX_RADIO_CMD_ERR: {
           response_queue_element p;
           std::memcpy(&p, &recv_buffer, std::min(sizeof(p), sizeof(recv_buffer)));
-          response_queue.push(p);
+          response_queue_push_wait(p);
         }
         break;
         // packet types that should never show up at the host are dropped
