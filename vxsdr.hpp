@@ -117,14 +117,16 @@ class vxsdr {
     command_queue.reset();
     response_queue.reset();
     destination_endpoint = radio_endpoint;
-
+#ifndef SYNCH_RX
     // https://www.boost.org/doc/libs/1_77_0/doc/html/boost_asio/example/cpp11/futures/daytime_client.cpp
     // We run the io_context off in its own thread so that it operates
     // completely asynchronously with respect to the rest of the program.
-    // this needs Boost 1.76 or higher
+    //
+    // boost::asio::execution needs Boost 1.76 or higher; use make_work_guard for backwards compatibility
     //auto work = boost::asio::require(context.get_executor(), boost::asio::execution::outstanding_work.tracked);
     auto work = boost::asio::make_work_guard(context);
     context_thread = std::thread([&] { context.run(); });
+#endif
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
     receiver_thread = std::thread([&] { receiver(); });
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -139,16 +141,20 @@ class vxsdr {
     LOGGER(debug) << "vxsdr destructor entered";
     LOGGER(debug) << "joining receiver_thread";
     receiver_thread_stop_flag = true;
+    receiver_socket.shutdown(boost::asio::ip::udp::socket::shutdown_receive);
     if(receiver_thread.joinable()) {
       receiver_thread.join();
     }
     LOGGER(debug) << "joining sender thread";
+    //sender_socket.shutdown(boost::asio::ip::udp::socket::shutdown_send);
     sender_thread_stop_flag = true;
     if(sender_thread.joinable()) {
       sender_thread.join();
     }
+#ifndef SYNCH_RX
     LOGGER(debug) << "joining context thread";
     context_thread.join();
+#endif
     LOGGER(debug) << "vxsdr destructor complete";
   };
   // copy constructor deleted
@@ -507,7 +513,6 @@ class vxsdr {
 
       data_queue_element recv_buffer;
       size_t bytes_received = 0;
-
 #ifdef SYNCH_RX
       bytes_received = receiver_socket.receive_from(boost::asio::buffer(&recv_buffer, sizeof(recv_buffer)), remote_endpoint);
 #else
