@@ -195,7 +195,7 @@ class vxsdr {
       unsigned wait_time_us = 0;
       // setting rx_data_queue_wait_us = 0 results in a busy wait with no timeout
       while(rx_data_queue.read_available() == 0 and wait_time_us < rx_data_queue_timeout_us) {
-        if constexpr(rx_data_queue_wait_us > 0) {
+        if(rx_data_queue_wait_us > 0) {
           std::this_thread::sleep_for(std::chrono::microseconds(rx_data_queue_wait_us));
           wait_time_us += rx_data_queue_wait_us;
         }
@@ -259,7 +259,7 @@ class vxsdr {
       unsigned wait_time_us = 0;
       // setting tx_data_queue_wait_us = 0 results in a busy wait with no timeout
       while(tx_data_queue.write_available() == 0 and wait_time_us < tx_data_queue_timeout_us) {
-        if constexpr(tx_data_queue_wait_us > 0) {
+        if(tx_data_queue_wait_us > 0) {
           std::this_thread::sleep_for(std::chrono::microseconds(tx_data_queue_wait_us));
           wait_time_us += tx_data_queue_wait_us;
         }
@@ -281,7 +281,7 @@ class vxsdr {
     unsigned wait_time_us = 0;
     // setting command_queue_wait_us = 0 results in a busy wait with no timeout
     while(command_queue.write_available() == 0 and wait_time_us < command_queue_timeout_us) {
-      if constexpr(command_queue_wait_us > 0) {
+      if(command_queue_wait_us > 0) {
         std::this_thread::sleep_for(std::chrono::microseconds(command_queue_wait_us));
         wait_time_us += command_queue_wait_us;
       }
@@ -518,7 +518,7 @@ class vxsdr {
   void response_queue_push_wait(response_queue_element &p) {
     unsigned wait_time_us = 0;
     while(response_queue.write_available() == 0 and wait_time_us < response_queue_timeout_us) {
-      if constexpr(response_queue_wait_us > 0) {
+      if(response_queue_wait_us > 0) {
         std::this_thread::sleep_for(std::chrono::microseconds(response_queue_wait_us));
         wait_time_us += response_queue_wait_us;
       }
@@ -602,7 +602,7 @@ class vxsdr {
           case PACKET_TYPES::RX_SIGNAL_DATA: {
               unsigned wait_time_us = 0;
               while(rx_data_queue.write_available() == 0 and wait_time_us < rx_data_queue_timeout_us) {
-                if constexpr(rx_data_queue_wait_us > 0) {
+                if(rx_data_queue_wait_us > 0) {
                   std::this_thread::sleep_for(std::chrono::microseconds(rx_data_queue_wait_us));
                   wait_time_us += rx_data_queue_wait_us;
                 }
@@ -823,7 +823,7 @@ class vxsdr {
           }
         }
       } else {
-        if constexpr(send_thread_sleep_us > 0) {
+        if(send_thread_sleep_us > 0) {
           std::this_thread::sleep_for(std::chrono::microseconds(send_thread_sleep_us));
         }
       }
