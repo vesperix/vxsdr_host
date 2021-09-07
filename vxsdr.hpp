@@ -114,10 +114,6 @@ class vxsdr {
     sender_socket(context, local_send_endpoint),
     receiver_socket(context, local_receive_endpoint) {
     LOGGER(debug) << "vxsdr constructor entered";
-    tx_data_queue.reset();
-    rx_data_queue.reset();
-    command_queue.reset();
-    response_queue.reset();
     destination_endpoint = radio_endpoint;
 #ifdef ASYNCH_RX
     // https://www.boost.org/doc/libs/1_77_0/doc/html/boost_asio/example/cpp11/futures/daytime_client.cpp
@@ -128,8 +124,8 @@ class vxsdr {
     //auto work = boost::asio::require(context.get_executor(), boost::asio::execution::outstanding_work.tracked);
     auto work = boost::asio::make_work_guard(context);
     context_thread = std::thread([&] { context.run(); });
-#endif // ASYNC_RX
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
+#endif // ASYNC_RX
     receiver_thread = std::thread([&] { receiver(); });
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
     sender_thread = std::thread([&] { sender(); });
@@ -188,9 +184,8 @@ class vxsdr {
     size_t n_received = 0;
     data_queue_element q;
 
-    data.clear();
     if(n_desired > 0) {
-      data.reserve(n_desired);
+      data.resize(n_desired);
     } else {
       n_desired = data.size();
     }
