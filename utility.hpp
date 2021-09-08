@@ -6,8 +6,8 @@
 
 #include <boost/format.hpp>
 
-std::string format_time(const std::chrono::time_point<std::chrono::system_clock> t, const int digits = 6, 
-      const bool use_utc = false, const std::string fmt = "%Y-%m-%d %H:%M:%S");
+std::string format_time(const std::chrono::time_point<std::chrono::system_clock> t, const int digits = 6,
+      const bool use_utc = false, const std::string& fmt = "%Y-%m-%d %H:%M:%S");
 std::string make_filename_no_time(const double freq, const double rate);
 std::string make_filename_time(const std::chrono::time_point<std::chrono::system_clock> t, const double freq, const double rate);
 
