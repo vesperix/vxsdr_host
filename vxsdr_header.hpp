@@ -313,7 +313,7 @@ class radio_rf_gain_packet : public cmd_or_rsp_packet {
     double                 gain = 0.0;
 };
 
-class radio_rf_sample_rate_packet : public cmd_or_rsp_packet {
+class radio_sample_rate_packet : public cmd_or_rsp_packet {
   public:
     uint32_t               rate = 0;
     uint32_t               reserved = 0;
