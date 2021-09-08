@@ -32,19 +32,19 @@ namespace PACKET_TYPES {
   static constexpr uint8_t INVALID_PACKET     = 0xFF;
 }
 
-typedef struct {
-  uint8_t                 packet_type = PACKET_TYPES::INVALID_PACKET;
-  uint8_t                 command = 0;
-  uint8_t                 target_subdevice = 0;  // for cases where multiple devices exist (e.g. multiple network I/F or multichannel TX/RX)
-  uint8_t                 flags = 0;
-  uint16_t                packet_size = 0;       // length of packet including header in bytes
-  uint16_t                sequence_counter = 0;  // need to figure out when this resets (every new data stream, power up, ?)
-} packet_header;
+struct packet_header {
+  static inline uint8_t   packet_type = PACKET_TYPES::INVALID_PACKET;
+  static inline uint8_t   command = 0;
+  static inline uint8_t   target_subdevice = 0;  // for cases where multiple devices exist (e.g. multiple network I/F or multichannel TX/RX)
+  static inline uint8_t   flags = 0;
+  static inline uint16_t  packet_size = 0;       // length of packet including header in bytes
+  static inline uint16_t  sequence_counter = 0;  // need to figure out when this resets (every new data stream, power up, ?)
+};
 
-typedef struct {
-  uint32_t                nanoseconds = 0;
-  uint32_t                seconds = 0;
-} time_spec_t;
+struct time_spec_t {
+  static inline uint32_t  nanoseconds = 0;
+  static inline uint32_t  seconds = 0;
+};
 
 typedef uint64_t          stream_spec_t;
 
