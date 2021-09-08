@@ -348,7 +348,7 @@ class radio_rf_gain_packet : public cmd_or_rsp_packet {
 
 //FIXME: this needs to be a double, and the integer divisor needs to be figured
 //       out by the MCU!!
-class radio_rf_sample_rate_packet : public cmd_or_rsp_packet {
+class radio_sample_rate_packet : public cmd_or_rsp_packet {
   public:
     static inline uint32_t               rate = 0;
     static inline uint32_t               reserved = 0;

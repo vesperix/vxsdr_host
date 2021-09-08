@@ -398,7 +398,7 @@ class vxsdr {
   }
 
   void set_tx_rate(const double rate_samples_sec, const uint8_t subdev = 0, const uint8_t flags = 0) {
-    radio_rf_sample_rate_packet p;
+    radio_sample_rate_packet p;
     p.hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::SET_SAMPLE_RATE, subdev, flags, sizeof(p), 0 };
     //FIXME: rate setting needs to be done in MCU from rate_samples_sec, not here
     p.rate = std::min(128, std::max(1, (int)std::lround(160.0e6 / rate_samples_sec)));
@@ -406,7 +406,7 @@ class vxsdr {
   }
 
   void set_rx_rate(const double rate_samples_sec, const uint8_t subdev = 0, const uint8_t flags = 0) {
-    radio_rf_sample_rate_packet p;
+    radio_sample_rate_packet p;
     p.hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::SET_SAMPLE_RATE, subdev, flags, sizeof(p), 0 };
     //FIXME: rate setting needs to be done in MCU from rate_samples_sec, not here
     p.rate = std::min(128, std::max(1, (int)std::lround(160.0e6 / rate_samples_sec)));

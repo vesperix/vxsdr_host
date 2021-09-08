@@ -170,7 +170,32 @@ void log_packet_info(cmd_or_rsp_packet &packet)
       }
       break;
     case PACKET_TYPES::RX_RADIO_CMD_RSP:
-      LOGGER(info) << "RX_RADIO_CMD_RSP: " << (int)packet.hdr.command;
+      switch(packet.hdr.command) {
+        case RADIO_CMD_RSP::GET_RF_FREQ_RSP:
+          {
+            LOGGER(info) << "RX_RADIO_CMD_RSP: GET_RF_FREQ";
+            radio_rf_freq_packet *fr = reinterpret_cast<radio_rf_freq_packet *>(&packet);
+            LOGGER(info) << "   freq                      = " << boost::format("%.5e") % fr->freq;
+          }
+          break;
+        case RADIO_CMD_RSP::GET_RF_GAIN_RSP:
+          {
+            LOGGER(info) << "RX_RADIO_CMD_RSP: GET_RF_GAIN";
+            radio_rf_gain_packet *gr = reinterpret_cast<radio_rf_gain_packet *>(&packet);
+            LOGGER(info) << "   gain                      = " << boost::format("%.2f") % gr->gain;
+          }
+          break;
+        case RADIO_CMD_RSP::GET_SAMPLE_RATE_RSP:
+          {
+            LOGGER(info) << "RX_RADIO_CMD_RSP: GET_SAMPLE_RATE";
+            radio_sample_rate_packet *sr = reinterpret_cast<radio_sample_rate_packet *>(&packet);
+            LOGGER(info) << "   rate                      = " << boost::format("%.5e") % sr->rate;
+          }
+          break;
+        default:
+          LOGGER(info) << "RX_RADIO_CMD_RSP: " << (int)packet.hdr.command;
+          break;
+      }
       break;
     case PACKET_TYPES::RX_RADIO_CMD_ERR:
       LOGGER(info) << "RX_RADIO_CMD_ERR: " << (int)packet.hdr.command;
@@ -179,7 +204,32 @@ void log_packet_info(cmd_or_rsp_packet &packet)
       LOGGER(info) << "RX_RADIO_CMD_ACK: " << (int)packet.hdr.command;
       break;
     case PACKET_TYPES::TX_RADIO_CMD_RSP:
-      LOGGER(info) << "RX_RADIO_CMD_RSP: " << (int)packet.hdr.command;
+      switch(packet.hdr.command) {
+        case RADIO_CMD_RSP::GET_RF_FREQ_RSP:
+          {
+            LOGGER(info) << "TX_RADIO_CMD_RSP: GET_RF_FREQ";
+            radio_rf_freq_packet *fr = reinterpret_cast<radio_rf_freq_packet *>(&packet);
+            LOGGER(info) << "   freq                      = " << boost::format("%.5e") % fr->freq;
+          }
+          break;
+        case RADIO_CMD_RSP::GET_RF_GAIN_RSP:
+          {
+            LOGGER(info) << "TX_RADIO_CMD_RSP: GET_RF_GAIN";
+            radio_rf_gain_packet *gr = reinterpret_cast<radio_rf_gain_packet *>(&packet);
+            LOGGER(info) << "   gain                      = " << boost::format("%.2f") % gr->gain;
+          }
+          break;
+        case RADIO_CMD_RSP::GET_SAMPLE_RATE_RSP:
+          {
+            LOGGER(info) << "TX_RADIO_CMD_RSP: GET_SAMPLE_RATE";
+            radio_sample_rate_packet *sr = reinterpret_cast<radio_sample_rate_packet *>(&packet);
+            LOGGER(info) << "   rate                      = " << boost::format("%.5e") % sr->rate;
+          }
+          break;
+        default:
+          LOGGER(info) << "TX_RADIO_CMD_RSP: " << (int)packet.hdr.command;
+          break;
+      }
       break;
     case PACKET_TYPES::TX_RADIO_CMD_ERR:
       LOGGER(info) << "TX_RADIO_CMD_ERR: " << (int)packet.hdr.command;
