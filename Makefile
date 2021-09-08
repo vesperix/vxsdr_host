@@ -2,17 +2,17 @@
 CXX = clang++-10
 
 CXX_DEFINES = -DBOOST_LOG_DYN_LINK -DBOOST_BIND_GLOBAL_PLACEHOLDERS #-DSEQUENCE_ERROR_DIAGNOSTICS
-CXX_BASEFLAGS = -Wall -pedantic -std=c++17
+CXX_BASEFLAGS = -Wall -pedantic -std=c++17 $(CXX_EXTRA_FLAGS)
 CXX_OPTFLAGS = -O3
 CXX_DBGFLAGS = -g -Og -fsanitize=address
 CXX_LDFLAGS = -lpthread -lboost_log -lboost_program_options -lboost_system
 
-DEBUG = 1
+#DEBUG = 1
 
-ifdef DEBUG
-	CXX_FLAGS = $(CXX_BASEFLAGS) $(CXX_DBGFLAGS) $(CXX_DEFINES)
+ifdef VXSDR_DEBUG
+	CXX_FLAGS = $(CXX_BASEFLAGS) $(CXX_DEFINES) $(CXX_DBGFLAGS)
 else
-	CXX_FLAGS = $(CXX_BASEFLAGS) $(CXX_OPTFLAGS) $(CXX_DEFINES)
+	CXX_FLAGS = $(CXX_BASEFLAGS) $(CXX_DEFINES) $(CXX_OPTFLAGS)
 endif
 
 COMMON_INCLUDES = packet_proc.cpp vxsdr_header.hpp host_radio_options.hpp utility.hpp

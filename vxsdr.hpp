@@ -21,10 +21,10 @@
 class vxsdr {
 
  private:
-#ifdef ASYNC_RX
+#ifdef VXSDR_ASYNC_RX
   // socket_receive_timeout setting for async rx
   static constexpr unsigned receiver_socket_timeout_ms    =      100;
-#endif // ASYNC_RX
+#endif // VXSDR_ASYNC_RX
 
   // thread realtime priority settings
   static constexpr bool thread_set_priority = true;
@@ -99,12 +99,12 @@ class vxsdr {
   std::array<uint64_t, UINT8_MAX + 1> packet_types_received = { 0 };
 
   // FIXME: diagnostic info gathering: remove when unneeded
-#ifdef SEQUENCE_ERROR_DIAGNOSTICS
+#ifdef VXSDR_SEQ_ERR_DIAG
   std::vector<std::chrono::time_point<std::chrono::system_clock> > seq_error_times;
   std::vector<uint8_t> seq_error_packet_type;
   std::vector<uint16_t> seq_error_counter;
   std::vector<uint16_t> seq_error_expected;
-#endif // SEQUENCE_ERROR_DIAGNOSTICS
+#endif // VXSDR_SEQ_ERR_DIAG
 
  public:
   // constructor
@@ -115,7 +115,7 @@ class vxsdr {
     receiver_socket(context, local_receive_endpoint) {
     LOGGER(debug) << "vxsdr constructor entered";
     destination_endpoint = radio_endpoint;
-#ifdef ASYNCH_RX
+#ifdef VXSDR_ASYNC_RX
     // https://www.boost.org/doc/libs/1_77_0/doc/html/boost_asio/example/cpp11/futures/daytime_client.cpp
     // We run the io_context off in its own thread so that it operates
     // completely asynchronously with respect to the rest of the program.
@@ -125,7 +125,7 @@ class vxsdr {
     auto work = boost::asio::make_work_guard(context);
     context_thread = std::thread([&] { context.run(); });
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
-#endif // ASYNC_RX
+#endif // VXSDR_ASYNC_RX
     receiver_thread = std::thread([&] { receiver(); });
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
     sender_thread = std::thread([&] { sender(); });
@@ -147,7 +147,7 @@ class vxsdr {
       // the not connected error is expected since it's a UDP socket
       LOGGER(error) << "receiver socket shutdown: " << err.message();
     }
-#endif // ASYNCH_RX
+#endif // VXSDR_ASYNC_RX
     if(receiver_thread.joinable()) {
       receiver_thread.join();
     }
@@ -164,10 +164,10 @@ class vxsdr {
     if(err != boost::system::errc::success) {
       LOGGER(error) << "sender socket close: " << err.message();
     }
-#ifdef ASYNCH_RX
+#ifdef VXSDR_ASYNC_RX
     LOGGER(debug) << "joining context thread";
     context_thread.join();
-#endif // ASYNC_RX
+#endif // VXSDR_ASYNC_RX
     LOGGER(debug) << "vxsdr destructor complete";
   };
   // copy constructor deleted
@@ -542,7 +542,7 @@ class vxsdr {
     while(not receiver_thread_stop_flag) {
       static data_queue_element recv_buffer;
       size_t bytes_in_packet = 0;
-#ifndef ASYNCH_RX
+#ifndef VXSDR_ASYNC_RX
       bytes_in_packet = receiver_socket.receive_from(boost::asio::buffer(&recv_buffer, sizeof(recv_buffer)), remote_endpoint);
 #else
       /*
@@ -571,7 +571,7 @@ class vxsdr {
       } else {
         bytes_in_packet = result.get();
       }
-#endif // ASYNC_RX
+#endif // VXSDR_ASYNC_RX
 
       if(bytes_in_packet >= sizeof(packet_header) and remote_endpoint == destination_endpoint) {
         packets_received++;
@@ -589,12 +589,12 @@ class vxsdr {
         }
         if(packets_received > 1 and recv_buffer.hdr.sequence_counter != (uint16_t)(last_seq + 1)) {
           sequence_errors++;
-#ifdef SEQUENCE_ERROR_DIAGNOSTICS
+#ifdef VXSDR_SEQ_ERR_DIAG
           seq_error_times.push_back(std::chrono::system_clock::now());
           seq_error_packet_type.push_back(recv_buffer.hdr.packet_type);
           seq_error_counter.push_back(recv_buffer.hdr.sequence_counter);
           seq_error_expected.push_back((uint16_t)(last_seq + 1));
-#endif // SEQUENCE_ERROR_DIAGNOSTICS
+#endif // VXSDR_SEQ_ERR_DIAG
         }
 
         last_seq = recv_buffer.hdr.sequence_counter;
@@ -699,12 +699,12 @@ class vxsdr {
     LOGGER(info) << (boost::format("   %12d samples received") % samples_received);
     LOGGER(info) << (boost::format("   %12d bytes received") % bytes_received);
     LOGGER(info) << (boost::format("   %12d sequence errors") % sequence_errors);
-#ifdef SEQUENCE_ERROR_DIAGNOSTICS
+#ifdef VXSDR_SEQ_ERR_DIAG
     for(unsigned i =0; i < seq_error_times.size(); i++) {
       LOGGER(info) << boost::format(" %30s %20s %8d %8d") % format_time(seq_error_times[i]) % packet_type_to_name(seq_error_packet_type[i])
                    % seq_error_counter[i] % seq_error_expected[i];
     }
-#endif // SEQUENCE_ERROR_DIAGNOSTICS
+#endif // VXSDR_SEQ_ERR_DIAG
   }
 
   void udp_sender() {
