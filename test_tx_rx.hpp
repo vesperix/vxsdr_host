@@ -113,7 +113,6 @@ class udp_receiver {
     boost::asio::ip::udp::socket socket;
     boost::asio::ip::udp::endpoint remote;
     largest_data_packet recv_buffer;
-    largest_cmd_or_rsp_packet cmd_buffer;
     uint64_t packets_received = 0, seq_errors = 0;
     std::array<uint64_t, UINT8_MAX + 1> packet_types_received = { 0 };
     uint16_t last_seq = 0;

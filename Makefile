@@ -1,13 +1,11 @@
 
 CXX = clang++-10
 
-CXX_DEFINES = -DBOOST_LOG_DYN_LINK -DBOOST_BIND_GLOBAL_PLACEHOLDERS #-DSEQUENCE_ERROR_DIAGNOSTICS
+CXX_DEFINES = -DBOOST_LOG_DYN_LINK -DBOOST_BIND_GLOBAL_PLACEHOLDERS #-DVXSDR_SEQ_ERR_DIAG
 CXX_BASEFLAGS = -Wall -pedantic -std=c++17 $(CXX_EXTRA_FLAGS)
 CXX_OPTFLAGS = -O3
 CXX_DBGFLAGS = -g -Og -fsanitize=address
 CXX_LDFLAGS = -lpthread -lboost_log -lboost_program_options -lboost_system
-
-#DEBUG = 1
 
 ifdef VXSDR_DEBUG
 	CXX_FLAGS = $(CXX_BASEFLAGS) $(CXX_DEFINES) $(CXX_DBGFLAGS)
@@ -18,14 +16,11 @@ endif
 COMMON_INCLUDES = packet_proc.cpp vxsdr_header.hpp host_radio_options.hpp utility.hpp
 COMMON_SRC = packet_proc.cpp utility.cpp
 
-PROGS = host_tx_throttle vxsdr_test test_rx test_tx test_rx_seq_only
+PROGS = vxsdr_test test_rx test_tx test_rx_seq_only
 
 all: $(PROGS) Makefile
 
 .PHONY: all
-
-host_tx_throttle: host_tx_throttle.cpp udp_tx_rx.hpp $(COMMON_INCLUDES)
-	$(CXX) $(CXX_FLAGS) -o $@ $< $(COMMON_SRC) $(CXX_LDFLAGS)
 
 test_rx: test_rx.cpp test_tx_rx.hpp $(COMMON_INCLUDES)
 	$(CXX) $(CXX_FLAGS) -o $@ $< $(COMMON_SRC) $(CXX_LDFLAGS)
