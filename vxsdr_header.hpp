@@ -17,7 +17,6 @@ namespace PACKET_TYPES {
   static constexpr uint8_t DEVICE_CMD         = 0x02;
   static constexpr uint8_t TX_RADIO_CMD       = 0x03;
   static constexpr uint8_t RX_RADIO_CMD       = 0x04;
-  static constexpr uint8_t STATUS_MSG         = 0x05;
   static constexpr uint8_t DEVICE_CMD_ERR     = 0x0A;
   static constexpr uint8_t TX_RADIO_CMD_ERR   = 0x0B;
   static constexpr uint8_t RX_RADIO_CMD_ERR   = 0x0C;
@@ -121,9 +120,12 @@ namespace DEVICE_CMD_ERR {
   static constexpr uint8_t NO_SUCH_SUBDEVICE            = 0x03;  // the specified subdevice doesn't exist
   static constexpr uint8_t TIMEOUT                      = 0x04;  // tried to do command but something didn't answer
   static constexpr uint8_t BAD_PARAMETER                = 0x05;  // command parameter is out of allowed range
-  static constexpr uint8_t OUT_OF_SEQUENCE              = 0x06;  // command received with sequence error
-  static constexpr uint8_t DATA_BUFFER_OVERFLOW         = 0x07;  // overflow data buffer
-  static constexpr uint8_t CTRL_BUFFER_OVERFLOW         = 0x08;  // overflow control buffer
+  static constexpr uint8_t CMD_OUT_OF_SEQUENCE          = 0x06;  // command received with sequence error
+  static constexpr uint8_t DATA_BUFFER_OVERFLOW         = 0x07;
+  static constexpr uint8_t CTRL_BUFFER_OVERFLOW         = 0x08;
+  static constexpr uint8_t DATA_BUFFER_UNDERFLOW        = 0x09;
+  static constexpr uint8_t CTRL_BUFFER_UNDERFLOW        = 0x0A;
+  static constexpr uint8_t DATA_OUT_OF_SEQUENCE         = 0x0B;  // data received with sequence error
 }
 
 namespace RADIO_CMD {

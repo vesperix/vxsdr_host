@@ -118,9 +118,12 @@ local errors = {
     [0x03] = "NO_SUCH_SUBDEVICE",
     [0x04] = "TIMEOUT",
     [0x05] = "BAD_PARAMETER",
-    [0x06] = "OUT_OF_SEQUENCE",
+    [0x06] = "CMD_OUT_OF_SEQUENCE",
     [0x07] = "DATA_BUFFER_OVERFLOW",
-    [0x08] = "CTRL_BUFFER_OVERFLOW"
+    [0x08] = "CTRL_BUFFER_OVERFLOW",
+    [0x09] = "DATA_BUFFER_UNDERFLOW",
+    [0x0A] = "CTRL_BUFFER_UNDERFLOW",
+    [0x0B] = "DATA_OUT_OF_SEQUENCE"
 }
 
 
