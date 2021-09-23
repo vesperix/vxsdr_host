@@ -6,7 +6,9 @@
 #include <boost/lockfree/spsc_queue.hpp>
 #include <boost/asio/io_service.hpp>
 #include <boost/asio/ip/udp.hpp>
+#ifdef VXSDR_ASYNC_RX
 #include <boost/asio/use_future.hpp>
+#endif // VXSDR_ASYNC_RX
 
 #include "logging.hpp"
 #include "thread_utils.h"
