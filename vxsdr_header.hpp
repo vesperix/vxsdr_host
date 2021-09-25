@@ -10,27 +10,25 @@
   FROZEN EXCEPT FOR ADDITIONS UNTIL INITIAL IMPLEMENTATION COMPLETE AND TESTED
 */
 
-namespace PACKET_TYPES {
-  // packet types
-  static constexpr uint8_t TX_SIGNAL_DATA     = 0x00;
-  static constexpr uint8_t RX_SIGNAL_DATA     = 0x01;
-  static constexpr uint8_t DEVICE_CMD         = 0x02;
-  static constexpr uint8_t TX_RADIO_CMD       = 0x03;
-  static constexpr uint8_t RX_RADIO_CMD       = 0x04;
-  static constexpr uint8_t STATUS_MSG         = 0x05;
-  static constexpr uint8_t DEVICE_CMD_ERR     = 0x0A;
-  static constexpr uint8_t TX_RADIO_CMD_ERR   = 0x0B;
-  static constexpr uint8_t RX_RADIO_CMD_ERR   = 0x0C;
-  static constexpr uint8_t DEVICE_CMD_RSP     = 0x0D;
-  static constexpr uint8_t TX_RADIO_CMD_RSP   = 0x0E;
-  static constexpr uint8_t RX_RADIO_CMD_RSP   = 0x0F;
-  static constexpr uint8_t TX_SIGNAL_DATA_ACK = 0x80;
-  static constexpr uint8_t RX_SIGNAL_DATA_ACK = 0x81;
-  static constexpr uint8_t DEVICE_CMD_ACK     = 0x82;
-  static constexpr uint8_t TX_RADIO_CMD_ACK   = 0x83;
-  static constexpr uint8_t RX_RADIO_CMD_ACK   = 0x84;
-  static constexpr uint8_t INVALID_PACKET     = 0xFF;
-}
+// Packet Types
+#define  PACKET_TYPE_TX_SIGNAL_DATA     (0x00)
+#define  PACKET_TYPE_RX_SIGNAL_DATA     (0x01)
+#define  PACKET_TYPE_DEVICE_CMD         (0x02)
+#define  PACKET_TYPE_TX_RADIO_CMD       (0x03)
+#define  PACKET_TYPE_RX_RADIO_CMD       (0x04)
+#define  PACKET_TYPE_STATUS_MSG         (0x05)
+#define  PACKET_TYPE_DEVICE_CMD_ERR     (0x0A)
+#define  PACKET_TYPE_TX_RADIO_CMD_ERR   (0x0B)
+#define  PACKET_TYPE_RX_RADIO_CMD_ERR   (0x0C)
+#define  PACKET_TYPE_DEVICE_CMD_RSP     (0x0D)
+#define  PACKET_TYPE_TX_RADIO_CMD_RSP   (0x0E)
+#define  PACKET_TYPE_RX_RADIO_CMD_RSP   (0x0F)
+#define  PACKET_TYPE_TX_SIGNAL_DATA_ACK (0x80)
+#define  PACKET_TYPE_RX_SIGNAL_DATA_ACK (0x81)
+#define  PACKET_TYPE_DEVICE_CMD_ACK     (0x82)
+#define  PACKET_TYPE_TX_RADIO_CMD_ACK   (0x83)
+#define  PACKET_TYPE_RX_RADIO_CMD_ACK   (0x84)
+#define  PACKET_TYPE_INVALID_PACKET     (0xFF)
 
 struct packet_header {
   uint8_t                  packet_type;

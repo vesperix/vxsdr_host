@@ -7,37 +7,37 @@
 
 std::string packet_type_to_name(const uint8_t number) {
   switch(number) {
-    case PACKET_TYPES::TX_SIGNAL_DATA:
+    case PACKET_TYPE_TX_SIGNAL_DATA:
       return "TX_SIGNAL_DATA";
-    case PACKET_TYPES::RX_SIGNAL_DATA:
+    case PACKET_TYPE_RX_SIGNAL_DATA:
       return "RX_SIGNAL_DATA";
-    case PACKET_TYPES::DEVICE_CMD:
+    case PACKET_TYPE_DEVICE_CMD:
       return "DEVICE_CMD";
-    case PACKET_TYPES::TX_RADIO_CMD:
+    case PACKET_TYPE_TX_RADIO_CMD:
       return "TX_RADIO_CMD";
-    case PACKET_TYPES::RX_RADIO_CMD:
+    case PACKET_TYPE_RX_RADIO_CMD:
       return "RX_RADIO_CMD";
-    case PACKET_TYPES::DEVICE_CMD_ERR:
+    case PACKET_TYPE_DEVICE_CMD_ERR:
       return "DEVICE_CMD_ERR";
-    case PACKET_TYPES::TX_RADIO_CMD_ERR:
+    case PACKET_TYPE_TX_RADIO_CMD_ERR:
       return "TX_RADIO_CMD_ERR";
-    case PACKET_TYPES::RX_RADIO_CMD_ERR:
+    case PACKET_TYPE_RX_RADIO_CMD_ERR:
       return "RX_RADIO_CMD_ERR";
-    case PACKET_TYPES::DEVICE_CMD_RSP:
+    case PACKET_TYPE_DEVICE_CMD_RSP:
       return "DEVICE_CMD_RSP";
-    case PACKET_TYPES::TX_RADIO_CMD_RSP:
+    case PACKET_TYPE_TX_RADIO_CMD_RSP:
       return "TX_RADIO_CMD_RSP";
-    case PACKET_TYPES::RX_RADIO_CMD_RSP:
+    case PACKET_TYPE_RX_RADIO_CMD_RSP:
       return "RX_RADIO_CMD_RSP";
-    case PACKET_TYPES::TX_SIGNAL_DATA_ACK:
+    case PACKET_TYPE_TX_SIGNAL_DATA_ACK:
       return "TX_SIGNAL_DATA_ACK";
-    case PACKET_TYPES::RX_SIGNAL_DATA_ACK:
+    case PACKET_TYPE_RX_SIGNAL_DATA_ACK:
       return "RX_SIGNAL_DATA_ACK";
-    case PACKET_TYPES::DEVICE_CMD_ACK:
+    case PACKET_TYPE_DEVICE_CMD_ACK:
       return "DEVICE_CMD_ACK";
-    case PACKET_TYPES::TX_RADIO_CMD_ACK:
+    case PACKET_TYPE_TX_RADIO_CMD_ACK:
       return "TX_RADIO_CMD_ACK";
-    case PACKET_TYPES::RX_RADIO_CMD_ACK:
+    case PACKET_TYPE_RX_RADIO_CMD_ACK:
       return "RX_RADIO_CMD_ACK";
     default:
       return "UNDEFINED";
@@ -106,13 +106,13 @@ std::string device_command_to_name(const uint8_t cmd) {
 void log_packet_info(cmd_or_rsp_packet &packet)
 {
   switch(packet.hdr.packet_type) {
-    case PACKET_TYPES::DEVICE_CMD_ACK:
+    case PACKET_TYPE_DEVICE_CMD_ACK:
       LOGGER(info) << "DEVICE_CMD_ACK: " << device_command_to_name(packet.hdr.command);
       break;
-    case PACKET_TYPES::DEVICE_CMD_ERR:
+    case PACKET_TYPE_DEVICE_CMD_ERR:
       LOGGER(info) << "DEVICE_CMD_ERR: " << device_command_to_name(packet.hdr.command);
       break;
-    case PACKET_TYPES::DEVICE_CMD_RSP:
+    case PACKET_TYPE_DEVICE_CMD_RSP:
       switch(packet.hdr.command) {
         case DEVICE_CMD::HELLO:
           {
@@ -171,7 +171,7 @@ void log_packet_info(cmd_or_rsp_packet &packet)
           break;
       }
       break;
-    case PACKET_TYPES::RX_RADIO_CMD_RSP:
+    case PACKET_TYPE_RX_RADIO_CMD_RSP:
       switch(packet.hdr.command) {
         case RADIO_CMD_RSP::GET_RF_FREQ_RSP:
           {
@@ -199,13 +199,13 @@ void log_packet_info(cmd_or_rsp_packet &packet)
           break;
       }
       break;
-    case PACKET_TYPES::RX_RADIO_CMD_ERR:
+    case PACKET_TYPE_RX_RADIO_CMD_ERR:
       LOGGER(info) << "RX_RADIO_CMD_ERR: " << (int)packet.hdr.command;
       break;
-    case PACKET_TYPES::RX_RADIO_CMD_ACK:
+    case PACKET_TYPE_RX_RADIO_CMD_ACK:
       LOGGER(info) << "RX_RADIO_CMD_ACK: " << (int)packet.hdr.command;
       break;
-    case PACKET_TYPES::TX_RADIO_CMD_RSP:
+    case PACKET_TYPE_TX_RADIO_CMD_RSP:
       switch(packet.hdr.command) {
         case RADIO_CMD_RSP::GET_RF_FREQ_RSP:
           {
@@ -233,13 +233,13 @@ void log_packet_info(cmd_or_rsp_packet &packet)
           break;
       }
       break;
-    case PACKET_TYPES::TX_RADIO_CMD_ERR:
+    case PACKET_TYPE_TX_RADIO_CMD_ERR:
       LOGGER(info) << "TX_RADIO_CMD_ERR: " << (int)packet.hdr.command;
       break;
-    case PACKET_TYPES::TX_RADIO_CMD_ACK:
+    case PACKET_TYPE_TX_RADIO_CMD_ACK:
       LOGGER(info) << "TX_RADIO_CMD_ACK: " << (int)packet.hdr.command;
       break;
-    case PACKET_TYPES::TX_SIGNAL_DATA_ACK:
+    case PACKET_TYPE_TX_SIGNAL_DATA_ACK:
       {
         LOGGER(info) << "TX_SIGNAL_DATA_ACK";
         auto *br = reinterpret_cast<tx_signal_data_ack_packet *>(&packet);
