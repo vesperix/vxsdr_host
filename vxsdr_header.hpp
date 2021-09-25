@@ -10,26 +10,124 @@
   FROZEN EXCEPT FOR ADDITIONS UNTIL INITIAL IMPLEMENTATION COMPLETE AND TESTED
 */
 
-namespace PACKET_TYPES {
-  // packet types
-  static constexpr uint8_t TX_SIGNAL_DATA     = 0x00;
-  static constexpr uint8_t RX_SIGNAL_DATA     = 0x01;
-  static constexpr uint8_t DEVICE_CMD         = 0x02;
-  static constexpr uint8_t TX_RADIO_CMD       = 0x03;
-  static constexpr uint8_t RX_RADIO_CMD       = 0x04;
-  static constexpr uint8_t DEVICE_CMD_ERR     = 0x0A;
-  static constexpr uint8_t TX_RADIO_CMD_ERR   = 0x0B;
-  static constexpr uint8_t RX_RADIO_CMD_ERR   = 0x0C;
-  static constexpr uint8_t DEVICE_CMD_RSP     = 0x0D;
-  static constexpr uint8_t TX_RADIO_CMD_RSP   = 0x0E;
-  static constexpr uint8_t RX_RADIO_CMD_RSP   = 0x0F;
-  static constexpr uint8_t TX_SIGNAL_DATA_ACK = 0x80;
-  static constexpr uint8_t RX_SIGNAL_DATA_ACK = 0x81;
-  static constexpr uint8_t DEVICE_CMD_ACK     = 0x82;
-  static constexpr uint8_t TX_RADIO_CMD_ACK   = 0x83;
-  static constexpr uint8_t RX_RADIO_CMD_ACK   = 0x84;
-  static constexpr uint8_t INVALID_PACKET     = 0xFF;
-}
+// Packet Types
+#define  PACKET_TYPE_TX_SIGNAL_DATA            (0x00)
+#define  PACKET_TYPE_RX_SIGNAL_DATA            (0x01)
+#define  PACKET_TYPE_DEVICE_CMD                (0x02)
+#define  PACKET_TYPE_TX_RADIO_CMD              (0x03)
+#define  PACKET_TYPE_RX_RADIO_CMD              (0x04)
+#define  PACKET_TYPE_STATUS_MSG                (0x05)
+#define  PACKET_TYPE_DEVICE_CMD_ERR            (0x0A)
+#define  PACKET_TYPE_TX_RADIO_CMD_ERR          (0x0B)
+#define  PACKET_TYPE_RX_RADIO_CMD_ERR          (0x0C)
+#define  PACKET_TYPE_DEVICE_CMD_RSP            (0x0D)
+#define  PACKET_TYPE_TX_RADIO_CMD_RSP          (0x0E)
+#define  PACKET_TYPE_RX_RADIO_CMD_RSP          (0x0F)
+#define  PACKET_TYPE_TX_SIGNAL_DATA_ACK        (0x80)
+#define  PACKET_TYPE_RX_SIGNAL_DATA_ACK        (0x81)
+#define  PACKET_TYPE_DEVICE_CMD_ACK            (0x82)
+#define  PACKET_TYPE_TX_RADIO_CMD_ACK          (0x83)
+#define  PACKET_TYPE_RX_RADIO_CMD_ACK          (0x84)
+#define  PACKET_TYPE_INVALID_PACKET            (0xFF)
+
+// Flags
+#define FLAGS_REQUEST_ACK                      (0x80)
+#define FLAGS_TIME_PRESENT                     (0x40)
+#define FLAGS_STREAM_ID_PRESENT                (0x20)
+//     bits 3-7: reserved for additional settings
+
+// Device Commands
+#define DEVICE_CMD_HELLO                       (0x00)
+#define DEVICE_CMD_SET_TIME_NOW                (0x01)  // error if TIME_PRESENT is 0
+#define DEVICE_CMD_SET_TIME_NEXT_PPS           (0x02)  // error if TIME_PRESENT is 0
+#define DEVICE_CMD_GET_TIME                    (0x03)
+#define DEVICE_CMD_GET_STATUS                  (0x04)
+#define DEVICE_CMD_CLEAR_STATUS                (0x05)  // resets error flags and counters
+#define DEVICE_CMD_GET_BUFFER_INFO             (0x06)  // returns info on how many buffers and their purpose
+#define DEVICE_CMD_GET_BUFFER_USE              (0x07)  // asks for buffer info
+#define DEVICE_CMD_OPEN_SESSION                (0x08)
+#define DEVICE_CMD_CLOSE_SESSION               (0x09)
+  // 0x0A-0x0F reserved
+#define DEVICE_CMD_GET_TRANSPORT_INFO          (0x10)  // unimplemented // how many interfaces, what kind
+#define DEVICE_CMD_GET_TRANSPORT_ADDR          (0x11)  // we'll use this for IP addresses
+#define DEVICE_CMD_GET_TRANSPORT_PKTSIZ        (0x12)
+  // 0x12-0x1F reserved for more get_transport stuff as needed
+#define DEVICE_CMD_SET_TRANSPORT_ADDR          (0x21)
+#define DEVICE_CMD_SET_TRANSPORT_PKTSIZ        (0x22)
+#define DEVICE_CMD_SAVE_TRANSPORT_ADDR         (0x23)
+  // 0x22-0x2F reserved for more set_transport stuff as needed
+#define DEVICE_CMD_GET_CHANNEL_INFO            (0x30)  // unimplemented // how many, are they TX/RX, etc
+  // 0x31-0x4F reserved for channel parameter get and set
+#define DEVICE_CMD_GET_TIMING_INFO             (0x50)  // unimplemented // what timing inputs are available
+#define DEVICE_CMD_GET_TIMING_STATUS           (0x51)  // PPS present/absent; 10 MHz locked/unlocked
+#define DEVICE_CMD_GET_TIMING_REF              (0x52)  // unimplemented // current sources of 10 MHz and PPS
+#define DEVICE_CMD_SET_TIMING_REF              (0x53)  // unimplemented // set sources of 10 MHz and PPS
+//#define DEVICE_CMD_READ_DAC_REG                (0x60)
+//#define DEVICE_CMD_WRITE_DAC_REG               (0x61)
+//#define DEVICE_CMD_READ_ADC_REG                (0x62)
+//#define DEVICE_CMD_WRITE_ADC_REG               (0x63)
+// 0x64-0xFD reserved for stuff we haven't thought of yet
+#define DEVICE_CMD_STOP                        (0xFE)  // unimplemented // stop all streaming and return to wait state within session
+#define DEVICE_CMD_RESET                       (0xFF)  // unimplemented // do a power on reset (closing session and returning to idle)
+
+// Device Command Errors
+#define DEVICE_CMD_ERR_BAD_CMD                 (0x01)  // generic bad stuff happened; can substitute for more detailed ones until they're implemented
+#define DEVICE_CMD_ERR_BUSY                    (0x02)  // can't accept that command because we're running
+#define DEVICE_CMD_ERR_NO_SUCH_SUBDEVICE       (0x03)  // the specified subdevice doesn't exist
+#define DEVICE_CMD_ERR_TIMEOUT                 (0x04)  // tried to do command but something didn't answer
+#define DEVICE_CMD_ERR_BAD_PARAMETER           (0x05)  // command parameter is out of allowed range
+#define DEVICE_CMD_ERR_OUT_OF_SEQUENCE         (0x06)  // command received with sequence error
+#define DEVICE_CMD_ERR_DATA_BUFFER_OVERFLOW    (0x07)  // overflow data buffer
+#define DEVICE_CMD_ERR_CTRL_BUFFER_OVERFLOW    (0x08)  // overflow control buffer
+
+// Radio Commands
+#define RADIO_CMD_START_NOW_UNTIL_STOP         (0x01)
+#define RADIO_CMD_START_AT_TIME_UNTIL_STOP     (0x02)  // error if TIME_PRESENT is 0
+#define RADIO_CMD_STOP_NOW                     (0x03)  // stops anything going on
+#define RADIO_CMD_START_NOW_FOR_N_SAMPLES      (0x04)
+#define RADIO_CMD_START_AT_TIME_FOR_N_SAMPLES  (0x05)  // error if TIME_PRESENT is 0
+  // 0x06-0x0F reserved
+#define RADIO_CMD_GET_RF_INFO                  (0x10)  // unimplemented // available frequency, gain, sample rate, and bandwidth ranges, number of selectable I/Os
+#define RADIO_CMD_GET_RF_FREQ                  (0x11)  // unimplemented
+#define RADIO_CMD_GET_RF_GAIN                  (0x12)  // unimplemented
+#define RADIO_CMD_GET_SAMPLE_RATE              (0x13)
+#define RADIO_CMD_GET_RF_BW                    (0x14)  // unimplemented
+#define RADIO_CMD_GET_RF_ENABLED               (0x15)  // unimplemented
+#define RADIO_CMD_GET_RF_PORT                  (0x16)  // unimplemented
+  // 0x17-0x20 reserved
+#define RADIO_CMD_SET_RF_FREQ                  (0x21)
+#define RADIO_CMD_SET_RF_GAIN                  (0x22)
+#define RADIO_CMD_SET_SAMPLE_RATE              (0x23)  // FIXME: sets CIC interpolation/decimation rate (valid 1-128)
+#define RADIO_CMD_SET_RF_BW                    (0x24)  // unimplemented
+#define RADIO_CMD_SET_RF_ENABLED               (0x25)  // enables(0x1) or disables(0x0) RX/TX RF path
+#define RADIO_CMD_SET_RF_PORT                  (0x26)  // FIXME: this selects input and output ports
+  // 0x27-0x30 reserved
+#define RADIO_CMD_GET_NUM_SUBDEVS              (0x31)  //unimplemented // return the number of subdevices
+  // 0x32-0xFF reserved
+
+// Radio Command Errors
+#define RADIO_CMD_ERR_BAD_CMD                  (0x01)
+#define RADIO_CMD_ERR_BUSY                     (0x02)
+#define RADIO_CMD_ERR_NO_SUCH_SUBDEVICE        (0x03)
+#define RADIO_CMD_ERR_TIMEOUT                  (0x04)
+#define RADIO_CMD_ERR_BAD_PARAMETER            (0x05)
+
+// Capabilities
+#define CAPABILITY_HAS_LOCK_DETECT             (0x00000001)
+#define CAPABILITY_HAS_EXTERNAL_REF            (0x00000002)
+#define CAPABILITY_HAS_AGC                     (0x00000004)
+#define CAPABILITY_HAS_LIMITER                 (0x00000008)
+#define CAPABILITY_HAS_LIMIT_DETECT            (0x00000010)
+#define CAPABILITY_HAS_MANUAL_IQ_OFFSET_CORR   (0x00000020)
+#define CAPABILITY_HAS_MANUAL_IQ_BALANCE_CORR  (0x00000040)
+#define CAPABILITY_HAS_AUTO_IQ_OFFSET_CORR     (0x00000080)
+#define CAPABILITY_HAS_AUTO_IQ_BALANCE_CORR    (0x00000100)
+#define CAPABILITY_HAS_TEMP_MEASURE            (0x00000200)
+#define CAPABILITY_HAS_POWER_MEASURE           (0x00000400)
+#define CAPABILITY_HAS_EXTERNAL_LO             (0x00000800)
+
+static constexpr size_t   MAX_DATA_LENGTH_SAMPLES  = 2048;
+static constexpr size_t   MAX_PAYLOAD_LENGTH_BYTES = 32;  // maximum length of a CMD or RSP packet, excluding header
 
 struct packet_header {
   uint8_t                  packet_type;
@@ -46,149 +144,6 @@ struct time_spec_t {
 };
 
 typedef uint64_t          stream_spec_t;
-
-namespace FLAGS {
-  static constexpr uint8_t REQUEST_ACK       = 0x80;  // bit 0
-  static constexpr uint8_t TIME_PRESENT      = 0x40;  // bit 1
-  static constexpr uint8_t STREAM_ID_PRESENT = 0x20;  // bit 2
-//     bits 3-7: reserved for additional settings
-  static constexpr uint8_t RESERVED_BIT_3    = 0x10;
-  static constexpr uint8_t RESERVED_BIT_4    = 0x08;
-  static constexpr uint8_t RESERVED_BIT_5    = 0x04;
-  static constexpr uint8_t RESERVED_BIT_6    = 0x02;
-  static constexpr uint8_t RESERVED_BIT_7    = 0x01;
-}
-
-namespace DEVICE_CMD {
-  static constexpr uint8_t HELLO                        = 0x00;
-  static constexpr uint8_t SET_TIME_NOW                 = 0x01;  // error if TIME_PRESENT is 0
-  static constexpr uint8_t SET_TIME_NEXT_PPS            = 0x02;  // error if TIME_PRESENT is 0
-  static constexpr uint8_t GET_TIME                     = 0x03;
-  static constexpr uint8_t GET_STATUS                   = 0x04;
-  static constexpr uint8_t CLEAR_STATUS                 = 0x05;  // resets error flags and counters
-  static constexpr uint8_t GET_BUFFER_INFO              = 0x06;  // returns info on how many buffers and their purpose
-  static constexpr uint8_t GET_BUFFER_USE               = 0x07;  // asks for buffer info
-  static constexpr uint8_t OPEN_SESSION                 = 0x08;
-  static constexpr uint8_t CLOSE_SESSION                = 0x09;
-  // 0x0A-0x0F reserved
-  static constexpr uint8_t GET_TRANSPORT_INFO           = 0x10;  // unimplemented // how many interfaces, what kind
-  static constexpr uint8_t GET_TRANSPORT_ADDR           = 0x11;  // we'll use this for IP addresses
-  static constexpr uint8_t GET_TRANSPORT_PKTSIZ         = 0x12;
-  // 0x12-0x1F reserved for more get_transport stuff as needed
-  static constexpr uint8_t SET_TRANSPORT_ADDR           = 0x21;
-  static constexpr uint8_t SET_TRANSPORT_PKTSIZ         = 0x22;
-  static constexpr uint8_t SAVE_TRANSPORT_ADDR          = 0x23;
-  // 0x22-0x2F reserved for more set_transport stuff as needed
-  static constexpr uint8_t GET_CHANNEL_INFO             = 0x30;  // unimplemented // how many, are they TX/RX, etc
-  // 0x31-0x4F reserved for channel parameter get and set
-  static constexpr uint8_t GET_TIMING_INFO              = 0x50;  // unimplemented // what timing inputs are available
-  static constexpr uint8_t GET_TIMING_STATUS            = 0x51;  // PPS present/absent; 10 MHz locked/unlocked
-  static constexpr uint8_t GET_TIMING_REF               = 0x52;  // unimplemented // current sources of 10 MHz and PPS
-  static constexpr uint8_t SET_TIMING_REF               = 0x53;  // unimplemented // set sources of 10 MHz and PPS
-  static constexpr uint8_t READ_DAC_REG                 = 0x60;
-  static constexpr uint8_t WRITE_DAC_REG                = 0x61;
-  static constexpr uint8_t READ_ADC_REG                 = 0x62;
-  static constexpr uint8_t WRITE_ADC_REG                = 0x63;
-
-  // 0x64-0xFD reserved for stuff we haven't thought of yet
-  static constexpr uint8_t STOP                         = 0xFE;  // unimplemented // stop all streaming and return to wait state within session
-  static constexpr uint8_t RESET                        = 0xFF;  // unimplemented // do a power on reset (closing session and returning to idle)
-}
-
-namespace DEVICE_CMD_RSP {
-  static constexpr uint8_t HELLO_RSP                    = 0x00;
-  static constexpr uint8_t GET_TIME_RSP                 = 0x03;
-  static constexpr uint8_t GET_STATUS_RSP               = 0x04;
-  static constexpr uint8_t GET_BUFFER_INFO_RSP          = 0x06;
-  static constexpr uint8_t GET_BUFFER_USE_RSP           = 0x07;
-  static constexpr uint8_t OPEN_SESSION_RSP             = 0x08;
-  static constexpr uint8_t CLOSE_SESSION_RSP            = 0x09;
-  static constexpr uint8_t GET_TRANSPORT_INFO_RSP       = 0x10; // fixed to match command
-  static constexpr uint8_t GET_TRANSPORT_ADDR_RSP       = 0x11; // fixed to match command
-  static constexpr uint8_t GET_TRANSPORT_PKTSIZ_RSP     = 0x12; // fixed to match command
-  static constexpr uint8_t GET_CHANNEL_INFO_RSP         = 0x30;
-  static constexpr uint8_t GET_TIMING_INFO_RSP          = 0x50;
-  static constexpr uint8_t GET_TIMING_STATUS_RSP        = 0x51;
-  static constexpr uint8_t GET_TIMING_REF_RSP           = 0x52;
-  static constexpr uint8_t READ_DAC_REG_RSP             = 0x60;
-  static constexpr uint8_t READ_ADC_REG_RSP             = 0x62;
-}
-
-namespace DEVICE_CMD_ERR {
-  static constexpr uint8_t BAD_CMD                      = 0x01;  // generic bad stuff happened; can substitute for more detailed ones until they're implemented
-  static constexpr uint8_t BUSY                         = 0x02;  // can't accept that command because we're running
-  static constexpr uint8_t NO_SUCH_SUBDEVICE            = 0x03;  // the specified subdevice doesn't exist
-  static constexpr uint8_t TIMEOUT                      = 0x04;  // tried to do command but something didn't answer
-  static constexpr uint8_t BAD_PARAMETER                = 0x05;  // command parameter is out of allowed range
-  static constexpr uint8_t CMD_OUT_OF_SEQUENCE          = 0x06;  // command received with sequence error
-  static constexpr uint8_t DATA_BUFFER_OVERFLOW         = 0x07;
-  static constexpr uint8_t CTRL_BUFFER_OVERFLOW         = 0x08;
-  static constexpr uint8_t DATA_BUFFER_UNDERFLOW        = 0x09;
-  static constexpr uint8_t CTRL_BUFFER_UNDERFLOW        = 0x0A;
-  static constexpr uint8_t DATA_OUT_OF_SEQUENCE         = 0x0B;  // data received with sequence error
-}
-
-namespace RADIO_CMD {
-  static constexpr uint8_t START_NOW_UNTIL_STOP         = 0x01;
-  static constexpr uint8_t START_AT_TIME_UNTIL_STOP     = 0x02;  // error if TIME_PRESENT is 0
-  static constexpr uint8_t STOP_NOW                     = 0x03;  // stops anything going on
-  static constexpr uint8_t START_NOW_FOR_N_SAMPLES      = 0x04;
-  static constexpr uint8_t START_AT_TIME_FOR_N_SAMPLES  = 0x05;  // error if TIME_PRESENT is 0
-  // 0x06-0x0F reserved
-  static constexpr uint8_t GET_RF_INFO                  = 0x10;  // unimplemented // available frequency, gain, sample rate, and bandwidth ranges, number of selectable I/Os
-  static constexpr uint8_t GET_RF_FREQ                  = 0x11;  // unimplemented
-  static constexpr uint8_t GET_RF_GAIN                  = 0x12;  // unimplemented
-  static constexpr uint8_t GET_SAMPLE_RATE              = 0x13;
-  static constexpr uint8_t GET_RF_BW                    = 0x14;  // unimplemented
-  static constexpr uint8_t GET_RF_ENABLED               = 0x15;  // unimplemented
-  static constexpr uint8_t GET_RF_PORT                  = 0x16;  // unimplemented
-  // 0x17-0x20 reserved
-  static constexpr uint8_t SET_RF_FREQ                  = 0x21;
-  static constexpr uint8_t SET_RF_GAIN                  = 0x22;
-  static constexpr uint8_t SET_SAMPLE_RATE              = 0x23;  // FIXME: sets CIC interpolation/decimation rate (valid 1-128)
-  static constexpr uint8_t SET_RF_BW                    = 0x24;  // unimplemented
-  static constexpr uint8_t SET_RF_ENABLED               = 0x25;  // enables(0x1) or disables(0x0) RX/TX RF path
-  static constexpr uint8_t SET_RF_PORT                  = 0x26;  // FIXME: this selects input and output ports
-  // 0x27-0x30 reserved
-  static constexpr uint8_t GET_NUM_SUBDEVS              = 0x31;  //unimplemented // return the number of subdevices
-  // 0x32-0xFF reserved
-}
-
-namespace RADIO_CMD_RSP {
-  static constexpr uint8_t GET_RF_INFO_RSP              = 0x10;
-  static constexpr uint8_t GET_RF_FREQ_RSP              = 0x11;
-  static constexpr uint8_t GET_RF_GAIN_RSP              = 0x12;
-  static constexpr uint8_t GET_SAMPLE_RATE_RSP          = 0x13;
-  static constexpr uint8_t GET_RF_BW_RSP                = 0x14;
-  static constexpr uint8_t GET_RF_ENABLED_RSP           = 0x15;
-  static constexpr uint8_t GET_RF_PORT_RSP              = 0x16;
-}
-
-namespace RADIO_CMD_ERR {
-  static constexpr uint8_t BAD_CMD                      = 0x01;
-  static constexpr uint8_t BUSY                         = 0x02;
-  static constexpr uint8_t NO_SUCH_SUBDEVICE            = 0x03;
-  static constexpr uint8_t TIMEOUT                      = 0x04;
-  static constexpr uint8_t BAD_PARAMETER                = 0x05;
-}
-
-namespace CAPABILITIES {
-  static constexpr uint32_t HAS_LOCK_DETECT             = 0x00000001;
-  static constexpr uint32_t HAS_EXTERNAL_REF            = 0x00000002;
-  static constexpr uint32_t HAS_AGC                     = 0x00000004;
-  static constexpr uint32_t HAS_LIMITER                 = 0x00000008;
-  static constexpr uint32_t HAS_LIMIT_DETECT            = 0x00000010;
-  static constexpr uint32_t HAS_MANUAL_IQ_OFFSET_CORR   = 0x00000020;
-  static constexpr uint32_t HAS_MANUAL_IQ_BALANCE_CORR  = 0x00000040;
-  static constexpr uint32_t HAS_AUTO_IQ_OFFSET_CORR     = 0x00000080;
-  static constexpr uint32_t HAS_AUTO_IQ_BALANCE_CORR    = 0x00000100;
-  static constexpr uint32_t HAS_TEMP_MEASURE            = 0x00000200;
-  static constexpr uint32_t HAS_POWER_MEASURE           = 0x00000400;
-  static constexpr uint32_t HAS_EXTERNAL_LO             = 0x00000800;
-}
-
-static constexpr size_t   MAX_DATA_LENGTH_SAMPLES  = 2048;
-static constexpr size_t   MAX_PAYLOAD_LENGTH_BYTES = 32;  // maximum length of a CMD or RSP packet, excluding header
 
 class packet {
   public:
