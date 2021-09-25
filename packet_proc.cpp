@@ -46,57 +46,59 @@ std::string packet_type_to_name(const uint8_t number) {
 
 std::string device_command_to_name(const uint8_t cmd) {
   switch(cmd) {
-    case DEVICE_CMD::HELLO:
+    case DEVICE_CMD_HELLO:
       return "HELLO";
-    case DEVICE_CMD::SET_TIME_NOW:
+    case DEVICE_CMD_SET_TIME_NOW:
       return "SET_TIME_NOW";
-    case DEVICE_CMD::SET_TIME_NEXT_PPS:
+    case DEVICE_CMD_SET_TIME_NEXT_PPS:
       return "SET_TIME_NEXT_PPS";
-    case DEVICE_CMD::GET_TIME:
+    case DEVICE_CMD_GET_TIME:
       return "GET_TIME";
-    case DEVICE_CMD::GET_STATUS:
+    case DEVICE_CMD_GET_STATUS:
       return "GET_STATUS";
-    case DEVICE_CMD::GET_BUFFER_INFO:
+    case DEVICE_CMD_GET_BUFFER_INFO:
       return "GET_BUFFER_INFO";
-    case DEVICE_CMD::GET_BUFFER_USE:
+    case DEVICE_CMD_GET_BUFFER_USE:
       return "GET_BUFFER_USE";
-    case DEVICE_CMD::OPEN_SESSION:
+    case DEVICE_CMD_OPEN_SESSION:
       return "OPEN_SESSION";
-    case DEVICE_CMD::CLOSE_SESSION:
+    case DEVICE_CMD_CLOSE_SESSION:
       return "CLOSE_SESSION";
-    case DEVICE_CMD::GET_TRANSPORT_INFO:
+    case DEVICE_CMD_GET_TRANSPORT_INFO:
       return "GET_TRANSPORT_INFO";
-    case DEVICE_CMD::GET_TRANSPORT_ADDR:
+    case DEVICE_CMD_GET_TRANSPORT_ADDR:
       return "GET_TRANSPORT_ADDR";
-    case DEVICE_CMD::GET_TRANSPORT_PKTSIZ:
+    case DEVICE_CMD_GET_TRANSPORT_PKTSIZ:
       return "GET_TRANSPORT_PKTSIZ";
-    case DEVICE_CMD::SET_TRANSPORT_ADDR:
+    case DEVICE_CMD_SET_TRANSPORT_ADDR:
       return "SET_TRANSPORT_ADDR";
-    case DEVICE_CMD::SET_TRANSPORT_PKTSIZ:
+    case DEVICE_CMD_SET_TRANSPORT_PKTSIZ:
       return "SET_TRANSPORT_PKTSIZ";
-    case DEVICE_CMD::SAVE_TRANSPORT_ADDR:
+    case DEVICE_CMD_SAVE_TRANSPORT_ADDR:
       return "SAVE_TRANSPORT_ADDR";
-    case DEVICE_CMD::GET_CHANNEL_INFO:
+    case DEVICE_CMD_GET_CHANNEL_INFO:
       return "GET_CHANNEL_INFO";
-    case DEVICE_CMD::GET_TIMING_INFO:
+    case DEVICE_CMD_GET_TIMING_INFO:
       return "GET_TIMING_INFO";
-    case DEVICE_CMD::GET_TIMING_STATUS:
+    case DEVICE_CMD_GET_TIMING_STATUS:
       return "GET_TIMING_STATUS";
-    case DEVICE_CMD::GET_TIMING_REF:
+    case DEVICE_CMD_GET_TIMING_REF:
       return "GET_TIMING_REF";
-    case DEVICE_CMD::SET_TIMING_REF:
+    case DEVICE_CMD_SET_TIMING_REF:
       return "SET_TIMING_REF";
-    case DEVICE_CMD::READ_DAC_REG:
+/*
+    case DEVICE_CMD_READ_DAC_REG:
       return "READ_DAC_REG";
-    case DEVICE_CMD::WRITE_DAC_REG:
+    case DEVICE_CMD_WRITE_DAC_REG:
       return "WRITE_DAC_REG";
-    case DEVICE_CMD::READ_ADC_REG:
+    case DEVICE_CMD_READ_ADC_REG:
       return "READ_ADC_REG";
-    case DEVICE_CMD::WRITE_ADC_REG:
+    case DEVICE_CMD_WRITE_ADC_REG:
       return "WRITE_ADC_REG";
-    case DEVICE_CMD::STOP:
+*/
+    case DEVICE_CMD_STOP:
       return "STOP";
-    case DEVICE_CMD::RESET:
+    case DEVICE_CMD_RESET:
       return "RESET";
     default:
       return "UNDEFINED";
@@ -114,7 +116,7 @@ void log_packet_info(cmd_or_rsp_packet &packet)
       break;
     case PACKET_TYPE_DEVICE_CMD_RSP:
       switch(packet.hdr.command) {
-        case DEVICE_CMD::HELLO:
+        case DEVICE_CMD_HELLO:
           {
             LOGGER(info) << "DEVICE_CMD_RSP: HELLO";
             auto *hr = reinterpret_cast<hello_rsp_packet *>(&packet);
@@ -122,7 +124,7 @@ void log_packet_info(cmd_or_rsp_packet &packet)
             LOGGER(info) << "   fpga_fw_version           = " << (uint32_t)hr->fpga_fw_version;
           }
           break;
-        case DEVICE_CMD::GET_STATUS:
+        case DEVICE_CMD_GET_STATUS:
           {
             LOGGER(info) << "DEVICE_CMD_RSP: GET_STATUS";
             auto *sr = reinterpret_cast<status_rsp_packet *>(&packet);
@@ -134,7 +136,7 @@ void log_packet_info(cmd_or_rsp_packet &packet)
             LOGGER(info) << "   ethernet_status           = " << std::bitset<8>((sr->ethernet_status) % 256);
           }
           break;
-        case DEVICE_CMD::GET_BUFFER_INFO:
+        case DEVICE_CMD_GET_BUFFER_INFO:
           {
             LOGGER(info) << "DEVICE_CMD_RSP: GET_BUFFER_INFO";
             auto *br = reinterpret_cast<get_buffer_info_rsp_packet *>(&packet);
@@ -142,7 +144,7 @@ void log_packet_info(cmd_or_rsp_packet &packet)
             LOGGER(info) << "   tx_buffer_size_bytes      = " << (uint32_t)br->tx_buffer_size_bytes;
           }
           break;
-        case DEVICE_CMD::GET_BUFFER_USE:
+        case DEVICE_CMD_GET_BUFFER_USE:
           {
             LOGGER(info) << "DEVICE_CMD_RSP: GET_BUFFER_USE";
             auto *br = reinterpret_cast<get_buffer_use_rsp_packet *>(&packet);
@@ -150,20 +152,22 @@ void log_packet_info(cmd_or_rsp_packet &packet)
             LOGGER(info) << "   tx_buffer_used_bytes      = " << (uint32_t)br->tx_buffer_used_bytes;
           }
           break;
-        case DEVICE_CMD::READ_ADC_REG:
+/*
+        case DEVICE_CMD_READ_ADC_REG:
           {
             LOGGER(info) << "DEVICE_CMD_RSP: READ_ADC_REG";
             auto *br = reinterpret_cast<dev_read_write_reg_packet *>(&packet);
             LOGGER(info) << "   value                     = " << boost::format("%08x") % (uint32_t)br->value;
           }
           break;
-        case DEVICE_CMD::READ_DAC_REG:
+        case DEVICE_CMD_READ_DAC_REG:
           {
             LOGGER(info) << "DEVICE_CMD_RSP: READ_DAC_REG";
             auto *br = reinterpret_cast<dev_read_write_reg_packet *>(&packet);
             LOGGER(info) << "   value                     = " << boost::format("%04x") % (uint16_t)br->value;
           }
           break;
+*/
         default:
           {
             LOGGER(info) << "DEVICE_CMD_RSP: " << (int)packet.hdr.command;
@@ -173,21 +177,21 @@ void log_packet_info(cmd_or_rsp_packet &packet)
       break;
     case PACKET_TYPE_RX_RADIO_CMD_RSP:
       switch(packet.hdr.command) {
-        case RADIO_CMD_RSP::GET_RF_FREQ_RSP:
+        case RADIO_CMD_GET_RF_FREQ:
           {
             LOGGER(info) << "RX_RADIO_CMD_RSP: GET_RF_FREQ";
             auto *fr = reinterpret_cast<radio_rf_freq_packet *>(&packet);
             LOGGER(info) << "   freq                      = " << boost::format("%.5e") % fr->freq;
           }
           break;
-        case RADIO_CMD_RSP::GET_RF_GAIN_RSP:
+        case RADIO_CMD_GET_RF_GAIN:
           {
             LOGGER(info) << "RX_RADIO_CMD_RSP: GET_RF_GAIN";
             auto *gr = reinterpret_cast<radio_rf_gain_packet *>(&packet);
             LOGGER(info) << "   gain                      = " << boost::format("%.2f") % gr->gain;
           }
           break;
-        case RADIO_CMD_RSP::GET_SAMPLE_RATE_RSP:
+        case RADIO_CMD_GET_SAMPLE_RATE:
           {
             LOGGER(info) << "RX_RADIO_CMD_RSP: GET_SAMPLE_RATE";
             auto *sr = reinterpret_cast<radio_sample_rate_packet *>(&packet);
@@ -205,23 +209,23 @@ void log_packet_info(cmd_or_rsp_packet &packet)
     case PACKET_TYPE_RX_RADIO_CMD_ACK:
       LOGGER(info) << "RX_RADIO_CMD_ACK: " << (int)packet.hdr.command;
       break;
-    case PACKET_TYPE_TX_RADIO_CMD_RSP:
+    case PACKET_TYPE_TX_RADIO_CMD:
       switch(packet.hdr.command) {
-        case RADIO_CMD_RSP::GET_RF_FREQ_RSP:
+        case RADIO_CMD_GET_RF_FREQ:
           {
             LOGGER(info) << "TX_RADIO_CMD_RSP: GET_RF_FREQ";
             auto *fr = reinterpret_cast<radio_rf_freq_packet *>(&packet);
             LOGGER(info) << "   freq                      = " << boost::format("%.5e") % fr->freq;
           }
           break;
-        case RADIO_CMD_RSP::GET_RF_GAIN_RSP:
+        case RADIO_CMD_GET_RF_GAIN:
           {
             LOGGER(info) << "TX_RADIO_CMD_RSP: GET_RF_GAIN";
             auto *gr = reinterpret_cast<radio_rf_gain_packet *>(&packet);
             LOGGER(info) << "   gain                      = " << boost::format("%.2f") % gr->gain;
           }
           break;
-        case RADIO_CMD_RSP::GET_SAMPLE_RATE_RSP:
+        case RADIO_CMD_GET_SAMPLE_RATE:
           {
             LOGGER(info) << "TX_RADIO_CMD_RSP: GET_SAMPLE_RATE";
             auto *sr = reinterpret_cast<radio_sample_rate_packet *>(&packet);

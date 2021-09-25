@@ -205,8 +205,8 @@ class vxsdr {
       }
 
       if(rx_data_queue.pop(q)) {
-        bool has_time = (bool)(q.hdr.flags & FLAGS::TIME_PRESENT);
-        bool has_stream_id = (bool)(q.hdr.flags & FLAGS::STREAM_ID_PRESENT);
+        bool has_time = (bool)(q.hdr.flags & FLAGS_TIME_PRESENT);
+        bool has_stream_id = (bool)(q.hdr.flags & FLAGS_STREAM_ID_PRESENT);
         if(not has_time and not has_stream_id) {
           data_packet p;
           std::memcpy(&p, &q, std::min(sizeof(q), sizeof(p)));
@@ -297,81 +297,81 @@ class vxsdr {
 
   void device_hello(const uint8_t subdev = 0, const uint8_t flags = 0) {
     cmd_packet p;
-    p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD::HELLO, subdev, flags, sizeof(p), 0 };
+    p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_HELLO, subdev, flags, sizeof(p), 0 };
     cmd_queue_push(p);
   }
 
   void device_reset(const uint8_t subdev = 0, const uint8_t flags = 0) {
     cmd_packet p;
-    p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD::RESET, subdev, flags, sizeof(p), 0 };
+    p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_RESET, subdev, flags, sizeof(p), 0 };
     cmd_queue_push(p);
   }
 
   void device_open_session(const uint8_t subdev = 0, const uint8_t flags = 0) {
     cmd_packet p;
-    p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD::OPEN_SESSION, subdev, flags, sizeof(p), 0 };
+    p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_OPEN_SESSION, subdev, flags, sizeof(p), 0 };
     cmd_queue_push(p);
   }
 
   void device_close_session(const uint8_t subdev = 0, const uint8_t flags = 0) {
     cmd_packet p;
-    p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD::CLOSE_SESSION, subdev, flags, sizeof(p), 0 };
+    p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_CLOSE_SESSION, subdev, flags, sizeof(p), 0 };
     cmd_queue_push(p);
   }
 
   void device_clear_status(const uint8_t subdev = 0, const uint8_t flags = 0) {
     cmd_packet p;
-    p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD::CLEAR_STATUS, subdev, flags, sizeof(p), 0 };
+    p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_CLEAR_STATUS, subdev, flags, sizeof(p), 0 };
     cmd_queue_push(p);
   }
 
   void device_get_status(const uint8_t subdev = 0, const uint8_t flags = 0) {
     cmd_packet p;
-    p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD::GET_STATUS, subdev, flags, sizeof(p), 0 };
+    p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_GET_STATUS, subdev, flags, sizeof(p), 0 };
     cmd_queue_push(p);
   }
 
   void tx_start_now_until_stop(const uint8_t subdev = 0, const uint8_t flags = 0) {
     stream_ctrl_packet p;
-    p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD::START_NOW_UNTIL_STOP, subdev, flags, sizeof(p), 0 };
+    p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_START_NOW_UNTIL_STOP, subdev, flags, sizeof(p), 0 };
     cmd_queue_push(p);
   }
 
   void rx_start_now_until_stop(const uint8_t subdev = 0, const uint8_t flags = 0) {
     stream_ctrl_packet p;
-    p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD::START_NOW_UNTIL_STOP, subdev, flags, sizeof(p), 0 };
+    p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_START_NOW_UNTIL_STOP, subdev, flags, sizeof(p), 0 };
     cmd_queue_push(p);
   }
 
   void tx_start_now_for_n_samples(const uint64_t n, const uint8_t subdev = 0, const uint8_t flags = 0) {
     stream_ctrl_packet_time_samples p;
-    p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD::START_NOW_FOR_N_SAMPLES, subdev, flags, sizeof(p), 0 };
+    p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_START_NOW_FOR_N_SAMPLES, subdev, flags, sizeof(p), 0 };
     p.n_samples = n;
     cmd_queue_push(p);
   }
 
   void rx_start_now_for_n_samples(const uint64_t n, const uint8_t subdev = 0, const uint8_t flags = 0) {
     stream_ctrl_packet_time_samples p;
-    p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD::START_NOW_FOR_N_SAMPLES, subdev, flags, sizeof(p), 0 };
+    p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_START_NOW_FOR_N_SAMPLES, subdev, flags, sizeof(p), 0 };
     p.n_samples = n;
     cmd_queue_push(p);
   }
 
   void tx_stop_now(const uint8_t subdev = 0, const uint8_t flags = 0) {
     stream_ctrl_packet p;
-    p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD::STOP_NOW, subdev, flags, sizeof(p), 0 };
+    p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_STOP_NOW, subdev, flags, sizeof(p), 0 };
     cmd_queue_push(p);
   }
 
   void rx_stop_now(const uint8_t subdev = 0, const uint8_t flags = 0) {
     cmd_packet p;
-    p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD::STOP_NOW, subdev, flags, sizeof(p), 0 };
+    p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_STOP_NOW, subdev, flags, sizeof(p), 0 };
     cmd_queue_push(p);
   }
 
   void set_tx_freq(const double freq, const uint8_t subdev = 0, const uint8_t flags = 0) {
     radio_rf_freq_packet p;
-    p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD::SET_RF_FREQ, subdev, flags, sizeof(p), 0 };
+    p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_SET_RF_FREQ, subdev, flags, sizeof(p), 0 };
     p.freq = freq;
     p.rtol = 1e-9;
     cmd_queue_push(p);
@@ -379,7 +379,7 @@ class vxsdr {
 
   void set_rx_freq(const double freq, const uint8_t subdev = 0, const uint8_t flags = 0) {
     radio_rf_freq_packet p;
-    p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD::SET_RF_FREQ, subdev, flags, sizeof(p), 0 };
+    p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_SET_RF_FREQ, subdev, flags, sizeof(p), 0 };
     p.freq = freq;
     p.rtol = 1e-9;
     cmd_queue_push(p);
@@ -387,21 +387,21 @@ class vxsdr {
 
   void set_tx_gain(const double gain_db, const uint8_t subdev = 0, const uint8_t flags = 0) {
     radio_rf_gain_packet p;
-    p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD::SET_RF_GAIN, subdev, flags, sizeof(p), 0 };
+    p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_SET_RF_GAIN, subdev, flags, sizeof(p), 0 };
     p.gain = gain_db;
     cmd_queue_push(p);
   }
 
   void set_rx_gain(const double gain_db, const uint8_t subdev = 0, const uint8_t flags = 0) {
     radio_rf_gain_packet p;
-    p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD::SET_RF_GAIN, subdev, flags, sizeof(p), 0 };
+    p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_SET_RF_GAIN, subdev, flags, sizeof(p), 0 };
     p.gain = gain_db;
     cmd_queue_push(p);
   }
 
   void set_tx_rate(const double rate_samples_sec, const uint8_t subdev = 0, const uint8_t flags = 0) {
     radio_sample_rate_packet p;
-    p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD::SET_SAMPLE_RATE, subdev, flags, sizeof(p), 0 };
+    p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_SET_SAMPLE_RATE, subdev, flags, sizeof(p), 0 };
     //FIXME: rate setting needs to be done in MCU from rate_samples_sec, not here
     p.rate = std::min(128, std::max(1, (int)std::lround(160.0e6 / rate_samples_sec)));
     cmd_queue_push(p);
@@ -409,7 +409,7 @@ class vxsdr {
 
   void set_rx_rate(const double rate_samples_sec, const uint8_t subdev = 0, const uint8_t flags = 0) {
     radio_sample_rate_packet p;
-    p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD::SET_SAMPLE_RATE, subdev, flags, sizeof(p), 0 };
+    p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_SET_SAMPLE_RATE, subdev, flags, sizeof(p), 0 };
     //FIXME: rate setting needs to be done in MCU from rate_samples_sec, not here
     p.rate = std::min(128, std::max(1, (int)std::lround(160.0e6 / rate_samples_sec)));
     cmd_queue_push(p);
@@ -425,7 +425,7 @@ class vxsdr {
 
   void set_tx_enable(const bool enabled, const uint8_t subdev = 0, const uint8_t flags = 0) {
     radio_rf_enable_packet p;
-    p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD::SET_RF_ENABLED, subdev, flags, sizeof(p), 0 };
+    p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_SET_RF_ENABLED, subdev, flags, sizeof(p), 0 };
     if(enabled) {
       p.enabled = 1;
     } else {
@@ -436,7 +436,7 @@ class vxsdr {
 
   void set_rx_enable(const bool enabled, const uint8_t subdev = 0, const uint8_t flags = 0) {
     radio_rf_enable_packet p;
-    p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD::SET_RF_ENABLED, subdev, flags, sizeof(p), 0 };
+    p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_SET_RF_ENABLED, subdev, flags, sizeof(p), 0 };
     if(enabled) {
       p.enabled = 1;
     } else {
@@ -451,13 +451,13 @@ class vxsdr {
 
   void device_get_buffer_info(const uint8_t subdev, const uint8_t flags = 0) {
     cmd_packet p;
-    p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD::GET_BUFFER_INFO, subdev, flags, sizeof(p), 0 };
+    p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_GET_BUFFER_INFO, subdev, flags, sizeof(p), 0 };
     cmd_queue_push(p);
   }
 
   void device_get_buffer_use(const uint8_t subdev, const uint8_t flags = 0) {
     cmd_packet p;
-    p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD::GET_BUFFER_USE, subdev, flags, sizeof(p), 0 };
+    p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_GET_BUFFER_USE, subdev, flags, sizeof(p), 0 };
     cmd_queue_push(p);
   }
 
@@ -581,10 +581,10 @@ class vxsdr {
         bytes_received += bytes_in_packet;
         if(recv_buffer.hdr.packet_type == PACKET_TYPE_RX_SIGNAL_DATA) {
           uint16_t header_size = sizeof(packet_header);
-          if((bool)(recv_buffer.hdr.flags & FLAGS::TIME_PRESENT)) {
+          if((bool)(recv_buffer.hdr.flags & FLAGS_TIME_PRESENT)) {
             header_size += sizeof(time_spec_t);
           }
-          if((bool)(recv_buffer.hdr.flags & FLAGS::STREAM_ID_PRESENT)) {
+          if((bool)(recv_buffer.hdr.flags & FLAGS_STREAM_ID_PRESENT)) {
             header_size += sizeof(stream_spec_t);
           }
           samples_received += (recv_buffer.hdr.packet_size - header_size) / sizeof(std::complex<int16_t>);
@@ -631,7 +631,7 @@ class vxsdr {
           // the buffer info commands are special cased since they can also be used for TX throttling
           case PACKET_TYPE_DEVICE_CMD_RSP:
             switch(recv_buffer.hdr.command) {
-              case DEVICE_CMD_RSP::GET_BUFFER_USE_RSP: {
+              case DEVICE_CMD_GET_BUFFER_USE: {
                   get_buffer_use_rsp_packet r;
                   std::memcpy(&r, &recv_buffer, std::min(sizeof(r), sizeof(recv_buffer)));
                   tx_buffer_used_bytes = r.tx_buffer_used_bytes;
@@ -643,7 +643,7 @@ class vxsdr {
                   response_queue_push_wait(p);
                 }
                 break;
-              case DEVICE_CMD_RSP::GET_BUFFER_INFO_RSP: {
+              case DEVICE_CMD_GET_BUFFER_INFO: {
                   get_buffer_info_rsp_packet r;
                   std::memcpy(&r, &recv_buffer, sizeof(r));
                   tx_buffer_size_bytes = r.tx_buffer_size_bytes;
@@ -736,10 +736,10 @@ class vxsdr {
     }
     if(packet.hdr.packet_type == PACKET_TYPE_TX_SIGNAL_DATA) {
       uint16_t header_size = sizeof(packet_header);
-      if((bool)(packet.hdr.flags & FLAGS::TIME_PRESENT)) {
+      if((bool)(packet.hdr.flags & FLAGS_TIME_PRESENT)) {
         header_size += sizeof(time_spec_t);
       }
-      if((bool)(packet.hdr.flags & FLAGS::STREAM_ID_PRESENT)) {
+      if((bool)(packet.hdr.flags & FLAGS_STREAM_ID_PRESENT)) {
         header_size += sizeof(stream_spec_t);
       }
       samples_sent += (packet.hdr.packet_size - header_size) / sizeof(std::complex<int16_t>);
@@ -764,8 +764,8 @@ class vxsdr {
     // get the status at the end
     device_get_status(device_subdev);
     // send a stop, requesting an ack so that the rx will see an incoming packet
-    tx_stop_now(tx_subdev, FLAGS::REQUEST_ACK);
-    rx_stop_now(rx_subdev, FLAGS::REQUEST_ACK);
+    tx_stop_now(tx_subdev, FLAGS_REQUEST_ACK);
+    rx_stop_now(rx_subdev, FLAGS_REQUEST_ACK);
   }
 
   void start_send() {
@@ -809,7 +809,7 @@ class vxsdr {
         for(size_t i = 0; i < n_popped; i++) {
           if(samples_sent - last_check >= buffer_check_interval_samples) {
             // request ack to update buffer use
-            data_buffer[i].hdr.flags |= FLAGS::REQUEST_ACK;
+            data_buffer[i].hdr.flags |= FLAGS_REQUEST_ACK;
             send_packet(data_buffer[i]);
             last_check = samples_sent;
           } else {
