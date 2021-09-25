@@ -31,9 +31,9 @@
 #define  PACKET_TYPE_INVALID_PACKET            (0xFF)
 
 // Flags
-#define FLAGS_REQUEST_ACK                      (0x80)
-#define FLAGS_TIME_PRESENT                     (0x40)
-#define FLAGS_STREAM_ID_PRESENT                (0x20)
+#define FLAGS_REQUEST_ACK                      (0x80U)
+#define FLAGS_TIME_PRESENT                     (0x40U)
+#define FLAGS_STREAM_ID_PRESENT                (0x20U)
 //     bits 3-7: reserved for additional settings
 
 // Device Commands
@@ -113,18 +113,18 @@
 #define RADIO_CMD_ERR_BAD_PARAMETER            (0x05)
 
 // Capabilities
-#define CAPABILITY_HAS_LOCK_DETECT             (0x00000001)
-#define CAPABILITY_HAS_EXTERNAL_REF            (0x00000002)
-#define CAPABILITY_HAS_AGC                     (0x00000004)
-#define CAPABILITY_HAS_LIMITER                 (0x00000008)
-#define CAPABILITY_HAS_LIMIT_DETECT            (0x00000010)
-#define CAPABILITY_HAS_MANUAL_IQ_OFFSET_CORR   (0x00000020)
-#define CAPABILITY_HAS_MANUAL_IQ_BALANCE_CORR  (0x00000040)
-#define CAPABILITY_HAS_AUTO_IQ_OFFSET_CORR     (0x00000080)
-#define CAPABILITY_HAS_AUTO_IQ_BALANCE_CORR    (0x00000100)
-#define CAPABILITY_HAS_TEMP_MEASURE            (0x00000200)
-#define CAPABILITY_HAS_POWER_MEASURE           (0x00000400)
-#define CAPABILITY_HAS_EXTERNAL_LO             (0x00000800)
+#define CAPABILITY_HAS_LOCK_DETECT             (0x00000001U)
+#define CAPABILITY_HAS_EXTERNAL_REF            (0x00000002U)
+#define CAPABILITY_HAS_AGC                     (0x00000004U)
+#define CAPABILITY_HAS_LIMITER                 (0x00000008U)
+#define CAPABILITY_HAS_LIMIT_DETECT            (0x00000010U)
+#define CAPABILITY_HAS_MANUAL_IQ_OFFSET_CORR   (0x00000020U)
+#define CAPABILITY_HAS_MANUAL_IQ_BALANCE_CORR  (0x00000040U)
+#define CAPABILITY_HAS_AUTO_IQ_OFFSET_CORR     (0x00000080U)
+#define CAPABILITY_HAS_AUTO_IQ_BALANCE_CORR    (0x00000100U)
+#define CAPABILITY_HAS_TEMP_MEASURE            (0x00000200U)
+#define CAPABILITY_HAS_POWER_MEASURE           (0x00000400U)
+#define CAPABILITY_HAS_EXTERNAL_LO             (0x00000800U)
 
 static constexpr size_t   MAX_DATA_LENGTH_SAMPLES  = 2048;
 static constexpr size_t   MAX_PAYLOAD_LENGTH_BYTES = 32;  // maximum length of a CMD or RSP packet, excluding header
