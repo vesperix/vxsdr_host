@@ -6,7 +6,9 @@
 #include <boost/lockfree/spsc_queue.hpp>
 #include <boost/asio/io_service.hpp>
 #include <boost/asio/ip/udp.hpp>
+#ifdef VXSDR_ASYNC_RX
 #include <boost/asio/use_future.hpp>
+#endif // VXSDR_ASYNC_RX
 
 #include "logging.hpp"
 #include "thread_utils.h"
@@ -21,10 +23,10 @@
 class vxsdr {
 
  private:
-#ifdef ASYNC_RX
+#ifdef VXSDR_ASYNC_RX
   // socket_receive_timeout setting for async rx
   static constexpr unsigned receiver_socket_timeout_ms    =      100;
-#endif // ASYNC_RX
+#endif // VXSDR_ASYNC_RX
 
   // thread realtime priority settings
   static constexpr bool thread_set_priority = true;
@@ -37,8 +39,8 @@ class vxsdr {
   static constexpr int receive_thread_cpu = 2;
 
   // parameters of the internal spsc queues (ring buffers)
-  static constexpr size_t rx_data_queue_length           =    16384;    // slots in rx data queue; 16384 * 2048 / 160e6 = 210 ms at 160 MSPS
-  static constexpr size_t tx_data_queue_length           =     4096;    // slots in tx data queue;  4096 * 2048 / 160e6 =  52 ms at 160 MSPS
+  static constexpr size_t rx_data_queue_length           =    65536;    // slots in rx data queue; 65536 * 2048 / 160e6 = 840 ms at 160 MSPS
+  static constexpr size_t tx_data_queue_length           =     1024;    // slots in tx data queue;  1024 * 2048 / 160e6 =  13 ms at 160 MSPS
   static constexpr size_t command_queue_length           =       64;    // slots in command msg queue
   static constexpr size_t response_queue_length          =      256;    // slots in response msg queue
 
@@ -57,8 +59,9 @@ class vxsdr {
   static constexpr unsigned response_queue_wait_us       =       10;
 
   // parameters used to set the OS's network buffer
-  static constexpr unsigned network_send_buffer_bytes    =   4194304;   // ~6 ms at 160 MSPS
-  static constexpr unsigned network_receive_buffer_bytes =   4194304;   // ~6 ms at 160 MSPS
+  static constexpr unsigned network_send_buffer_bytes    =   4194304;   // ~6.6 ms at 160 MSPS
+  static constexpr unsigned network_receive_buffer_bytes =  16777216;   // ~26 ms at 160 MSPS
+
 
   // parameters used to monitor status of the radio's internal buffers (on the other end of the network connection)
   std::atomic<unsigned> tx_buffer_size_bytes = 0, tx_buffer_used_bytes = 0;
@@ -98,12 +101,12 @@ class vxsdr {
   std::array<uint64_t, UINT8_MAX + 1> packet_types_received = { 0 };
 
   // FIXME: diagnostic info gathering: remove when unneeded
-#ifdef SEQUENCE_ERROR_DIAGNOSTICS
+#ifdef VXSDR_SEQ_ERR_DIAG
   std::vector<std::chrono::time_point<std::chrono::system_clock> > seq_error_times;
   std::vector<uint8_t> seq_error_packet_type;
   std::vector<uint16_t> seq_error_counter;
   std::vector<uint16_t> seq_error_expected;
-#endif // SEQUENCE_ERROR_DIAGNOSTICS
+#endif // VXSDR_SEQ_ERR_DIAG
 
  public:
   // constructor
@@ -114,7 +117,7 @@ class vxsdr {
     receiver_socket(context, local_receive_endpoint) {
     LOGGER(debug) << "vxsdr constructor entered";
     destination_endpoint = radio_endpoint;
-#ifdef ASYNCH_RX
+#ifdef VXSDR_ASYNC_RX
     // https://www.boost.org/doc/libs/1_77_0/doc/html/boost_asio/example/cpp11/futures/daytime_client.cpp
     // We run the io_context off in its own thread so that it operates
     // completely asynchronously with respect to the rest of the program.
@@ -124,7 +127,7 @@ class vxsdr {
     auto work = boost::asio::make_work_guard(context);
     context_thread = std::thread([&] { context.run(); });
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
-#endif // ASYNC_RX
+#endif // VXSDR_ASYNC_RX
     receiver_thread = std::thread([&] { receiver(); });
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
     sender_thread = std::thread([&] { sender(); });
@@ -146,7 +149,7 @@ class vxsdr {
       // the not connected error is expected since it's a UDP socket
       LOGGER(error) << "receiver socket shutdown: " << err.message();
     }
-#endif // ASYNCH_RX
+#endif // VXSDR_ASYNC_RX
     if(receiver_thread.joinable()) {
       receiver_thread.join();
     }
@@ -163,10 +166,10 @@ class vxsdr {
     if(err != boost::system::errc::success) {
       LOGGER(error) << "sender socket close: " << err.message();
     }
-#ifdef ASYNCH_RX
+#ifdef VXSDR_ASYNC_RX
     LOGGER(debug) << "joining context thread";
     context_thread.join();
-#endif // ASYNC_RX
+#endif // VXSDR_ASYNC_RX
     LOGGER(debug) << "vxsdr destructor complete";
   };
   // copy constructor deleted
@@ -183,11 +186,11 @@ class vxsdr {
     size_t n_received = 0;
     data_queue_element q;
 
-    if(n_desired > 0) {
-      data.resize(n_desired);
-    } else {
+    if(n_desired == 0) {
       n_desired = data.size();
     }
+    data.clear();
+    data.reserve(n_desired);
 
     LOGGER(info) << "receiving " << n_desired << " samples";
 
@@ -195,43 +198,43 @@ class vxsdr {
       unsigned wait_time_us = 0;
       // setting rx_data_queue_wait_us = 0 results in a busy wait with no timeout
       while(rx_data_queue.read_available() == 0 and wait_time_us < rx_data_queue_timeout_us) {
-        if constexpr(rx_data_queue_wait_us > 0) {
+        if(rx_data_queue_wait_us > 0) {
           std::this_thread::sleep_for(std::chrono::microseconds(rx_data_queue_wait_us));
           wait_time_us += rx_data_queue_wait_us;
         }
       }
 
       if(rx_data_queue.pop(q)) {
-        bool has_time = (bool)(q.hdr.flags | FLAGS::TIME_PRESENT);
-        bool has_stream_id = (bool)(q.hdr.flags | FLAGS::STREAM_ID_PRESENT);
+        bool has_time = (bool)(q.hdr.flags & FLAGS::TIME_PRESENT);
+        bool has_stream_id = (bool)(q.hdr.flags & FLAGS::STREAM_ID_PRESENT);
         if(not has_time and not has_stream_id) {
           data_packet p;
           std::memcpy(&p, &q, std::min(sizeof(q), sizeof(p)));
-          size_t data_size = std::min(MAX_DATA_LENGTH_SAMPLES,
-                                      (p.hdr.packet_size - sizeof(packet_header)) / sizeof(std::complex<int16_t>));
-          std::copy_n(std::begin(p.data), std::min(n_desired - n_received, data_size), std::back_inserter(data));
-          n_received += data_size;
+          size_t data_bytes = p.hdr.packet_size - sizeof(packet_header);
+          size_t data_samples = data_bytes / sizeof(std::complex<int16_t>);
+          std::copy_n(std::begin(p.data), std::min(n_desired - n_received, data_samples), std::back_inserter(data));
+          n_received += data_samples;
         } else if(has_time and not has_stream_id) {
           data_packet_time p;
           std::memcpy(&p, &q, std::min(sizeof(q), sizeof(p)));
-          size_t data_size = std::min(MAX_DATA_LENGTH_SAMPLES,
-                                      (p.hdr.packet_size - sizeof(packet_header) - sizeof(time_spec_t)) / sizeof(std::complex<int16_t>));
-          std::copy_n(std::begin(p.data), std::min(n_desired - n_received, data_size), std::back_inserter(data));
-          n_received += data_size;
+          size_t data_bytes = p.hdr.packet_size - sizeof(packet_header) - sizeof(time_spec_t);
+          size_t data_samples = data_bytes / sizeof(std::complex<int16_t>);
+          std::copy_n(std::begin(p.data), std::min(n_desired - n_received, data_samples), std::back_inserter(data));
+          n_received += data_samples;
         } else if(has_stream_id and not has_time) {
           data_packet_stream p;
           std::memcpy(&p, &q, std::min(sizeof(q), sizeof(p)));
-          size_t data_size = std::min(MAX_DATA_LENGTH_SAMPLES,
-                                      (p.hdr.packet_size - sizeof(packet_header) - sizeof(stream_spec_t)) / sizeof(std::complex<int16_t>));
-          std::copy_n(std::begin(p.data), std::min(n_desired - n_received, data_size), std::back_inserter(data));
-          n_received += data_size;
+          size_t data_bytes = p.hdr.packet_size - sizeof(packet_header) - sizeof(stream_spec_t);
+          size_t data_samples = data_bytes / sizeof(std::complex<int16_t>);
+          std::copy_n(std::begin(p.data), std::min(n_desired - n_received, data_samples), std::back_inserter(data));
+          n_received += data_samples;
         } else {
           data_packet_time_stream p;
           std::memcpy(&p, &q, std::min(sizeof(q), sizeof(p)));
-          size_t data_size = std::min(MAX_DATA_LENGTH_SAMPLES,
-                                      (p.hdr.packet_size - sizeof(packet_header) - sizeof(time_spec_t) - sizeof(stream_spec_t)) / sizeof(std::complex<int16_t>));
-          std::copy_n(std::begin(p.data), std::min(n_desired - n_received, data_size), std::back_inserter(data));
-          n_received += data_size;
+          size_t data_bytes = p.hdr.packet_size - sizeof(packet_header) - sizeof(time_spec_t) - sizeof(stream_spec_t);
+          size_t data_samples = data_bytes / sizeof(std::complex<int16_t>);
+          std::copy_n(std::begin(p.data), std::min(n_desired - n_received, data_samples), std::back_inserter(data));
+          n_received += data_samples;
         }
       } else {
         LOGGER(error) << "timeout popping from rx data queue";
@@ -259,7 +262,7 @@ class vxsdr {
       unsigned wait_time_us = 0;
       // setting tx_data_queue_wait_us = 0 results in a busy wait with no timeout
       while(tx_data_queue.write_available() == 0 and wait_time_us < tx_data_queue_timeout_us) {
-        if constexpr(tx_data_queue_wait_us > 0) {
+        if(tx_data_queue_wait_us > 0) {
           std::this_thread::sleep_for(std::chrono::microseconds(tx_data_queue_wait_us));
           wait_time_us += tx_data_queue_wait_us;
         }
@@ -281,7 +284,7 @@ class vxsdr {
     unsigned wait_time_us = 0;
     // setting command_queue_wait_us = 0 results in a busy wait with no timeout
     while(command_queue.write_available() == 0 and wait_time_us < command_queue_timeout_us) {
-      if constexpr(command_queue_wait_us > 0) {
+      if(command_queue_wait_us > 0) {
         std::this_thread::sleep_for(std::chrono::microseconds(command_queue_wait_us));
         wait_time_us += command_queue_wait_us;
       }
@@ -397,7 +400,7 @@ class vxsdr {
   }
 
   void set_tx_rate(const double rate_samples_sec, const uint8_t subdev = 0, const uint8_t flags = 0) {
-    radio_rf_sample_rate_packet p;
+    radio_sample_rate_packet p;
     p.hdr = { PACKET_TYPES::TX_RADIO_CMD, RADIO_CMD::SET_SAMPLE_RATE, subdev, flags, sizeof(p), 0 };
     //FIXME: rate setting needs to be done in MCU from rate_samples_sec, not here
     p.rate = std::min(128, std::max(1, (int)std::lround(160.0e6 / rate_samples_sec)));
@@ -405,7 +408,7 @@ class vxsdr {
   }
 
   void set_rx_rate(const double rate_samples_sec, const uint8_t subdev = 0, const uint8_t flags = 0) {
-    radio_rf_sample_rate_packet p;
+    radio_sample_rate_packet p;
     p.hdr = { PACKET_TYPES::RX_RADIO_CMD, RADIO_CMD::SET_SAMPLE_RATE, subdev, flags, sizeof(p), 0 };
     //FIXME: rate setting needs to be done in MCU from rate_samples_sec, not here
     p.rate = std::min(128, std::max(1, (int)std::lround(160.0e6 / rate_samples_sec)));
@@ -518,7 +521,7 @@ class vxsdr {
   void response_queue_push_wait(response_queue_element &p) {
     unsigned wait_time_us = 0;
     while(response_queue.write_available() == 0 and wait_time_us < response_queue_timeout_us) {
-      if constexpr(response_queue_wait_us > 0) {
+      if(response_queue_wait_us > 0) {
         std::this_thread::sleep_for(std::chrono::microseconds(response_queue_wait_us));
         wait_time_us += response_queue_wait_us;
       }
@@ -541,7 +544,7 @@ class vxsdr {
     while(not receiver_thread_stop_flag) {
       static data_queue_element recv_buffer;
       size_t bytes_in_packet = 0;
-#ifndef ASYNCH_RX
+#ifndef VXSDR_ASYNC_RX
       bytes_in_packet = receiver_socket.receive_from(boost::asio::buffer(&recv_buffer, sizeof(recv_buffer)), remote_endpoint);
 #else
       /*
@@ -570,7 +573,7 @@ class vxsdr {
       } else {
         bytes_in_packet = result.get();
       }
-#endif // ASYNC_RX
+#endif // VXSDR_ASYNC_RX
 
       if(bytes_in_packet >= sizeof(packet_header) and remote_endpoint == destination_endpoint) {
         packets_received++;
@@ -588,12 +591,12 @@ class vxsdr {
         }
         if(packets_received > 1 and recv_buffer.hdr.sequence_counter != (uint16_t)(last_seq + 1)) {
           sequence_errors++;
-#ifdef SEQUENCE_ERROR_DIAGNOSTICS
+#ifdef VXSDR_SEQ_ERR_DIAG
           seq_error_times.push_back(std::chrono::system_clock::now());
           seq_error_packet_type.push_back(recv_buffer.hdr.packet_type);
           seq_error_counter.push_back(recv_buffer.hdr.sequence_counter);
           seq_error_expected.push_back((uint16_t)(last_seq + 1));
-#endif // SEQUENCE_ERROR_DIAGNOSTICS
+#endif // VXSDR_SEQ_ERR_DIAG
         }
 
         last_seq = recv_buffer.hdr.sequence_counter;
@@ -602,13 +605,13 @@ class vxsdr {
           case PACKET_TYPES::RX_SIGNAL_DATA: {
               unsigned wait_time_us = 0;
               while(rx_data_queue.write_available() == 0 and wait_time_us < rx_data_queue_timeout_us) {
-                if constexpr(rx_data_queue_wait_us > 0) {
+                if(rx_data_queue_wait_us > 0) {
                   std::this_thread::sleep_for(std::chrono::microseconds(rx_data_queue_wait_us));
                   wait_time_us += rx_data_queue_wait_us;
                 }
               }
               if(not rx_data_queue.push(recv_buffer)) {
-                LOGGER(error) << "timeout pushing to rx data queue";
+                LOGGER(error) << "timeout pushing to rx data queue: " << samples_received;
               }
             }
             break;
@@ -688,21 +691,22 @@ class vxsdr {
         }
       }
     }
-    LOGGER(info) << "start_receive exiting; " << packets_received << " packets received, "
-                                              << samples_received << " samples_received, "
-                                              << bytes_received << " bytes_received, "
-                                              << sequence_errors << " sequence errors";
-#ifdef SEQUENCE_ERROR_DIAGNOSTICS
-    for(unsigned i =0; i < seq_error_times.size(); i++) {
-      LOGGER(info) << boost::format(" %30s %20s %8d %8d") % format_time(seq_error_times[i]) % packet_type_to_name(seq_error_packet_type[i])
-                   % seq_error_counter[i] % seq_error_expected[i];
-    }
-#endif // SEQUENCE_ERROR_DIAGNOSTICS
+    LOGGER(info) << "start_receive exiting:";
+    LOGGER(info) << (boost::format("   %12d packets received") % packets_received);
     for(unsigned i = 0; i < packet_types_received.size(); i++) {
       if(packet_types_received[i] > 0) {
         LOGGER(info) << (boost::format("   %12d %20s (%d)") % packet_types_received[i] % packet_type_to_name(i) % i);
       }
     }
+    LOGGER(info) << (boost::format("   %12d samples received") % samples_received);
+    LOGGER(info) << (boost::format("   %12d bytes received") % bytes_received);
+    LOGGER(info) << (boost::format("   %12d sequence errors") % sequence_errors);
+#ifdef VXSDR_SEQ_ERR_DIAG
+    for(unsigned i =0; i < seq_error_times.size(); i++) {
+      LOGGER(info) << boost::format(" %30s %20s %8d %8d") % format_time(seq_error_times[i]) % packet_type_to_name(seq_error_packet_type[i])
+                   % seq_error_counter[i] % seq_error_expected[i];
+    }
+#endif // VXSDR_SEQ_ERR_DIAG
   }
 
   void udp_sender() {
@@ -785,8 +789,9 @@ class vxsdr {
 
     initialize_sdr(device_subdev, tx_subdev, rx_subdev);
 
+    constexpr uint64_t initial_check_interval_samples = 9999; // a value that's unlikely to be equal to the updated interval
     uint64_t last_check = 0;
-    const uint64_t buffer_check_interval_samples = tx_buffer_size_bytes / sizeof(std::complex<uint16_t>) / 32; // check every 1/32 of a buffer
+    uint64_t buffer_check_interval_samples = initial_check_interval_samples;
 
     while(not sender_thread_stop_flag) {
       if(command_queue.read_available() > 0) {
@@ -795,7 +800,10 @@ class vxsdr {
           send_packet(cmd_buffer[i]);
         }
       }
-      // FIXME: is a timeout needed?
+      if(buffer_check_interval_samples == initial_check_interval_samples and tx_buffer_size_bytes > 0) {
+        // once tx_buffer_size_bytes has been set, update buffer_check_interval_samples
+        buffer_check_interval_samples = tx_buffer_size_bytes / sizeof(std::complex<int16_t>) / 32; // check every 1/32 of a buffer
+      }
       else if(tx_data_queue.read_available() > 0) {
         size_t n_popped = tx_data_queue.pop(&data_buffer.front(), data_buffer.size());
         for(size_t i = 0; i < n_popped; i++) {
@@ -806,7 +814,6 @@ class vxsdr {
             last_check = samples_sent;
           } else {
             send_packet(data_buffer[i]);
-
           }
           // throttle if needed
           if(tx_buffer_fill_percent > throttle_on_percent) {
@@ -819,22 +826,23 @@ class vxsdr {
           }
         }
       } else {
-        if constexpr(send_thread_sleep_us > 0) {
+        if(send_thread_sleep_us > 0) {
           std::this_thread::sleep_for(std::chrono::microseconds(send_thread_sleep_us));
         }
       }
     }
     close_sdr(device_subdev, tx_subdev, rx_subdev);
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    LOGGER(info) << "start_send exiting; " << packets_sent << " packets sent, "
-                                           << samples_sent << " samples_sent, "
-                                           << bytes_sent << " bytes_sent, "
-                                           << send_errors << " send errors";
+    LOGGER(info) << "start_send exiting:";
+    LOGGER(info) << (boost::format("   %12d packets sent") % packets_sent);
     for(unsigned i = 0; i < packet_types_sent.size(); i++) {
       if(packet_types_sent[i] > 0) {
         LOGGER(info) << (boost::format("   %12d %20s (%d)") % packet_types_sent[i] % packet_type_to_name(i) % i);
       }
     }
+    LOGGER(info) << (boost::format("   %12d samples sent") % samples_sent);
+    LOGGER(info) << (boost::format("   %12d bytes sent") % bytes_sent);
+    LOGGER(info) << (boost::format("   %12d send errors") % send_errors);
   }
 };
 

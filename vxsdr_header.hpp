@@ -31,19 +31,19 @@ namespace PACKET_TYPES {
   static constexpr uint8_t INVALID_PACKET     = 0xFF;
 }
 
-typedef struct {
-  uint8_t                 packet_type = PACKET_TYPES::INVALID_PACKET;
-  uint8_t                 command = 0;
-  uint8_t                 target_subdevice = 0;  // for cases where multiple devices exist (e.g. multiple network I/F or multichannel TX/RX)
-  uint8_t                 flags = 0;
-  uint16_t                packet_size = 0;       // length of packet including header in bytes
-  uint16_t                sequence_counter = 0;  // need to figure out when this resets (every new data stream, power up, ?)
-} packet_header;
+struct packet_header {
+  uint8_t                  packet_type;
+  uint8_t                  command;
+  uint8_t                  target_subdevice;  // for cases where multiple devices exist (e.g. multiple network I/F or multichannel TX/RX)
+  uint8_t                  flags;
+  uint16_t                 packet_size;       // length of packet including header in bytes
+  uint16_t                 sequence_counter;  // need to figure out when this resets (every new data stream, power up, ?)
+};
 
-typedef struct {
-  uint32_t                nanoseconds = 0;
-  uint32_t                seconds = 0;
-} time_spec_t;
+struct time_spec_t {
+  uint32_t                 nanoseconds;
+  uint32_t                 seconds;
+};
 
 typedef uint64_t          stream_spec_t;
 
@@ -210,14 +210,14 @@ class data_packet_time : public packet {
 
 class data_packet_stream : public packet {
   public:
-    stream_spec_t          stream_id = 0;
+    stream_spec_t          stream_id;
     std::complex<int16_t>  data[MAX_DATA_LENGTH_SAMPLES];
 };
 
 class data_packet_time_stream : public packet {
   public:
     time_spec_t            time;
-    stream_spec_t          stream_id = 0;
+    stream_spec_t          stream_id;
     std::complex<int16_t>  data[MAX_DATA_LENGTH_SAMPLES];
 };
 
@@ -238,7 +238,7 @@ class cmd_or_rsp_packet_time_stream : public cmd_or_rsp_packet {
 
 class largest_cmd_or_rsp_packet : public cmd_or_rsp_packet_time_stream {
     [[maybe_unused]]
-    uint8_t                payload[MAX_PAYLOAD_LENGTH_BYTES];
+     uint8_t               payload[MAX_PAYLOAD_LENGTH_BYTES] = { 0 };
 };
 
 class cmd_packet : public cmd_or_rsp_packet {};
@@ -350,7 +350,7 @@ class radio_rf_gain_packet : public cmd_or_rsp_packet {
 
 //FIXME: this needs to be a double, and the integer divisor needs to be figured
 //       out by the MCU!!
-class radio_rf_sample_rate_packet : public cmd_or_rsp_packet {
+class radio_sample_rate_packet : public cmd_or_rsp_packet {
   public:
     uint32_t               rate = 0;
     uint32_t               reserved = 0;
