@@ -51,10 +51,10 @@ int main(int argc, char *argv[])
 
     auto radio = std::make_unique<vxsdr>(local_send_endpoint, local_receive_endpoint, destination_endpoint);
 
-    LOG_INFO(fmt::format("using frequency {:e}", vm["freq"].as<double>()));
-    LOG_INFO(fmt::format("using rate      {:e}", vm["rate"].as<double>()));
-    LOG_INFO(fmt::format("using tx_gain   {:e}", vm["tx_gain"].as<double>()));
-    LOG_INFO(fmt::format("using rx_gain   {:e}", vm["rx_gain"].as<double>()));
+    LOG_INFO(fmt::format("using frequency {:.5e}", vm["freq"].as<double>()));
+    LOG_INFO(fmt::format("using rate      {:.5e}", vm["rate"].as<double>()));
+    LOG_INFO(fmt::format("using tx_gain   {:.1f}", vm["tx_gain"].as<double>()));
+    LOG_INFO(fmt::format("using rx_gain   {:.1f}", vm["rx_gain"].as<double>()));
 
     if(vm["duration"].as<double>() <= 0.0) {
       LOG_FATAL("duration must be positive");
@@ -70,7 +70,7 @@ int main(int argc, char *argv[])
 
     size_t n_samp = std::llround(vm["duration"].as<double>() * vm["rate"].as<double>());
 
-    LOG_INFO(fmt::format("preparing {:.3f} seconds ({:lld} samples) of data", vm["duration"].as<double>(), n_samp));
+    LOG_INFO(fmt::format("preparing {:.3f} seconds ({:d} samples) of data", vm["duration"].as<double>(), n_samp));
 
     std::vector<std::complex<int16_t> > data(n_samp);
 

@@ -118,11 +118,11 @@ int main(int argc, char *argv[])
     boost::asio::ip::address_v4 local_ip = boost::asio::ip::address_v4::from_string(vm["local_address"].as<std::string>());
     boost::asio::ip::address_v4 destination_ip = boost::asio::ip::address_v4::from_string(vm["destination_address"].as<std::string>());
     boost::asio::ip::udp::endpoint local_send_endpoint(local_ip, vm["local_send_port"].as<unsigned>());
-    LOG_INFO(fmt::format("using local send IP {:s} and port {:u}", local_send_endpoint.address().to_string(), local_send_endpoint.port()));
+    LOG_INFO(fmt::format("using local send IP {:s} and port {:d}", local_send_endpoint.address().to_string(), local_send_endpoint.port()));
     boost::asio::ip::udp::endpoint local_receive_endpoint(local_ip, vm["local_receive_port"].as<unsigned>());
-    LOG_INFO(fmt::format("using local receive IP {:s} and port {:u}", local_receive_endpoint.address().to_string(), local_receive_endpoint.port()));
+    LOG_INFO(fmt::format("using local receive IP {:s} and port {:d}", local_receive_endpoint.address().to_string(), local_receive_endpoint.port()));
     boost::asio::ip::udp::endpoint destination_endpoint(destination_ip, vm["destination_port"].as<unsigned>());
-    LOG_INFO(fmt::format("using destination IP {:s} and port {:u}", destination_endpoint.address().to_string(), destination_endpoint.port()));
+    LOG_INFO(fmt::format("using destination IP {:s} and port {:d}", destination_endpoint.address().to_string(), destination_endpoint.port()));
 
     boost::asio::io_context io_context;
 

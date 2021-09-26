@@ -86,7 +86,7 @@ class udp_receiver {
       boost::asio::socket_base::receive_buffer_size option;
       socket.get_option(option);
       int network_buffer_size = option.value();
-      LOG_INFO(fmt::format("network receive buffer size set to {:u}", network_buffer_size));
+      LOG_INFO(fmt::format("network receive buffer size set to {:d}", network_buffer_size));
 
       if(not rx_stop_flag)
         start_receive();
@@ -102,7 +102,7 @@ class udp_receiver {
       boost::asio::socket_base::receive_buffer_size option;
       socket.get_option(option);
       int network_buffer_size = option.value();
-      LOG_INFO(fmt::format("network receive buffer size set to {:u}", network_buffer_size));
+      LOG_INFO(fmt::format("network receive buffer size set to {:d}", network_buffer_size));
 
       if(not rx_stop_flag)
         start_receive();
@@ -216,7 +216,7 @@ class udp_receiver {
       //if(receive_thread_sleep_us > 0)
       //  std::this_thread::sleep_for(std::chrono::microseconds(receive_thread_sleep_us));
 
-      LOG_INFO(fmt::format("start_receive exiting; {:u} packets received, {:u} sequence errors", packets_received, seq_errors));
+      LOG_INFO(fmt::format("start_receive exiting; {:d} packets received, {:d} sequence errors", packets_received, seq_errors));
       for(unsigned i =0; i < seq_error_times.size(); i++) {
         LOG_INFO(fmt::format(" {:30s} {:20s} {:8d} {:8d}", format_time(seq_error_times[i]), packet_type_to_name(seq_error_packet_type[i]),
                                                                    seq_error_counter[i], seq_error_expected[i]));
@@ -239,7 +239,7 @@ class udp_sender {
       boost::asio::socket_base::send_buffer_size option;
       socket.get_option(option);
       int network_buffer_size = option.value();
-      LOG_INFO(fmt::format("network send buffer size set to {:u}", network_buffer_size));
+      LOG_INFO(fmt::format("network send buffer size set to {:d}", network_buffer_size));
 
       if(not tx_stop_flag)
         start_send();
@@ -527,7 +527,7 @@ class udp_sender {
         send_rx_stop_now(rx_subdev, FLAGS_REQUEST_ACK);
         set_rx_enable(false);
       }
-      LOG_INFO(fmt::format("start_send exiting; {:u} packets sent, {u} send errors", packets_sent, send_errors));
+      LOG_INFO(fmt::format("start_send exiting; {:d} packets sent, {:d} send errors", packets_sent, send_errors));
       for(unsigned i = 0; i < packet_types_processed.size(); i++)
         if(packet_types_processed[i] > 0)
           LOG_INFO(fmt::format("   {:12d} {:20s} ({:d})", packet_types_processed[i], packet_type_to_name(i), i));
@@ -591,8 +591,8 @@ inline void writer(const std::string &outfilename, const uint64_t max_packets) {
 
   auto t1 = std::chrono::steady_clock::now();
   std::chrono::duration<double> dt = t1 - t0;
-  LOG_INFO(fmt::format("{:u} data packets recieved in {.2f} sec", packets, dt.count()));
-  LOG_INFO(fmt::format("{:u} write errors", write_errors));
+  LOG_INFO(fmt::format("{:d} data packets recieved in {:.2f} sec", packets, dt.count()));
+  LOG_INFO(fmt::format("{:d} write errors", write_errors));
   LOG_INFO(fmt::format("{:.2e} bytes/s", bytes_written / dt.count()));
 
   std::this_thread::sleep_for(std::chrono::microseconds(rx_data_queue_clear_sleep_us));
@@ -630,8 +630,8 @@ inline void data_packet_counter(const uint64_t max_packets) {
 
   auto t1 = std::chrono::steady_clock::now();
   std::chrono::duration<double> dt = t1 - t0;
-  LOG_INFO(fmt::format("{:u} data packets recieved in {.2f} sec", packets, dt.count()));
-  LOG_INFO(fmt::format( "{.2e} bytes/s", bytes / dt.count()));
+  LOG_INFO(fmt::format("{:d} data packets recieved in {:.2f} sec", packets, dt.count()));
+  LOG_INFO(fmt::format( "{:.2e} bytes/s", bytes / dt.count()));
 
   std::this_thread::sleep_for(std::chrono::microseconds(rx_data_queue_clear_sleep_us));
   // empty the queue
@@ -700,7 +700,7 @@ inline void generator(const uint64_t max_packets, const size_t requested_packet_
 
   size_t packet_size = requested_packet_size;
   if(requested_packet_size > data_buffer_max_bytes) {
-    LOG_ERROR(fmt::format("requested packet size is greater than maximum ({:u}); setting to maximum", data_buffer_max_bytes));
+    LOG_ERROR(fmt::format("requested packet size is greater than maximum ({:d}); setting to maximum", data_buffer_max_bytes));
     packet_size = data_buffer_max_bytes;
   }
 
@@ -739,7 +739,7 @@ inline void generator(const uint64_t max_packets, const size_t requested_packet_
 
   auto t1 = std::chrono::steady_clock::now();
   std::chrono::duration<double> dt = t1 - t0;
-  LOG_INFO(fmt::format( "{:u} buffers ({:u} bytes) generated in {:.2f} seconds", nsent - 1, (nsent - 1) * packet_size, dt.count()));
+  LOG_INFO(fmt::format( "{:d} buffers ({:d} bytes) generated in {:.2f} seconds", nsent - 1, (nsent - 1) * packet_size, dt.count()));
   LOG_DEBUG("generator thread finished");
 }
 
@@ -750,7 +750,7 @@ inline void intermod_generator(const uint64_t max_packets, const size_t requeste
 
   size_t packet_size = requested_packet_size;
   if(requested_packet_size > data_buffer_max_bytes) {
-    LOG_ERROR(fmt::format("requested packet size is greater than maximum ({:u}); setting to maximum", data_buffer_max_bytes));
+    LOG_ERROR(fmt::format("requested packet size is greater than maximum ({:d}); setting to maximum", data_buffer_max_bytes));
     packet_size = data_buffer_max_bytes;
   }
 
@@ -791,7 +791,7 @@ inline void intermod_generator(const uint64_t max_packets, const size_t requeste
 
   auto t1 = std::chrono::steady_clock::now();
   std::chrono::duration<double> dt = t1 - t0;
-  LOG_INFO(fmt::format( "{:u} buffers ({:u} bytes) generated in {:.2f} seconds", nsent - 1, (nsent - 1) * packet_size, dt.count()));
+  LOG_INFO(fmt::format( "{:d} buffers ({:d} bytes) generated in {:.2f} seconds", nsent - 1, (nsent - 1) * packet_size, dt.count()));
   LOG_DEBUG("intermod_generator thread finished");
 }
 

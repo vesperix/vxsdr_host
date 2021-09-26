@@ -125,11 +125,11 @@ void log_packet_info(cmd_or_rsp_packet &packet)
           {
             LOG_INFO(fmt::format("DEVICE_CMD_RSP: GET_STATUS"));
             auto *sr = reinterpret_cast<status_rsp_packet *>(&packet);
-            LOG_INFO(fmt::format("   fpga_temperature          = {:u}", sr->fpga_temperature));
-            LOG_INFO(fmt::format("   dac_temperature           = {:u}", sr->dac_temperature));
-            LOG_INFO(fmt::format("   sequence_error_count      = {:u}", sr->sequence_error_count));
+            LOG_INFO(fmt::format("   fpga_temperature          = {:d}", sr->fpga_temperature));
+            LOG_INFO(fmt::format("   dac_temperature           = {:d}", sr->dac_temperature));
+            LOG_INFO(fmt::format("   sequence_error_count      = {:d}", sr->sequence_error_count));
             LOG_INFO(fmt::format("   data_flow_error_flags     = {:s}", std::bitset<8>((sr->data_flow_error_flags) % 256).to_string()));
-            LOG_INFO(fmt::format("   ddr_arbiter_status        = {:u}", sr->ddr_arbiter_status));
+            LOG_INFO(fmt::format("   ddr_arbiter_status        = {:d}", sr->ddr_arbiter_status));
             LOG_INFO(fmt::format("   ethernet_status           = {:s}", std::bitset<8>((sr->ethernet_status) % 256).to_string()));
           }
           break;
@@ -137,16 +137,16 @@ void log_packet_info(cmd_or_rsp_packet &packet)
           {
             LOG_INFO(fmt::format("DEVICE_CMD_RSP: GET_BUFFER_INFO"));
             auto *br = reinterpret_cast<get_buffer_info_rsp_packet *>(&packet);
-            LOG_INFO(fmt::format("   rx_buffer_size_bytes      = {:u}", (uint32_t)br->rx_buffer_size_bytes));
-            LOG_INFO(fmt::format("   tx_buffer_size_bytes      = {:u}", (uint32_t)br->tx_buffer_size_bytes));
+            LOG_INFO(fmt::format("   rx_buffer_size_bytes      = {:d}", (uint32_t)br->rx_buffer_size_bytes));
+            LOG_INFO(fmt::format("   tx_buffer_size_bytes      = {:d}", (uint32_t)br->tx_buffer_size_bytes));
           }
           break;
         case DEVICE_CMD_GET_BUFFER_USE:
           {
             LOG_INFO(fmt::format("DEVICE_CMD_RSP: GET_BUFFER_USE"));
             auto *br = reinterpret_cast<get_buffer_use_rsp_packet *>(&packet);
-            LOG_INFO(fmt::format("   rx_buffer_used_bytes      = {:u}", (uint32_t)br->rx_buffer_used_bytes));
-            LOG_INFO(fmt::format("   tx_buffer_used_bytes      = {:u}", (uint32_t)br->tx_buffer_used_bytes));
+            LOG_INFO(fmt::format("   rx_buffer_used_bytes      = {:d}", (uint32_t)br->rx_buffer_used_bytes));
+            LOG_INFO(fmt::format("   tx_buffer_used_bytes      = {:d}", (uint32_t)br->tx_buffer_used_bytes));
           }
           break;
         default:
@@ -180,15 +180,15 @@ void log_packet_info(cmd_or_rsp_packet &packet)
           }
           break;
         default:
-          LOG_INFO(fmt::format("RX_RADIO_CMD_RSP: {:u}", (int)packet.hdr.command));
+          LOG_INFO(fmt::format("RX_RADIO_CMD_RSP: {:d}", (int)packet.hdr.command));
           break;
       }
       break;
     case PACKET_TYPE_RX_RADIO_CMD_ERR:
-      LOG_INFO(fmt::format("RX_RADIO_CMD_ERR: {:u}", (int)packet.hdr.command));
+      LOG_INFO(fmt::format("RX_RADIO_CMD_ERR: {:d}", (int)packet.hdr.command));
       break;
     case PACKET_TYPE_RX_RADIO_CMD_ACK:
-      LOG_INFO(fmt::format("RX_RADIO_CMD_ACK: {:u}", (int)packet.hdr.command));
+      LOG_INFO(fmt::format("RX_RADIO_CMD_ACK: {:d}", (int)packet.hdr.command));
       break;
     case PACKET_TYPE_TX_RADIO_CMD:
       switch(packet.hdr.command) {
@@ -214,27 +214,27 @@ void log_packet_info(cmd_or_rsp_packet &packet)
           }
           break;
         default:
-          LOG_INFO(fmt::format("TX_RADIO_CMD_RSP: {:u}", (int)packet.hdr.command));
+          LOG_INFO(fmt::format("TX_RADIO_CMD_RSP: {:d}", (int)packet.hdr.command));
           break;
       }
       break;
     case PACKET_TYPE_TX_RADIO_CMD_ERR:
-      LOG_INFO(fmt::format("TX_RADIO_CMD_ERR: {:u}", (int)packet.hdr.command));
+      LOG_INFO(fmt::format("TX_RADIO_CMD_ERR: {:d}", (int)packet.hdr.command));
       break;
     case PACKET_TYPE_TX_RADIO_CMD_ACK:
-      LOG_INFO(fmt::format("TX_RADIO_CMD_ACK: {:u}", (int)packet.hdr.command));
+      LOG_INFO(fmt::format("TX_RADIO_CMD_ACK: {:d}", (int)packet.hdr.command));
       break;
     case PACKET_TYPE_TX_SIGNAL_DATA_ACK:
       {
         LOG_INFO(fmt::format("TX_SIGNAL_DATA_ACK"));
         auto *br = reinterpret_cast<tx_signal_data_ack_packet *>(&packet);
-        LOG_INFO(fmt::format("   requester_seq_num         = {:u}", (uint64_t)br->requester_seq_num));
-        LOG_INFO(fmt::format("   tx_buffer_used_bytes      = {:u}", (uint32_t)br->tx_buffer_used_bytes));
-        LOG_INFO(fmt::format("   sequence_error_count      = {:u}", (uint32_t)br->sequence_error_count));
+        LOG_INFO(fmt::format("   requester_seq_num         = {:d}", (uint64_t)br->requester_seq_num));
+        LOG_INFO(fmt::format("   tx_buffer_used_bytes      = {:d}", (uint32_t)br->tx_buffer_used_bytes));
+        LOG_INFO(fmt::format("   sequence_error_count      = {:d}", (uint32_t)br->sequence_error_count));
       }
       break;
     default:
-      LOG_INFO(fmt::format("PACKET_TYPE: {:u} COMMAND {:u}", packet.hdr.packet_type, (int)packet.hdr.command));
+      LOG_INFO(fmt::format("PACKET_TYPE: {:d} COMMAND {:d}", packet.hdr.packet_type, (int)packet.hdr.command));
       break;
   }
 }
