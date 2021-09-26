@@ -240,7 +240,7 @@ class vxsdr {
         LOG_ERROR("timeout popping from rx data queue");
       }
     }
-    LOG_DEBUG(fmt::format("get_rx_data() complete ({:llu} samples)", data.size()));
+    LOG_DEBUG(fmt::format("get_rx_data() complete ({:d} samples)", data.size()));
     return n_received;
   }
 
