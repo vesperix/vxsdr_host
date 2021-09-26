@@ -80,7 +80,7 @@ int main(int argc, char *argv[])
 
     LOG_INFO("sending data...");
 
-    radio->tx_start_now_for_n_samples(n_samp);
+    radio->tx_start_now_until_stop();
     radio->put_tx_data(data, n_samp);
     radio->tx_stop_now();
 
@@ -92,7 +92,7 @@ int main(int argc, char *argv[])
 
     LOG_INFO(fmt::format("receiving data to file {:s}", filename));
 
-    radio->rx_start_now_for_n_samples(n_samp);
+    radio->rx_start_now_until_stop();
     radio->get_rx_data(data, n_samp);
     radio->rx_stop_now();
 

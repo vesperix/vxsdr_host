@@ -203,7 +203,6 @@ class vxsdr {
           wait_time_us += rx_data_queue_wait_us;
         }
       }
-
       if(rx_data_queue.pop(q)) {
         bool has_time = (bool)(q.hdr.flags & FLAGS_TIME_PRESENT);
         bool has_stream_id = (bool)(q.hdr.flags & FLAGS_STREAM_ID_PRESENT);
@@ -237,7 +236,7 @@ class vxsdr {
           n_received += data_samples;
         }
       } else {
-        LOG_ERROR("timeout popping from rx data queue");
+        LOG_ERROR(fmt::format("timeout popping from rx data queue {:d} {:d}", n_received, n_desired));
       }
     }
     LOG_DEBUG(fmt::format("get_rx_data() complete ({:d} samples)", data.size()));
@@ -519,6 +518,7 @@ class vxsdr {
   }
 
   void response_queue_push_wait(response_queue_element &p) {
+    /*
     unsigned wait_time_us = 0;
     while(response_queue.write_available() == 0 and wait_time_us < response_queue_timeout_us) {
       if(response_queue_wait_us > 0) {
@@ -529,6 +529,8 @@ class vxsdr {
     if(not response_queue.push(p)) {
       LOG_ERROR("timeout pushing to response queue");
     }
+    */
+    response_queue.push(p);
   }
 
   void start_receive() {
