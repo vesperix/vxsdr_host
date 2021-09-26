@@ -6,7 +6,7 @@
 #include <complex>
 #include <cctype>
 
-#include <boost/format.hpp>
+#include <spdlog/spdlog.h>
 
 std::string format_time(const std::chrono::time_point<std::chrono::system_clock> t, const int digits, const bool use_utc, const std::string &fmt) {
   std::stringstream output;
@@ -22,23 +22,23 @@ std::string format_time(const std::chrono::time_point<std::chrono::system_clock>
     case 0:
       break;
     case 1:
-      output << boost::format(".%01d") % std::lround(1e-8 * ns);
+      output << fmt::format("{:.01d}", std::lround(1e-8 * ns));
       break;
     case 2:
-      output << boost::format(".%02d") % std::lround(1e-7 * ns);
+      output << fmt::format("{:.02d}", std::lround(1e-7 * ns));
       break;
     case 3:
-      output << boost::format(".%03d") % std::lround(1e-6 * ns);
+      output << fmt::format("{:.03d}", std::lround(1e-6 * ns));
       break;
     case 4:
-      output << boost::format(".%04d") % std::lround(1e-5 * ns);
+      output << fmt::format("{:.04d}", std::lround(1e-5 * ns));
       break;
     case 5:
-      output << boost::format(".%05d") % std::lround(1e-4 * ns);
+      output << fmt::format("{:.05d}", std::lround(1e-4 * ns));
       break;
     case 6:
     default:
-      output << boost::format(".%06d") % std::lround(1e-3 * ns);
+      output << fmt::format("{:.06d}", std::lround(1e-3 * ns));
       break;
   }
   return output.str();
@@ -47,7 +47,7 @@ std::string format_time(const std::chrono::time_point<std::chrono::system_clock>
 std::string make_filename_time(const std::chrono::time_point<std::chrono::system_clock> t, const double freq, const double rate)
 {
   std::stringstream s;
-  s << boost::format("%.3f-mhz-%.1f-ksps-") % (freq / 1e6) %  (rate / 1e3);
+  s << fmt::format("{:.3f}-mhz-{:.1f}-ksps-", freq / 1e6, rate / 1e3);
   s << format_time(t, 0, true, "%Y-%m-%d-%H.%M.%S-utc");
   return s.str();
 }
@@ -55,7 +55,7 @@ std::string make_filename_time(const std::chrono::time_point<std::chrono::system
 std::string make_filename_no_time(const double freq, const double rate)
 {
   std::stringstream s;
-  s << boost::format("%.3f-mhz-%.1f-ksps") % (freq / 1e6) %  (rate / 1e3);
+  s << fmt::format("{:.3f}-mhz-{:.1f}-ksps-", freq / 1e6, rate / 1e3);
   return s.str();
 }
 

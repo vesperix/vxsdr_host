@@ -12,7 +12,6 @@
 #include <boost/version.hpp>
 #include <boost/program_options.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
-#include <boost/format.hpp>
 
 #include "logging.hpp"
 #include "errors.hpp"
@@ -71,7 +70,7 @@ int main(int argc, char *argv[])
 
     size_t n_samp = std::llround(vm["duration"].as<double>() * vm["rate"].as<double>());
 
-    LOGGER(info) << boost::format("preparing %.3f seconds (%lld samples) of data") % vm["duration"].as<double>() % n_samp;
+    LOGGER(info) << fmt::format("preparing {:.3f} seconds ({:lld} samples) of data", vm["duration"].as<double>(), n_samp);
 
     std::vector<std::complex<int16_t> > data(n_samp);
 

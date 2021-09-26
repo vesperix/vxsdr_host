@@ -1,7 +1,4 @@
 #include <bitset>
-
-#include <boost/format.hpp>
-
 #include "logging.hpp"
 #include "vxsdr_header.hpp"
 
@@ -152,22 +149,6 @@ void log_packet_info(cmd_or_rsp_packet &packet)
             LOGGER(info) << "   tx_buffer_used_bytes      = " << (uint32_t)br->tx_buffer_used_bytes;
           }
           break;
-/*
-        case DEVICE_CMD_READ_ADC_REG:
-          {
-            LOGGER(info) << "DEVICE_CMD_RSP: READ_ADC_REG";
-            auto *br = reinterpret_cast<dev_read_write_reg_packet *>(&packet);
-            LOGGER(info) << "   value                     = " << boost::format("%08x") % (uint32_t)br->value;
-          }
-          break;
-        case DEVICE_CMD_READ_DAC_REG:
-          {
-            LOGGER(info) << "DEVICE_CMD_RSP: READ_DAC_REG";
-            auto *br = reinterpret_cast<dev_read_write_reg_packet *>(&packet);
-            LOGGER(info) << "   value                     = " << boost::format("%04x") % (uint16_t)br->value;
-          }
-          break;
-*/
         default:
           {
             LOGGER(info) << "DEVICE_CMD_RSP: " << (int)packet.hdr.command;
@@ -181,21 +162,21 @@ void log_packet_info(cmd_or_rsp_packet &packet)
           {
             LOGGER(info) << "RX_RADIO_CMD_RSP: GET_RF_FREQ";
             auto *fr = reinterpret_cast<radio_rf_freq_packet *>(&packet);
-            LOGGER(info) << "   freq                      = " << boost::format("%.5e") % fr->freq;
+            LOGGER(info) << "   freq                      = " << fmt::format("{:.5e}", fr->freq);
           }
           break;
         case RADIO_CMD_GET_RF_GAIN:
           {
             LOGGER(info) << "RX_RADIO_CMD_RSP: GET_RF_GAIN";
             auto *gr = reinterpret_cast<radio_rf_gain_packet *>(&packet);
-            LOGGER(info) << "   gain                      = " << boost::format("%.2f") % gr->gain;
+            LOGGER(info) << "   gain                      = " << fmt::format("{:.2f}", gr->gain);
           }
           break;
         case RADIO_CMD_GET_SAMPLE_RATE:
           {
             LOGGER(info) << "RX_RADIO_CMD_RSP: GET_SAMPLE_RATE";
             auto *sr = reinterpret_cast<radio_sample_rate_packet *>(&packet);
-            LOGGER(info) << "   rate                      = " << boost::format("%.5e") % sr->rate;
+            LOGGER(info) << "   rate                      = " << fmt::format("{:.5e}", sr->rate);
           }
           break;
         default:
@@ -215,21 +196,21 @@ void log_packet_info(cmd_or_rsp_packet &packet)
           {
             LOGGER(info) << "TX_RADIO_CMD_RSP: GET_RF_FREQ";
             auto *fr = reinterpret_cast<radio_rf_freq_packet *>(&packet);
-            LOGGER(info) << "   freq                      = " << boost::format("%.5e") % fr->freq;
+            LOGGER(info) << "   freq                      = " << fmt::format("{:.5e}", fr->freq);
           }
           break;
         case RADIO_CMD_GET_RF_GAIN:
           {
             LOGGER(info) << "TX_RADIO_CMD_RSP: GET_RF_GAIN";
             auto *gr = reinterpret_cast<radio_rf_gain_packet *>(&packet);
-            LOGGER(info) << "   gain                      = " << boost::format("%.2f") % gr->gain;
+            LOGGER(info) << "   gain                      = " << fmt::format("{:.2f}", gr->gain);
           }
           break;
         case RADIO_CMD_GET_SAMPLE_RATE:
           {
             LOGGER(info) << "TX_RADIO_CMD_RSP: GET_SAMPLE_RATE";
             auto *sr = reinterpret_cast<radio_sample_rate_packet *>(&packet);
-            LOGGER(info) << "   rate                      = " << boost::format("%.5e") % sr->rate;
+            LOGGER(info) << "   rate                      = " << fmt::format("{:.5e}", sr->rate);
           }
           break;
         default:

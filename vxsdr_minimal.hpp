@@ -301,7 +301,7 @@ class vxsdr {
                  << sequence_errors << " sequence errors";
     for(unsigned i = 0; i < packet_types_received.size(); i++) {
       if(packet_types_received[i] > 0) {
-        LOGGER(info) << (boost::format("   %12d %20s (%d)") % packet_types_received[i] % packet_type_to_name(i) % i);
+        LOGGER(info) << fmt::format("   {:12d} {:20s} ({:d})", packet_types_received[i], packet_type_to_name(i), i);
       }
     }
   }
@@ -416,7 +416,7 @@ class vxsdr {
     LOGGER(info) << "start_send exiting; " << packets_sent << " packets sent, " << send_errors << " send errors";
     for(unsigned i = 0; i < packet_types_sent.size(); i++) {
       if(packet_types_sent[i] > 0) {
-        LOGGER(info) << (boost::format("   %12d %20s (%d)") % packet_types_sent[i] % packet_type_to_name(i) % i);
+        LOGGER(info) << fmt::format("   {:12d} {:20s} ({:d})", packet_types_sent[i], packet_type_to_name(i), i);
       }
     }
   }

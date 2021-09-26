@@ -143,7 +143,7 @@ class udp_receiver {
           case PACKET_TYPE_RX_SIGNAL_DATA:
             rx_data_queue.push(recv_buffer);
             break;
-          // tx sginal data acks special cased since they contain throttling information
+          // tx sginal data acks special cased since they contain throttling inion
           case PACKET_TYPE_TX_SIGNAL_DATA_ACK:
             {
               auto *r = reinterpret_cast<tx_signal_data_ack_packet *>(&recv_buffer);
@@ -219,12 +219,12 @@ class udp_receiver {
 
       LOGGER(info) << "start_receive exiting; " << packets_received << " packets received, " << seq_errors << " sequence errors";
       for(unsigned i =0; i < seq_error_times.size(); i++) {
-        LOGGER(info) << boost::format(" %30s %20s %8d %8d") % format_time(seq_error_times[i]) % packet_type_to_name(seq_error_packet_type[i])
-                                                                 % seq_error_counter[i] % seq_error_expected[i];
+        LOGGER(info) << fmt::format(" {:30s} {:20s} {:8d} {:8d}", format_time(seq_error_times[i]), packet_type_to_name(seq_error_packet_type[i]),
+                                                                   seq_error_counter[i], seq_error_expected[i]);
       }
       for(unsigned i = 0; i < packet_types_received.size(); i++)
         if(packet_types_received[i] > 0)
-          LOGGER(info) << (boost::format("   %12d %20s (%d)") % packet_types_received[i] % packet_type_to_name(i) % i);
+          LOGGER(info) << fmt::format("   {:12d} {:20s} ({:d})", packet_types_received[i], packet_type_to_name(i), i);
     }
 };
 
@@ -531,7 +531,7 @@ class udp_sender {
       LOGGER(info) << "start_send exiting; " << packets_sent << " packets sent, " << send_errors << " send errors";
       for(unsigned i = 0; i < packet_types_processed.size(); i++)
         if(packet_types_processed[i] > 0)
-          LOGGER(info) << (boost::format("   %12d %20s (%d)") % packet_types_processed[i] % packet_type_to_name(i) % i);
+          LOGGER(info) << fmt::format("   {:12d} {:20s} ({:d})", packet_types_processed[i], packet_type_to_name(i), i);
 
     }
 };

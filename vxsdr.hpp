@@ -692,18 +692,18 @@ class vxsdr {
       }
     }
     LOGGER(info) << "start_receive exiting:";
-    LOGGER(info) << (boost::format("   %12d packets received") % packets_received);
+    LOGGER(info) << fmt::format("   {:12d} packets received", packets_received);
     for(unsigned i = 0; i < packet_types_received.size(); i++) {
       if(packet_types_received[i] > 0) {
-        LOGGER(info) << (boost::format("   %12d %20s (%d)") % packet_types_received[i] % packet_type_to_name(i) % i);
+        LOGGER(info) << fmt::format("   {:12d} {:20s} ({:d})", packet_types_received[i], packet_type_to_name(i), i);
       }
     }
-    LOGGER(info) << (boost::format("   %12d samples received") % samples_received);
-    LOGGER(info) << (boost::format("   %12d bytes received") % bytes_received);
-    LOGGER(info) << (boost::format("   %12d sequence errors") % sequence_errors);
+    LOGGER(info) << fmt::format("   {:12d} samples received", samples_received);
+    LOGGER(info) << fmt::format("   {:12d} bytes received", bytes_received);
+    LOGGER(info) << fmt::format("   {:12d} sequence errors", sequence_errors);
 #ifdef VXSDR_SEQ_ERR_DIAG
     for(unsigned i =0; i < seq_error_times.size(); i++) {
-      LOGGER(info) << boost::format(" %30s %20s %8d %8d") % format_time(seq_error_times[i]) % packet_type_to_name(seq_error_packet_type[i])
+      LOGGER(info) << fmt::format(" {:30s} {:20s} {:8d} {:8d}", format_time(seq_error_times[i]), packet_type_to_name(seq_error_packet_type[i]));
                    % seq_error_counter[i] % seq_error_expected[i];
     }
 #endif // VXSDR_SEQ_ERR_DIAG
@@ -834,15 +834,15 @@ class vxsdr {
     close_sdr(device_subdev, tx_subdev, rx_subdev);
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     LOGGER(info) << "start_send exiting:";
-    LOGGER(info) << (boost::format("   %12d packets sent") % packets_sent);
+    LOGGER(info) << fmt::format("   {:12d} packets sent", packets_sent);
     for(unsigned i = 0; i < packet_types_sent.size(); i++) {
       if(packet_types_sent[i] > 0) {
-        LOGGER(info) << (boost::format("   %12d %20s (%d)") % packet_types_sent[i] % packet_type_to_name(i) % i);
+        LOGGER(info) << fmt::format("   {:12d} {:20s} ({:d})", packet_types_sent[i], packet_type_to_name(i), i);
       }
     }
-    LOGGER(info) << (boost::format("   %12d samples sent") % samples_sent);
-    LOGGER(info) << (boost::format("   %12d bytes sent") % bytes_sent);
-    LOGGER(info) << (boost::format("   %12d send errors") % send_errors);
+    LOGGER(info) << fmt::format("  {:12d} samples sent", samples_sent);
+    LOGGER(info) << fmt::format("  {:12d} bytes sent", bytes_sent);
+    LOGGER(info) << fmt::format("  {:12d} send errors", send_errors);
   }
 };
 
