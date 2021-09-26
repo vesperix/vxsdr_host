@@ -603,15 +603,20 @@ class vxsdr {
         switch(recv_buffer.hdr.packet_type) {
           // receive buffers go into the rx data queue
           case PACKET_TYPE_RX_SIGNAL_DATA: {
-              unsigned wait_time_us = 0;
-              while(rx_data_queue.write_available() == 0 and wait_time_us < rx_data_queue_timeout_us) {
-                if(rx_data_queue_wait_us > 0) {
-                  std::this_thread::sleep_for(std::chrono::microseconds(rx_data_queue_wait_us));
-                  wait_time_us += rx_data_queue_wait_us;
-                }
-              }
               if(not rx_data_queue.push(recv_buffer)) {
-                LOG_ERROR(fmt::format("timeout pushing to rx data queue: {:d}", samples_received));
+                unsigned wait_time_us = 0;
+                while(rx_data_queue.write_available() == 0 and wait_time_us < rx_data_queue_timeout_us) {
+                  if(rx_data_queue_wait_us > 0) {
+                    std::this_thread::sleep_for(std::chrono::microseconds(rx_data_queue_wait_us));
+                    wait_time_us += rx_data_queue_wait_us;
+                  }
+                  else {
+                    break; // avoid an endless loop if rx_data_queue_wait_us = 0
+                  }
+                }
+                if(not rx_data_queue.push(recv_buffer)) {
+                  LOG_ERROR(fmt::format("timeout pushing to rx data queue: {:d}", samples_received));
+                }
               }
             }
             break;
