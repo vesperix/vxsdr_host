@@ -343,14 +343,14 @@ class vxsdr {
   }
 
   void tx_start_now_for_n_samples(const uint64_t n, const uint8_t subdev = 0, const uint8_t flags = 0) {
-    stream_ctrl_packet_time_samples p;
+    stream_ctrl_packet_samples p;
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_START_NOW_FOR_N_SAMPLES, subdev, flags, sizeof(p), 0 };
     p.n_samples = n;
     cmd_queue_push(p);
   }
 
   void rx_start_now_for_n_samples(const uint64_t n, const uint8_t subdev = 0, const uint8_t flags = 0) {
-    stream_ctrl_packet_time_samples p;
+    stream_ctrl_packet_samples p;
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_START_NOW_FOR_N_SAMPLES, subdev, flags, sizeof(p), 0 };
     p.n_samples = n;
     cmd_queue_push(p);

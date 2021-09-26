@@ -206,6 +206,16 @@ class status_packet : public cmd_or_rsp_packet {};
 
 class stream_ctrl_packet : public cmd_packet {};
 
+class stream_ctrl_packet_time : public stream_ctrl_packet {
+  public:
+    time_spec_t            time;
+};
+
+class stream_ctrl_packet_samples : public stream_ctrl_packet {
+  public:
+    uint64_t               n_samples = 0;
+};
+
 class stream_ctrl_packet_time_samples : public stream_ctrl_packet {
   public:
     time_spec_t            time;
