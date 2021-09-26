@@ -147,7 +147,7 @@ class vxsdr {
     receiver_socket.shutdown(boost::asio::ip::udp::socket::shutdown_receive, err);
     if(err != boost::system::errc::success and err != boost::system::errc::not_connected) {
       // the not connected error is expected since it's a UDP socket
-      LOG_ERROR("receiver socket shutdown: {:s}", err.message());
+      LOG_ERROR(fmt::format("receiver socket shutdown: {:s}", err.message()));
     }
 #endif // VXSDR_ASYNC_RX
     if(receiver_thread.joinable()) {
@@ -155,7 +155,7 @@ class vxsdr {
     }
     receiver_socket.close(err);
     if(err != boost::system::errc::success) {
-      LOG_ERROR("receiver socket close: {:s}", err.message());
+      LOG_ERROR(fmt::format("receiver socket close: {:s}", err.message()));
     }
     LOG_DEBUG("joining sender thread");
     sender_thread_stop_flag = true;
@@ -164,7 +164,7 @@ class vxsdr {
     }
     sender_socket.close(err);
     if(err != boost::system::errc::success) {
-      LOG_ERROR("sender socket close: {:s}", err.message());
+      LOG_ERROR(fmt::format("sender socket close: {:s}", err.message()));
     }
 #ifdef VXSDR_ASYNC_RX
     LOG_DEBUG("joining context thread");
@@ -192,7 +192,7 @@ class vxsdr {
     data.clear();
     data.reserve(n_desired);
 
-    LOG_INFO("receiving {:d} samples", n_desired);
+    LOG_INFO(fmt::format("receiving {:d} samples", n_desired));
 
     while(n_received < n_desired) {
       unsigned wait_time_us = 0;
@@ -240,7 +240,7 @@ class vxsdr {
         LOG_ERROR("timeout popping from rx data queue");
       }
     }
-    LOG_DEBUG("get_rx_data() complete ({:d} samples)", data.size());
+    LOG_DEBUG(fmt::format("get_rx_data() complete ({:d} samples)", data.size()));
     return n_received;
   }
 
@@ -509,10 +509,10 @@ class vxsdr {
     receiver_socket.get_option(option);
     unsigned network_buffer_size = option.value();
     if(network_buffer_size != network_receive_buffer_bytes) {
-      LOG_ERROR("cannot set network receive buffer size to {:d} (got {:d})",
-                    network_receive_buffer_bytes, network_buffer_size);
+      LOG_ERROR(fmt::format("cannot set network receive buffer size to {:d} (got {:d})",
+                    network_receive_buffer_bytes, network_buffer_size));
     } else {
-      LOG_INFO("network receive buffer size set to {:d}", network_buffer_size);
+      LOG_INFO(fmt::format("network receive buffer size set to {:d}", network_buffer_size));
     }
 
     start_receive();
@@ -611,7 +611,7 @@ class vxsdr {
                 }
               }
               if(not rx_data_queue.push(recv_buffer)) {
-                LOG_ERROR("timeout pushing to rx data queue: {:d}", samples_received);
+                LOG_ERROR(fmt::format("timeout pushing to rx data queue: {:d}", samples_received));
               }
             }
             break;
@@ -692,19 +692,19 @@ class vxsdr {
       }
     }
     LOG_INFO("start_receive exiting:");
-    LOG_INFO("   {:12d} packets received", packets_received);
+    LOG_INFO(fmt::format("   {:12d} packets received", packets_received));
     for(unsigned i = 0; i < packet_types_received.size(); i++) {
       if(packet_types_received[i] > 0) {
-        LOG_INFO("   {:12d} {:20s} ({:d})", packet_types_received[i], packet_type_to_name(i), i);
+        LOG_INFO(fmt::format("   {:12d} {:20s} ({:d})", packet_types_received[i], packet_type_to_name(i), i));
       }
     }
-    LOG_INFO("   {:12d} samples received", samples_received);
-    LOG_INFO("   {:12d} bytes received", bytes_received);
-    LOG_INFO("   {:12d} sequence errors", sequence_errors);
+    LOG_INFO(fmt::format("   {:12d} samples received", samples_received));
+    LOG_INFO(fmt::format("   {:12d} bytes received", bytes_received));
+    LOG_INFO(fmt::format("   {:12d} sequence errors", sequence_errors));
 #ifdef VXSDR_SEQ_ERR_DIAG
     for(unsigned i =0; i < seq_error_times.size(); i++) {
-      LOG_INFO(" {:30s} {:20s} {:8d} {:8d}", format_time(seq_error_times[i]), packet_type_to_name(seq_error_packet_type[i]));
-                   % seq_error_counter[i] % seq_error_expected[i];
+      LOG_INFO(fmt::format(" {:30s} {:20s} {:8d} {:8d}", format_time(seq_error_times[i]), packet_type_to_name(seq_error_packet_type[i]),
+                   seq_error_counter[i], seq_error_expected[i]));
     }
 #endif // VXSDR_SEQ_ERR_DIAG
   }
@@ -718,10 +718,10 @@ class vxsdr {
     int network_buffer_size = option.value();
 
     if(network_buffer_size != network_send_buffer_bytes) {
-      LOG_ERROR("cannot set network send buffer size to {:d} (got {:d})",
-                    network_send_buffer_bytes, network_buffer_size);
+      LOG_ERROR(fmt::format("cannot set network send buffer size to {:d} (got {:d})",
+                    network_send_buffer_bytes, network_buffer_size));
     } else {
-      LOG_INFO("network send buffer size set to {:d}", network_buffer_size);
+      LOG_INFO(fmt::format("network send buffer size set to {:d}", network_buffer_size));
     }
 
     start_send();
@@ -834,15 +834,15 @@ class vxsdr {
     close_sdr(device_subdev, tx_subdev, rx_subdev);
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     LOG_INFO("start_send exiting:");
-    LOG_INFO("   {:12d} packets sent", packets_sent);
+    LOG_INFO(fmt::format("   {:12d} packets sent", packets_sent));
     for(unsigned i = 0; i < packet_types_sent.size(); i++) {
       if(packet_types_sent[i] > 0) {
-        LOG_INFO("   {:12d} {:20s} ({:d})", packet_types_sent[i], packet_type_to_name(i), i);
+        LOG_INFO(fmt::format("   {:12d} {:20s} ({:d})", packet_types_sent[i], packet_type_to_name(i), i));
       }
     }
-    LOG_INFO("  {:12d} samples sent", samples_sent);
-    LOG_INFO("  {:12d} bytes sent", bytes_sent);
-    LOG_INFO("  {:12d} send errors", send_errors);
+    LOG_INFO(fmt::format("  {:12d} samples sent", samples_sent));
+    LOG_INFO(fmt::format("  {:12d} bytes sent", bytes_sent));
+    LOG_INFO(fmt::format("  {:12d} send errors", send_errors));
   }
 };
 

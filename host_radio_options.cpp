@@ -69,7 +69,7 @@ void init_vm(boost::program_options::options_description &desc, boost::program_o
   if (vm.count("config_file") > 0) {
     std::ifstream ifs(vm["config_file"].as<std::string>().c_str());
     if (!ifs) {
-      LOGGER(fatal) << "Error: cannot open config file " << vm["config_file"].as<std::string>();
+      LOG_FATAL(fmt::format("Error: cannot open config file {:s}", vm["config_file"].as<std::string>()));
       throw std::runtime_error("Specified config file not found.");
     }
     boost::program_options::store(boost::program_options::parse_config_file(ifs, desc), vm);
@@ -94,28 +94,28 @@ int set_rx_1ch_options(boost::program_options::variables_map &vm, std::unique_pt
   if(vm.count("rate") > 0) {
     radio->set_rx_rate(vm["rate"].as<double>());
     if(vm.count("rx_rate") > 0) {
-      LOGGER(warning) << "Global option --rate overrides --rx_rate";
+      LOG_WARN("Global option --rate overrides --rx_rate");
     }
   }
   else if(vm.count("rx_rate") > 0) {
     radio->set_rx_rate(vm["rx_rate"].as<double>());
   }
   else {
-    LOGGER(fatal) << "Please specify the global sample rate with --rate or the RX sample rate with --rx_rate";
+    LOG_FATAL("Please specify the global sample rate with --rate or the RX sample rate with --rx_rate");
     exit(EXIT_CMD_LINE_ERROR);
   }
 
   if(vm.count("freq") > 0) {
     radio->set_rx_freq(vm["freq"].as<double>());
     if(vm.count("rx_freq") > 0) {
-      LOGGER(warning) << "Global option --freq overrides --rx_freq";
+      LOG_WARN("Global option --freq overrides --rx_freq");
     }
   }
   else if(vm.count("rx_freq") > 0) {
     radio->set_rx_freq(vm["rx_freq"].as<double>());
   }
   else {
-    LOGGER(fatal) << "Please specify the global center frequency with --freq or the RX center frequency with --rx_freq";
+    LOG_FATAL("Please specify the global center frequency with --freq or the RX center frequency with --rx_freq");
     exit(EXIT_CMD_LINE_ERROR);
   }
 
@@ -135,28 +135,28 @@ int set_tx_1ch_options(boost::program_options::variables_map &vm, std::unique_pt
   if(vm.count("rate") > 0) {
     radio->set_tx_rate(vm["rate"].as<double>());
     if(vm.count("tx_rate") > 0) {
-      LOGGER(warning) << "Global option --rate overrides --tx_rate";
+      LOG_WARN("Global option --rate overrides --tx_rate");
     }
   }
   else if(vm.count("tx_rate") > 0) {
     radio->set_tx_rate(vm["tx_rate"].as<double>());
   }
   else {
-    LOGGER(fatal) << "Please specify the global sample rate with --rate or the TX sample rate with --tx_rate";
+    LOG_FATAL("Please specify the global sample rate with --rate or the TX sample rate with --tx_rate");
     exit(EXIT_CMD_LINE_ERROR);
   }
 
   if(vm.count("freq") > 0) {
     radio->set_tx_freq(vm["freq"].as<double>());
     if(vm.count("tx_freq") > 0) {
-      LOGGER(warning) << "Global option --freq overrides --tx_freq";
+      LOG_WARN("Global option --freq overrides --tx_freq");
     }
   }
   else if(vm.count("tx_freq") > 0) {
     radio->set_tx_freq(vm["tx_freq"].as<double>());
   }
   else {
-    LOGGER(fatal) << "Please specify the global center frequency with --freq or the TX center frequency with --tx_freq";
+    LOG_WARN("Please specify the global center frequency with --freq or the TX center frequency with --tx_freq");
     exit(EXIT_CMD_LINE_ERROR);
   }
 
@@ -187,7 +187,7 @@ int set_time_options(boost::program_options::variables_map &vm, std::unique_ptr<
   if(vm.count("clock_source") > 0) {
     radio->set_clock_source(vm["clock_source"].as<string>());
     if(vm.count("no_ext_ref") > 0)
-      LOGGER(warning) << "Both clock_source and no_ext_ref specified; clock_source takes precedence";
+      LOG_WARN(<< "Both clock_source and no_ext_ref specified; clock_source takes precedence");
   }
   else if(vm.count("no_ext_ref") > 0) {
     radio->set_internal_freq_ref();

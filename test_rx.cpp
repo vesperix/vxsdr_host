@@ -46,11 +46,11 @@ void define_options(boost::program_options::options_description &desc)
 void check_options( boost::program_options::variables_map &vm)
 {
   if(vm["local_address"].as<std::string>().empty()) {
-    LOGGER(fatal) << "local IP address must be specified";
+    LOG_FATAL("local IP address must be specified");
     exit(EXIT_CMD_LINE_ERROR);
   }
   if(vm["destination_address"].as<std::string>().empty()) {
-    LOGGER(fatal) << "destination IP address must be specified";
+    LOG_FATAL("destination IP address must be specified");
     exit(EXIT_CMD_LINE_ERROR);
   }
 }
@@ -83,7 +83,7 @@ void init_options(boost::program_options::options_description &desc, boost::prog
 }
 
 extern "C" void sig_int_handler(int sig_num) {
-  LOGGER(fatal) << "terminated by SIGINT (ctrl-C)";
+  LOG_FATAL("terminated by SIGINT (ctrl-C)");
   exit(EXIT_USER_TERMINATED);
 }
 
@@ -91,7 +91,7 @@ int main(int argc, char *argv[])
 {
   INIT_LOGGER();
   try {
-    LOGGER(debug) << argv[0] << " started";
+  LOG_DEBUG(fmt::format("{:s} started", argv[0]));
     signal(SIGINT, &sig_int_handler);
     boost::program_options::options_description desc("Command line options");
     boost::program_options::variables_map vm;
@@ -118,18 +118,18 @@ int main(int argc, char *argv[])
     global_kludge_rx_rate = vm["rate"].as<double>();
     global_kludge_tx_rate = vm["rate"].as<double>();
 
-    LOGGER(info) << "Output filename: " << filename;
+    LOG_INFO(fmt::format("Output filename: {:s}", filename));
 
     boost::asio::ip::address_v4 local_ip = boost::asio::ip::address_v4::from_string(vm["local_address"].as<std::string>());
     boost::asio::ip::address_v4 destination_ip = boost::asio::ip::address_v4::from_string(vm["destination_address"].as<std::string>());
     //boost::asio::ip::address_v4 netmask = boost::asio::ip::address_v4::from_string(vm["netmask"].as<std::string>());
     //boost::asio::ip::address_v4 broadcast_ip = boost::asio::ip::address_v4::broadcast(local_ip, netmask);
     boost::asio::ip::udp::endpoint local_send_endpoint(local_ip, vm["local_send_port"].as<unsigned>());
-    LOGGER(info) << "using local send IP " << local_send_endpoint.address().to_string() << " and port " << local_send_endpoint.port();
+    LOG_INFO(fmt::format("using local send IP {:s} and port {:u}", local_send_endpoint.address().to_string(), local_send_endpoint.port()));
     boost::asio::ip::udp::endpoint local_receive_endpoint(local_ip, vm["local_receive_port"].as<unsigned>());
-    LOGGER(info) << "using local receive IP " << local_receive_endpoint.address().to_string() << " and port " << local_receive_endpoint.port();
+    LOG_INFO(fmt::format("using local receive IP {:s} and port {:u}", local_receive_endpoint.address().to_string(), local_receive_endpoint.port()));
     boost::asio::ip::udp::endpoint destination_endpoint(destination_ip, vm["destination_port"].as<unsigned>());
-    LOGGER(info) << "using destination IP " << destination_endpoint.address().to_string() << " and port " << destination_endpoint.port();
+    LOG_INFO(fmt::format("using destination IP {:s} and port {:u}", destination_endpoint.address().to_string(), destination_endpoint.port()));
 
     boost::asio::io_context io_context;
 
@@ -158,10 +158,10 @@ int main(int argc, char *argv[])
       response_logger_thread.join();
   }
   catch (std::exception& e) {
-    LOGGER(fatal) << "exception caught: " << e.what();
+    LOG_FATAL(fmt::format("exception caught: {:s}", e.what()));
     return EXIT_INTERNAL_ERROR;
   }
 
-  LOGGER(debug) << argv[0] << " finished";
+  LOG_DEBUG(fmt::format("{:s} finished", argv[0]));
   return EXIT_SUCCESS;
 }

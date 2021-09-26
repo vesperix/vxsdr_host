@@ -1,11 +1,11 @@
 
 CXX = clang++-10
 
-CXX_DEFINES = -DBOOST_LOG_DYN_LINK -DBOOST_BIND_GLOBAL_PLACEHOLDERS #-DVXSDR_SEQ_ERR_DIAG
+CXX_DEFINES = -DBOOST_BIND_GLOBAL_PLACEHOLDERS #-DVXSDR_SEQ_ERR_DIAG
 CXX_BASEFLAGS = -Wall -pedantic -std=c++17 $(CXX_EXTRA_FLAGS)
 CXX_OPTFLAGS = -O3
 CXX_DBGFLAGS = -g -Og -fsanitize=address
-CXX_LDFLAGS = -lpthread -lboost_log -lboost_program_options -lboost_system
+CXX_LDFLAGS = -lpthread -lboost_program_options -lboost_system
 
 ifdef VXSDR_DEBUG
 	CXX_FLAGS = $(CXX_BASEFLAGS) $(CXX_DEFINES) $(CXX_DBGFLAGS)

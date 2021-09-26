@@ -6,7 +6,6 @@
 #include <boost/shared_ptr.hpp>
 
 #include "logging.hpp"
-#include "cycle_counter.h"
 #include "thread_utils.h"
 #include "utility.hpp"
 
@@ -87,7 +86,7 @@ class udp_receiver {
       boost::asio::socket_base::receive_buffer_size option;
       socket.get_option(option);
       int network_buffer_size = option.value();
-      LOGGER(info) << "network receive buffer size set to " << network_buffer_size;
+      LOG_INFO(fmt::format("network receive buffer size set to {:u}", network_buffer_size));
 
       if(not rx_stop_flag)
         start_receive();
@@ -103,7 +102,7 @@ class udp_receiver {
       boost::asio::socket_base::receive_buffer_size option;
       socket.get_option(option);
       int network_buffer_size = option.value();
-      LOGGER(info) << "network receive buffer size set to " << network_buffer_size;
+      LOG_INFO(fmt::format("network receive buffer size set to {:u}", network_buffer_size));
 
       if(not rx_stop_flag)
         start_receive();
@@ -123,7 +122,7 @@ class udp_receiver {
     std::vector<uint16_t> seq_error_expected;
 
     void start_receive() {
-      LOGGER(debug) << "start_receive started";
+      LOG_DEBUG("start_receive started");
       //boost::asio::socket_base::bytes_readable check_for_bytes(true);
       // FIXME: need to use async read, handler, and deadline timer to implement timeout
       while(not rx_stop_flag) {
@@ -217,14 +216,14 @@ class udp_receiver {
       //if(receive_thread_sleep_us > 0)
       //  std::this_thread::sleep_for(std::chrono::microseconds(receive_thread_sleep_us));
 
-      LOGGER(info) << "start_receive exiting; " << packets_received << " packets received, " << seq_errors << " sequence errors";
+      LOG_INFO(fmt::format("start_receive exiting; {:u} packets received, {:u} sequence errors", packets_received, seq_errors));
       for(unsigned i =0; i < seq_error_times.size(); i++) {
-        LOGGER(info) << fmt::format(" {:30s} {:20s} {:8d} {:8d}", format_time(seq_error_times[i]), packet_type_to_name(seq_error_packet_type[i]),
-                                                                   seq_error_counter[i], seq_error_expected[i]);
+        LOG_INFO(fmt::format(" {:30s} {:20s} {:8d} {:8d}", format_time(seq_error_times[i]), packet_type_to_name(seq_error_packet_type[i]),
+                                                                   seq_error_counter[i], seq_error_expected[i]));
       }
       for(unsigned i = 0; i < packet_types_received.size(); i++)
         if(packet_types_received[i] > 0)
-          LOGGER(info) << fmt::format("   {:12d} {:20s} ({:d})", packet_types_received[i], packet_type_to_name(i), i);
+          LOG_INFO(fmt::format("   {:12d} {:20s} ({:d})", packet_types_received[i], packet_type_to_name(i), i));
     }
 };
 
@@ -240,7 +239,7 @@ class udp_sender {
       boost::asio::socket_base::send_buffer_size option;
       socket.get_option(option);
       int network_buffer_size = option.value();
-      LOGGER(info) << "network send buffer size set to " << network_buffer_size;
+      LOG_INFO(fmt::format("network send buffer size set to {:u}", network_buffer_size));
 
       if(not tx_stop_flag)
         start_send();
@@ -429,7 +428,7 @@ class udp_sender {
     }
 
     void start_send() {
-      LOGGER(debug) << "start_send started";
+      LOG_DEBUG("start_send started");
       //FIXME: handle halt correctly
       constexpr float throttle_halt_percent  = 90;
       constexpr float throttle_on_percent    = 75;
@@ -528,16 +527,16 @@ class udp_sender {
         send_rx_stop_now(rx_subdev, FLAGS_REQUEST_ACK);
         set_rx_enable(false);
       }
-      LOGGER(info) << "start_send exiting; " << packets_sent << " packets sent, " << send_errors << " send errors";
+      LOG_INFO(fmt::format("start_send exiting; {:u} packets sent, {u} send errors", packets_sent, send_errors));
       for(unsigned i = 0; i < packet_types_processed.size(); i++)
         if(packet_types_processed[i] > 0)
-          LOGGER(info) << fmt::format("   {:12d} {:20s} ({:d})", packet_types_processed[i], packet_type_to_name(i), i);
+          LOG_INFO(fmt::format("   {:12d} {:20s} ({:d})", packet_types_processed[i], packet_type_to_name(i), i));
 
     }
 };
 
 inline void writer(const std::string &outfilename, const uint64_t max_packets) {
-  LOGGER(debug) << "writer thread started";
+  LOG_DEBUG("writer thread started");
 
   std::array<largest_data_packet, rx_write_buffer_size> buffer;
   std::ofstream outfile(outfilename.c_str(), std::ofstream::binary);
@@ -592,20 +591,20 @@ inline void writer(const std::string &outfilename, const uint64_t max_packets) {
 
   auto t1 = std::chrono::steady_clock::now();
   std::chrono::duration<double> dt = t1 - t0;
-  LOGGER(info) << packets << " data packets recieved in " << dt.count() << " sec";
-  LOGGER(info) << write_errors << " write errors";
-  LOGGER(info) << (bytes_written / dt.count()) << " bytes/s";
+  LOG_INFO(fmt::format("{:u} data packets recieved in {.2f} sec", packets, dt.count()));
+  LOG_INFO(fmt::format("{:u} write errors", write_errors));
+  LOG_INFO(fmt::format("{:.2e} bytes/s", bytes_written / dt.count()));
 
   std::this_thread::sleep_for(std::chrono::microseconds(rx_data_queue_clear_sleep_us));
   // empty the queue
   while(rx_data_queue.read_available() > 0)
     rx_data_queue.pop(&buffer.front(), rx_write_buffer_size);
 
-  LOGGER(debug) << "writer thread finished";
+  LOG_DEBUG("writer thread finished");
 }
 
 inline void data_packet_counter(const uint64_t max_packets) {
-  LOGGER(debug) << "data_packet counter thread started";
+  LOG_DEBUG("data_packet counter thread started");
 
   const unsigned buffer_max_packets = 256;
   static std::array<largest_data_packet, buffer_max_packets> buffer;
@@ -631,19 +630,19 @@ inline void data_packet_counter(const uint64_t max_packets) {
 
   auto t1 = std::chrono::steady_clock::now();
   std::chrono::duration<double> dt = t1 - t0;
-  LOGGER(info) << packets << " data packets recieved in " << dt.count() << " sec";
-  LOGGER(info) << (bytes / dt.count()) << " bytes/s, " << (8 * bytes / dt.count()) << " bits/s";
+  LOG_INFO(fmt::format("{:u} data packets recieved in {.2f} sec", packets, dt.count()));
+  LOG_INFO(fmt::format( "{.2e} bytes/s", bytes / dt.count()));
 
   std::this_thread::sleep_for(std::chrono::microseconds(rx_data_queue_clear_sleep_us));
   // empty the queue
   while(rx_data_queue.read_available() > 0)
     rx_data_queue.pop(&buffer.front(), rx_write_buffer_size);
 
-  LOGGER(debug) << "data packet counter thread finished";
+  LOG_DEBUG("data packet counter thread finished");
 }
 
 inline void response_packet_printer() {
-  LOGGER(debug) << "response packet printer thread started";
+  LOG_DEBUG("response packet printer thread started");
 
   const unsigned buffer_max_packets = 256;
   static std::array<largest_cmd_or_rsp_packet, buffer_max_packets> buffer;
@@ -661,47 +660,47 @@ inline void response_packet_printer() {
       std::this_thread::sleep_for(std::chrono::microseconds(response_thread_sleep_us));
   }
 
-  LOGGER(debug) << "response packet printer thread finished";
+  LOG_DEBUG("response packet printer thread finished");
 }
 
 inline void receiver(boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint)
 {
-  LOGGER(debug) << "receiver thread started";
+  LOG_DEBUG("receiver thread started");
 
   if(set_current_thread_priority_realtime(20) != 0)
-    LOGGER(error) << "unable to set receiver thread realtime priority";
+    LOG_ERROR("unable to set receiver thread realtime priority");
 
   if(set_current_thread_affinity(0) != 0)
-    LOGGER(error) << "unable to set receiver thread CPU affinity";
+    LOG_ERROR("unable to set receiver thread CPU affinity");
 
   udp_receiver server(io_context, local_endpoint);
   io_context.run();
-  LOGGER(debug) << "receiver thread finished";
+  LOG_DEBUG("receiver thread finished");
 }
 
 inline void multicast_receiver(boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint, const boost::asio::ip::address_v4 &multicast_ip)
 {
-  LOGGER(debug) << "multicast receiver thread started";
+  LOG_DEBUG("multicast receiver thread started");
 
   if(set_current_thread_priority_realtime(20) != 0)
-    LOGGER(error) << "unable to set realtime thread priority";
+    LOG_ERROR("unable to set realtime thread priority");
 
   if(set_current_thread_affinity(0) != 0)
-    LOGGER(error) << "unable to set thread CPU affinity";
+    LOG_ERROR("unable to set thread CPU affinity");
 
   udp_receiver server(io_context, local_endpoint, multicast_ip);
   io_context.run();
-  LOGGER(debug) << "multicast receiver thread finished";
+  LOG_DEBUG("multicast receiver thread finished");
 }
 
 inline void generator(const uint64_t max_packets, const size_t requested_packet_size, const double a, const int ncycles) {
   std::array<largest_data_packet, 625> buf;
   static constexpr size_t data_buffer_max_bytes = sizeof(largest_data_packet);
-  LOGGER(debug) << "generator thread started";
+  LOG_DEBUG("generator thread started");
 
   size_t packet_size = requested_packet_size;
   if(requested_packet_size > data_buffer_max_bytes) {
-    LOGGER(error) << "requested packet size is greater than maximum (" << data_buffer_max_bytes <<"); setting to maximum";
+    LOG_ERROR(fmt::format("requested packet size is greater than maximum ({:u}); setting to maximum", data_buffer_max_bytes));
     packet_size = data_buffer_max_bytes;
   }
 
@@ -740,18 +739,18 @@ inline void generator(const uint64_t max_packets, const size_t requested_packet_
 
   auto t1 = std::chrono::steady_clock::now();
   std::chrono::duration<double> dt = t1 - t0;
-  LOGGER(info) << (nsent - 1) << " buffers (" << ((nsent - 1) * packet_size) << " bytes) generated in " << dt.count() << " seconds";
-  LOGGER(debug) << "generator thread finished";
+  LOG_INFO(fmt::format( "{:u} buffers ({:u} bytes) generated in {:.2f} seconds", nsent - 1, (nsent - 1) * packet_size, dt.count()));
+  LOG_DEBUG("generator thread finished");
 }
 
 inline void intermod_generator(const uint64_t max_packets, const size_t requested_packet_size, const double a, const int ncycles1, const int ncycles2) {
   std::array<largest_data_packet, 625> buf;
   static constexpr size_t data_buffer_max_bytes = sizeof(largest_data_packet);
-  LOGGER(debug) << "intermod_generator thread started";
+  LOG_DEBUG("intermod_generator thread started");
 
   size_t packet_size = requested_packet_size;
   if(requested_packet_size > data_buffer_max_bytes) {
-    LOGGER(error) << "requested packet size is greater than maximum (" << data_buffer_max_bytes <<"); setting to maximum";
+    LOG_ERROR(fmt::format("requested packet size is greater than maximum ({:u}); setting to maximum", data_buffer_max_bytes));
     packet_size = data_buffer_max_bytes;
   }
 
@@ -792,25 +791,25 @@ inline void intermod_generator(const uint64_t max_packets, const size_t requeste
 
   auto t1 = std::chrono::steady_clock::now();
   std::chrono::duration<double> dt = t1 - t0;
-  LOGGER(info) << (nsent - 1) << " buffers (" << ((nsent - 1) * packet_size) << " bytes) generated in " << dt.count() << " seconds";
-  LOGGER(debug) << "intermod_generator thread finished";
+  LOG_INFO(fmt::format( "{:u} buffers ({:u} bytes) generated in {:.2f} seconds", nsent - 1, (nsent - 1) * packet_size, dt.count()));
+  LOG_DEBUG("intermod_generator thread finished");
 }
 
 inline void sender(boost::asio::io_context &io_context, const boost::asio::ip::udp::endpoint &local_endpoint,
       const boost::asio::ip::udp::endpoint &destination_endpoint, const bool tx_enable, const bool rx_enable)
 {
-  LOGGER(debug) << "sender thread started";
+  LOG_DEBUG("sender thread started");
 
   if(set_current_thread_priority_realtime(20) != 0)
-    LOGGER(error) << "unable to set sender thread realtime priority";
+    LOG_ERROR("unable to set sender thread realtime priority");
 
   if(set_current_thread_affinity(2) != 0)
-    LOGGER(error) << "unable to set sender thread CPU affinity";
+    LOG_ERROR("unable to set sender thread CPU affinity");
 
   udp_sender server(io_context, local_endpoint, destination_endpoint, tx_enable, rx_enable);
   io_context.run();
 
-  LOGGER(debug) << "sender thread finished";
+  LOG_DEBUG("sender thread finished");
 }
 
 #endif // TEST_TX_RX_HPP
