@@ -20,7 +20,7 @@
 #include "host_radio_options.hpp"
 
 extern "C" void sig_int_handler(int /* sig_num */) {
-  LOGGER(fatal) << "terminated by SIGINT (ctrl-C)";
+  LOG_FATAL("terminated by SIGINT (ctrl-C)");
   exit(EXIT_USER_TERMINATED);
 }
 
@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
 {
   INIT_LOGGER();
   try {
-    LOGGER(info) << "started";
+    LOG_INFO("started");
     signal(SIGINT, &sig_int_handler);
     boost::program_options::options_description desc("Command line options");
     boost::program_options::variables_map vm;
@@ -43,21 +43,21 @@ int main(int argc, char *argv[])
     boost::asio::ip::address_v4 local_ip = boost::asio::ip::address_v4::from_string(vm["local_address"].as<std::string>());
     boost::asio::ip::address_v4 destination_ip = boost::asio::ip::address_v4::from_string(vm["destination_address"].as<std::string>());
     boost::asio::ip::udp::endpoint local_send_endpoint(local_ip, vm["local_send_port"].as<unsigned>());
-    LOGGER(info) << "using local send IP " << local_send_endpoint.address().to_string() << " and port " << local_send_endpoint.port();
+    LOG_INFO("using local send IP {:s} and port {:d}", local_send_endpoint.address().to_string(), local_send_endpoint.port());
     boost::asio::ip::udp::endpoint local_receive_endpoint(local_ip, vm["local_receive_port"].as<unsigned>());
-    LOGGER(info) << "using local receive IP " << local_receive_endpoint.address().to_string() << " and port " << local_receive_endpoint.port();
+    LOG_INFO("using local receive IP {:s} and port {:d}", local_receive_endpoint.address().to_string(), local_receive_endpoint.port());
     boost::asio::ip::udp::endpoint destination_endpoint(destination_ip, vm["destination_port"].as<unsigned>());
-    LOGGER(info) << "using destination IP " << destination_endpoint.address().to_string() << " and port " << destination_endpoint.port();
+    LOG_INFO("using destination IP {:s} and port {:d}", destination_endpoint.address().to_string(), destination_endpoint.port());
 
     auto radio = std::make_unique<vxsdr>(local_send_endpoint, local_receive_endpoint, destination_endpoint);
 
-    LOGGER(info) << "using frequency " << vm["freq"].as<double>();
-    LOGGER(info) << "using rate      " << vm["rate"].as<double>();
-    LOGGER(info) << "using tx_gain   " << vm["tx_gain"].as<double>();
-    LOGGER(info) << "using rx_gain   " << vm["rx_gain"].as<double>();
+    LOG_INFO("using frequency {:e}", vm["freq"].as<double>());
+    LOG_INFO("using rate      {:e}", vm["rate"].as<double>());
+    LOG_INFO("using tx_gain   {:e}", vm["tx_gain"].as<double>());
+    LOG_INFO("using rx_gain   {:e}", vm["rx_gain"].as<double>());
 
     if(vm["duration"].as<double>() <= 0.0) {
-      LOGGER(fatal) << "duration must be positive";
+      LOG_FATAL("duration must be positive");
       return EXIT_CMD_LINE_ERROR;
     }
 
@@ -70,7 +70,7 @@ int main(int argc, char *argv[])
 
     size_t n_samp = std::llround(vm["duration"].as<double>() * vm["rate"].as<double>());
 
-    LOGGER(info) << fmt::format("preparing {:.3f} seconds ({:lld} samples) of data", vm["duration"].as<double>(), n_samp);
+    LOG_INFO("preparing {:.3f} seconds ({:lld} samples) of data", vm["duration"].as<double>(), n_samp);
 
     std::vector<std::complex<int16_t> > data(n_samp);
 
@@ -78,34 +78,34 @@ int main(int argc, char *argv[])
       data[i] = std::complex<int16_t>(10000,0);
     }
 
-    LOGGER(info) << "sending data...";
+    LOG_INFO("sending data...");
 
     radio->tx_start_now_for_n_samples(n_samp);
     radio->put_tx_data(data, n_samp);
     radio->tx_stop_now();
 
-    LOGGER(info) << "send complete";
+    LOG_INFO("send complete");
 
     std::string filename = vm["prefix"].as<std::string>();
     filename.append(make_filename_time(std::chrono::system_clock::now(), vm["freq"].as<double>(), vm["rate"].as<double>()));
     filename.append(vm["suffix"].as<std::string>());
 
-    LOGGER(info) << "receiving data to file " << filename;
+    LOG_INFO("receiving data to file {:s}", filename);
 
     radio->rx_start_now_for_n_samples(n_samp);
     radio->get_rx_data(data, n_samp);
     radio->rx_stop_now();
 
-    LOGGER(info) << "receive complete";
+    LOG_INFO("receive complete");
 
     size_t n_written = write_cplx_16(filename, data);
-    LOGGER(info) << n_written << " samples written";
+    LOG_INFO("{:d} samples written", n_written);
   }
   catch (std::exception& e) {
-    LOGGER(fatal) << "exception caught: " << e.what();
+    LOG_FATAL("exception caught: {:s}", e.what());
     return EXIT_INTERNAL_ERROR;
   }
 
-  LOGGER(info) << "finished";
+  LOG_INFO("finished");
   return EXIT_SUCCESS;
 }

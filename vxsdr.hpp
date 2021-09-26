@@ -115,7 +115,7 @@ class vxsdr {
         const boost::asio::ip::udp::endpoint &radio_endpoint) :
     sender_socket(context, local_send_endpoint),
     receiver_socket(context, local_receive_endpoint) {
-    LOGGER(debug) << "vxsdr constructor entered";
+    LOG_DEBUG("vxsdr constructor entered");
     destination_endpoint = radio_endpoint;
 #ifdef VXSDR_ASYNC_RX
     // https://www.boost.org/doc/libs/1_77_0/doc/html/boost_asio/example/cpp11/futures/daytime_client.cpp
@@ -134,12 +134,12 @@ class vxsdr {
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
     set_tx_enable(true);
     set_rx_enable(true);
-    LOGGER(debug) << "vxsdr constructor complete";
+    LOG_DEBUG("vxsdr constructor complete");
   };
   // destructor
   ~vxsdr() {
-    LOGGER(debug) << "vxsdr destructor entered";
-    LOGGER(debug) << "joining receiver_thread";
+    LOG_DEBUG("vxsdr destructor entered");
+    LOG_DEBUG("joining receiver_thread");
     receiver_thread_stop_flag = true;
     boost::system::error_code err;
 #ifndef ASYNCH__RX
@@ -147,7 +147,7 @@ class vxsdr {
     receiver_socket.shutdown(boost::asio::ip::udp::socket::shutdown_receive, err);
     if(err != boost::system::errc::success and err != boost::system::errc::not_connected) {
       // the not connected error is expected since it's a UDP socket
-      LOGGER(error) << "receiver socket shutdown: " << err.message();
+      LOG_ERROR("receiver socket shutdown: {:s}", err.message());
     }
 #endif // VXSDR_ASYNC_RX
     if(receiver_thread.joinable()) {
@@ -155,22 +155,22 @@ class vxsdr {
     }
     receiver_socket.close(err);
     if(err != boost::system::errc::success) {
-      LOGGER(error) << "receiver socket close: " << err.message();
+      LOG_ERROR("receiver socket close: {:s}", err.message());
     }
-    LOGGER(debug) << "joining sender thread";
+    LOG_DEBUG("joining sender thread");
     sender_thread_stop_flag = true;
     if(sender_thread.joinable()) {
       sender_thread.join();
     }
     sender_socket.close(err);
     if(err != boost::system::errc::success) {
-      LOGGER(error) << "sender socket close: " << err.message();
+      LOG_ERROR("sender socket close: {:s}", err.message());
     }
 #ifdef VXSDR_ASYNC_RX
-    LOGGER(debug) << "joining context thread";
+    LOG_DEBUG("joining context thread");
     context_thread.join();
 #endif // VXSDR_ASYNC_RX
-    LOGGER(debug) << "vxsdr destructor complete";
+    LOG_DEBUG("vxsdr destructor complete");
   };
   // copy constructor deleted
   vxsdr(const vxsdr &) = delete;
@@ -182,7 +182,7 @@ class vxsdr {
   vxsdr& operator=(vxsdr &&) = delete;
 
   size_t get_rx_data(std::vector<std::complex<int16_t> > &data, size_t n_desired = 0) {
-    LOGGER(debug) << "get_rx_data() entered";
+    LOG_DEBUG("get_rx_data() entered");
     size_t n_received = 0;
     data_queue_element q;
 
@@ -192,7 +192,7 @@ class vxsdr {
     data.clear();
     data.reserve(n_desired);
 
-    LOGGER(info) << "receiving " << n_desired << " samples";
+    LOG_INFO("receiving {:d} samples", n_desired);
 
     while(n_received < n_desired) {
       unsigned wait_time_us = 0;
@@ -237,10 +237,10 @@ class vxsdr {
           n_received += data_samples;
         }
       } else {
-        LOGGER(error) << "timeout popping from rx data queue";
+        LOG_ERROR("timeout popping from rx data queue");
       }
     }
-    LOGGER(debug) << "get_rx_data() complete (" << data.size() << " samples)";
+    LOG_DEBUG("get_rx_data() complete ({:d} samples)", data.size());
     return n_received;
   }
 
@@ -271,7 +271,7 @@ class vxsdr {
       if(tx_data_queue.push(q)) {
         n_put += n_samples;
       } else {
-        LOGGER(error) << "timeout pushing to tx data queue";
+        LOG_ERROR("timeout pushing to tx data queue");
         break;
       }
     }
@@ -291,7 +291,7 @@ class vxsdr {
     }
 
     if(not command_queue.push(q)) {
-      LOGGER(error) << "timeout pushing to command queue";
+      LOG_ERROR("timeout pushing to command queue");
     }
   }
 
@@ -462,43 +462,43 @@ class vxsdr {
   }
 
   void receiver() {
-    LOGGER(debug) << "receiver thread started";
+    LOG_DEBUG("receiver thread started");
 
     if(thread_set_priority) {
       if(set_current_thread_priority_realtime(receive_thread_priority) != 0) {
-        LOGGER(error) << "unable to set receiver thread realtime priority";
+        LOG_ERROR("unable to set receiver thread realtime priority");
       }
     }
 
     if(thread_set_affinity) {
       if(set_current_thread_affinity(receive_thread_cpu) != 0) {
-        LOGGER(error) << "unable to set receiver thread CPU affinity";
+        LOG_ERROR("unable to set receiver thread CPU affinity");
       }
     }
 
     udp_receiver();
     context.run();
-    LOGGER(debug) << "receiver thread finished";
+    LOG_DEBUG("receiver thread finished");
   }
 
   void sender() {
-    LOGGER(debug) << "sender thread started";
+    LOG_DEBUG("sender thread started");
 
     if(thread_set_priority) {
       if(set_current_thread_priority_realtime(send_thread_priority) != 0) {
-        LOGGER(error) << "unable to set sender thread realtime priority";
+        LOG_ERROR("unable to set sender thread realtime priority");
       }
     }
 
     if(thread_set_affinity) {
       if(set_current_thread_affinity(send_thread_cpu) != 0) {
-        LOGGER(error) << "unable to set sender thread CPU affinity";
+        LOG_ERROR("unable to set sender thread CPU affinity");
       }
     }
 
     udp_sender();
     context.run();
-    LOGGER(debug) << "sender thread finished";
+    LOG_DEBUG("sender thread finished");
   }
 
   void udp_receiver() {
@@ -509,10 +509,10 @@ class vxsdr {
     receiver_socket.get_option(option);
     unsigned network_buffer_size = option.value();
     if(network_buffer_size != network_receive_buffer_bytes) {
-      LOGGER(error) << "cannot set network receive buffer size to "
-                    << network_receive_buffer_bytes << " (got " << network_buffer_size << ")";
+      LOG_ERROR("cannot set network receive buffer size to {:d} (got {:d})",
+                    network_receive_buffer_bytes, network_buffer_size);
     } else {
-      LOGGER(info) << "network receive buffer size set to " << network_buffer_size;
+      LOG_INFO("network receive buffer size set to {:d}", network_buffer_size);
     }
 
     start_receive();
@@ -527,12 +527,12 @@ class vxsdr {
       }
     }
     if(not response_queue.push(p)) {
-      LOGGER(error) << "timeout pushing to response queue";
+      LOG_ERROR("timeout pushing to response queue");
     }
   }
 
   void start_receive() {
-    LOGGER(debug) << "start_receive started";
+    LOG_DEBUG("start_receive started");
     boost::asio::ip::udp::endpoint remote_endpoint;
     uint16_t last_seq = 0;
 
@@ -569,7 +569,7 @@ class vxsdr {
                                    boost::asio::use_future);
       if(result.wait_for(std::chrono::milliseconds(receiver_socket_timeout_ms)) == std::future_status::timeout) {
         bytes_in_packet = 0;
-        //LOGGER(debug) << "timeout";
+        //LOG_DEBUG("timeout");
       } else {
         bytes_in_packet = result.get();
       }
@@ -611,7 +611,7 @@ class vxsdr {
                 }
               }
               if(not rx_data_queue.push(recv_buffer)) {
-                LOGGER(error) << "timeout pushing to rx data queue: " << samples_received;
+                LOG_ERROR("timeout pushing to rx data queue: {:d}", samples_received);
               }
             }
             break;
@@ -691,19 +691,19 @@ class vxsdr {
         }
       }
     }
-    LOGGER(info) << "start_receive exiting:";
-    LOGGER(info) << fmt::format("   {:12d} packets received", packets_received);
+    LOG_INFO("start_receive exiting:");
+    LOG_INFO("   {:12d} packets received", packets_received);
     for(unsigned i = 0; i < packet_types_received.size(); i++) {
       if(packet_types_received[i] > 0) {
-        LOGGER(info) << fmt::format("   {:12d} {:20s} ({:d})", packet_types_received[i], packet_type_to_name(i), i);
+        LOG_INFO("   {:12d} {:20s} ({:d})", packet_types_received[i], packet_type_to_name(i), i);
       }
     }
-    LOGGER(info) << fmt::format("   {:12d} samples received", samples_received);
-    LOGGER(info) << fmt::format("   {:12d} bytes received", bytes_received);
-    LOGGER(info) << fmt::format("   {:12d} sequence errors", sequence_errors);
+    LOG_INFO("   {:12d} samples received", samples_received);
+    LOG_INFO("   {:12d} bytes received", bytes_received);
+    LOG_INFO("   {:12d} sequence errors", sequence_errors);
 #ifdef VXSDR_SEQ_ERR_DIAG
     for(unsigned i =0; i < seq_error_times.size(); i++) {
-      LOGGER(info) << fmt::format(" {:30s} {:20s} {:8d} {:8d}", format_time(seq_error_times[i]), packet_type_to_name(seq_error_packet_type[i]));
+      LOG_INFO(" {:30s} {:20s} {:8d} {:8d}", format_time(seq_error_times[i]), packet_type_to_name(seq_error_packet_type[i]));
                    % seq_error_counter[i] % seq_error_expected[i];
     }
 #endif // VXSDR_SEQ_ERR_DIAG
@@ -718,10 +718,10 @@ class vxsdr {
     int network_buffer_size = option.value();
 
     if(network_buffer_size != network_send_buffer_bytes) {
-      LOGGER(error) << "cannot set network send buffer size to "
-                    << network_send_buffer_bytes << "(got " << network_buffer_size << ")";
+      LOG_ERROR("cannot set network send buffer size to {:d} (got {:d})",
+                    network_send_buffer_bytes, network_buffer_size);
     } else {
-      LOGGER(info) << "network send buffer size set to " << network_buffer_size;
+      LOG_INFO("network send buffer size set to {:d}", network_buffer_size);
     }
 
     start_send();
@@ -769,7 +769,7 @@ class vxsdr {
   }
 
   void start_send() {
-    LOGGER(debug) << "start_send started";
+    LOG_DEBUG("start_send started");
 
     packets_sent = 0;
     samples_sent = 0;
@@ -833,16 +833,16 @@ class vxsdr {
     }
     close_sdr(device_subdev, tx_subdev, rx_subdev);
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    LOGGER(info) << "start_send exiting:";
-    LOGGER(info) << fmt::format("   {:12d} packets sent", packets_sent);
+    LOG_INFO("start_send exiting:");
+    LOG_INFO("   {:12d} packets sent", packets_sent);
     for(unsigned i = 0; i < packet_types_sent.size(); i++) {
       if(packet_types_sent[i] > 0) {
-        LOGGER(info) << fmt::format("   {:12d} {:20s} ({:d})", packet_types_sent[i], packet_type_to_name(i), i);
+        LOG_INFO("   {:12d} {:20s} ({:d})", packet_types_sent[i], packet_type_to_name(i), i);
       }
     }
-    LOGGER(info) << fmt::format("  {:12d} samples sent", samples_sent);
-    LOGGER(info) << fmt::format("  {:12d} bytes sent", bytes_sent);
-    LOGGER(info) << fmt::format("  {:12d} send errors", send_errors);
+    LOG_INFO("  {:12d} samples sent", samples_sent);
+    LOG_INFO("  {:12d} bytes sent", bytes_sent);
+    LOG_INFO("  {:12d} send errors", send_errors);
   }
 };
 
