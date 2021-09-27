@@ -66,7 +66,6 @@ int main(int argc, char *argv[])
     set_rx_1ch_options(vm, radio);
 
     size_t n_samp = std::llround(vm["duration"].as<double>() * vm["rate"].as<double>());
-    std::vector<std::complex<int16_t> > data(n_samp);
 
     std::string filename = vm["prefix"].as<std::string>();
     if(vm.count("no_filename_time") > 0) {
@@ -77,15 +76,16 @@ int main(int argc, char *argv[])
     }
     filename.append(vm["suffix"].as<std::string>());
 
+    std::ofstream outfile (filename, std::ofstream::binary);
+
     LOG_INFO(fmt::format("receiving data to file {:s}", filename));
 
     radio->rx_start_now_for_n_samples(n_samp);
-    radio->get_rx_data(data, n_samp);
+    radio->write_rx_data(outfile, n_samp);
     radio->rx_stop_now();
 
     LOG_INFO("receive complete");
-
-    size_t n_written = write_cplx_16(filename, data);
+    outfile.close();
     LOG_INFO(fmt::format("{:d} samples written", n_written));
   }
   catch (std::exception& e) {
