@@ -76,12 +76,12 @@ int main(int argc, char *argv[])
     }
     filename.append(vm["suffix"].as<std::string>());
 
-    std::ofstream outfile (filename, std::ofstream::binary);
+    std::ofstream outfile(filename, std::ofstream::binary);
 
     LOG_INFO(fmt::format("receiving data to file {:s}", filename));
 
     radio->rx_start_now_for_n_samples(n_samp);
-    radio->write_rx_data(outfile, n_samp);
+    size_t n_written = radio->write_rx_data(outfile, n_samp);
     radio->rx_stop_now();
 
     LOG_INFO("receive complete");

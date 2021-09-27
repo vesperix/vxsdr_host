@@ -240,14 +240,21 @@ class vxsdr {
     return n_received;
   }
 
-  size_t write_rx_data(std::ofstream &out_stream, size_t n_desired) {
+  size_t write_rx_data(std::ofstream &out_stream, size_t n_desired, size_t write_size_samples = 65536) {
     LOG_DEBUG("write_rx_data() entered");
-    size_t n_received = 0;
+    size_t n_received = 0, n_written = 0;
     data_queue_element q;
+
+    if(write_size_samples < MAX_DATA_LENGTH_SAMPLES) {
+      LOG_WARN(fmt::format("requested buffered write size too small; increasing to {:d} samples", MAX_DATA_LENGTH_SAMPLES));
+      write_size_samples = MAX_DATA_LENGTH_SAMPLES;
+    }
+
+    std::vector<std::complex<int16_t>> buffer(2 * write_size_samples);
 
     LOG_INFO(fmt::format("receiving {:d} samples", n_desired));
 
-    while(n_received < n_desired) {
+    while(n_written < n_desired) {
       unsigned wait_time_us = 0;
       // setting rx_data_queue_wait_us = 0 results in a busy wait with no timeout
       while(rx_data_queue.read_available() == 0 and wait_time_us < rx_data_queue_timeout_us) {
@@ -263,37 +270,50 @@ class vxsdr {
           auto p = reinterpret_cast<data_packet *>(&q);
           size_t data_bytes = p->hdr.packet_size - sizeof(packet_header);
           size_t data_samples = data_bytes / sizeof(std::complex<int16_t>);
-          out_stream.write((char *)std::begin(p->data), sizeof(std::complex<int16_t>) * std::min(n_desired - n_received, data_samples));
+          std::copy_n(std::begin(p->data), std::min(n_desired - n_received, data_samples), std::back_inserter(buffer));
           n_received += data_samples;
         } else if(has_time and not has_stream_id) {
           auto p = reinterpret_cast<data_packet_time *>(&q);
           size_t data_bytes = p->hdr.packet_size - sizeof(packet_header) - sizeof(time_spec_t);
           size_t data_samples = data_bytes / sizeof(std::complex<int16_t>);
-          out_stream.write((char *)std::begin(p->data), sizeof(std::complex<int16_t>) * std::min(n_desired - n_received, data_samples));
+          std::copy_n(std::begin(p->data), std::min(n_desired - n_received, data_samples), std::back_inserter(buffer));
           n_received += data_samples;
         } else if(has_stream_id and not has_time) {
           auto p = reinterpret_cast<data_packet_stream *>(&q);
           size_t data_bytes = p->hdr.packet_size - sizeof(packet_header) - sizeof(stream_spec_t);
           size_t data_samples = data_bytes / sizeof(std::complex<int16_t>);
-          out_stream.write((char *)std::begin(p->data), sizeof(std::complex<int16_t>) * std::min(n_desired - n_received, data_samples));
+          std::copy_n(std::begin(p->data), std::min(n_desired - n_received, data_samples), std::back_inserter(buffer));
           n_received += data_samples;
         } else {
           auto p = reinterpret_cast<data_packet_time_stream *>(&q);
           size_t data_bytes = p->hdr.packet_size - sizeof(packet_header) - sizeof(time_spec_t) - sizeof(stream_spec_t);
           size_t data_samples = data_bytes / sizeof(std::complex<int16_t>);
-          out_stream.write((char *)std::begin(p->data), sizeof(std::complex<int16_t>) * std::min(n_desired - n_received, data_samples));
+          std::copy_n(std::begin(p->data), std::min(n_desired - n_received, data_samples), std::back_inserter(buffer));
           n_received += data_samples;
         }
-        if(out_stream.fail()) {
-          LOG_ERROR(fmt::format("error writing to output file ({:d}, {:d})", n_received, n_desired));
-          break;    
+        if(buffer.size() >= write_size_samples or n_received >= n_desired) {
+          size_t n_to_write = std::min(n_desired - n_written, write_size_samples);     
+          out_stream.write((char *)buffer.data(), sizeof(std::complex<int16_t>) * n_to_write);
+          if(out_stream.fail()) {
+            LOG_ERROR(fmt::format("error writing to output file ({:d}, {:d})", n_received, n_desired));
+            break;    
+          } else {
+            n_written += n_to_write;
+            // copy anything that hasn't been written to the front of the buffer
+            size_t n_to_copy = std::min(n_desired - n_written, buffer.size() - n_to_write);
+            for(size_t i = 0; i < n_to_copy; i++) {
+              buffer[i] = buffer[n_to_write + i];
+            }
+            buffer.resize(n_to_copy);
+          }
         }
+
       } else {
-        LOG_ERROR(fmt::format("timeout popping from rx data queue ({:d}, {:d})", n_received, n_desired));
+        LOG_ERROR(fmt::format("timeout popping from rx data queue ({:d} of {:d} samples written)", n_written, n_desired));
       }
     }
-    LOG_DEBUG(fmt::format("write_rx_data() complete ({:d} samples)", n_received));
-    return n_received;
+    LOG_DEBUG(fmt::format("write_rx_data() complete ({:d} samples)", n_written));
+    return n_written;
   }
 
   size_t put_tx_data(std::vector<std::complex<int16_t> > data, const uint8_t subdev = 0) {
