@@ -22,19 +22,19 @@ all: $(PROGS) Makefile
 
 .PHONY: all
 
-test_rx: test_rx.cpp test_tx_rx.hpp $(COMMON_INCLUDES)
+test_rx: test_rx.cpp test_tx_rx.hpp $(COMMON_INCLUDES) $(COMMON_SRC)
 	$(CXX) $(CXX_FLAGS) -o $@ $< $(COMMON_SRC) $(CXX_LDFLAGS)
 
-test_rx_seq_only: test_rx_seq_only.cpp test_tx_rx.hpp $(COMMON_INCLUDES)
+test_rx_seq_only: test_rx_seq_only.cpp test_tx_rx.hpp $(COMMON_INCLUDES) $(COMMON_SRC)
 	$(CXX) $(CXX_FLAGS) -o $@ $< $(COMMON_SRC) $(CXX_LDFLAGS)
 
-test_tx: test_tx.cpp test_tx_rx.hpp $(COMMON_INCLUDES)
+test_tx: test_tx.cpp test_tx_rx.hpp $(COMMON_INCLUDES) $(COMMON_SRC)
 	$(CXX) $(CXX_FLAGS) -o $@ $< $(COMMON_SRC) $(CXX_LDFLAGS)
 
-vxsdr_test: vxsdr_test.cpp host_radio_options.cpp vxsdr.hpp $(COMMON_INCLUDES)
+vxsdr_test: vxsdr_test.cpp host_radio_options.cpp vxsdr.hpp $(COMMON_INCLUDES) $(COMMON_SRC)
 	$(CXX) $(CXX_FLAGS) -o $@ $< host_radio_options.cpp $(COMMON_SRC) $(CXX_LDFLAGS)
 
-vxsdr_test_rx: vxsdr_test_rx.cpp host_radio_options.cpp vxsdr.hpp $(COMMON_INCLUDES)
+vxsdr_test_rx: vxsdr_test_rx.cpp host_radio_options.cpp vxsdr.hpp $(COMMON_INCLUDES) $(COMMON_SRC)
 	$(CXX) $(CXX_FLAGS) -o $@ $< host_radio_options.cpp $(COMMON_SRC) $(CXX_LDFLAGS)
 
 clean:

@@ -69,7 +69,12 @@ int main(int argc, char *argv[])
     std::vector<std::complex<int16_t> > data(n_samp);
 
     std::string filename = vm["prefix"].as<std::string>();
-    filename.append(make_filename_time(std::chrono::system_clock::now(), vm["freq"].as<double>(), vm["rate"].as<double>()));
+    if(vm.count("no_filename_time") > 0) {
+      filename.append(make_filename_no_time(vm["freq"].as<double>(), vm["rate"].as<double>()));
+    }
+    else {
+      filename.append(make_filename_time(std::chrono::system_clock::now(), vm["freq"].as<double>(), vm["rate"].as<double>()));
+    }
     filename.append(vm["suffix"].as<std::string>());
 
     LOG_INFO(fmt::format("receiving data to file {:s}", filename));

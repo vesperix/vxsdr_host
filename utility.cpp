@@ -55,7 +55,7 @@ std::string make_filename_time(const std::chrono::time_point<std::chrono::system
 std::string make_filename_no_time(const double freq, const double rate)
 {
   std::stringstream s;
-  s << fmt::format("{:.3f}-mhz-{:.1f}-ksps-", freq / 1e6, rate / 1e3);
+  s << fmt::format("{:.3f}-mhz-{:.1f}-ksps", freq / 1e6, rate / 1e3);
   return s.str();
 }
 
