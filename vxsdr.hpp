@@ -207,32 +207,28 @@ class vxsdr {
         bool has_time = (bool)(q.hdr.flags & FLAGS_TIME_PRESENT);
         bool has_stream_id = (bool)(q.hdr.flags & FLAGS_STREAM_ID_PRESENT);
         if(not has_time and not has_stream_id) {
-          data_packet p;
-          std::memcpy(&p, &q, std::min(sizeof(q), sizeof(p)));
-          size_t data_bytes = p.hdr.packet_size - sizeof(packet_header);
+          auto p = reinterpret_cast<data_packet *>(&q);
+          size_t data_bytes = p->hdr.packet_size - sizeof(packet_header);
           size_t data_samples = data_bytes / sizeof(std::complex<int16_t>);
-          std::copy_n(std::begin(p.data), std::min(n_desired - n_received, data_samples), std::back_inserter(data));
+          std::copy_n(std::begin(p->data), std::min(n_desired - n_received, data_samples), std::back_inserter(data));
           n_received += data_samples;
         } else if(has_time and not has_stream_id) {
-          data_packet_time p;
-          std::memcpy(&p, &q, std::min(sizeof(q), sizeof(p)));
-          size_t data_bytes = p.hdr.packet_size - sizeof(packet_header) - sizeof(time_spec_t);
+          auto p = reinterpret_cast<data_packet_time *>(&q);
+          size_t data_bytes = p->hdr.packet_size - sizeof(packet_header) - sizeof(time_spec_t);
           size_t data_samples = data_bytes / sizeof(std::complex<int16_t>);
-          std::copy_n(std::begin(p.data), std::min(n_desired - n_received, data_samples), std::back_inserter(data));
+          std::copy_n(std::begin(p->data), std::min(n_desired - n_received, data_samples), std::back_inserter(data));
           n_received += data_samples;
         } else if(has_stream_id and not has_time) {
-          data_packet_stream p;
-          std::memcpy(&p, &q, std::min(sizeof(q), sizeof(p)));
-          size_t data_bytes = p.hdr.packet_size - sizeof(packet_header) - sizeof(stream_spec_t);
+          auto p = reinterpret_cast<data_packet_stream *>(&q);
+          size_t data_bytes = p->hdr.packet_size - sizeof(packet_header) - sizeof(stream_spec_t);
           size_t data_samples = data_bytes / sizeof(std::complex<int16_t>);
-          std::copy_n(std::begin(p.data), std::min(n_desired - n_received, data_samples), std::back_inserter(data));
+          std::copy_n(std::begin(p->data), std::min(n_desired - n_received, data_samples), std::back_inserter(data));
           n_received += data_samples;
         } else {
-          data_packet_time_stream p;
-          std::memcpy(&p, &q, std::min(sizeof(q), sizeof(p)));
-          size_t data_bytes = p.hdr.packet_size - sizeof(packet_header) - sizeof(time_spec_t) - sizeof(stream_spec_t);
+          auto p = reinterpret_cast<data_packet_time_stream *>(&q);
+          size_t data_bytes = p->hdr.packet_size - sizeof(packet_header) - sizeof(time_spec_t) - sizeof(stream_spec_t);
           size_t data_samples = data_bytes / sizeof(std::complex<int16_t>);
-          std::copy_n(std::begin(p.data), std::min(n_desired - n_received, data_samples), std::back_inserter(data));
+          std::copy_n(std::begin(p->data), std::min(n_desired - n_received, data_samples), std::back_inserter(data));
           n_received += data_samples;
         }
       } else {
@@ -624,13 +620,12 @@ class vxsdr {
             break;
           // tx sginal data acks special cased since they contain throttling information
           case PACKET_TYPE_TX_SIGNAL_DATA_ACK: {
-              tx_signal_data_ack_packet r;
-              std::memcpy(&r, &recv_buffer, std::min(sizeof(r), sizeof(recv_buffer)));
-              tx_buffer_used_bytes = r.tx_buffer_used_bytes;
+              auto r = reinterpret_cast<tx_signal_data_ack_packet *>(&recv_buffer);
+              tx_buffer_used_bytes = r->tx_buffer_used_bytes;
               tx_buffer_fill_percent = std::min(100U, (100U * tx_buffer_used_bytes) / tx_buffer_size_bytes);
               if(forward_acks) {
                 response_queue_element p;
-                std::memcpy(&p, &r, std::min(sizeof(p), sizeof(r)));
+                std::memcpy(&p, &recv_buffer, std::min(sizeof(p), sizeof(recv_buffer)));
                 response_queue_push_wait(p);
               }
             }
@@ -639,10 +634,9 @@ class vxsdr {
           case PACKET_TYPE_DEVICE_CMD_RSP:
             switch(recv_buffer.hdr.command) {
               case DEVICE_CMD_GET_BUFFER_USE: {
-                  get_buffer_use_rsp_packet r;
-                  std::memcpy(&r, &recv_buffer, std::min(sizeof(r), sizeof(recv_buffer)));
-                  tx_buffer_used_bytes = r.tx_buffer_used_bytes;
-                  rx_buffer_used_bytes = r.rx_buffer_used_bytes;
+                  auto r = reinterpret_cast<get_buffer_use_rsp_packet *>(&recv_buffer);
+                  tx_buffer_used_bytes = r->tx_buffer_used_bytes;
+                  rx_buffer_used_bytes = r->rx_buffer_used_bytes;
                   tx_buffer_fill_percent = std::min(100U, (100U * tx_buffer_used_bytes) / tx_buffer_size_bytes);
                   rx_buffer_fill_percent = std::min(100U, (100U * rx_buffer_used_bytes) / rx_buffer_size_bytes);
                   response_queue_element p;
@@ -651,10 +645,9 @@ class vxsdr {
                 }
                 break;
               case DEVICE_CMD_GET_BUFFER_INFO: {
-                  get_buffer_info_rsp_packet r;
-                  std::memcpy(&r, &recv_buffer, sizeof(r));
-                  tx_buffer_size_bytes = r.tx_buffer_size_bytes;
-                  rx_buffer_size_bytes = r.rx_buffer_size_bytes;
+                  auto r = reinterpret_cast<get_buffer_info_rsp_packet *>(&recv_buffer);
+                  tx_buffer_size_bytes = r->tx_buffer_size_bytes;
+                  rx_buffer_size_bytes = r->rx_buffer_size_bytes;
                   response_queue_element p;
                   std::memcpy(&p, &r, std::min(sizeof(p), sizeof(r)));
                   response_queue_push_wait(p);
