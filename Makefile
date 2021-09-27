@@ -34,6 +34,9 @@ test_tx: test_tx.cpp test_tx_rx.hpp $(COMMON_INCLUDES)
 vxsdr_test: vxsdr_test.cpp host_radio_options.cpp vxsdr.hpp $(COMMON_INCLUDES)
 	$(CXX) $(CXX_FLAGS) -o $@ $< host_radio_options.cpp $(COMMON_SRC) $(CXX_LDFLAGS)
 
+vxsdr_test_rx: vxsdr_test.cpp host_radio_options.cpp vxsdr.hpp $(COMMON_INCLUDES)
+	$(CXX) $(CXX_FLAGS) -o $@ $< host_radio_options.cpp $(COMMON_SRC) $(CXX_LDFLAGS)
+
 clean:
 	rm -f $(PROGS) *.o *~
 
