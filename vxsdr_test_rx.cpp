@@ -35,7 +35,6 @@ int main(int argc, char *argv[])
 
     add_common_options(desc);
     add_network_options(desc);
-    add_tx_1ch_options(desc);
     add_rx_1ch_options(desc);
 
     init_vm(desc, vm, argc, argv);
@@ -53,7 +52,6 @@ int main(int argc, char *argv[])
 
     LOG_INFO(fmt::format("using frequency {:.5e}", vm["freq"].as<double>()));
     LOG_INFO(fmt::format("using rate      {:.5e}", vm["rate"].as<double>()));
-    LOG_INFO(fmt::format("using tx_gain   {:.1f}", vm["tx_gain"].as<double>()));
     LOG_INFO(fmt::format("using rx_gain   {:.1f}", vm["rx_gain"].as<double>()));
 
     if(vm["duration"].as<double>() <= 0.0) {
@@ -66,25 +64,9 @@ int main(int argc, char *argv[])
 
     set_common_options(vm, radio);
     set_rx_1ch_options(vm, radio);
-    set_tx_1ch_options(vm, radio);
 
     size_t n_samp = std::llround(vm["duration"].as<double>() * vm["rate"].as<double>());
-
-    LOG_INFO(fmt::format("preparing {:.3f} seconds ({:d} samples) of data", vm["duration"].as<double>(), n_samp));
-
     std::vector<std::complex<int16_t> > data(n_samp);
-
-    for(size_t i = 0; i < n_samp; i++) {
-      data[i] = std::complex<int16_t>(10000,0);
-    }
-
-    LOG_INFO("sending data...");
-
-    radio->tx_start_now_for_n_samples(n_samp);
-    radio->put_tx_data(data, n_samp);
-    radio->tx_stop_now();
-
-    LOG_INFO("send complete");
 
     std::string filename = vm["prefix"].as<std::string>();
     filename.append(make_filename_time(std::chrono::system_clock::now(), vm["freq"].as<double>(), vm["rate"].as<double>()));
