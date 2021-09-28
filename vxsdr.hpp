@@ -318,6 +318,37 @@ class vxsdr {
     return n_written;
   }
 
+  size_t check_rx_data_sequence_only(size_t n_desired) {
+    // FIXME: diagnostic routine for data transfer only; 
+    // drops data after sequence check and byte/sample counts
+    LOG_DEBUG("check_rx_data_sequence_only");
+    size_t n_received = 0;
+    data_queue_element q;
+
+    LOG_INFO(fmt::format("checking sequence for {:d} samples", n_desired));
+
+    while(n_received < n_desired) {
+      unsigned wait_time_us = 0;
+      // setting rx_data_queue_wait_us = 0 results in a busy wait with no timeout
+      while(rx_data_queue.read_available() == 0 and wait_time_us < rx_data_queue_timeout_us) {
+        if(rx_data_queue_wait_us > 0) {
+          std::this_thread::sleep_for(std::chrono::microseconds(rx_data_queue_wait_us));
+          wait_time_us += rx_data_queue_wait_us;
+        }
+      }
+      if(rx_data_queue.pop(q)) {
+        auto p = reinterpret_cast<packet_header *>(&q);
+        size_t data_bytes = p->packet_size - sizeof(packet_header);
+        size_t data_samples = data_bytes / sizeof(std::complex<int16_t>);
+        n_received += data_samples;
+      } else {
+        LOG_ERROR(fmt::format("timeout popping from rx data queue {:d} {:d}", n_received, n_desired));
+      }
+    }
+    LOG_DEBUG(fmt::format("check_rx_data_sequence_only() complete ({:d} samples)", n_received));
+    return n_received;
+  }
+
   size_t put_tx_data(std::vector<std::complex<int16_t> > data, const uint8_t subdev = 0) {
     // puts plain data_packets (no time, no stream)
     size_t n_put = 0;
