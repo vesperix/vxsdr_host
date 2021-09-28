@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
 {
   INIT_LOGGER();
   try {
-    LOG_INFO("started");
+    LOG_INFO(fmt::format("{:s} started", argv[0]));
     signal(SIGINT, &sig_int_handler);
     boost::program_options::options_description desc("Command line options");
     boost::program_options::variables_map vm;
@@ -90,13 +90,14 @@ int main(int argc, char *argv[])
 
     LOG_INFO("receive complete");
     //outfile.close();
-    LOG_INFO(fmt::format("{:d} samples written", n_written));
+    //LOG_INFO(fmt::format("{:d} samples written", n_written));
+    LOG_INFO(fmt::format("{:d} samples checked", n_written));
   }
   catch (std::exception& e) {
     LOG_FATAL(fmt::format("exception caught: {:s}", e.what()));
     return EXIT_INTERNAL_ERROR;
   }
 
-  LOG_INFO("finished");
+  LOG_INFO(fmt::format("{:s} finished", argv[0]));
   return EXIT_SUCCESS;
 }

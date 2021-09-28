@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
 {
   INIT_LOGGER();
   try {
-    LOG_INFO("started");
+    LOG_INFO(fmt::format("{:s} started", argv[0]));
     signal(SIGINT, &sig_int_handler);
     boost::program_options::options_description desc("Command line options");
     boost::program_options::variables_map vm;
@@ -111,6 +111,6 @@ int main(int argc, char *argv[])
     return EXIT_INTERNAL_ERROR;
   }
 
-  LOG_INFO("finished");
+  LOG_INFO(fmt::format("{:s} finished", argv[0]));
   return EXIT_SUCCESS;
 }
