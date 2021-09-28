@@ -339,6 +339,13 @@ class vxsdr {
       if(rx_data_queue.pop(q)) {
         auto p = reinterpret_cast<packet_header *>(&q);
         size_t data_bytes = p->packet_size - sizeof(packet_header);
+        if(p->flags & FLAGS_TIME_PRESENT) {
+          data_bytes -= sizeof(time_spec_t);
+        }
+        if(p->flags & FLAGS_STREAM_ID_PRESENT) {
+          data_bytes -= sizeof(stream_spec_t);
+        }
+        
         size_t data_samples = data_bytes / sizeof(std::complex<int16_t>);
         n_received += data_samples;
       } else {
