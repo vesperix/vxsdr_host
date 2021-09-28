@@ -321,15 +321,14 @@ class vxsdr {
     size_t n_put = 0;
     for(size_t i = 0; i < data.size(); i += MAX_DATA_LENGTH_SAMPLES) {
       data_queue_element q;
-      data_packet p;
+      auto p = reinterpret_cast<data_packet *>(&q);
       unsigned n_samples = std::min(MAX_DATA_LENGTH_SAMPLES, data.size() - i);
       unsigned n_data_bytes = n_samples * sizeof(std::complex<int16_t>);
       uint16_t packet_size = sizeof(packet_header) + n_data_bytes;
-      p.hdr = { PACKET_TYPE_TX_SIGNAL_DATA, 0, subdev, 0, packet_size, 0 };
+      p->hdr = { PACKET_TYPE_TX_SIGNAL_DATA, 0, subdev, 0, packet_size, 0 };
       for(unsigned j = 0; j < n_samples; j++) {
-        p.data[j] = data[i + j];
+        p->data[j] = data[i + j];
       }
-      std::memcpy(&q, &p, std::min(sizeof(q), sizeof(p)));
 
       unsigned wait_time_us = 0;
       // setting tx_data_queue_wait_us = 0 results in a busy wait with no timeout
@@ -701,9 +700,8 @@ class vxsdr {
               tx_buffer_used_bytes = r->tx_buffer_used_bytes;
               tx_buffer_fill_percent = std::min(100U, (100U * tx_buffer_used_bytes) / tx_buffer_size_bytes);
               if(forward_acks) {
-                response_queue_element p;
-                std::memcpy(&p, &recv_buffer, std::min(sizeof(p), sizeof(recv_buffer)));
-                response_queue_push_wait(p);
+                auto p = reinterpret_cast<response_queue_element *>(&recv_buffer);
+                response_queue_push_wait(*p);
               }
             }
             break;
@@ -716,24 +714,21 @@ class vxsdr {
                   rx_buffer_used_bytes = r->rx_buffer_used_bytes;
                   tx_buffer_fill_percent = std::min(100U, (100U * tx_buffer_used_bytes) / tx_buffer_size_bytes);
                   rx_buffer_fill_percent = std::min(100U, (100U * rx_buffer_used_bytes) / rx_buffer_size_bytes);
-                  response_queue_element p;
-                  std::memcpy(&p, &r, std::min(sizeof(p), sizeof(r)));
-                  response_queue_push_wait(p);
+                  auto p = reinterpret_cast<response_queue_element *>(&recv_buffer);
+                  response_queue_push_wait(*p);
                 }
                 break;
               case DEVICE_CMD_GET_BUFFER_INFO: {
                   auto r = reinterpret_cast<get_buffer_info_rsp_packet *>(&recv_buffer);
                   tx_buffer_size_bytes = r->tx_buffer_size_bytes;
                   rx_buffer_size_bytes = r->rx_buffer_size_bytes;
-                  response_queue_element p;
-                  std::memcpy(&p, &r, std::min(sizeof(p), sizeof(r)));
-                  response_queue_push_wait(p);
+                  auto p = reinterpret_cast<response_queue_element *>(&recv_buffer);
+                  response_queue_push_wait(*p);
                 }
                 break;
               default: {
-                  response_queue_element p;
-                  std::memcpy(&p, &recv_buffer, std::min(sizeof(p), sizeof(recv_buffer)));
-                  response_queue_push_wait(p);
+                  auto p = reinterpret_cast<response_queue_element *>(&recv_buffer);
+                  response_queue_push_wait(*p);
                 }
                 break;
             }
@@ -742,9 +737,8 @@ class vxsdr {
           case PACKET_TYPE_RX_RADIO_CMD_ACK:
           case PACKET_TYPE_TX_RADIO_CMD_ACK:
             if(forward_acks) {
-              response_queue_element p;
-              std::memcpy(&p, &recv_buffer, std::min(sizeof(p), sizeof(recv_buffer)));
-              response_queue_push_wait(p);
+              auto p = reinterpret_cast<response_queue_element *>(&recv_buffer);
+              response_queue_push_wait(*p);
             }
             break;
           // DEVICE_CMD_RSP handled above
@@ -753,9 +747,8 @@ class vxsdr {
           case PACKET_TYPE_RX_RADIO_CMD_ERR:
           case PACKET_TYPE_TX_RADIO_CMD_RSP:
           case PACKET_TYPE_TX_RADIO_CMD_ERR: {
-              response_queue_element p;
-              std::memcpy(&p, &recv_buffer, std::min(sizeof(p), sizeof(recv_buffer)));
-              response_queue_push_wait(p);
+              auto p = reinterpret_cast<response_queue_element *>(&recv_buffer);
+              response_queue_push_wait(*p);
             }
             break;
           // packet types that should never show up at the host are dropped
