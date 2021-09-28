@@ -185,7 +185,7 @@ class vxsdr {
   vxsdr& operator=(vxsdr &&) = delete;
 
   size_t get_rx_data(std::vector<std::complex<int16_t> > &data, size_t n_desired = 0) {
-    LOG_DEBUG("get_rx_data() entered");
+    LOG_DEBUG("get_rx_data entered");
     size_t n_received = 0;
     data_queue_element q;
 
@@ -235,15 +235,15 @@ class vxsdr {
           n_received += data_samples;
         }
       } else {
-        LOG_ERROR(fmt::format("timeout popping from rx data queue {:d} {:d}", n_received, n_desired));
+        LOG_ERROR(fmt::format("timeout popping from rx data queue ({:d} of {:d} samples)", n_received, n_desired));
       }
     }
-    LOG_DEBUG(fmt::format("get_rx_data() complete ({:d} samples)", data.size()));
+    LOG_DEBUG(fmt::format("get_rx_data complete ({:d} samples)", data.size()));
     return n_received;
   }
 
   size_t write_rx_data(std::ofstream &out_stream, size_t n_desired, size_t write_size_samples = 65536) {
-    LOG_DEBUG("write_rx_data() entered");
+    LOG_DEBUG("write_rx_data entered");
     size_t n_received = 0, n_written = 0;
     data_queue_element q;
 
@@ -311,17 +311,17 @@ class vxsdr {
         }
 
       } else {
-        LOG_ERROR(fmt::format("timeout popping from rx data queue ({:d} of {:d} samples written)", n_written, n_desired));
+        LOG_ERROR(fmt::format("timeout popping from rx data queue ({:d} of {:d} samples)", n_written, n_desired));
       }
     }
-    LOG_DEBUG(fmt::format("write_rx_data() complete ({:d} samples)", n_written));
+    LOG_DEBUG(fmt::format("write_rx_data complete ({:d} samples)", n_written));
     return n_written;
   }
 
   size_t check_rx_data_sequence_only(size_t n_desired) {
-    // FIXME: diagnostic routine for data transfer only; 
+    // FIXME: diagnostic routine for data transfer only;
     // drops data after sequence check and byte/sample counts
-    LOG_DEBUG("check_rx_data_sequence_only");
+    LOG_DEBUG("check_rx_data_sequence_only started");
     size_t n_received = 0;
     data_queue_element q;
 
@@ -345,18 +345,19 @@ class vxsdr {
         if(p->flags & FLAGS_STREAM_ID_PRESENT) {
           data_bytes -= sizeof(stream_spec_t);
         }
-        
+
         size_t data_samples = data_bytes / sizeof(std::complex<int16_t>);
         n_received += data_samples;
       } else {
-        LOG_ERROR(fmt::format("timeout popping from rx data queue {:d} {:d}", n_received, n_desired));
+        LOG_ERROR(fmt::format("timeout popping from rx data queue ({:d} of {:d} samples)", n_received, n_desired));
       }
     }
-    LOG_DEBUG(fmt::format("check_rx_data_sequence_only() complete ({:d} samples)", n_received));
+    LOG_DEBUG(fmt::format("check_rx_data_sequence_only complete ({:d} samples)", n_received));
     return n_received;
   }
 
   size_t put_tx_data(std::vector<std::complex<int16_t> > data, const uint8_t subdev = 0) {
+    LOG_DEBUG("put_tx_data started");
     // puts plain data_packets (no time, no stream)
     size_t n_put = 0;
     for(size_t i = 0; i < data.size(); i += MAX_DATA_LENGTH_SAMPLES) {
@@ -386,6 +387,7 @@ class vxsdr {
         break;
       }
     }
+    LOG_DEBUG(fmt::format("put_tx_data complete ({:d} samples)", n_put));
     return n_put;
   }
 
