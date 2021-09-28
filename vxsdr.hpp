@@ -140,6 +140,8 @@ class vxsdr {
   // destructor
   ~vxsdr() {
     LOG_DEBUG("vxsdr destructor entered");
+    set_tx_enable(false);
+    set_rx_enable(false);
     LOG_DEBUG("joining receiver_thread");
     receiver_thread_stop_flag = true;
     boost::system::error_code err;
@@ -292,11 +294,11 @@ class vxsdr {
           n_received += data_samples;
         }
         if(buffer.size() >= write_size_samples or n_received >= n_desired) {
-          size_t n_to_write = std::min(n_desired - n_written, write_size_samples);     
+          size_t n_to_write = std::min(n_desired - n_written, write_size_samples);
           out_stream.write((char *)buffer.data(), sizeof(std::complex<int16_t>) * n_to_write);
           if(out_stream.fail()) {
             LOG_ERROR(fmt::format("error writing to output file ({:d}, {:d})", n_received, n_desired));
-            break;    
+            break;
           } else {
             n_written += n_to_write;
             // copy anything that hasn't been written to the front of the buffer
