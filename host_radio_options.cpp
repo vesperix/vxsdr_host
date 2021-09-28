@@ -10,8 +10,8 @@
 void add_rx_1ch_options(boost::program_options::options_description &desc)
 {
   desc.add_options()
-   // ("rx_rate", boost::program_options::value<double>(), "RX sample rate in Hz")
-   // ("rx_freq", boost::program_options::value<double>(), "RX center frequency in Hz")
+    ("rx_rate", boost::program_options::value<double>(), "RX sample rate in Hz")
+    ("rx_freq", boost::program_options::value<double>(), "RX center frequency in Hz")
     ("rx_gain", boost::program_options::value<double>()->default_value(0.0), "RX gain in dB")
     ("rx_ant", boost::program_options::value<std::string>(), "RX antenna input selection")
   ;
@@ -20,8 +20,8 @@ void add_rx_1ch_options(boost::program_options::options_description &desc)
 void add_tx_1ch_options(boost::program_options::options_description &desc)
 {
   desc.add_options()
-   // ("tx_rate", boost::program_options::value<double>(), "TX sample rate in Hz")
-   // ("tx_freq", boost::program_options::value<double>(), "TX center frequency in Hz")
+    ("tx_rate", boost::program_options::value<double>(), "TX sample rate in Hz")
+    ("tx_freq", boost::program_options::value<double>(), "TX center frequency in Hz")
     ("tx_gain", boost::program_options::value<double>()->default_value(0.0), "TX gain in dB")
     ("tx_ant", boost::program_options::value<std::string>(), "TX antenna input selection")
   ;
@@ -35,13 +35,12 @@ void add_common_options(boost::program_options::options_description &desc)
     ("prefix", boost::program_options::value<std::string>()->default_value("test-"), "prefix for the output file")
     ("suffix", boost::program_options::value<std::string>()->default_value(".dat"), "suffix for the output file")
     ("duration", boost::program_options::value<double>()->default_value(1.0), "duration in seconds")
- //   ("startup_delay", boost::program_options::value<int>()->default_value(5), "startup delay in (integer) seconds")
     ("no_filename_time", "do not include time in output filenames")
     ("clock_source", boost::program_options::value<std::string>(), "source for frequency reference")
     ("time_source", boost::program_options::value<std::string>(), "source for PPS reference")
     ("rate", boost::program_options::value<double>()->required(), "TX/RX sample rate in Hz")
     ("freq", boost::program_options::value<double>()->required(), "TX/RX center frequency in Hz")
-    ("verbose_level", boost::program_options::value<int>(), "log level (0 = trace, 1 = debug, 2 = info, 3 = warning, 4 = error, 5 = fatal, 6 = none)")
+    ("verbose_level", boost::program_options::value<int>(), "log level (6 = trace, 5 = debug, 4 = info, 3 = warning, 2 = error, 1 = fatal, 0 = none)")
     ("quit_on_error", boost::program_options::value<bool>()->default_value(true), "quit on errors")
   ;
 }
@@ -85,7 +84,9 @@ void init_vm(boost::program_options::options_description &desc, boost::program_o
 
 int set_common_options(boost::program_options::variables_map &vm, std::unique_ptr<vxsdr> &radio)
 {
-  // options currently set in specific sections even when they are defined as common
+  if(vm.count("verbose_level") > 0) {
+    log_set_level(vm["verbose_level"].as<int>());
+  }
   return 0;
 }
 
