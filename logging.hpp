@@ -6,7 +6,7 @@
 #include <spdlog/sinks/stdout_sinks.h>
 #include <spdlog/sinks/basic_file_sink.h>
 
-#define INIT_LOGGER()           my_log_init()
+#define INIT_LOGGER(x)           my_log_init(x)
 
 #define LOG_DEBUG(x)            spdlog::get("multi")->debug(x)
 #define LOG_INFO(x)             spdlog::get("multi")->info(x)
@@ -14,6 +14,6 @@
 #define LOG_ERROR(x)            spdlog::get("multi")->error(x)
 #define LOG_FATAL(x)            spdlog::get("multi")->critical(x)
 
-void my_log_init();
+void my_log_init(const std::string &logfilename);
 
 #endif // LOGGING_HPP

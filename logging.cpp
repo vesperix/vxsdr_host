@@ -1,11 +1,11 @@
 #include "logging.hpp"
 
-void my_log_init() {
+void my_log_init(const std::string &logfilename) {
   // console logger and its settings
   auto clog = std::make_shared<spdlog::sinks::stdout_sink_mt>();
 
   // file logger and its settings
-  auto flog = std::make_shared<spdlog::sinks::basic_file_sink_mt>("log.txt");
+  auto flog = std::make_shared<spdlog::sinks::basic_file_sink_mt>(logfilename + ".log");
 
   spdlog::sinks_init_list sink_list = { flog, clog };
 

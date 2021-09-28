@@ -90,7 +90,7 @@ extern "C" void sig_int_handler(int sig_num) {
 
 int main(int argc, char *argv[])
 {
-  INIT_LOGGER();
+  INIT_LOGGER(argv[0]);
   try {
     LOG_DEBUG(fmt::format("{:s} started", argv[0]));
     signal(SIGINT, &sig_int_handler);
