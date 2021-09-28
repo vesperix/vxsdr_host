@@ -76,7 +76,7 @@ int main(int argc, char *argv[])
     }
     filename.append(vm["suffix"].as<std::string>());
 
-    std::ofstream outfile(filename, std::ofstream::binary);
+    std::ofstream outfile(filename, std::ofstream::binary | std::ofstream::out);
 
     LOG_INFO(fmt::format("receiving data to file {:s}", filename));
 

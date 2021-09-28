@@ -22,23 +22,23 @@ std::string format_time(const std::chrono::time_point<std::chrono::system_clock>
     case 0:
       break;
     case 1:
-      output << fmt::format("{:.01d}", std::lround(1e-8 * ns));
+      output << fmt::format(".{:01d}", std::lround(1e-8 * ns));
       break;
     case 2:
-      output << fmt::format("{:.02d}", std::lround(1e-7 * ns));
+      output << fmt::format(".{:02d}", std::lround(1e-7 * ns));
       break;
     case 3:
-      output << fmt::format("{:.03d}", std::lround(1e-6 * ns));
+      output << fmt::format(".{:03d}", std::lround(1e-6 * ns));
       break;
     case 4:
-      output << fmt::format("{:.04d}", std::lround(1e-5 * ns));
+      output << fmt::format(".{:04d}", std::lround(1e-5 * ns));
       break;
     case 5:
-      output << fmt::format("{:.05d}", std::lround(1e-4 * ns));
+      output << fmt::format(".{:05d}", std::lround(1e-4 * ns));
       break;
     case 6:
     default:
-      output << fmt::format("{:.06d}", std::lround(1e-3 * ns));
+      output << fmt::format(".{:06d}", std::lround(1e-3 * ns));
       break;
   }
   return output.str();
