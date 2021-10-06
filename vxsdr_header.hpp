@@ -77,8 +77,7 @@
 #define DEVICE_CMD_ERR_TIMEOUT                 (0x04)  // tried to do command but something didn't answer
 #define DEVICE_CMD_ERR_BAD_PARAMETER           (0x05)  // command parameter is out of allowed range
 #define DEVICE_CMD_ERR_OUT_OF_SEQUENCE         (0x06)  // command received with sequence error
-#define DEVICE_CMD_ERR_DATA_BUFFER_OVERFLOW    (0x07)  // overflow data buffer
-#define DEVICE_CMD_ERR_CTRL_BUFFER_OVERFLOW    (0x08)  // overflow control buffer
+#define DEVICE_CMD_ERR_CTRL_BUFFER_OVERFLOW    (0x07)  // overflow control buffer
 
 // Radio Commands
 #define RADIO_CMD_START_NOW_UNTIL_STOP         (0x01)
