@@ -103,7 +103,13 @@
 #define RADIO_CMD_SET_RF_PORT                  (0x26)  // FIXME: this selects input and output ports
   // 0x27-0x30 reserved
 #define RADIO_CMD_GET_NUM_SUBDEVS              (0x31)  //unimplemented // return the number of subdevices
-  // 0x32-0xFF reserved
+  // 0x32-0x40 reserved
+#define RADIO_CMD_GET_IQ_BIAS                  (0x41)
+#define RADIO_CMD_GET_IQ_CORR                  (0x42)
+  // 0x43-0x50 reserved
+#define RADIO_CMD_SET_IQ_BIAS                  (0x51)
+#define RADIO_CMD_SET_IQ_CORR                  (0x52)
+  // 0x53-0xFF reserved
 
 // Radio Command Errors
 #define RADIO_CMD_ERR_BAD_CMD                  (0x01)
@@ -111,6 +117,8 @@
 #define RADIO_CMD_ERR_NO_SUCH_SUBDEVICE        (0x03)
 #define RADIO_CMD_ERR_TIMEOUT                  (0x04)
 #define RADIO_CMD_ERR_BAD_PARAMETER            (0x05)
+#define RADIO_CMD_ERR_DATA_UNDERFLOW           (0x06)
+#define RADIO_CMD_ERR_DATA_OVERFLOW            (0x07)
 
 // Capabilities
 #define CAPABILITY_HAS_LOCK_DETECT             (0x00000001U)
@@ -304,10 +312,6 @@ class radio_rf_freq_packet : public cmd_or_rsp_packet {
     double                 rtol = 0.0;
 };
 
-//negative gain value sets attenuator (0 to -15.5dB) parameter range [0 to -31]
-//FIXME: the description below for positive values appears to be reversed
-//       (63 = min gain, 0 = max gain) in board testing
-//(RX only) positive gain value sets VGA gain (0 to 31.5dB) paramter range [0 to 63]
 class radio_rf_gain_packet : public cmd_or_rsp_packet {
   public:
     double                 gain = 0.0;
@@ -317,14 +321,27 @@ class radio_rf_gain_packet : public cmd_or_rsp_packet {
 //       out by the MCU!!
 class radio_sample_rate_packet : public cmd_or_rsp_packet {
   public:
-    uint32_t               rate = 0;
-    uint32_t               reserved = 0;
+    double                 rate = 0;
 };
 
 class radio_rf_enable_packet : public cmd_or_rsp_packet {
   public:
     uint32_t               enabled = 0; //TX/RX path enable (1 = on, 0 = off)
     uint32_t               reserved = 0;
+};
+
+class radio_iq_bias_packet : public cmd_or_rsp_packet {
+  public:
+    double                 i_bias = 0; // range = +/- 1 covering min to max
+    double                 q_bias = 0;
+};
+
+class radio_iq_corr_packet : public cmd_or_rsp_packet {
+  public:
+    double                 ii_corr = 1;
+    double                 iq_corr = 0;
+    double                 qi_corr = 0;
+    double                 qq_corr = 1;
 };
 
 #endif // VXSDR_HEADER_HPP
