@@ -125,9 +125,9 @@
 #define CAPABILITY_HAS_AGC                     (0x00000004U)
 #define CAPABILITY_HAS_LIMITER                 (0x00000008U)
 #define CAPABILITY_HAS_LIMIT_DETECT            (0x00000010U)
-#define CAPABILITY_HAS_MANUAL_IQ_OFFSET_CORR   (0x00000020U)
+#define CAPABILITY_HAS_MANUAL_IQ_BIAS_CORR     (0x00000020U)
 #define CAPABILITY_HAS_MANUAL_IQ_BALANCE_CORR  (0x00000040U)
-#define CAPABILITY_HAS_AUTO_IQ_OFFSET_CORR     (0x00000080U)
+#define CAPABILITY_HAS_AUTO_IQ_BIAS_CORR       (0x00000080U)
 #define CAPABILITY_HAS_AUTO_IQ_BALANCE_CORR    (0x00000100U)
 #define CAPABILITY_HAS_TEMP_MEASURE            (0x00000200U)
 #define CAPABILITY_HAS_POWER_MEASURE           (0x00000400U)
@@ -335,7 +335,7 @@ class radio_iq_bias_packet : public cmd_or_rsp_packet {
     double                 q_bias = 0;
 };
 
-class radio_iq_corr_packet : public cmd_or_rsp_packet {
+class radio_iq_balance_packet : public cmd_or_rsp_packet {
   public:
     double                 ii_corr = 1;
     double                 iq_corr = 0;
