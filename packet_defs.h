@@ -11,17 +11,19 @@ extern "C" {
 */
 
 // Packet Types
-//   These types are sent only by the host to a radio, and may
-//   have responses or acks, depending on the command
+//   TX data is sent only from a host to a radio
 #define PACKET_TYPE_TX_SIGNAL_DATA             (0x00)
+//   RX data is sent only from a radio to a host
 #define PACKET_TYPE_RX_SIGNAL_DATA             (0x01)
+//   Commands are sent only from a host to a radio, and may
+//   have responses or acks, depending on the command
 #define PACKET_TYPE_DEVICE_CMD                 (0x02)
 #define PACKET_TYPE_TX_RADIO_CMD               (0x03)
 #define PACKET_TYPE_RX_RADIO_CMD               (0x04)
-//   Async messages are sent by the radio only, and are not
+//   Async messages are sent by a radio only, and are not
 //   responses to a host message
 #define  PACKET_TYPE_ASYNC_MSG                  (0x05)
-//   Errors, responses, and acks are sent by the radio only,
+//   Errors, responses, and acks are sent by a radio only,
 //   and only in response to a host packet
 #define PACKET_TYPE_DEVICE_CMD_ERR             (0x0A)
 #define PACKET_TYPE_TX_RADIO_CMD_ERR           (0x0B)
