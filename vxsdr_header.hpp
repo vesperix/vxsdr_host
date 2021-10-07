@@ -16,7 +16,7 @@
 #define  PACKET_TYPE_DEVICE_CMD                (0x02)
 #define  PACKET_TYPE_TX_RADIO_CMD              (0x03)
 #define  PACKET_TYPE_RX_RADIO_CMD              (0x04)
-#define  PACKET_TYPE_STATUS_MSG                (0x05)
+#define  PACKET_TYPE_ASYNC_MSG                 (0x05)
 #define  PACKET_TYPE_DEVICE_CMD_ERR            (0x0A)
 #define  PACKET_TYPE_TX_RADIO_CMD_ERR          (0x0B)
 #define  PACKET_TYPE_RX_RADIO_CMD_ERR          (0x0C)
@@ -96,7 +96,7 @@
   // 0x17-0x20 reserved
 #define RADIO_CMD_SET_RF_FREQ                  (0x21)
 #define RADIO_CMD_SET_RF_GAIN                  (0x22)
-#define RADIO_CMD_SET_SAMPLE_RATE              (0x23)  // FIXME: sets CIC interpolation/decimation rate (valid 1-128)
+#define RADIO_CMD_SET_SAMPLE_RATE              (0x23)  // FIXME: needs to take double as arg
 #define RADIO_CMD_SET_RF_BW                    (0x24)  // unimplemented
 #define RADIO_CMD_SET_RF_ENABLED               (0x25)  // enables(0x1) or disables(0x0) RX/TX RF path
 #define RADIO_CMD_SET_RF_PORT                  (0x26)  // FIXME: this selects input and output ports
@@ -116,8 +116,15 @@
 #define RADIO_CMD_ERR_NO_SUCH_SUBDEVICE        (0x03)
 #define RADIO_CMD_ERR_TIMEOUT                  (0x04)
 #define RADIO_CMD_ERR_BAD_PARAMETER            (0x05)
-#define RADIO_CMD_ERR_DATA_UNDERFLOW           (0x06)
-#define RADIO_CMD_ERR_DATA_OVERFLOW            (0x07)
+
+// Async messages
+#define ASYNC_NO_ERROR                         (0x00)
+#define ASYNC_DATA_UNDERFLOW                   (0x01)
+#define ASYNC_DATA_OVERFLOW                    (0x02)
+#define ASYNC_OVER_TEMP                        (0x03)  // too hot
+#define ASYNC_POWER_ERROR                      (0x04)  // voltage low/current high
+#define ASYNC_FREQ_ERROR                       (0x05)  // loss of lock, etc
+  // 0x06-0xFF reserved
 
 // Capabilities
 #define CAPABILITY_HAS_LOCK_DETECT             (0x00000001U)
@@ -335,7 +342,7 @@ class radio_iq_bias_packet : public cmd_or_rsp_packet {
     double                 q_bias = 0;
 };
 
-class radio_iq_balance_packet : public cmd_or_rsp_packet {
+class radio_iq_corr_packet : public cmd_or_rsp_packet {
   public:
     double                 ii_corr = 1;
     double                 iq_corr = 0;

@@ -10,6 +10,8 @@ std::string packet_type_to_name(const uint8_t number) {
       return "RX_SIGNAL_DATA";
     case PACKET_TYPE_DEVICE_CMD:
       return "DEVICE_CMD";
+    case PACKET_TYPE_ASYNC_MSG:
+      return "ASYNC_MSG";
     case PACKET_TYPE_TX_RADIO_CMD:
       return "TX_RADIO_CMD";
     case PACKET_TYPE_RX_RADIO_CMD:
@@ -102,6 +104,28 @@ std::string device_command_to_name(const uint8_t cmd) {
   }
 }
 
+std::string device_command_error_to_name(const uint8_t cmd) {
+  switch(cmd) {
+    case DEVICE_CMD_ERR_BAD_CMD:
+      return "BAD_CMD";
+    case DEVICE_CMD_ERR_BUSY:
+      return "BUSY";
+    case DEVICE_CMD_ERR_NO_SUCH_SUBDEVICE:
+      return "NO_SUCH_SUBDEVICE";
+    case DEVICE_CMD_ERR_TIMEOUT:
+      return "TIMEOUT";
+    case DEVICE_CMD_ERR_BAD_PARAMETER:
+      return "BAD_PARAMETER";
+    case DEVICE_CMD_ERR_OUT_OF_SEQUENCE:
+      return "OUT_OF_SEQUENCE";
+    case DEVICE_CMD_ERR_CTRL_BUFFER_OVERFLOW:
+      return "CTRL_BUFFER_OVERFLOW";
+    default:
+      return fmt::format("{:d}", cmd);
+  }
+}
+
+
 void log_packet_info(cmd_or_rsp_packet &packet)
 {
   switch(packet.hdr.packet_type) {
@@ -109,8 +133,8 @@ void log_packet_info(cmd_or_rsp_packet &packet)
       LOG_INFO(fmt::format("DEVICE_CMD_ACK: {:s}", device_command_to_name(packet.hdr.command)));
       break;
     case PACKET_TYPE_DEVICE_CMD_ERR:
-      LOG_INFO(fmt::format("DEVICE_CMD_ERR: {:s}", device_command_to_name(packet.hdr.command)));
-      break;
+        LOG_INFO(fmt::format("DEVICE_CMD_ERR: {:s}", device_command_error_to_name(packet.hdr.command)));
+        break;
     case PACKET_TYPE_DEVICE_CMD_RSP:
       switch(packet.hdr.command) {
         case DEVICE_CMD_HELLO:
@@ -185,8 +209,11 @@ void log_packet_info(cmd_or_rsp_packet &packet)
       }
       break;
     case PACKET_TYPE_RX_RADIO_CMD_ERR:
-      LOG_INFO(fmt::format("RX_RADIO_CMD_ERR: {:d}", (int)packet.hdr.command));
-      break;
+      switch(packet.hdr.command) {
+        default:
+          LOG_INFO(fmt::format("RX_RADIO_CMD_ERR: {:d}", (int)packet.hdr.command));
+          break;
+      }
     case PACKET_TYPE_RX_RADIO_CMD_ACK:
       LOG_INFO(fmt::format("RX_RADIO_CMD_ACK: {:d}", (int)packet.hdr.command));
       break;
@@ -219,8 +246,11 @@ void log_packet_info(cmd_or_rsp_packet &packet)
       }
       break;
     case PACKET_TYPE_TX_RADIO_CMD_ERR:
-      LOG_INFO(fmt::format("TX_RADIO_CMD_ERR: {:d}", (int)packet.hdr.command));
-      break;
+      switch(packet.hdr.command) {
+        default:
+          LOG_INFO(fmt::format("TX_RADIO_CMD_ERR: {:d}", (int)packet.hdr.command));
+          break;
+      }
     case PACKET_TYPE_TX_RADIO_CMD_ACK:
       LOG_INFO(fmt::format("TX_RADIO_CMD_ACK: {:d}", (int)packet.hdr.command));
       break;
@@ -233,6 +263,27 @@ void log_packet_info(cmd_or_rsp_packet &packet)
         LOG_INFO(fmt::format("   sequence_error_count      = {:d}", (uint32_t)br->sequence_error_count));
       }
       break;
+    case PACKET_TYPE_ASYNC_MSG:
+      switch(packet.hdr.command) {
+        case ASYNC_DATA_UNDERFLOW:
+          LOG_INFO(fmt::format("ASYNC_DATA_UNDERFLOW"));
+          break;
+        case ASYNC_DATA_OVERFLOW:
+          LOG_INFO(fmt::format("ASYNC_DATA_OVERFLOW"));
+          break;
+        case ASYNC_OVER_TEMP:
+          LOG_INFO(fmt::format("ASYNC_OVER_TEMP"));
+          break;
+        case ASYNC_POWER_ERROR:
+          LOG_INFO(fmt::format("ASYNC_POWER_ERROR"));
+          break;
+        case ASYNC_FREQ_ERROR:
+          LOG_INFO(fmt::format("ASYNC_FREQ_ERROR"));
+          break;
+        default:
+          LOG_INFO(fmt::format("ASYNC_MSG: {:d}", (int)packet.hdr.command));
+          break;
+      }
     default:
       LOG_INFO(fmt::format("PACKET_TYPE: {:d} COMMAND {:d}", packet.hdr.packet_type, (int)packet.hdr.command));
       break;

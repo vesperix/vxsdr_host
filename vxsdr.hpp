@@ -470,6 +470,44 @@ class vxsdr {
     cmd_queue_push(p);
   }
 
+  void tx_set_iq_bias(const double i_bias, const double q_bias, const uint8_t subdev = 0, const uint8_t flags = 0) {
+    radio_iq_bias_packet p;
+    p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_SET_IQ_BIAS, subdev, flags, sizeof(p), 0 };
+    p.i_bias = i_bias;
+    p.q_bias = q_bias;
+    cmd_queue_push(p);
+  }
+
+  void rx_set_iq_bias(const double i_bias, const double q_bias, const uint8_t subdev = 0, const uint8_t flags = 0) {
+    radio_iq_bias_packet p;
+    p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_SET_IQ_BIAS, subdev, flags, sizeof(p), 0 };
+    p.i_bias = i_bias;
+    p.q_bias = q_bias;
+    cmd_queue_push(p);
+  }
+
+  void tx_set_iq_corr(const double ii_corr, const double iq_corr, const double qi_corr, const double qq_corr,
+      const uint8_t subdev = 0, const uint8_t flags = 0) {
+    radio_iq_corr_packet p;
+    p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_SET_IQ_CORR, subdev, flags, sizeof(p), 0 };
+    p.ii_corr = ii_corr;
+    p.iq_corr = iq_corr;
+    p.qi_corr = qi_corr;
+    p.qq_corr = qq_corr;
+    cmd_queue_push(p);
+  }
+
+  void rx_set_iq_corr(const double ii_corr, const double iq_corr, const double qi_corr, const double qq_corr,
+      const uint8_t subdev = 0, const uint8_t flags = 0) {
+    radio_iq_corr_packet p;
+    p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_SET_IQ_CORR, subdev, flags, sizeof(p), 0 };
+    p.ii_corr = ii_corr;
+    p.iq_corr = iq_corr;
+    p.qi_corr = qi_corr;
+    p.qq_corr = qq_corr;
+    cmd_queue_push(p);
+  }
+
   void tx_stop_now(const uint8_t subdev = 0, const uint8_t flags = 0) {
     stream_ctrl_packet p;
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_STOP_NOW, subdev, flags, sizeof(p), 0 };
@@ -784,6 +822,12 @@ class vxsdr {
             }
             break;
           // DEVICE_CMD_RSP handled above
+          case PACKET_TYPE_ASYNC_MSG: {
+              // FIXME: do whatever is needed to notify or shut down!!!
+              auto p = reinterpret_cast<response_queue_element *>(&recv_buffer);
+              response_queue_push_wait(*p);
+            }
+            break;
           case PACKET_TYPE_DEVICE_CMD_ERR:
           case PACKET_TYPE_RX_RADIO_CMD_RSP:
           case PACKET_TYPE_RX_RADIO_CMD_ERR:

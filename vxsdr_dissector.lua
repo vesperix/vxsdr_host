@@ -9,6 +9,7 @@ local packet_types = {
     [0x02] = "DEVICE_CMD",
     [0x03] = "TX_RADIO_CMD",
     [0x04] = "RX_RADIO_CMD",
+    [0x04] = "ASYNC_MSG",
     [0x0A] = "DEVICE_CMD_ERR",
     [0x0B] = "TX_RADIO_CMD_ERR",
     [0x0C] = "RX_RADIO_CMD_ERR",
@@ -118,12 +119,16 @@ local errors = {
     [0x03] = "NO_SUCH_SUBDEVICE",
     [0x04] = "TIMEOUT",
     [0x05] = "BAD_PARAMETER",
-    [0x06] = "CMD_OUT_OF_SEQUENCE",
-    [0x07] = "DATA_BUFFER_OVERFLOW",
-    [0x08] = "CTRL_BUFFER_OVERFLOW",
-    [0x09] = "DATA_BUFFER_UNDERFLOW",
-    [0x0A] = "CTRL_BUFFER_UNDERFLOW",
-    [0x0B] = "DATA_OUT_OF_SEQUENCE"
+    [0x06] = "CMD_OUT_OF_SEQUENCE"
+}
+
+local asyncs = {
+    [0x00] = "NO_ERROR",
+    [0x01] = "DATA_UNDERFLOW",
+    [0x02] = "DATA_OVERFLOW",
+    [0x03] = "OVER_TEMP",
+    [0x04] = "POWER_ERROR"
+    [0x05] = "FREQ_ERROR"
 }
 
 
@@ -139,6 +144,7 @@ local pf_device_command_rsp = ProtoField.uint8("vxsdr.device_command_rsp", "Devi
 local pf_radio_command      = ProtoField.uint8("vxsdr.radio_command", "Radio Command", base.HEX, radio_cmds)
 local pf_radio_command_rsp  = ProtoField.uint8("vxsdr.device_command", "Radio Command Response", base.HEX, radio_cmd_rsps)
 local pf_command_error      = ProtoField.uint8("vxsdr.error", "Command Error", base.HEX, errors)
+local pf_async_msg          = ProtoField.uint8("vxsdr.async_msg", "Async Mesaage", base.HEX, asyncs)
 
 local pf_uint16_data        = ProtoField.uint16("vxsdr.data", "UInt16 Data", base.DEC)
 local pf_uint32_data        = ProtoField.uint32("vxsdr.data", "UInt32 Data", base.DEC)
