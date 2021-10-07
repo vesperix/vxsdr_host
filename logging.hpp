@@ -1,6 +1,9 @@
 #ifndef LOGGING_HPP
 #define LOGGING_HPP
 
+// disable exceptions in logging
+#define SPDLOG_NO_EXCEPTIONS
+
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_sinks.h>
 #include <spdlog/sinks/basic_file_sink.h>
