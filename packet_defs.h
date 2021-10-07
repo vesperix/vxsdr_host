@@ -5,6 +5,8 @@
 extern "C" {
 #endif // __cplusplus
 
+#include <stdint.h>
+
 /*
   VXSDR packet definitions
   Version 0.9.0 7 Oct 2021
