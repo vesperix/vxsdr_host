@@ -612,6 +612,76 @@ class vxsdr {
     cmd_queue_push(p);
   }
 
+  int device_cmd_has_response(const uint8_t cmd) {
+    switch(cmd) {
+      case DEVICE_CMD_HELLO:
+      case DEVICE_CMD_GET_TIME:
+      case DEVICE_CMD_GET_STATUS:
+      case DEVICE_CMD_GET_BUFFER_INFO:
+      case DEVICE_CMD_GET_BUFFER_USE:
+      case DEVICE_CMD_GET_TRANSPORT_INFO:
+      case DEVICE_CMD_GET_TRANSPORT_ADDR:
+      case DEVICE_CMD_GET_TRANSPORT_PKTSIZ:
+      case DEVICE_CMD_GET_CHANNEL_INFO:
+      case DEVICE_CMD_GET_TIMING_INFO:
+      case DEVICE_CMD_GET_TIMING_STATUS:
+      case DEVICE_CMD_GET_TIMING_REF:
+      case DEVICE_CMD_SET_TIME_NOW:
+      case DEVICE_CMD_SET_TIME_NEXT_PPS:
+  //    case DEVICE_CMD_READ_DAC_REG:
+  //    case DEVICE_CMD_READ_ADC_REG:
+        return 1;
+      case DEVICE_CMD_CLEAR_STATUS:
+      case DEVICE_CMD_OPEN_SESSION:
+      case DEVICE_CMD_CLOSE_SESSION:
+      case DEVICE_CMD_SET_TRANSPORT_ADDR:
+      case DEVICE_CMD_SET_TRANSPORT_PKTSIZ:
+      case DEVICE_CMD_SAVE_TRANSPORT_ADDR:
+      case DEVICE_CMD_SET_TIMING_REF:
+  //    case DEVICE_CMD_WRITE_DAC_REG:
+  //    case DEVICE_CMD_WRITE_ADC_REG:
+      case DEVICE_CMD_STOP:
+      case DEVICE_CMD_RESET:
+        return 0;
+      default:
+        return 0;
+    }
+  }
+
+
+  int radio_cmd_has_response(const uint8_t cmd) {
+    switch(cmd) {
+      case RADIO_CMD_GET_RF_INFO:
+      case RADIO_CMD_GET_RF_FREQ:
+      case RADIO_CMD_GET_RF_GAIN:
+      case RADIO_CMD_GET_SAMPLE_RATE:
+      case RADIO_CMD_GET_RF_BW:
+      case RADIO_CMD_GET_RF_ENABLED:
+      case RADIO_CMD_GET_RF_PORT:
+      case RADIO_CMD_GET_NUM_SUBDEVS:
+      case RADIO_CMD_GET_IQ_BIAS:
+      case RADIO_CMD_GET_IQ_CORR:
+        return 1;
+      case RADIO_CMD_START_NOW_UNTIL_STOP:
+      case RADIO_CMD_START_AT_TIME_UNTIL_STOP:
+      case RADIO_CMD_STOP_NOW:
+      case RADIO_CMD_START_NOW_FOR_N_SAMPLES:
+      case RADIO_CMD_START_AT_TIME_FOR_N_SAMPLES:
+      case RADIO_CMD_SET_RF_FREQ:
+      case RADIO_CMD_SET_RF_GAIN:
+      case RADIO_CMD_SET_SAMPLE_RATE:
+      case RADIO_CMD_SET_RF_BW:
+      case RADIO_CMD_SET_RF_ENABLED:
+      case RADIO_CMD_SET_RF_PORT:
+      case RADIO_CMD_SET_IQ_BIAS:
+      case RADIO_CMD_SET_IQ_CORR:
+        return 0;
+      default:
+        return 0;
+    }
+  }
+
+
   void receiver() {
     LOG_DEBUG("receiver thread started");
 

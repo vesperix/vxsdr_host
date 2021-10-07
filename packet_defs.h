@@ -6,29 +6,35 @@ extern "C" {
 #endif // __cplusplus
 
 /*
-  SDR packet definitions
+  VXSDR packet definitions
   Version 0.9.0 7 Oct 2021
 */
 
 // Packet Types
-#define  PACKET_TYPE_TX_SIGNAL_DATA            (0x00)
-#define  PACKET_TYPE_RX_SIGNAL_DATA            (0x01)
-#define  PACKET_TYPE_DEVICE_CMD                (0x02)
-#define  PACKET_TYPE_TX_RADIO_CMD              (0x03)
-#define  PACKET_TYPE_RX_RADIO_CMD              (0x04)
-#define  PACKET_TYPE_ASYNC_MSG                 (0x05)
-#define  PACKET_TYPE_DEVICE_CMD_ERR            (0x0A)
-#define  PACKET_TYPE_TX_RADIO_CMD_ERR          (0x0B)
-#define  PACKET_TYPE_RX_RADIO_CMD_ERR          (0x0C)
-#define  PACKET_TYPE_DEVICE_CMD_RSP            (0x0D)
-#define  PACKET_TYPE_TX_RADIO_CMD_RSP          (0x0E)
-#define  PACKET_TYPE_RX_RADIO_CMD_RSP          (0x0F)
-#define  PACKET_TYPE_TX_SIGNAL_DATA_ACK        (0x80)
-#define  PACKET_TYPE_RX_SIGNAL_DATA_ACK        (0x81)
-#define  PACKET_TYPE_DEVICE_CMD_ACK            (0x82)
-#define  PACKET_TYPE_TX_RADIO_CMD_ACK          (0x83)
-#define  PACKET_TYPE_RX_RADIO_CMD_ACK          (0x84)
-#define  PACKET_TYPE_INVALID_PACKET            (0xFF)
+//   These types are sent only by the host to a radio, and may
+//   have responses or acks, depending on the command
+#define PACKET_TYPE_TX_SIGNAL_DATA             (0x00)
+#define PACKET_TYPE_RX_SIGNAL_DATA             (0x01)
+#define PACKET_TYPE_DEVICE_CMD                 (0x02)
+#define PACKET_TYPE_TX_RADIO_CMD               (0x03)
+#define PACKET_TYPE_RX_RADIO_CMD               (0x04)
+//   Async messages are sent by the radio only, and are not
+//   responses to a host message
+#define  PACKET_TYPE_ASYNC_MSG                  (0x05)
+//   Errors, responses, and acks are sent by the radio only,
+//   and only in response to a host packet
+#define PACKET_TYPE_DEVICE_CMD_ERR             (0x0A)
+#define PACKET_TYPE_TX_RADIO_CMD_ERR           (0x0B)
+#define PACKET_TYPE_RX_RADIO_CMD_ERR           (0x0C)
+#define PACKET_TYPE_DEVICE_CMD_RSP             (0x0D)
+#define PACKET_TYPE_TX_RADIO_CMD_RSP           (0x0E)
+#define PACKET_TYPE_RX_RADIO_CMD_RSP           (0x0F)
+#define PACKET_TYPE_TX_SIGNAL_DATA_ACK         (0x80)
+#define PACKET_TYPE_RX_SIGNAL_DATA_ACK         (0x81)
+#define PACKET_TYPE_DEVICE_CMD_ACK             (0x82)
+#define PACKET_TYPE_TX_RADIO_CMD_ACK           (0x83)
+#define PACKET_TYPE_RX_RADIO_CMD_ACK           (0x84)
+#define PACKET_TYPE_INVALID_PACKET             (0xFF)
 
 // Flags
 #define FLAGS_REQUEST_ACK                      (0x80U)
@@ -43,13 +49,13 @@ extern "C" {
 #define DEVICE_CMD_GET_TIME                    (0x03)
 #define DEVICE_CMD_GET_STATUS                  (0x04)
 #define DEVICE_CMD_CLEAR_STATUS                (0x05)  // resets error flags and counters
-#define DEVICE_CMD_GET_BUFFER_INFO             (0x06)  // returns info on how many buffers and their purpose
+#define DEVICE_CMD_GET_BUFFER_INFO             (0x06)  // info on how many buffers and their purpose
 #define DEVICE_CMD_GET_BUFFER_USE              (0x07)  // asks for buffer info
-#define DEVICE_CMD_OPEN_SESSION                (0x08)
-#define DEVICE_CMD_CLOSE_SESSION               (0x09)
+#define DEVICE_CMD_OPEN_SESSION                (0x08)  // unimplemented
+#define DEVICE_CMD_CLOSE_SESSION               (0x09)  // unimplemented
   // 0x0A-0x0F reserved
 #define DEVICE_CMD_GET_TRANSPORT_INFO          (0x10)  // unimplemented // how many interfaces, what kind
-#define DEVICE_CMD_GET_TRANSPORT_ADDR          (0x11)  // we'll use this for IP addresses
+#define DEVICE_CMD_GET_TRANSPORT_ADDR          (0x11)
 #define DEVICE_CMD_GET_TRANSPORT_PKTSIZ        (0x12)
   // 0x12-0x1F reserved for more get_transport stuff as needed
 #define DEVICE_CMD_SET_TRANSPORT_ADDR          (0x21)
@@ -67,8 +73,8 @@ extern "C" {
 //#define DEVICE_CMD_READ_ADC_REG                (0x62)
 //#define DEVICE_CMD_WRITE_ADC_REG               (0x63)
 // 0x64-0xFD reserved for stuff we haven't thought of yet
-#define DEVICE_CMD_STOP                        (0xFE)  // unimplemented // stop all streaming and return to wait state within session
-#define DEVICE_CMD_RESET                       (0xFF)  // unimplemented // do a power on reset (closing session and returning to idle)
+#define DEVICE_CMD_STOP                        (0xFE)  // stop all streaming and return to wait state within session
+#define DEVICE_CMD_RESET                       (0xFF)  // do a power on reset (closing session and returning to idle)
 
 // Device Command Errors
 #define DEVICE_CMD_ERR_BAD_CMD                 (0x01)  // generic bad stuff happened; can substitute for more detailed ones until they're implemented
