@@ -94,7 +94,6 @@ extern "C" {
 #define DEVICE_CMD_ERR_OUT_OF_SEQUENCE         (0x06)  // command received with sequence error
 #define DEVICE_CMD_ERR_CTRL_BUFFER_OVERFLOW    (0x07)  // overflow control buffer
 
-
 // Radio Commands
 #define RADIO_CMD_START_NOW_UNTIL_STOP         (0x01)
 #define RADIO_CMD_START_AT_TIME_UNTIL_STOP     (0x02)  // error if TIME_PRESENT is 0
@@ -112,7 +111,7 @@ extern "C" {
   // 0x17-0x20 reserved
 #define RADIO_CMD_SET_RF_FREQ                  (0x21)
 #define RADIO_CMD_SET_RF_GAIN                  (0x22)
-#define RADIO_CMD_SET_SAMPLE_RATE              (0x23)  // FIXME: needs to take double as arg
+#define RADIO_CMD_SET_SAMPLE_RATE              (0x23)
 #define RADIO_CMD_SET_RF_BW                    (0x24)  // unimplemented
 #define RADIO_CMD_SET_RF_ENABLED               (0x25)  // enables(0x1) or disables(0x0) RX/TX RF path
 #define RADIO_CMD_SET_RF_PORT                  (0x26)  // FIXME: this selects input and output ports
