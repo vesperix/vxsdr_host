@@ -24,7 +24,7 @@ extern "C" {
 #define PACKET_TYPE_RX_RADIO_CMD               (0x04)
 //   Async messages are sent by a radio only, and are not
 //   responses to a host message
-#define  PACKET_TYPE_ASYNC_MSG                  (0x05)
+#define  PACKET_TYPE_ASYNC_MSG                 (0x05)
 //   Errors, responses, and acks are sent by a radio only,
 //   and only in response to a host packet
 #define PACKET_TYPE_DEVICE_CMD_ERR             (0x0A)
@@ -72,11 +72,16 @@ extern "C" {
 #define DEVICE_CMD_GET_TIMING_STATUS           (0x51)  // PPS present/absent; 10 MHz locked/unlocked
 #define DEVICE_CMD_GET_TIMING_REF              (0x52)  // unimplemented // current sources of 10 MHz and PPS
 #define DEVICE_CMD_SET_TIMING_REF              (0x53)  // unimplemented // set sources of 10 MHz and PPS
-//#define DEVICE_CMD_READ_DAC_REG                (0x60)
-//#define DEVICE_CMD_WRITE_DAC_REG               (0x61)
-//#define DEVICE_CMD_READ_ADC_REG                (0x62)
-//#define DEVICE_CMD_WRITE_ADC_REG               (0x63)
-// 0x64-0xFD reserved for stuff we haven't thought of yet
+  // these may be removed before release
+#define DEVICE_CMD_READ_DAC_REG                (0x60)
+#define DEVICE_CMD_WRITE_DAC_REG               (0x61)
+#define DEVICE_CMD_READ_ADC_REG                (0x62)
+#define DEVICE_CMD_WRITE_ADC_REG               (0x63)
+  // 0x64-0x9F reserved
+#define DEVICE_CMD_APP_UPDATE_MODE_SET         (0xA0)
+#define DEVICE_CMD_APP_UPDATE_DATA             (0xA1)
+#define DEVICE_CMD_APP_UPDATE_DONE             (0xA2)
+// 0xA3-0xFD reserved for stuff we haven't thought of yet
 #define DEVICE_CMD_STOP                        (0xFE)  // stop all streaming and return to wait state within session
 #define DEVICE_CMD_RESET                       (0xFF)  // do a power on reset (closing session and returning to idle)
 
@@ -88,6 +93,7 @@ extern "C" {
 #define DEVICE_CMD_ERR_BAD_PARAMETER           (0x05)  // command parameter is out of allowed range
 #define DEVICE_CMD_ERR_OUT_OF_SEQUENCE         (0x06)  // command received with sequence error
 #define DEVICE_CMD_ERR_CTRL_BUFFER_OVERFLOW    (0x07)  // overflow control buffer
+
 
 // Radio Commands
 #define RADIO_CMD_START_NOW_UNTIL_STOP         (0x01)
