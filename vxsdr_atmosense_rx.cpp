@@ -35,6 +35,7 @@ void add_custom_common_options(boost::program_options::options_description &desc
     ("no_filename_time", "do not include time in output filenames")
     ("clock_source", boost::program_options::value<std::string>(), "source for frequency reference")
     ("time_source", boost::program_options::value<std::string>(), "source for PPS reference")
+    ("startup_delay", boost::program_options::value<unsigned>()->default(3), "startup delay in seconds")
     ("rate", boost::program_options::value<double>()->default(80e6), "RX sample rate in Hz")
     ("demod_freqs", boost::program_options::value<std::string>()->required(),
             "comma-separated list of demodulation frequencies in Hz")
@@ -95,7 +96,7 @@ int main(int argc, char *argv[])
     set_common_options(vm, radio);
     radio->set_rx_rate(vm["rate"].as<double>());
 
-    auto tstart = std::chrono::system_clock::now() + std::chrono::seconds(3);
+    auto t_start = std::chrono::ceil(std::chrono::system_clock::now() + std::chrono::seconds(vm["startup_delay"].as<unsigned>()), std::chrono::seconds);
 
     size_t n_samp = std::llround(vm["duration"].as<double>() * vm["rate"].as<double>());
 
@@ -104,7 +105,7 @@ int main(int argc, char *argv[])
       fileformat.append(vm["filename_format"].as<std::string>());
     }
     else {
-      fileformat.append(tstart.strftime("%Y-%m-%d-%H.%M.%S-"));
+      fileformat.append(t_start.strftime("%Y-%m-%d-%H.%M.%S-"));
       fileformat.append(vm["filename_format"].as<std::string>());
     }
     fileformat.append(vm["suffix"].as<std::string>());
@@ -116,8 +117,7 @@ int main(int argc, char *argv[])
     //size_t n_written = radio->write_rx_data(outfile, n_samp);
     //radio->rx_stop_now();
 
-    //radio->rx_start_now_for_n_samples(n_samp);
-    radio->rx_start_now_until_stop();
+    radio->rx_start_at_time_for_n_samples(t_start, n_samp);
     size_t n_written = radio->check_rx_data_sequence_only(n_samp);
     radio->rx_stop_now();
 

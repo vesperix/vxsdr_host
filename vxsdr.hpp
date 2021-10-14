@@ -673,8 +673,6 @@ class vxsdr {
       case DEVICE_CMD_GET_TIMING_INFO:
       case DEVICE_CMD_GET_TIMING_STATUS:
       case DEVICE_CMD_GET_TIMING_REF:
-      case DEVICE_CMD_SET_TIME_NOW:
-      case DEVICE_CMD_SET_TIME_NEXT_PPS:
   //    case DEVICE_CMD_READ_DAC_REG:
   //    case DEVICE_CMD_READ_ADC_REG:
         return 1;
@@ -685,11 +683,12 @@ class vxsdr {
       case DEVICE_CMD_SET_MAX_PAYLOAD:
       case DEVICE_CMD_SAVE_TRANSPORT_ADDR:
       case DEVICE_CMD_SET_TIMING_REF:
+      case DEVICE_CMD_SET_TIME_NOW:
+      case DEVICE_CMD_SET_TIME_NEXT_PPS:
   //    case DEVICE_CMD_WRITE_DAC_REG:
   //    case DEVICE_CMD_WRITE_ADC_REG:
       case DEVICE_CMD_STOP:
       case DEVICE_CMD_RESET:
-        return 0;
       default:
         return 0;
     }
@@ -721,7 +720,6 @@ class vxsdr {
       case RADIO_CMD_SET_RF_PORT:
       case RADIO_CMD_SET_IQ_BIAS:
       case RADIO_CMD_SET_IQ_CORR:
-        return 0;
       default:
         return 0;
     }
