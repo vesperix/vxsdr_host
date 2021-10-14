@@ -168,8 +168,8 @@ struct packet_header {
 };
 
 struct time_spec_t {
-  uint32_t                 nanoseconds;
   uint32_t                 seconds;
+  uint32_t                 nanoseconds;
 };
 
 typedef uint64_t          stream_spec_t;

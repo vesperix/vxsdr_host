@@ -59,6 +59,11 @@ class largest_cmd_or_rsp_packet : public cmd_or_rsp_packet_time_stream {
 
 class cmd_packet : public cmd_or_rsp_packet {};
 
+class device_time_packet : public cmd_packet {
+  public:
+    time_spec_t            time;
+};
+
 class rsp_packet : public cmd_or_rsp_packet {};
 
 class ack_packet : public cmd_or_rsp_packet {};

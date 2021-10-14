@@ -407,6 +407,12 @@ class vxsdr {
     }
   }
 
+  void time_point_to_time_spec_t(const std::chrono::time_point<std::chrono::system_clock> &t, time_spec_t &ts) {
+    auto secs = std::chrono::time_point_cast<std::chrono::seconds>(t);
+    auto nsecs = std::chrono::time_point_cast<std::chrono::nanoseconds>(t) - std::chrono::time_point_cast<std::chrono::nanoseconds>(secs);
+    ts = { (uint32_t)secs.time_since_epoch().count(), (uint32_t)nsecs.count() };
+  }
+
   void device_hello(const uint8_t subdev = 0, const uint8_t flags = 0) {
     cmd_packet p;
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_HELLO, subdev, flags, sizeof(p), 0 };
@@ -443,6 +449,20 @@ class vxsdr {
     cmd_queue_push(p);
   }
 
+  void device_set_time_now(const std::chrono::time_point<std::chrono::system_clock> &t, const uint8_t subdev = 0, const uint8_t flags = 0) {
+    device_time_packet p;
+    p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_SET_TIME_NOW, subdev, flags, sizeof(p), 0 };
+    time_point_to_time_spec_t(t, p.time);
+    cmd_queue_push(p);
+  }
+
+  void device_set_time_next_pps(const std::chrono::time_point<std::chrono::system_clock> &t, const uint8_t subdev = 0, const uint8_t flags = 0) {
+    device_time_packet p;
+    p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_SET_TIME_NEXT_PPS, subdev, flags, sizeof(p), 0 };
+    time_point_to_time_spec_t(t, p.time);
+    cmd_queue_push(p);
+  }
+
   void tx_start_now_until_stop(const uint8_t subdev = 0, const uint8_t flags = 0) {
     stream_ctrl_packet p;
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_START_NOW_UNTIL_STOP, subdev, flags, sizeof(p), 0 };
@@ -466,6 +486,36 @@ class vxsdr {
     stream_ctrl_packet_samples p;
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_START_NOW_FOR_N_SAMPLES, subdev, flags, sizeof(p), 0 };
     p.n_samples = n;
+    cmd_queue_push(p);
+  }
+
+  void tx_start_at_time_for_n_samples(const std::chrono::time_point<std::chrono::system_clock> &t, const uint64_t n, const uint8_t subdev = 0, const uint8_t flags = 0) {
+    stream_ctrl_packet_time_samples p;
+    p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_START_AT_TIME_FOR_N_SAMPLES, subdev, flags, sizeof(p), 0 };
+    time_point_to_time_spec_t(t, p.time);
+    p.n_samples = n;
+    cmd_queue_push(p);
+  }
+
+  void rx_start_at_time_for_n_samples(const std::chrono::time_point<std::chrono::system_clock> &t,const uint64_t n, const uint8_t subdev = 0, const uint8_t flags = 0) {
+    stream_ctrl_packet_time_samples p;
+    p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_START_AT_TIME_FOR_N_SAMPLES, subdev, flags, sizeof(p), 0 };
+    time_point_to_time_spec_t(t, p.time);
+    p.n_samples = n;
+    cmd_queue_push(p);
+  }
+
+  void tx_start_at_time_until_stop(const std::chrono::time_point<std::chrono::system_clock> &t, const uint8_t subdev = 0, const uint8_t flags = 0) {
+    stream_ctrl_packet_time p;
+    p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_START_AT_TIME_UNTIL_STOP, subdev, flags, sizeof(p), 0 };
+    time_point_to_time_spec_t(t, p.time);
+    cmd_queue_push(p);
+  }
+
+  void rx_start_at_time_until_stop(const std::chrono::time_point<std::chrono::system_clock> &t, const uint8_t subdev = 0, const uint8_t flags = 0) {
+    stream_ctrl_packet_time p;
+    p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_START_AT_TIME_UNTIL_STOP, subdev, flags, sizeof(p), 0 };
+    time_point_to_time_spec_t(t, p.time);
     cmd_queue_push(p);
   }
 
