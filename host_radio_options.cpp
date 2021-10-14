@@ -55,7 +55,7 @@ void add_network_options(boost::program_options::options_description &desc)
     ("netmask", boost::program_options::value<std::string>()->default_value("255.255.255.0"), "IPv4 netmask of local interface")
     ("broadcast", boost::program_options::bool_switch()->default_value(false), "flag to enable broadcast")
     ("destination_port", boost::program_options::value<unsigned>()->default_value(1030), "port to use on destination")
-    ("packet_size", boost::program_options::value<size_t>()->default_value(4096), "packet size in bytes")
+    ("payload_size", boost::program_options::value<size_t>()->default_value(8192), "maximum data packet payload size in bytes")
   ;
 }
 
@@ -63,6 +63,13 @@ void init_vm(boost::program_options::options_description &desc, boost::program_o
 {
   // setup the program options
   boost::program_options::store(boost::program_options::parse_command_line(argc, argv, desc), vm);
+
+  if(vm.count("help") > 0) {
+    // just write help to stderr, not to log
+    std::cerr << desc << std::endl;
+    exit(EXIT_SUCCESS);
+  }
+
   boost::program_options::notify(vm);
 
   if (vm.count("config_file") > 0) {
@@ -73,12 +80,6 @@ void init_vm(boost::program_options::options_description &desc, boost::program_o
     }
     boost::program_options::store(boost::program_options::parse_config_file(ifs, desc), vm);
     boost::program_options::notify(vm);
-  }
-
-  if(vm.count("help") > 0) {
-    // just write help to stderr, not to log
-    std::cerr << desc << std::endl;
-    exit(EXIT_SUCCESS);
   }
 }
 
