@@ -49,6 +49,10 @@ int main(int argc, char *argv[])
     LOG_INFO(fmt::format("using destination IP {:s} and port {:d}", destination_endpoint.address().to_string(), destination_endpoint.port()));
 
     auto radio = std::make_unique<vxsdr>(local_send_endpoint, local_receive_endpoint, destination_endpoint);
+    // let radio complete initialization
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    set_common_options(vm, radio);
+    set_rx_1ch_options(vm, radio);
 
     LOG_INFO(fmt::format("using frequency {:.5e}", vm["freq"].as<double>()));
     LOG_INFO(fmt::format("using rate      {:.5e}", vm["rate"].as<double>()));
@@ -58,12 +62,6 @@ int main(int argc, char *argv[])
       LOG_FATAL("duration must be positive");
       return EXIT_CMD_LINE_ERROR;
     }
-
-    // let radio complete initialization
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
-
-    set_common_options(vm, radio);
-    set_rx_1ch_options(vm, radio);
 
     size_t n_samp = std::llround(vm["duration"].as<double>() * vm["rate"].as<double>());
 

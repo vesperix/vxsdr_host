@@ -113,13 +113,10 @@ int main(int argc, char *argv[])
     size_t n_samp = std::llround(vm["duration"].as<double>() * vm["rate"].as<double>());
 
     std::string fileformat = vm["prefix"].as<std::string>();
-    if(vm.count("no_filename_time") > 0) {
-      fileformat.append(vm["filename_format"].as<std::string>());
-    }
-    else {
+    if(vm.count("no_filename_time") == 0) {
       fileformat.append(format_time(t_start, 0, true, "%Y-%m-%d-%H.%M.%S-"));
-      fileformat.append(vm["filename_format"].as<std::string>());
     }
+    fileformat.append(vm["filename_format"].as<std::string>());
     fileformat.append(vm["suffix"].as<std::string>());
 
     //radio->rx_start_at_time_for_n_samples(t_start, n_samp);
