@@ -55,7 +55,7 @@ void add_network_options(boost::program_options::options_description &desc)
     ("netmask", boost::program_options::value<std::string>()->default_value("255.255.255.0"), "IPv4 netmask of local interface")
     ("broadcast", boost::program_options::bool_switch()->default_value(false), "flag to enable broadcast")
     ("destination_port", boost::program_options::value<unsigned>()->default_value(1030), "port to use on destination")
-    ("packet_size", boost::program_options::value<size_t>()->default_value(4096), "packet size in bytes")
+    ("payload_size", boost::program_options::value<size_t>()->default_value(8192), "maximum data packet payload size in bytes")
   ;
 }
 
