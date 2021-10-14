@@ -33,8 +33,8 @@ void add_custom_common_options(boost::program_options::options_description &desc
     ("suffix", boost::program_options::value<std::string>()->default_value(".dat"), "suffix for the output files")
     ("duration", boost::program_options::value<double>()->default_value(1.0), "duration in seconds")
     ("no_filename_time", "do not include time in output filenames")
-    ("clock_source", boost::program_options::value<std::string>(), "source for frequency reference")
-    ("time_source", boost::program_options::value<std::string>(), "source for PPS reference")
+    ("clock_source", boost::program_options::value<std::string>()->default_value("internal"), "source for frequency reference")
+    ("time_source", boost::program_options::value<std::string>()->default_value("system"), "source for PPS reference")
     ("startup_delay", boost::program_options::value<unsigned>()->default_value(3), "startup delay in seconds")
     ("rate", boost::program_options::value<double>()->default_value(80e6), "RX sample rate in Hz")
     ("demod_freqs", boost::program_options::value<std::string>()->required(),
