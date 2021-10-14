@@ -4,7 +4,7 @@ CXX = clang++-10
 CXX_DEFINES = -DVXSDR_SEQ_ERR_DIAG
 CXX_BASEFLAGS = -Wall -pedantic -std=c++17 $(CXX_EXTRA_FLAGS)
 CXX_OPTFLAGS = -O3
-CXX_DBGFLAGS = -g -Og #-fsanitize=address
+CXX_DBGFLAGS = -g -Og -fsanitize=address
 CXX_LDFLAGS = -lpthread -lboost_program_options -lboost_system
 
 ifdef VXSDR_DEBUG

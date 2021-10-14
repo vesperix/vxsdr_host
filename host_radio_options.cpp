@@ -64,7 +64,13 @@ void add_network_options(boost::program_options::options_description &desc)
 void init_vm(boost::program_options::options_description &desc, boost::program_options::variables_map &vm, int argc, char *argv[])
 {
   // setup the program options
-  boost::program_options::store(boost::program_options::parse_command_line(argc, argv, desc), vm);
+  try {
+    boost::program_options::store(boost::program_options::parse_command_line(argc, argv, desc), vm);
+  }
+  catch (std::exception& e) {
+    LOG_FATAL(fmt::format("error parsing command line options (store): {:s}", e.what()));
+    exit(EXIT_CMD_LINE_ERROR);
+  }
 
   if(vm.count("help") > 0) {
     // just write help to stderr, not to log
@@ -72,7 +78,13 @@ void init_vm(boost::program_options::options_description &desc, boost::program_o
     exit(EXIT_SUCCESS);
   }
 
-  boost::program_options::notify(vm);
+  try {
+    boost::program_options::notify(vm);
+  }
+  catch (std::exception& e) {
+    LOG_FATAL(fmt::format("error parsing command line options (notify): {:s}", e.what()));
+    exit(EXIT_CMD_LINE_ERROR);
+  }
 
   if (vm.count("config_file") > 0) {
     std::ifstream ifs(vm["config_file"].as<std::string>().c_str());
@@ -80,8 +92,14 @@ void init_vm(boost::program_options::options_description &desc, boost::program_o
       LOG_FATAL(fmt::format("Error: cannot open config file {:s}", vm["config_file"].as<std::string>()));
       exit(EXIT_CMD_LINE_ERROR);
     }
-    boost::program_options::store(boost::program_options::parse_config_file(ifs, desc), vm);
-    boost::program_options::notify(vm);
+    try {
+      boost::program_options::store(boost::program_options::parse_config_file(ifs, desc), vm);
+      boost::program_options::notify(vm);
+    }
+    catch (std::exception& e) {
+      LOG_FATAL(fmt::format("error parsing command line options (config file): {:s}", e.what()));
+      exit(EXIT_CMD_LINE_ERROR);
+    }
   }
 }
 

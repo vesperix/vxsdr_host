@@ -71,10 +71,6 @@ int main(int argc, char *argv[])
     boost::asio::ip::udp::endpoint destination_endpoint(destination_ip, vm["destination_port"].as<unsigned>());
     LOG_INFO(fmt::format("using destination IP {:s} and port {:d}", destination_endpoint.address().to_string(), destination_endpoint.port()));
 
-    auto radio = std::make_unique<vxsdr>(local_send_endpoint, local_receive_endpoint, destination_endpoint);
-    // let radio complete initialization
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
-
     std::vector<double> demod_freqs;
     std::stringstream ss(vm["demod_freqs"].as<std::string>());
     while(ss.good()) {
@@ -89,20 +85,25 @@ int main(int argc, char *argv[])
     }
 
     for(unsigned i = 0; i < demod_freqs.size(); i++) {
-      if(demod_freqs[i] <= 0.0 or demod_freqs[i] >= 0.5 * vm["rate"].as<double>())
-      LOG_FATAL("demod_freqs must be positive and less than f_s / 2");
-      return EXIT_CMD_LINE_ERROR;
+      if(demod_freqs[i] <= 0.0 or demod_freqs[i] >= 0.5 * vm["rate"].as<double>()) {
+        LOG_FATAL("demod_freqs must be positive and less than f_s / 2");
+        return EXIT_CMD_LINE_ERROR;
+      }
     }
 
     LOG_INFO(fmt::format("using sampling rate {:.5e}", vm["rate"].as<double>()));
     LOG_INFO(fmt::format("using demodulation frequencies:"));
-    for(auto f : demod_freqs) {
-      LOG_INFO(fmt::format("    {:.5e}", f));
+    for(auto&& f : demod_freqs) {
+      LOG_INFO(fmt::format("    {:e}", f));
     }
     if(vm["duration"].as<double>() <= 0.0) {
       LOG_FATAL("duration must be positive");
       return EXIT_CMD_LINE_ERROR;
     }
+
+    auto radio = std::make_unique<vxsdr>(local_send_endpoint, local_receive_endpoint, destination_endpoint);
+    // let radio complete initialization
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
     set_common_options(vm, radio);
     radio->set_rx_rate(vm["rate"].as<double>());
@@ -121,8 +122,10 @@ int main(int argc, char *argv[])
     }
     fileformat.append(vm["suffix"].as<std::string>());
 
-    radio->rx_start_at_time_for_n_samples(t_start, n_samp);
-//    size_t n_written = radio->check_rx_data_sequence_only(n_samp);
+    //radio->rx_start_at_time_for_n_samples(t_start, n_samp);
+
+    radio->rx_start_now_until_stop();
+    radio->check_rx_data_sequence_only(n_samp);
     radio->rx_stop_now();
 
     LOG_INFO("receive complete");
