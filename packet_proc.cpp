@@ -67,12 +67,12 @@ std::string device_command_to_name(const uint8_t cmd) {
       return "GET_TRANSPORT_INFO";
     case DEVICE_CMD_GET_TRANSPORT_ADDR:
       return "GET_TRANSPORT_ADDR";
-    case DEVICE_CMD_GET_TRANSPORT_PKTSIZ:
-      return "GET_TRANSPORT_PKTSIZ";
+    case DEVICE_CMD_GET_MAX_PAYLOAD:
+      return "GET_MAX_PAYLOAD";
     case DEVICE_CMD_SET_TRANSPORT_ADDR:
       return "SET_TRANSPORT_ADDR";
-    case DEVICE_CMD_SET_TRANSPORT_PKTSIZ:
-      return "SET_TRANSPORT_PKTSIZ";
+    case DEVICE_CMD_SET_MAX_PAYLOAD:
+      return "SET_MAX_PAYLOAD";
     case DEVICE_CMD_SAVE_TRANSPORT_ADDR:
       return "SAVE_TRANSPORT_ADDR";
     case DEVICE_CMD_GET_CHANNEL_INFO:
