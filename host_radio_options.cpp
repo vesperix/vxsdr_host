@@ -63,6 +63,13 @@ void init_vm(boost::program_options::options_description &desc, boost::program_o
 {
   // setup the program options
   boost::program_options::store(boost::program_options::parse_command_line(argc, argv, desc), vm);
+
+  if(vm.count("help") > 0) {
+    // just write help to stderr, not to log
+    std::cerr << desc << std::endl;
+    exit(EXIT_SUCCESS);
+  }
+
   boost::program_options::notify(vm);
 
   if (vm.count("config_file") > 0) {
@@ -73,12 +80,6 @@ void init_vm(boost::program_options::options_description &desc, boost::program_o
     }
     boost::program_options::store(boost::program_options::parse_config_file(ifs, desc), vm);
     boost::program_options::notify(vm);
-  }
-
-  if(vm.count("help") > 0) {
-    // just write help to stderr, not to log
-    std::cerr << desc << std::endl;
-    exit(EXIT_SUCCESS);
   }
 }
 
