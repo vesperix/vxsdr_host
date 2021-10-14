@@ -96,6 +96,7 @@ int main(int argc, char *argv[])
     set_common_options(vm, radio);
     radio->set_rx_rate(vm["rate"].as<double>());
 
+    radio->device_set_time_now(std::chrono::system_clock::now());
     auto t_start = std::chrono::ceil(std::chrono::system_clock::now() + std::chrono::seconds(vm["startup_delay"].as<unsigned>()), std::chrono::seconds);
 
     size_t n_samp = std::llround(vm["duration"].as<double>() * vm["rate"].as<double>());
