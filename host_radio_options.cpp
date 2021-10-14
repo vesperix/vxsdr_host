@@ -1,7 +1,9 @@
 #include <fstream>
 #include <iostream>
+#include <string>
 
 #include <boost/program_options.hpp>
+#include <boost/algorithm/string.hpp>
 
 #include "logging.hpp"
 #include "errors.hpp"
@@ -76,7 +78,7 @@ void init_vm(boost::program_options::options_description &desc, boost::program_o
     std::ifstream ifs(vm["config_file"].as<std::string>().c_str());
     if (!ifs) {
       LOG_FATAL(fmt::format("Error: cannot open config file {:s}", vm["config_file"].as<std::string>()));
-      throw std::runtime_error("Specified config file not found.");
+      exit(EXIT_CMD_LINE_ERROR);
     }
     boost::program_options::store(boost::program_options::parse_config_file(ifs, desc), vm);
     boost::program_options::notify(vm);
@@ -85,6 +87,26 @@ void init_vm(boost::program_options::options_description &desc, boost::program_o
 
 int set_common_options(boost::program_options::variables_map &vm, std::unique_ptr<vxsdr> &radio)
 {
+  std::string ts_str = vm["time_source"].as<std::string>();
+  boost::algorithm::to_lower(ts_str);
+  if(ts_str.compare("system") != 0) {
+      radio->device_set_time_now(std::chrono::system_clock::now());
+  } else if(ts_str.compare("pps") != 0) {
+    std::chrono::time_point<std::chrono::system_clock> tset;
+    double frac;
+    // wait until the system clock is in between seconds
+    do {
+      auto t = std::chrono::system_clock::now();
+      auto secs = std::chrono::time_point_cast<std::chrono::seconds>(t);
+      auto msecs = std::chrono::time_point_cast<std::chrono::milliseconds>(t) - std::chrono::time_point_cast<std::chrono::milliseconds>(secs);
+      frac = 1e-3 * msecs.count();
+      tset = std::chrono::ceil<std::chrono::seconds>(t);
+    } while(frac < 0.2 or frac > 0.8);
+    radio->device_set_time_next_pps(tset);
+  } else {
+    LOG_FATAL(fmt::format("Error: unknown option value for --time_source: {:s}", vm["time_source"].as<std::string>()));
+    exit(EXIT_CMD_LINE_ERROR);
+  }
   if(vm.count("verbose_level") > 0) {
     log_set_level(vm["verbose_level"].as<int>());
   }

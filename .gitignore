@@ -9,4 +9,5 @@ test_tx
 test_rx_seq_only
 vxsdr_test
 vxsdr_test_rx
+vxsdr_atmosense_rx
 .vscode

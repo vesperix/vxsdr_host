@@ -35,13 +35,13 @@ void add_custom_common_options(boost::program_options::options_description &desc
     ("no_filename_time", "do not include time in output filenames")
     ("clock_source", boost::program_options::value<std::string>(), "source for frequency reference")
     ("time_source", boost::program_options::value<std::string>(), "source for PPS reference")
-    ("startup_delay", boost::program_options::value<unsigned>()->default(3), "startup delay in seconds")
-    ("rate", boost::program_options::value<double>()->default(80e6), "RX sample rate in Hz")
+    ("startup_delay", boost::program_options::value<unsigned>()->default_value(3), "startup delay in seconds")
+    ("rate", boost::program_options::value<double>()->default_value(80e6), "RX sample rate in Hz")
     ("demod_freqs", boost::program_options::value<std::string>()->required(),
             "comma-separated list of demodulation frequencies in Hz")
-    ("filename_format", boost::program_options::value<std::string>()->default("{:.4e}-{:02d}"),
+    ("filename_format", boost::program_options::value<std::string>()->default_value("{:.4e}-{:02d}"),
             "fmt::format filename format with entries for demod frequency and channel number")
-    ("cic_r", boost::program_options::value<unsigned>()->default(125), "CIC filter rate reduction factor")
+    ("cic_r", boost::program_options::value<unsigned>()->default_value(125), "CIC filter rate reduction factor")
     ("verbose_level", boost::program_options::value<int>(),
             "log level (6 = trace, 5 = debug, 4 = info, 3 = warning, 2 = error, 1 = fatal, 0 = none)")
     ("quit_on_error", boost::program_options::value<bool>()->default_value(true), "quit on errors")
@@ -83,6 +83,17 @@ int main(int argc, char *argv[])
       demod_freqs.push_back(std::stod(substr));
     }
 
+    if(demod_freqs.size() < 1) {
+      LOG_FATAL("at least one demod_freq must be provided");
+      return EXIT_CMD_LINE_ERROR;
+    }
+
+    for(unsigned i = 0; i < demod_freqs.size(); i++) {
+      if(demod_freqs[i] <= 0.0 or demod_freqs[i] >= 0.5 * vm["rate"].as<double>())
+      LOG_FATAL("demod_freqs must be positive and less than f_s / 2");
+      return EXIT_CMD_LINE_ERROR;
+    }
+
     LOG_INFO(fmt::format("using sampling rate {:.5e}", vm["rate"].as<double>()));
     LOG_INFO(fmt::format("using demodulation frequencies:"));
     for(auto f : demod_freqs) {
@@ -96,8 +107,7 @@ int main(int argc, char *argv[])
     set_common_options(vm, radio);
     radio->set_rx_rate(vm["rate"].as<double>());
 
-    radio->device_set_time_now(std::chrono::system_clock::now());
-    auto t_start = std::chrono::ceil(std::chrono::system_clock::now() + std::chrono::seconds(vm["startup_delay"].as<unsigned>()), std::chrono::seconds);
+    auto t_start = std::chrono::ceil<std::chrono::seconds>(std::chrono::system_clock::now() + std::chrono::seconds(vm["startup_delay"].as<unsigned>()));
 
     size_t n_samp = std::llround(vm["duration"].as<double>() * vm["rate"].as<double>());
 
@@ -106,26 +116,16 @@ int main(int argc, char *argv[])
       fileformat.append(vm["filename_format"].as<std::string>());
     }
     else {
-      fileformat.append(t_start.strftime("%Y-%m-%d-%H.%M.%S-"));
+      fileformat.append(format_time(t_start, 0, true, "%Y-%m-%d-%H.%M.%S-"));
       fileformat.append(vm["filename_format"].as<std::string>());
     }
     fileformat.append(vm["suffix"].as<std::string>());
 
-    //std::ofstream outfile(filename, std::ofstream::binary | std::ofstream::out);
-    //LOG_INFO(fmt::format("receiving data to file {:s}", filename));
-
-    //radio->rx_start_now_for_n_samples(n_samp);
-    //size_t n_written = radio->write_rx_data(outfile, n_samp);
-    //radio->rx_stop_now();
-
     radio->rx_start_at_time_for_n_samples(t_start, n_samp);
-    size_t n_written = radio->check_rx_data_sequence_only(n_samp);
+//    size_t n_written = radio->check_rx_data_sequence_only(n_samp);
     radio->rx_stop_now();
 
     LOG_INFO("receive complete");
-    //outfile.close();
-    //LOG_INFO(fmt::format("{:d} samples written", n_written));
-    LOG_INFO(fmt::format("{:d} samples checked", n_written));
   }
   catch (std::exception& e) {
     LOG_FATAL(fmt::format("exception caught: {:s}", e.what()));
