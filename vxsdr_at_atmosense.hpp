@@ -3,10 +3,20 @@
 #include <cstring>
 #include <future>
 #include <fstream>
+#include <chrono>
+#include <atomic>
+#include <thread>
+#include <mutex>
+#include <shared_mutex>
+#include <condition_variable>
+
+#include <boost/interprocess/shared_memory_object.hpp>
+#include <boost/interprocess/mapped_region.hpp>
 
 #include <boost/lockfree/spsc_queue.hpp>
 #include <boost/asio/io_service.hpp>
 #include <boost/asio/ip/udp.hpp>
+
 #ifdef VXSDR_ASYNC_RX
 #include <boost/asio/use_future.hpp>
 #endif // VXSDR_ASYNC_RX
@@ -22,6 +32,10 @@
 #define VXSDR_HPP
 
 class vxsdr {
+  using cic_type = int64_t;
+  using demod_type = int32_t;
+  using sample_type = int16_t;
+  using fft_type = float;
 
  private:
 #ifdef VXSDR_ASYNC_RX
@@ -40,7 +54,7 @@ class vxsdr {
   static constexpr int receive_thread_cpu = 2;
 
   // parameters of the internal spsc queues (ring buffers)
-  static constexpr size_t rx_signal_queue_length         =  80'000'000;
+  static constexpr size_t rx_signal_queue_length         = 80'000'000;  // 1 sec at 80 MSPS
   static constexpr size_t rx_data_queue_length           =    65536;    // slots in rx data queue; 65536 * 2048 / 160e6 = 840 ms at 160 MSPS
   static constexpr size_t tx_data_queue_length           =     1024;    // slots in tx data queue;  1024 * 2048 / 160e6 =  13 ms at 160 MSPS
   static constexpr size_t command_queue_length           =       64;    // slots in command msg queue
@@ -70,13 +84,14 @@ class vxsdr {
   std::atomic<unsigned> rx_buffer_size_bytes = 0, rx_buffer_used_bytes = 0;
   std::atomic<unsigned> tx_buffer_fill_percent = 0, rx_buffer_fill_percent = 0;
 
-  using signal_data_type = std::complex<int16_t>;
+
+  using signal_queue_element = std::complex<sample_type>;
   using data_queue_element = largest_data_packet;
   using command_queue_element = largest_cmd_or_rsp_packet;
   using response_queue_element = largest_cmd_or_rsp_packet;
 
   // data queues
-  boost::lockfree::spsc_queue<signal_data_type, boost::lockfree::capacity<rx_signal_queue_length> > rx_signal_queue;
+  boost::lockfree::spsc_queue<signal_queue_element, boost::lockfree::capacity<rx_signal_queue_length> > rx_signal_queue;
   boost::lockfree::spsc_queue<data_queue_element, boost::lockfree::capacity<rx_data_queue_length> > rx_data_queue;
   boost::lockfree::spsc_queue<data_queue_element, boost::lockfree::capacity<tx_data_queue_length> > tx_data_queue;
   // command and response queues
