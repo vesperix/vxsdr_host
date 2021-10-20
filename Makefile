@@ -1,16 +1,16 @@
 
 CXX = clang++-10
 
-CXX_DEFINES = -DVXSDR_SEQ_ERR_DIAG
+CXX_DEFINES = -DVXSDR_SEQ_ERR_DIAG -DSPDLOG_COMPILED_LIB
 CXX_BASEFLAGS = -Wall -pedantic -std=c++17 $(CXX_EXTRA_FLAGS)
 CXX_OPTFLAGS = -O3
 CXX_DBGFLAGS = -g -Og -fsanitize=address
-CXX_LDFLAGS = -lpthread -lboost_program_options -lboost_system
+CXX_LDFLAGS = -lpthread -lboost_program_options -lboost_system -lspdlog
 
 ifdef VXSDR_DEBUG
-	CXX_FLAGS = $(CXX_BASEFLAGS) $(CXX_DEFINES) $(CXX_DBGFLAGS)
+	CXX_FLAGS = $(CXX_BASEFLAGS) $(CXX_DBGFLAGS) $(CXX_DEFINES)
 else
-	CXX_FLAGS = $(CXX_BASEFLAGS) $(CXX_DEFINES) $(CXX_OPTFLAGS)
+	CXX_FLAGS = $(CXX_BASEFLAGS) $(CXX_OPTFLAGS) $(CXX_DEFINES)
 endif
 
 COMMON_INCLUDES = packet_proc.cpp packet_defs.h vxsdr_header.hpp host_radio_options.hpp utility.hpp logging.hpp
