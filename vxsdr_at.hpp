@@ -18,8 +18,8 @@
 #include "vxsdr_header.hpp"
 #include "packet_proc.hpp"
 
-#ifndef VXSDR_HPP
-#define VXSDR_HPP
+#ifndef VXSDR_AT_HPP
+#define VXSDR_AT_HPP
 
 class vxsdr {
 
@@ -1079,4 +1079,4 @@ class vxsdr {
   }
 };
 
-#endif // VXSDR_HPP
+#endif // VXSDR_AT_HPP
