@@ -9,7 +9,7 @@ local packet_types = {
     [0x02] = "DEVICE_CMD",
     [0x03] = "TX_RADIO_CMD",
     [0x04] = "RX_RADIO_CMD",
-    [0x04] = "ASYNC_MSG",
+    [0x05] = "ASYNC_MSG",
     [0x0A] = "DEVICE_CMD_ERR",
     [0x0B] = "TX_RADIO_CMD_ERR",
     [0x0C] = "RX_RADIO_CMD_ERR",
@@ -127,7 +127,7 @@ local asyncs = {
     [0x01] = "DATA_UNDERFLOW",
     [0x02] = "DATA_OVERFLOW",
     [0x03] = "OVER_TEMP",
-    [0x04] = "POWER_ERROR"
+    [0x04] = "POWER_ERROR",
     [0x05] = "FREQ_ERROR"
 }
 
