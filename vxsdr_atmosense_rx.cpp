@@ -16,7 +16,7 @@
 #include "logging.hpp"
 #include "errors.hpp"
 
-#include "vxsdr.hpp"
+#include "vxsdr_at_atmosense.hpp"
 #include "host_radio_options.hpp"
 
 extern "C" void sig_int_handler(int /* sig_num */) {

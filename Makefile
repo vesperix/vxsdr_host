@@ -37,7 +37,7 @@ vxsdr_test: vxsdr_test.cpp host_radio_options.cpp vxsdr.hpp $(COMMON_INCLUDES) $
 vxsdr_test_rx: vxsdr_test_rx.cpp host_radio_options.cpp vxsdr.hpp $(COMMON_INCLUDES) $(COMMON_SRC)
 	$(CXX) $(CXX_FLAGS) -o $@ $< host_radio_options.cpp $(COMMON_SRC) $(CXX_LDFLAGS)
 
-vxsdr_atmosense_rx: vxsdr_atmosense_rx.cpp host_radio_options.cpp vxsdr.hpp $(COMMON_INCLUDES) $(COMMON_SRC)
+vxsdr_atmosense_rx: vxsdr_atmosense_rx.cpp host_radio_options.cpp vxsdr_at_atmosense.hpp $(COMMON_INCLUDES) $(COMMON_SRC)
 	$(CXX) $(CXX_FLAGS) -o $@ $< host_radio_options.cpp $(COMMON_SRC) $(CXX_LDFLAGS)
 
 clean:
