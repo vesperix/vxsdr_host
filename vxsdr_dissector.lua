@@ -188,10 +188,17 @@ function vxsdr.dissector(tvbuf, pktinfo, root)
     tree:add_le(pf_packet_size,      tvbuf:range(4, 2))
     tree:add_le(pf_sequence_counter, tvbuf:range(6, 2))
     if pkt_size > 8 then
+        -- device commands
+        if pkt_type == 0x02 then
+            -- set time now or next pps
+            if pkt_cmd == 0x01 or pkt_cmd == 0x02 then
+                tree:add_le(pf_uint32_data, tvbuf:range( 8, 4))
+                tree:add_le(pf_uint32_data, tvbuf:range(12, 4))
+            end
         -- device command responses
-        if pkt_type == 0x0D then
-            if pkt_cmd == 0x00 or pkt_cmd == 0x06 or pkt_cmd == 0x07 then
-                -- hello, buffer info, buffer use response
+        elseif pkt_type == 0x0D then
+            if pkt_cmd == 0x00 or pkt_cmd == 0x03 or pkt_cmd == 0x06 or pkt_cmd == 0x07 then
+                -- hello, get_time, buffer info, buffer use response
                 tree:add_le(pf_uint32_data, tvbuf:range( 8, 4))
                 tree:add_le(pf_uint32_data, tvbuf:range(12, 4))
             elseif pkt_cmd == 0x04 then
@@ -209,12 +216,9 @@ function vxsdr.dissector(tvbuf, pktinfo, root)
             -- set rf_enabled
             if pkt_cmd == 0x25 then
                 tree:add_le(pf_uint32_data, tvbuf:range(8, 4))
-            -- set freq, or gain
-            elseif pkt_cmd == 0x21 or pkt_cmd == 0x22 then
+            -- set freq, gain, or rate
+            elseif pkt_cmd == 0x21 or pkt_cmd == 0x22 or pkt_cmd == 0x23  then
                 tree:add_le(pf_double_data, tvbuf:range(8, 8))
-            elseif  pkt_cmd == 0x23 then
-                -- set rate
-                tree:add_le(pf_uint32_data, tvbuf:range(8, 4))
             end
         elseif pkt_type == 0x80 then
             -- tx signal data ack
