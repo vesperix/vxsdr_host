@@ -108,9 +108,9 @@ int set_common_options(boost::program_options::variables_map &vm, std::unique_pt
   if(vm.count("time_source") > 0) {
     std::string ts_str = vm["time_source"].as<std::string>();
     boost::algorithm::to_lower(ts_str);
-    if(ts_str.compare("system") != 0) {
+    if(ts_str.compare("system") == 0) {
         radio->device_set_time_now(std::chrono::system_clock::now());
-    } else if(ts_str.compare("pps") != 0) {
+    } else if(ts_str.compare("pps") == 0) {
       std::chrono::time_point<std::chrono::system_clock> t_set;
       double frac;
       // wait until the system clock is in between seconds
