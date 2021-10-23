@@ -173,6 +173,14 @@ void log_packet_info(cmd_or_rsp_packet &packet)
             LOG_INFO(fmt::format("   tx_buffer_used_bytes      = {:d}", (uint32_t)br->tx_buffer_used_bytes));
           }
           break;
+        case DEVICE_CMD_GET_TIME:
+          {
+            LOG_INFO(fmt::format("DEVICE_CMD_RSP: GET_TIME"));
+            auto *tr = reinterpret_cast<device_time_packet *>(&packet);
+            LOG_INFO(fmt::format("   seconds                   = {:d}", (uint32_t)(tr->time.seconds)));
+            LOG_INFO(fmt::format("   nanoseconds               = {:09d}", (uint32_t)(tr->time.nanoseconds)));
+          }
+          break;
         default:
           {
             LOG_INFO(fmt::format("DEVICE_CMD_RSP: {:d}", (int)packet.hdr.command));
