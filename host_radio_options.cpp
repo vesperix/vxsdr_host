@@ -111,7 +111,7 @@ int set_common_options(boost::program_options::variables_map &vm, std::unique_pt
     if(ts_str.compare("system") != 0) {
         radio->device_set_time_now(std::chrono::system_clock::now());
     } else if(ts_str.compare("pps") != 0) {
-      std::chrono::time_point<std::chrono::system_clock> tset;
+      std::chrono::time_point<std::chrono::system_clock> t_set;
       double frac;
       // wait until the system clock is in between seconds
       do {
@@ -119,9 +119,11 @@ int set_common_options(boost::program_options::variables_map &vm, std::unique_pt
         auto secs = std::chrono::time_point_cast<std::chrono::seconds>(t);
         auto msecs = std::chrono::time_point_cast<std::chrono::milliseconds>(t) - std::chrono::time_point_cast<std::chrono::milliseconds>(secs);
         frac = 1e-3 * msecs.count();
-        tset = std::chrono::ceil<std::chrono::seconds>(t);
+        t_set = std::chrono::ceil<std::chrono::seconds>(t);
       } while(frac < 0.2 or frac > 0.8);
-      radio->device_set_time_next_pps(tset);
+      radio->device_set_time_next_pps(t_set);
+      // wait until time is set
+      std::this_thread::sleep_until(t_set + std::chrono::milliseconds(10));
     } else {
       LOG_FATAL(fmt::format("Error: unknown option value for --time_source: {:s}", vm["time_source"].as<std::string>()));
       exit(EXIT_CMD_LINE_ERROR);
