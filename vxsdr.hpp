@@ -44,6 +44,9 @@ class vxsdr {
   static constexpr size_t tx_data_queue_length           =     1024;    // slots in tx data queue;  1024 * 2048 / 160e6 =  13 ms at 160 MSPS
   static constexpr size_t command_queue_length           =       64;    // slots in command msg queue
   static constexpr size_t response_queue_length          =      256;    // slots in response msg queue
+  static constexpr size_t error_queue_length             =      256;    // slots in error queue
+  static constexpr size_t ack_queue_length               =      256;    // slots in ack queue
+  static constexpr size_t async_queue_length             =      256;    // slots in async msg queue
 
   // timeouts and waits between tries for queue push/pop
 
@@ -72,6 +75,9 @@ class vxsdr {
   using data_queue_element = largest_data_packet;
   using command_queue_element = largest_cmd_or_rsp_packet;
   using response_queue_element = largest_cmd_or_rsp_packet;
+  using error_queue_element = largest_cmd_or_rsp_packet;
+  using ack_queue_element = largest_cmd_or_rsp_packet;
+  using async_queue_element = largest_cmd_or_rsp_packet;
 
   // data queues
   boost::lockfree::spsc_queue<data_queue_element, boost::lockfree::capacity<rx_data_queue_length> > rx_data_queue;
@@ -79,6 +85,9 @@ class vxsdr {
   // command and response queues
   boost::lockfree::spsc_queue<command_queue_element, boost::lockfree::capacity<command_queue_length> > command_queue;
   boost::lockfree::spsc_queue<response_queue_element, boost::lockfree::capacity<response_queue_length> > response_queue;
+  boost::lockfree::spsc_queue<error_queue_element, boost::lockfree::capacity<error_queue_length> > error_queue;
+  boost::lockfree::spsc_queue<ack_queue_element, boost::lockfree::capacity<ack_queue_length> > ack_queue;
+  boost::lockfree::spsc_queue<async_queue_element, boost::lockfree::capacity<async_queue_length> > async_queue;
 
   // Boost context
   boost::asio::io_context context;
@@ -92,8 +101,6 @@ class vxsdr {
 
   // flags used for orderly shutdown
   std::atomic<bool> sender_thread_stop_flag = false, receiver_thread_stop_flag = false;
-
-  const bool forward_acks = false;
 
   uint64_t send_errors = 0, packets_sent = 0, samples_sent = 0, bytes_sent = 0;
   std::array<uint64_t, UINT8_MAX + 1> packet_types_sent = { 0 };
@@ -783,22 +790,6 @@ class vxsdr {
     start_receive();
   }
 
-  void response_queue_push_wait(response_queue_element &p) {
-    /*
-    unsigned wait_time_us = 0;
-    while(response_queue.write_available() == 0 and wait_time_us < response_queue_timeout_us) {
-      if(response_queue_wait_us > 0) {
-        std::this_thread::sleep_for(std::chrono::microseconds(response_queue_wait_us));
-        wait_time_us += response_queue_wait_us;
-      }
-    }
-    if(not response_queue.push(p)) {
-      LOG_ERROR("timeout pushing to response queue");
-    }
-    */
-    response_queue.push(p);
-  }
-
   void start_receive() {
     LOG_DEBUG("start_receive started");
     boost::asio::ip::udp::endpoint remote_endpoint;
@@ -893,10 +884,8 @@ class vxsdr {
               auto *r = reinterpret_cast<tx_signal_data_ack_packet *>(&recv_buffer);
               tx_buffer_used_bytes = r->tx_buffer_used_bytes;
               tx_buffer_fill_percent = std::min(100U, (100U * tx_buffer_used_bytes) / tx_buffer_size_bytes);
-              if(forward_acks) {
-                auto *p = reinterpret_cast<response_queue_element *>(&recv_buffer);
-                response_queue_push_wait(*p);
-              }
+              auto *p = reinterpret_cast<ack_queue_element *>(&recv_buffer);
+              ack_queue.push(*p);
             }
             break;
           // the buffer info commands are special cased since they can also be used for TX throttling
@@ -909,7 +898,7 @@ class vxsdr {
                   tx_buffer_fill_percent = std::min(100U, (100U * tx_buffer_used_bytes) / tx_buffer_size_bytes);
                   rx_buffer_fill_percent = std::min(100U, (100U * rx_buffer_used_bytes) / rx_buffer_size_bytes);
                   auto *p = reinterpret_cast<response_queue_element *>(&recv_buffer);
-                  response_queue_push_wait(*p);
+                  response_queue.push(*p);
                 }
                 break;
               case DEVICE_CMD_GET_BUFFER_INFO: {
@@ -917,46 +906,52 @@ class vxsdr {
                   tx_buffer_size_bytes = r->tx_buffer_size_bytes;
                   rx_buffer_size_bytes = r->rx_buffer_size_bytes;
                   auto *p = reinterpret_cast<response_queue_element *>(&recv_buffer);
-                  response_queue_push_wait(*p);
+                  response_queue.push(*p);
                 }
                 break;
               default: {
                   auto *p = reinterpret_cast<response_queue_element *>(&recv_buffer);
-                  response_queue_push_wait(*p);
+                  response_queue.push(*p);
                 }
                 break;
             }
             break;
           case PACKET_TYPE_DEVICE_CMD_ACK:
           case PACKET_TYPE_RX_RADIO_CMD_ACK:
-          case PACKET_TYPE_TX_RADIO_CMD_ACK:
-            if(forward_acks) {
-              auto *p = reinterpret_cast<response_queue_element *>(&recv_buffer);
-              response_queue_push_wait(*p);
+          case PACKET_TYPE_TX_RADIO_CMD_ACK: {
+              auto *p = reinterpret_cast<ack_queue_element *>(&recv_buffer);
+              ack_queue.push(*p);
             }
             break;
           // DEVICE_CMD_RSP handled above
           case PACKET_TYPE_ASYNC_MSG: {
               // FIXME: do whatever is needed to notify or shut down!!!
+              auto *p = reinterpret_cast<async_queue_element *>(&recv_buffer);
+              async_queue.push(*p);
+            }
+            break;
+          case PACKET_TYPE_RX_RADIO_CMD_RSP:
+          case PACKET_TYPE_TX_RADIO_CMD_RSP: {
               auto *p = reinterpret_cast<response_queue_element *>(&recv_buffer);
-              response_queue_push_wait(*p);
+              response_queue.push(*p);
             }
             break;
           case PACKET_TYPE_DEVICE_CMD_ERR:
-          case PACKET_TYPE_RX_RADIO_CMD_RSP:
-          case PACKET_TYPE_RX_RADIO_CMD_ERR:
-          case PACKET_TYPE_TX_RADIO_CMD_RSP:
-          case PACKET_TYPE_TX_RADIO_CMD_ERR: {
-              auto *p = reinterpret_cast<response_queue_element *>(&recv_buffer);
-              response_queue_push_wait(*p);
+          case PACKET_TYPE_TX_RADIO_CMD_ERR:
+          case PACKET_TYPE_RX_RADIO_CMD_ERR: {
+              auto *p = reinterpret_cast<error_queue_element *>(&recv_buffer);
+              error_queue.push(*p);
             }
             break;
-          // packet types that should never show up at the host are dropped
+          // packet types that should never show up at the host are sent to the error queue
           case PACKET_TYPE_TX_SIGNAL_DATA:
           case PACKET_TYPE_DEVICE_CMD:
           case PACKET_TYPE_RX_RADIO_CMD:
           case PACKET_TYPE_TX_RADIO_CMD:
-          default: // unrecognized packet types
+          default: { // unrecognized packet types
+              auto *p = reinterpret_cast<error_queue_element *>(&recv_buffer);
+              error_queue.push(*p);
+            }
             break;
         }
       }
