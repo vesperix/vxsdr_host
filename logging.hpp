@@ -3,6 +3,8 @@
 
 // disable exceptions in logging
 #define SPDLOG_NO_EXCEPTIONS
+// use the compiled library
+#define SPDLOG_COMPILED_LIB
 
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_sinks.h>
