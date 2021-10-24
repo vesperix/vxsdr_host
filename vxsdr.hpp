@@ -1,6 +1,8 @@
 #include <complex>
 #include <vector>
 #include <cstring>
+#include <tuple>
+#include <cstdint>
 #include <future>
 #include <fstream>
 
@@ -426,7 +428,7 @@ class vxsdr {
     ts = { (uint32_t)secs.time_since_epoch().count(), (uint32_t)nsecs.count() };
   }
 
-  void device_hello(const uint8_t subdev = 0, const uint8_t flags = 0) {
+  std::tuple<uint32_t, uint32_t> device_hello(const uint8_t subdev = 0, const uint8_t flags = 0) {
     cmd_packet p;
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_HELLO, subdev, flags, sizeof(p), 0 };
     cmd_queue_push(p);
@@ -440,12 +442,14 @@ class vxsdr {
     if(got_response) {
       auto *r = reinterpret_cast<hello_rsp_packet *>(&q);
       if(r->hdr.packet_type == PACKET_TYPE_DEVICE_CMD_RSP and r->hdr.command == p.hdr.command) {
-        log_packet_info(*r);
+        return std::tuple<uint32_t, uint32_t>(r->fpga_fw_version, r->mcu_sw_version);
       } else {
         LOG_ERROR("invalid response in device_hello()");
+        return std::tuple<uint32_t, uint32_t>(0, 0);
       }
     } else {
       LOG_ERROR("timeout in device_hello()");
+      return std::tuple<uint32_t, uint32_t>(0, 0);
     }
   }
 
@@ -473,7 +477,7 @@ class vxsdr {
     cmd_queue_push(p);
   }
 
-  void device_get_status(const uint8_t subdev = 0, const uint8_t flags = 0) {
+  std::tuple<uint16_t, uint16_t, uint32_t, uint32_t, uint32_t, uint32_t> device_get_status(const uint8_t subdev = 0, const uint8_t flags = 0) {
     cmd_packet p;
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_GET_STATUS, subdev, flags, sizeof(p), 0 };
     cmd_queue_push(p);
@@ -487,12 +491,15 @@ class vxsdr {
     if(got_response) {
       auto *r = reinterpret_cast<status_rsp_packet *>(&q);
       if(r->hdr.packet_type == PACKET_TYPE_DEVICE_CMD_RSP and r->hdr.command == p.hdr.command) {
-        log_packet_info(*r);
+        return std::tuple<uint16_t, uint16_t, uint32_t, uint32_t, uint32_t, uint32_t>(r->fpga_temperature, r->dac_temperature,
+                                    r->sequence_error_count, r->data_flow_error_flags, r->ddr_arbiter_status, r->ethernet_status);
       } else {
         LOG_ERROR("invalid response in device_get_status()");
+        return std::tuple<uint16_t, uint16_t, uint32_t, uint32_t, uint32_t, uint32_t>(0, 0, 0, 0, 0, 0);
       }
     } else {
       LOG_ERROR("timeout in device_get_status()");
+      return std::tuple<uint16_t, uint16_t, uint32_t, uint32_t, uint32_t, uint32_t>(0, 0, 0, 0, 0, 0);
     }
   }
 
@@ -878,7 +885,7 @@ class vxsdr {
   boost::asio::ip::udp::socket sender_socket;
   boost::asio::ip::udp::socket receiver_socket;
 
-  void device_get_buffer_info(const uint8_t subdev, const uint8_t flags = 0) {
+  std::tuple<uint32_t, uint32_t> device_get_buffer_info(const uint8_t subdev, const uint8_t flags = 0) {
     cmd_packet p;
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_GET_BUFFER_INFO, subdev, flags, sizeof(p), 0 };
     cmd_queue_push(p);
@@ -892,16 +899,18 @@ class vxsdr {
     if(got_response) {
       auto *r = reinterpret_cast<get_buffer_info_rsp_packet *>(&q);
       if(r->hdr.packet_type == PACKET_TYPE_DEVICE_CMD_RSP and r->hdr.command == p.hdr.command) {
-        log_packet_info(*r);
+        return std::tuple<uint32_t, uint32_t>(r->rx_buffer_size_bytes, r->tx_buffer_size_bytes);
       } else {
         LOG_ERROR("invalid response in device_get_buffer_info()");
+        return std::tuple<uint32_t, uint32_t>(0, 0);
       }
     } else {
       LOG_ERROR("timeout in device_get_buffer_info()");
+      return std::tuple<uint32_t, uint32_t>(0, 0);
     }
   }
 
-  void device_get_buffer_use(const uint8_t subdev, const uint8_t flags = 0) {
+  std::tuple<uint32_t, uint32_t> device_get_buffer_use(const uint8_t subdev, const uint8_t flags = 0) {
     cmd_packet p;
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_GET_BUFFER_USE, subdev, flags, sizeof(p), 0 };
     cmd_queue_push(p);
@@ -915,12 +924,14 @@ class vxsdr {
     if(got_response) {
       auto *r = reinterpret_cast<get_buffer_use_rsp_packet *>(&q);
       if(r->hdr.packet_type == PACKET_TYPE_DEVICE_CMD_RSP and r->hdr.command == p.hdr.command) {
-        log_packet_info(*r);
+        return std::tuple<uint32_t, uint32_t>(r->rx_buffer_used_bytes, r->tx_buffer_used_bytes);
       } else {
         LOG_ERROR("invalid response in device_get_buffer_use()");
+        return std::tuple<uint32_t, uint32_t>(0, 0);
       }
     } else {
       LOG_ERROR("timeout in device_get_buffer_use()");
+      return std::tuple<uint32_t, uint32_t>(0, 0);
     }
   }
 
