@@ -493,9 +493,11 @@ class vxsdr {
         return std::chrono::time_point<std::chrono::system_clock>(std::chrono::seconds(r->time.seconds) +
                                                                   std::chrono::nanoseconds(r->time.nanoseconds));
       } else {
+        LOG_ERROR("invalid response in device_get_time_now()");
         return std::chrono::time_point<std::chrono::system_clock>(std::chrono::seconds(0));
       }
     } else {
+      LOG_ERROR("response timeout in device_get_time_now()");
       return std::chrono::time_point<std::chrono::system_clock>(std::chrono::seconds(1));
     }
   }
@@ -640,9 +642,11 @@ class vxsdr {
       if(r->hdr.packet_type == PACKET_TYPE_TX_RADIO_CMD_RSP and r->hdr.command == p.hdr.command) {
         return r->freq;
       } else {
+        LOG_ERROR("invalid response in get_tx_freq()");
         return RESPONSE_ERROR;
       }
     } else {
+      LOG_ERROR("timeout in get_tx_freq()");
       return RESPONSE_TIMEOUT;
     }
   }
@@ -665,9 +669,11 @@ class vxsdr {
       if(r->hdr.packet_type == PACKET_TYPE_RX_RADIO_CMD_RSP and r->hdr.command == p.hdr.command) {
         return r->freq;
       } else {
+        LOG_ERROR("invalid response in get_rx_freq()");
         return RESPONSE_ERROR;
       }
     } else {
+      LOG_ERROR("timeout in get_rx_freq()");
       return RESPONSE_TIMEOUT;
     }
   }
@@ -703,9 +709,11 @@ class vxsdr {
       if(r->hdr.packet_type == PACKET_TYPE_TX_RADIO_CMD_RSP and r->hdr.command == p.hdr.command) {
         return r->gain;
       } else {
+        LOG_ERROR("invalid response in get_tx_gain()");
         return RESPONSE_ERROR;
       }
     } else {
+      LOG_ERROR("timeout in get_tx_gain()");
       return RESPONSE_TIMEOUT;
     }
   }
@@ -727,9 +735,11 @@ class vxsdr {
       if(r->hdr.packet_type == PACKET_TYPE_RX_RADIO_CMD_RSP and r->hdr.command == p.hdr.command) {
         return r->gain;
       } else {
+        LOG_ERROR("invalid response in get_rx_gain()");
         return RESPONSE_ERROR;
       }
     } else {
+      LOG_ERROR("timeout in get_rx_gain()");
       return RESPONSE_TIMEOUT;
     }
   }
@@ -765,9 +775,11 @@ class vxsdr {
       if(r->hdr.packet_type == PACKET_TYPE_TX_RADIO_CMD_RSP and r->hdr.command == p.hdr.command) {
         return r->rate;
       } else {
+        LOG_ERROR("invalid response in get_tx_rate()");
         return RESPONSE_ERROR;
       }
     } else {
+      LOG_ERROR("timeout in get_tx_rate()");
       return RESPONSE_TIMEOUT;
     }
   }
@@ -789,9 +801,11 @@ class vxsdr {
       if(r->hdr.packet_type == PACKET_TYPE_RX_RADIO_CMD_RSP and r->hdr.command == p.hdr.command) {
         return r->rate;
       } else {
+        LOG_ERROR("invalid response in get_rx_rate()");
         return RESPONSE_ERROR;
       }
     } else {
+      LOG_ERROR("timeout in get_rx_rate()");
       return RESPONSE_TIMEOUT;
     }
   }
