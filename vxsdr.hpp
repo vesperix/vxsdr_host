@@ -430,6 +430,23 @@ class vxsdr {
     cmd_packet p;
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_HELLO, subdev, flags, sizeof(p), 0 };
     cmd_queue_push(p);
+    response_queue_element q;
+    bool got_response = false;
+    unsigned wait_time_ms = 0;
+    while(not (got_response = response_queue.pop(q)) and wait_time_ms < device_response_timeout_ms) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(device_response_wait_ms));
+      wait_time_ms += device_response_wait_ms;
+    }
+    if(got_response) {
+      auto *r = reinterpret_cast<hello_rsp_packet *>(&q);
+      if(r->hdr.packet_type == PACKET_TYPE_DEVICE_CMD_RSP and r->hdr.command == p.hdr.command) {
+        log_packet_info(*r);
+      } else {
+        LOG_ERROR("invalid response in device_hello()");
+      }
+    } else {
+      LOG_ERROR("timeout in device_hello()");
+    }
   }
 
   void device_reset(const uint8_t subdev = 0, const uint8_t flags = 0) {
@@ -460,6 +477,23 @@ class vxsdr {
     cmd_packet p;
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_GET_STATUS, subdev, flags, sizeof(p), 0 };
     cmd_queue_push(p);
+    response_queue_element q;
+    bool got_response = false;
+    unsigned wait_time_ms = 0;
+    while(not (got_response = response_queue.pop(q)) and wait_time_ms < device_response_timeout_ms) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(device_response_wait_ms));
+      wait_time_ms += device_response_wait_ms;
+    }
+    if(got_response) {
+      auto *r = reinterpret_cast<status_rsp_packet *>(&q);
+      if(r->hdr.packet_type == PACKET_TYPE_DEVICE_CMD_RSP and r->hdr.command == p.hdr.command) {
+        log_packet_info(*r);
+      } else {
+        LOG_ERROR("invalid response in device_get_status()");
+      }
+    } else {
+      LOG_ERROR("timeout in device_get_status()");
+    }
   }
 
   void device_set_time_now(const std::chrono::time_point<std::chrono::system_clock> &t, const uint8_t subdev = 0, const uint8_t flags = 0) {
@@ -848,12 +882,46 @@ class vxsdr {
     cmd_packet p;
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_GET_BUFFER_INFO, subdev, flags, sizeof(p), 0 };
     cmd_queue_push(p);
+    response_queue_element q;
+    bool got_response = false;
+    unsigned wait_time_ms = 0;
+    while(not (got_response = response_queue.pop(q)) and wait_time_ms < device_response_timeout_ms) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(device_response_wait_ms));
+      wait_time_ms += device_response_wait_ms;
+    }
+    if(got_response) {
+      auto *r = reinterpret_cast<get_buffer_info_rsp_packet *>(&q);
+      if(r->hdr.packet_type == PACKET_TYPE_DEVICE_CMD_RSP and r->hdr.command == p.hdr.command) {
+        log_packet_info(*r);
+      } else {
+        LOG_ERROR("invalid response in device_get_buffer_info()");
+      }
+    } else {
+      LOG_ERROR("timeout in device_get_buffer_info()");
+    }
   }
 
   void device_get_buffer_use(const uint8_t subdev, const uint8_t flags = 0) {
     cmd_packet p;
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_GET_BUFFER_USE, subdev, flags, sizeof(p), 0 };
     cmd_queue_push(p);
+    response_queue_element q;
+    bool got_response = false;
+    unsigned wait_time_ms = 0;
+    while(not (got_response = response_queue.pop(q)) and wait_time_ms < device_response_timeout_ms) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(device_response_wait_ms));
+      wait_time_ms += device_response_wait_ms;
+    }
+    if(got_response) {
+      auto *r = reinterpret_cast<get_buffer_use_rsp_packet *>(&q);
+      if(r->hdr.packet_type == PACKET_TYPE_DEVICE_CMD_RSP and r->hdr.command == p.hdr.command) {
+        log_packet_info(*r);
+      } else {
+        LOG_ERROR("invalid response in device_get_buffer_use()");
+      }
+    } else {
+      LOG_ERROR("timeout in device_get_buffer_use()");
+    }
   }
 
   static int device_cmd_has_response(const uint8_t cmd) {
