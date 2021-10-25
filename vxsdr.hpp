@@ -48,7 +48,7 @@ class vxsdr {
   static constexpr size_t command_queue_length           =       64;    // slots in command msg queue
   static constexpr size_t response_queue_length          =      256;    // slots in response msg queue
   static constexpr size_t error_queue_length             =      256;    // slots in error queue
-  static constexpr size_t ack_queue_length               =      256;    // slots in ack queue
+  static constexpr size_t cmd_ack_queue_length           =      256;    // slots in command ack queue
   static constexpr size_t async_queue_length             =      256;    // slots in async msg queue
 
   // timeouts and waits between tries for queue push/pop
@@ -85,7 +85,7 @@ class vxsdr {
   using command_queue_element = largest_cmd_or_rsp_packet;
   using response_queue_element = largest_cmd_or_rsp_packet;
   using error_queue_element = largest_cmd_or_rsp_packet;
-  using ack_queue_element = largest_cmd_or_rsp_packet;
+  using cmd_ack_queue_element = largest_cmd_or_rsp_packet;
   using async_queue_element = largest_cmd_or_rsp_packet;
 
   // data queues
@@ -95,7 +95,7 @@ class vxsdr {
   boost::lockfree::spsc_queue<command_queue_element, boost::lockfree::capacity<command_queue_length> > command_queue;
   boost::lockfree::spsc_queue<response_queue_element, boost::lockfree::capacity<response_queue_length> > response_queue;
   boost::lockfree::spsc_queue<error_queue_element, boost::lockfree::capacity<error_queue_length> > error_queue;
-  boost::lockfree::spsc_queue<ack_queue_element, boost::lockfree::capacity<ack_queue_length> > ack_queue;
+  boost::lockfree::spsc_queue<cmd_ack_queue_element, boost::lockfree::capacity<cmd_ack_queue_length> > cmd_ack_queue;
   boost::lockfree::spsc_queue<async_queue_element, boost::lockfree::capacity<async_queue_length> > async_queue;
 
   // Boost context
@@ -406,7 +406,7 @@ class vxsdr {
     return n_put;
   }
 
-  void cmd_queue_push(packet &p) {
+  bool cmd_queue_push(packet &p) {
     command_queue_element q;
     std::memcpy(&q, &p, std::min((size_t)p.hdr.packet_size, sizeof(q)));
     unsigned wait_time_us = 0;
@@ -420,7 +420,37 @@ class vxsdr {
 
     if(not command_queue.push(q)) {
       LOG_ERROR("timeout pushing to command queue");
+      return false;
     }
+    if((q.hdr.flags & FLAGS_REQUEST_ACK) != 0) {
+      cmd_ack_queue_element a;
+      bool got_response = false;
+      unsigned wait_time_ms = 0;
+      while(not (got_response = cmd_ack_queue.pop(a)) and wait_time_ms < device_response_timeout_ms) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(device_response_wait_ms));
+        wait_time_ms += device_response_wait_ms;
+      }
+      if(got_response) {
+        auto *r = reinterpret_cast<hello_rsp_packet *>(&a);
+        bool packet_types_match = false;
+        if((q.hdr.packet_type == PACKET_TYPE_DEVICE_CMD   and r->hdr.packet_type == PACKET_TYPE_DEVICE_CMD_ACK)   or
+           (q.hdr.packet_type == PACKET_TYPE_RX_RADIO_CMD and r->hdr.packet_type == PACKET_TYPE_RX_RADIO_CMD_ACK) or
+           (q.hdr.packet_type == PACKET_TYPE_TX_RADIO_CMD and r->hdr.packet_type == PACKET_TYPE_TX_RADIO_CMD_ACK)) {
+          packet_types_match = true;
+        }
+        // for an ack to match, packet types, commands, and subdevices must all match
+        if(packet_types_match and r->hdr.command == q.hdr.command and r->hdr.target_subdevice == q.hdr.target_subdevice) {
+          return true;
+        } else {
+          LOG_ERROR("invalid ack received");
+          return false;
+        }
+      } else {
+        LOG_ERROR("timeout waiting for ack");
+        return false;
+      }
+    }
+    return true;
   }
 
   void time_point_to_time_spec_t(const std::chrono::time_point<std::chrono::system_clock> &t, time_spec_t &ts) {
@@ -429,7 +459,7 @@ class vxsdr {
     ts = { (uint32_t)secs.time_since_epoch().count(), (uint32_t)nsecs.count() };
   }
 
-  std::tuple<uint32_t, uint32_t> device_hello(const uint8_t subdev = 0, const uint8_t flags = 0) {
+  std::optional<std::tuple<uint32_t, uint32_t>> device_hello(const uint8_t subdev = 0, const uint8_t flags = 0) {
     cmd_packet p;
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_HELLO, subdev, flags, sizeof(p), 0 };
     cmd_queue_push(p);
@@ -446,36 +476,36 @@ class vxsdr {
         return std::tuple<uint32_t, uint32_t>(r->fpga_fw_version, r->mcu_sw_version);
       } else {
         LOG_ERROR("invalid response in device_hello()");
-        return std::tuple<uint32_t, uint32_t>(0, 0);
+        return std::nullopt;
       }
     } else {
       LOG_ERROR("timeout in device_hello()");
-      return std::tuple<uint32_t, uint32_t>(0, 0);
+      return std::nullopt;
     }
   }
 
-  void device_reset(const uint8_t subdev = 0, const uint8_t flags = 0) {
+  bool device_reset(const uint8_t subdev = 0, const uint8_t flags = 0) {
     cmd_packet p;
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_RESET, subdev, flags, sizeof(p), 0 };
-    cmd_queue_push(p);
+    return cmd_queue_push(p);
   }
 
-  void device_open_session(const uint8_t subdev = 0, const uint8_t flags = 0) {
+  bool device_open_session(const uint8_t subdev = 0, const uint8_t flags = 0) {
     cmd_packet p;
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_OPEN_SESSION, subdev, flags, sizeof(p), 0 };
-    cmd_queue_push(p);
+    return cmd_queue_push(p);
   }
 
-  void device_close_session(const uint8_t subdev = 0, const uint8_t flags = 0) {
+  bool device_close_session(const uint8_t subdev = 0, const uint8_t flags = 0) {
     cmd_packet p;
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_CLOSE_SESSION, subdev, flags, sizeof(p), 0 };
-    cmd_queue_push(p);
+    return cmd_queue_push(p);
   }
 
-  void device_clear_status(const uint8_t subdev = 0, const uint8_t flags = 0) {
+  bool device_clear_status(const uint8_t subdev = 0, const uint8_t flags = 0) {
     cmd_packet p;
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_CLEAR_STATUS, subdev, flags, sizeof(p), 0 };
-    cmd_queue_push(p);
+    return cmd_queue_push(p);
   }
 
   std::optional<std::tuple<uint16_t, uint16_t, uint32_t, uint32_t, uint32_t, uint32_t>> device_get_status(const uint8_t subdev = 0, const uint8_t flags = 0) {
@@ -504,45 +534,47 @@ class vxsdr {
     }
   }
 
-  void device_set_time_now(const std::chrono::time_point<std::chrono::system_clock> &t, const uint8_t subdev = 0, const uint8_t flags = 0) {
+  bool device_set_time_now(const std::chrono::time_point<std::chrono::system_clock> &t, const uint8_t subdev = 0, const uint8_t flags = 0) {
     device_time_packet p;
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_SET_TIME_NOW, subdev, flags, sizeof(p), 0 };
     time_point_to_time_spec_t(t, p.time);
-    cmd_queue_push(p);
+    return cmd_queue_push(p);
   }
 
-  void device_set_time_next_pps(const std::chrono::time_point<std::chrono::system_clock> &t, const uint8_t subdev = 0, const uint8_t flags = 0) {
+  bool device_set_time_next_pps(const std::chrono::time_point<std::chrono::system_clock> &t, const uint8_t subdev = 0, const uint8_t flags = 0) {
     device_time_packet p;
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_SET_TIME_NEXT_PPS, subdev, flags, sizeof(p), 0 };
     time_point_to_time_spec_t(t, p.time);
-    cmd_queue_push(p);
+    return cmd_queue_push(p);
   }
 
-  void device_set_time_now(const int64_t sec, const int32_t nsec, const uint8_t subdev = 0, const uint8_t flags = 0) {
+  bool device_set_time_now(const int64_t sec, const int32_t nsec, const uint8_t subdev = 0, const uint8_t flags = 0) {
     device_time_packet p;
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_SET_TIME_NOW, subdev, flags, sizeof(p), 0 };
     if(sec >= 0 and sec <= UINT32_MAX and nsec >= 0 and nsec < 1'000'000'000) {
       p.time.seconds = sec;
       p.time.nanoseconds = nsec;
-      cmd_queue_push(p);
+      return cmd_queue_push(p);
     } else {
       LOG_ERROR("time out of range in device_set_time_now()");
     }
+    return false;
   }
 
-  void device_set_time_next_pps(const int64_t sec, const int32_t nsec, const uint8_t subdev = 0, const uint8_t flags = 0) {
+  bool device_set_time_next_pps(const int64_t sec, const int32_t nsec, const uint8_t subdev = 0, const uint8_t flags = 0) {
     device_time_packet p;
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_SET_TIME_NEXT_PPS, subdev, flags, sizeof(p), 0 };
     if(sec >= 0 and sec <= UINT32_MAX and nsec >= 0 and nsec < 1'000'000'000) {
       p.time.seconds = sec;
       p.time.nanoseconds = nsec;
-      cmd_queue_push(p);
+      return cmd_queue_push(p);
     } else {
       LOG_ERROR("time out of range in device_set_time_next_pps()");
     }
+    return false;
   }
 
-  void device_get_time_now(uint32_t &sec, uint32_t &nsec, const uint8_t subdev = 0, const uint8_t flags = 0) {
+  bool device_get_time_now(uint32_t &sec, uint32_t &nsec, const uint8_t subdev = 0, const uint8_t flags = 0) {
     device_time_packet p;
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_GET_TIME, subdev, flags, sizeof(p), 0 };
     cmd_queue_push(p);
@@ -558,6 +590,7 @@ class vxsdr {
       if(r->hdr.packet_type == PACKET_TYPE_DEVICE_CMD_RSP and r->hdr.command == p.hdr.command) {
         sec = r->time.seconds;
         nsec = r->time.nanoseconds;
+        return true;
       } else {
         LOG_ERROR("invalid response in device_get_time_now()");
         sec = 0;
@@ -568,9 +601,10 @@ class vxsdr {
       sec = 0;
       nsec = 0;
     }
+    return false;
   }
 
-  std::chrono::time_point<std::chrono::system_clock> device_get_time_now(const uint8_t subdev = 0, const uint8_t flags = 0) {
+  std::optional<std::chrono::time_point<std::chrono::system_clock>> device_get_time_now(const uint8_t subdev = 0, const uint8_t flags = 0) {
     device_time_packet p;
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_GET_TIME, subdev, flags, sizeof(p), 0 };
     cmd_queue_push(p);
@@ -588,87 +622,87 @@ class vxsdr {
                                                                   std::chrono::nanoseconds(r->time.nanoseconds));
       } else {
         LOG_ERROR("invalid response in device_get_time_now()");
-        return std::chrono::time_point<std::chrono::system_clock>(std::chrono::seconds(0));
+        return std::nullopt;
       }
     } else {
       LOG_ERROR("response timeout in device_get_time_now()");
-      return std::chrono::time_point<std::chrono::system_clock>(std::chrono::seconds(0));
+      return std::nullopt;
     }
   }
 
-  void tx_start_now_until_stop(const uint8_t subdev = 0, const uint8_t flags = 0) {
+  bool tx_start_now_until_stop(const uint8_t subdev = 0, const uint8_t flags = 0) {
     stream_ctrl_packet p;
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_START_NOW_UNTIL_STOP, subdev, flags, sizeof(p), 0 };
-    cmd_queue_push(p);
+    return cmd_queue_push(p);
   }
 
-  void rx_start_now_until_stop(const uint8_t subdev = 0, const uint8_t flags = 0) {
+  bool rx_start_now_until_stop(const uint8_t subdev = 0, const uint8_t flags = 0) {
     stream_ctrl_packet p;
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_START_NOW_UNTIL_STOP, subdev, flags, sizeof(p), 0 };
-    cmd_queue_push(p);
+    return cmd_queue_push(p);
   }
 
-  void tx_start_now_for_n_samples(const uint64_t n, const uint8_t subdev = 0, const uint8_t flags = 0) {
+  bool tx_start_now_for_n_samples(const uint64_t n, const uint8_t subdev = 0, const uint8_t flags = 0) {
     stream_ctrl_packet_samples p;
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_START_NOW_FOR_N_SAMPLES, subdev, flags, sizeof(p), 0 };
     p.n_samples = n;
-    cmd_queue_push(p);
+    return cmd_queue_push(p);
   }
 
-  void rx_start_now_for_n_samples(const uint64_t n, const uint8_t subdev = 0, const uint8_t flags = 0) {
+  bool rx_start_now_for_n_samples(const uint64_t n, const uint8_t subdev = 0, const uint8_t flags = 0) {
     stream_ctrl_packet_samples p;
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_START_NOW_FOR_N_SAMPLES, subdev, flags, sizeof(p), 0 };
     p.n_samples = n;
-    cmd_queue_push(p);
+    return cmd_queue_push(p);
   }
 
-  void tx_start_at_time_for_n_samples(const std::chrono::time_point<std::chrono::system_clock> &t, const uint64_t n, const uint8_t subdev = 0, const uint8_t flags = 0) {
+  bool tx_start_at_time_for_n_samples(const std::chrono::time_point<std::chrono::system_clock> &t, const uint64_t n, const uint8_t subdev = 0, const uint8_t flags = 0) {
     stream_ctrl_packet_time_samples p;
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_START_AT_TIME_FOR_N_SAMPLES, subdev, flags, sizeof(p), 0 };
     time_point_to_time_spec_t(t, p.time);
     p.n_samples = n;
-    cmd_queue_push(p);
+    return cmd_queue_push(p);
   }
 
-  void rx_start_at_time_for_n_samples(const std::chrono::time_point<std::chrono::system_clock> &t,const uint64_t n, const uint8_t subdev = 0, const uint8_t flags = 0) {
+  bool rx_start_at_time_for_n_samples(const std::chrono::time_point<std::chrono::system_clock> &t,const uint64_t n, const uint8_t subdev = 0, const uint8_t flags = 0) {
     stream_ctrl_packet_time_samples p;
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_START_AT_TIME_FOR_N_SAMPLES, subdev, flags, sizeof(p), 0 };
     time_point_to_time_spec_t(t, p.time);
     p.n_samples = n;
-    cmd_queue_push(p);
+    return cmd_queue_push(p);
   }
 
-  void tx_start_at_time_until_stop(const std::chrono::time_point<std::chrono::system_clock> &t, const uint8_t subdev = 0, const uint8_t flags = 0) {
+  bool tx_start_at_time_until_stop(const std::chrono::time_point<std::chrono::system_clock> &t, const uint8_t subdev = 0, const uint8_t flags = 0) {
     stream_ctrl_packet_time p;
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_START_AT_TIME_UNTIL_STOP, subdev, flags, sizeof(p), 0 };
     time_point_to_time_spec_t(t, p.time);
-    cmd_queue_push(p);
+    return cmd_queue_push(p);
   }
 
-  void rx_start_at_time_until_stop(const std::chrono::time_point<std::chrono::system_clock> &t, const uint8_t subdev = 0, const uint8_t flags = 0) {
+  bool rx_start_at_time_until_stop(const std::chrono::time_point<std::chrono::system_clock> &t, const uint8_t subdev = 0, const uint8_t flags = 0) {
     stream_ctrl_packet_time p;
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_START_AT_TIME_UNTIL_STOP, subdev, flags, sizeof(p), 0 };
     time_point_to_time_spec_t(t, p.time);
-    cmd_queue_push(p);
+    return cmd_queue_push(p);
   }
 
-  void tx_set_iq_bias(const double i_bias, const double q_bias, const uint8_t subdev = 0, const uint8_t flags = 0) {
+  bool tx_set_iq_bias(const double i_bias, const double q_bias, const uint8_t subdev = 0, const uint8_t flags = 0) {
     radio_iq_bias_packet p;
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_SET_IQ_BIAS, subdev, flags, sizeof(p), 0 };
     p.i_bias = i_bias;
     p.q_bias = q_bias;
-    cmd_queue_push(p);
+    return cmd_queue_push(p);
   }
 
-  void rx_set_iq_bias(const double i_bias, const double q_bias, const uint8_t subdev = 0, const uint8_t flags = 0) {
+  bool rx_set_iq_bias(const double i_bias, const double q_bias, const uint8_t subdev = 0, const uint8_t flags = 0) {
     radio_iq_bias_packet p;
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_SET_IQ_BIAS, subdev, flags, sizeof(p), 0 };
     p.i_bias = i_bias;
     p.q_bias = q_bias;
-    cmd_queue_push(p);
+    return cmd_queue_push(p);
   }
 
-  void tx_set_iq_corr(const double ii_corr, const double iq_corr, const double qi_corr, const double qq_corr,
+  bool tx_set_iq_corr(const double ii_corr, const double iq_corr, const double qi_corr, const double qq_corr,
       const uint8_t subdev = 0, const uint8_t flags = 0) {
     radio_iq_corr_packet p;
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_SET_IQ_CORR, subdev, flags, sizeof(p), 0 };
@@ -676,10 +710,10 @@ class vxsdr {
     p.iq_corr = iq_corr;
     p.qi_corr = qi_corr;
     p.qq_corr = qq_corr;
-    cmd_queue_push(p);
+    return cmd_queue_push(p);
   }
 
-  void rx_set_iq_corr(const double ii_corr, const double iq_corr, const double qi_corr, const double qq_corr,
+  bool rx_set_iq_corr(const double ii_corr, const double iq_corr, const double qi_corr, const double qq_corr,
       const uint8_t subdev = 0, const uint8_t flags = 0) {
     radio_iq_corr_packet p;
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_SET_IQ_CORR, subdev, flags, sizeof(p), 0 };
@@ -687,35 +721,35 @@ class vxsdr {
     p.iq_corr = iq_corr;
     p.qi_corr = qi_corr;
     p.qq_corr = qq_corr;
-    cmd_queue_push(p);
+    return cmd_queue_push(p);
   }
 
-  void tx_stop_now(const uint8_t subdev = 0, const uint8_t flags = 0) {
+  bool tx_stop_now(const uint8_t subdev = 0, const uint8_t flags = 0) {
     stream_ctrl_packet p;
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_STOP_NOW, subdev, flags, sizeof(p), 0 };
-    cmd_queue_push(p);
+    return cmd_queue_push(p);
   }
 
-  void rx_stop_now(const uint8_t subdev = 0, const uint8_t flags = 0) {
+  bool rx_stop_now(const uint8_t subdev = 0, const uint8_t flags = 0) {
     cmd_packet p;
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_STOP_NOW, subdev, flags, sizeof(p), 0 };
-    cmd_queue_push(p);
+    return cmd_queue_push(p);
   }
 
-  void set_tx_freq(const double freq, const uint8_t subdev = 0, const uint8_t flags = 0) {
+  bool set_tx_freq(const double freq, const uint8_t subdev = 0, const uint8_t flags = 0) {
     radio_rf_freq_packet p;
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_SET_RF_FREQ, subdev, flags, sizeof(p), 0 };
     p.freq = freq;
     p.rtol = 1e-9;
-    cmd_queue_push(p);
+    return cmd_queue_push(p);
   }
 
-  void set_rx_freq(const double freq, const uint8_t subdev = 0, const uint8_t flags = 0) {
+  bool set_rx_freq(const double freq, const uint8_t subdev = 0, const uint8_t flags = 0) {
     radio_rf_freq_packet p;
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_SET_RF_FREQ, subdev, flags, sizeof(p), 0 };
     p.freq = freq;
     p.rtol = 1e-9;
-    cmd_queue_push(p);
+    return cmd_queue_push(p);
   }
 
   double get_tx_freq(const double freq, const uint8_t subdev = 0, const uint8_t flags = 0) {
@@ -772,18 +806,18 @@ class vxsdr {
     }
   }
 
-  void set_tx_gain(const double gain_db, const uint8_t subdev = 0, const uint8_t flags = 0) {
+  bool set_tx_gain(const double gain_db, const uint8_t subdev = 0, const uint8_t flags = 0) {
     radio_rf_gain_packet p;
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_SET_RF_GAIN, subdev, flags, sizeof(p), 0 };
     p.gain = gain_db;
-    cmd_queue_push(p);
+    return cmd_queue_push(p);
   }
 
-  void set_rx_gain(const double gain_db, const uint8_t subdev = 0, const uint8_t flags = 0) {
+  bool set_rx_gain(const double gain_db, const uint8_t subdev = 0, const uint8_t flags = 0) {
     radio_rf_gain_packet p;
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_SET_RF_GAIN, subdev, flags, sizeof(p), 0 };
     p.gain = gain_db;
-    cmd_queue_push(p);
+    return cmd_queue_push(p);
   }
 
   double get_tx_gain(const double gain_db, const uint8_t subdev = 0, const uint8_t flags = 0) {
@@ -838,18 +872,18 @@ class vxsdr {
     }
   }
 
-  void set_tx_rate(const double rate_samples_sec, const uint8_t subdev = 0, const uint8_t flags = 0) {
+  bool set_tx_rate(const double rate_samples_sec, const uint8_t subdev = 0, const uint8_t flags = 0) {
     radio_sample_rate_packet p;
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_SET_SAMPLE_RATE, subdev, flags, sizeof(p), 0 };
     p.rate = rate_samples_sec;
-    cmd_queue_push(p);
+    return cmd_queue_push(p);
   }
 
-  void set_rx_rate(const double rate_samples_sec, const uint8_t subdev = 0, const uint8_t flags = 0) {
+  bool set_rx_rate(const double rate_samples_sec, const uint8_t subdev = 0, const uint8_t flags = 0) {
     radio_sample_rate_packet p;
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_SET_SAMPLE_RATE, subdev, flags, sizeof(p), 0 };
     p.rate = rate_samples_sec;
-    cmd_queue_push(p);
+    return cmd_queue_push(p);
   }
 
   double get_tx_rate(const double rate_samples_sec, const uint8_t subdev = 0, const uint8_t flags = 0) {
@@ -904,15 +938,17 @@ class vxsdr {
     }
   }
 
-  void set_tx_antenna(const std::string &ant, const uint8_t subdev = 0, const uint8_t flags = 0) {
+  bool set_tx_antenna(const std::string &ant, const uint8_t subdev = 0, const uint8_t flags = 0) {
     //FIXME: implement
+    return false;
   }
 
-  void set_rx_antenna(const std::string &ant, const uint8_t subdev = 0, const uint8_t flags = 0) {
+  bool set_rx_antenna(const std::string &ant, const uint8_t subdev = 0, const uint8_t flags = 0) {
     //FIXME: implement
+    return false;
   }
 
-  void set_tx_enable(const bool enabled, const uint8_t subdev = 0, const uint8_t flags = 0) {
+  bool set_tx_enable(const bool enabled, const uint8_t subdev = 0, const uint8_t flags = 0) {
     radio_rf_enable_packet p;
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_SET_RF_ENABLED, subdev, flags, sizeof(p), 0 };
     if(enabled) {
@@ -920,10 +956,10 @@ class vxsdr {
     } else {
       p.enabled = 0;
     }
-    cmd_queue_push(p);
+    return cmd_queue_push(p);
   }
 
-  void set_rx_enable(const bool enabled, const uint8_t subdev = 0, const uint8_t flags = 0) {
+  bool set_rx_enable(const bool enabled, const uint8_t subdev = 0, const uint8_t flags = 0) {
     radio_rf_enable_packet p;
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_SET_RF_ENABLED, subdev, flags, sizeof(p), 0 };
     if(enabled) {
@@ -931,7 +967,7 @@ class vxsdr {
     } else {
       p.enabled = 0;
     }
-    cmd_queue_push(p);
+    return cmd_queue_push(p);
   }
 
  private:
@@ -1206,8 +1242,7 @@ class vxsdr {
               auto *r = reinterpret_cast<tx_signal_data_ack_packet *>(&recv_buffer);
               tx_buffer_used_bytes = r->tx_buffer_used_bytes;
               tx_buffer_fill_percent = std::min(100U, (100U * tx_buffer_used_bytes) / tx_buffer_size_bytes);
-              auto *p = reinterpret_cast<ack_queue_element *>(&recv_buffer);
-              ack_queue.push(*p);
+              // DO NOT PUSH DATA ACKS TO COMMAND ACK QUEUE!!
             }
             break;
           // the buffer info commands are special cased since they can also be used for TX throttling
@@ -1241,8 +1276,8 @@ class vxsdr {
           case PACKET_TYPE_DEVICE_CMD_ACK:
           case PACKET_TYPE_RX_RADIO_CMD_ACK:
           case PACKET_TYPE_TX_RADIO_CMD_ACK: {
-              auto *p = reinterpret_cast<ack_queue_element *>(&recv_buffer);
-              ack_queue.push(*p);
+              auto *p = reinterpret_cast<cmd_ack_queue_element *>(&recv_buffer);
+              cmd_ack_queue.push(*p);
             }
             break;
           // DEVICE_CMD_RSP handled above
