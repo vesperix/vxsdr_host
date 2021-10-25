@@ -518,20 +518,28 @@ class vxsdr {
     cmd_queue_push(p);
   }
 
-  void device_set_time_now(const uint32_t sec, const uint32_t nsec, const uint8_t subdev = 0, const uint8_t flags = 0) {
+  void device_set_time_now(const int64_t sec, const int32_t nsec, const uint8_t subdev = 0, const uint8_t flags = 0) {
     device_time_packet p;
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_SET_TIME_NOW, subdev, flags, sizeof(p), 0 };
-    p.time.seconds = sec;
-    p.time.nanoseconds = nsec;
-    cmd_queue_push(p);
+    if(sec >= 0 and sec <= UINT32_MAX and nsec >= 0 and nsec < 1'000'000'000) {
+      p.time.seconds = sec;
+      p.time.nanoseconds = nsec;
+      cmd_queue_push(p);
+    } else {
+      LOG_ERROR("time out of range in device_set_time_now()")
+    }
   }
 
-  void device_set_time_next_pps(const uint32_t sec, const uint32_t nsec, const uint8_t subdev = 0, const uint8_t flags = 0) {
+  void device_set_time_next_pps(const int64_t sec, const int32_t nsec, const uint8_t subdev = 0, const uint8_t flags = 0) {
     device_time_packet p;
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_SET_TIME_NEXT_PPS, subdev, flags, sizeof(p), 0 };
-    p.time.seconds = sec;
-    p.time.nanoseconds = nsec;
-    cmd_queue_push(p);
+    if(sec >= 0 and sec <= UINT32_MAX and nsec >= 0 and nsec < 1'000'000'000) {
+      p.time.seconds = sec;
+      p.time.nanoseconds = nsec;
+      cmd_queue_push(p);
+    } else {
+      LOG_ERROR("time out of range in device_set_time_next_pps()")
+    }
   }
 
   void device_get_time_now(uint32_t &sec, uint32_t &nsec, const uint8_t subdev = 0, const uint8_t flags = 0) {
