@@ -168,8 +168,9 @@ struct packet_header {
 };
 
 struct time_spec_t {
-  uint32_t                 seconds;
+  // FIXME: temporary workaround for order in FPGA and MCU code
   uint32_t                 nanoseconds;
+  uint32_t                 seconds;
 };
 
 typedef uint64_t          stream_spec_t;
