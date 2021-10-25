@@ -65,7 +65,7 @@ class vxsdr {
   static constexpr unsigned response_queue_timeout_us    =   100000;
   static constexpr unsigned response_queue_wait_us       =       10;
 
-  // timeouts and waits for responses form device
+  // timeouts and waits for responses from device
    static constexpr unsigned device_response_timeout_ms  =      100;
    static constexpr unsigned device_response_wait_ms     =        1;
    static constexpr double RESPONSE_ERROR                =    -1e99;
