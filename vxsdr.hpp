@@ -1409,16 +1409,18 @@ class vxsdr {
 
     // wait for the rx to reach RUNNING
     unsigned total_wait_ms = 0;
+    LOG_INFO("waiting for udp rx to reach RUNNING state");
     while(udp_rx_state != RUNNING and total_wait_ms < udp_tx_ready_timeout_ms) {
       std::this_thread::sleep_for(std::chrono::milliseconds(udp_tx_ready_wait_ms));
       total_wait_ms += udp_tx_ready_wait_ms;
     }
 
     if(total_wait_ms >= udp_tx_ready_timeout_ms) {
-      LOG_ERROR("udp tx timed out waiting for rx to become ready; shutting down");
+      LOG_ERROR("udp tx timed out waiting for udp rx to reach RUNNING state; shutting down");
       receiver_thread_stop_flag = true;
       sender_thread_stop_flag = true;
     } else {
+      LOG_INFO("udp rx in RUNNING state; udp tx starting");
       udp_tx_state = RUNNING;
     }
 
