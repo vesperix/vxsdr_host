@@ -3,6 +3,7 @@
 #include <cstring>
 #include <tuple>
 #include <cstdint>
+#include <optional>
 #include <future>
 #include <fstream>
 
@@ -477,7 +478,7 @@ class vxsdr {
     cmd_queue_push(p);
   }
 
-  std::tuple<uint16_t, uint16_t, uint32_t, uint32_t, uint32_t, uint32_t> device_get_status(const uint8_t subdev = 0, const uint8_t flags = 0) {
+  std::optional<std::tuple<uint16_t, uint16_t, uint32_t, uint32_t, uint32_t, uint32_t>> device_get_status(const uint8_t subdev = 0, const uint8_t flags = 0) {
     cmd_packet p;
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_GET_STATUS, subdev, flags, sizeof(p), 0 };
     cmd_queue_push(p);
@@ -495,11 +496,11 @@ class vxsdr {
                                     r->sequence_error_count, r->data_flow_error_flags, r->ddr_arbiter_status, r->ethernet_status);
       } else {
         LOG_ERROR("invalid response in device_get_status()");
-        return std::tuple<uint16_t, uint16_t, uint32_t, uint32_t, uint32_t, uint32_t>(0, 0, 0, 0, 0, 0);
+        return std::nullopt;
       }
     } else {
       LOG_ERROR("timeout in device_get_status()");
-      return std::tuple<uint16_t, uint16_t, uint32_t, uint32_t, uint32_t, uint32_t>(0, 0, 0, 0, 0, 0);
+      return std::nullopt;
     }
   }
 
