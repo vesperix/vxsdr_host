@@ -73,7 +73,6 @@ class vxsdr {
   static constexpr unsigned udp_tx_ready_timeout_ms      =     1000;
   static constexpr unsigned udp_tx_ready_wait_ms         =        1;
 
-
   // parameters used to set the OS's network buffer
   static constexpr unsigned network_send_buffer_bytes    =   4194304;   // ~6.6 ms at 160 MSPS
   static constexpr unsigned network_receive_buffer_bytes =  16777216;   // ~26 ms at 160 MSPS
