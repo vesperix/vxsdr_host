@@ -968,7 +968,7 @@ class vxsdr {
         wait_time_ms += device_response_wait_ms;
       }
       if(got_response) {
-        auto *r = reinterpret_cast<hello_rsp_packet *>(&a);
+        auto *r = reinterpret_cast<ack_packet *>(&a);
         bool packet_types_match = false;
         if((q.hdr.packet_type == PACKET_TYPE_DEVICE_CMD   and r->hdr.packet_type == PACKET_TYPE_DEVICE_CMD_ACK)   or
            (q.hdr.packet_type == PACKET_TYPE_RX_RADIO_CMD and r->hdr.packet_type == PACKET_TYPE_RX_RADIO_CMD_ACK) or
@@ -990,58 +990,16 @@ class vxsdr {
     return true;
   }
 
-  std::optional<std::tuple<uint32_t, uint32_t>> device_get_buffer_info(const uint8_t subdev, const uint8_t flags = 0) {
+  bool device_get_buffer_info(const uint8_t subdev, const uint8_t flags = 0) {
     cmd_packet p;
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_GET_BUFFER_INFO, subdev, flags, sizeof(p), 0 };
-    if(not cmd_queue_push_check(p)) {
-      return std::nullopt;
-    }
-    response_queue_element q;
-    bool got_response = false;
-    unsigned wait_time_ms = 0;
-    while(not (got_response = response_queue.pop(q)) and wait_time_ms < device_response_timeout_ms) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(device_response_wait_ms));
-      wait_time_ms += device_response_wait_ms;
-    }
-    if(got_response) {
-      auto *r = reinterpret_cast<get_buffer_info_rsp_packet *>(&q);
-      if(r->hdr.packet_type == PACKET_TYPE_DEVICE_CMD_RSP and r->hdr.command == p.hdr.command) {
-        return std::tuple<uint32_t, uint32_t>(r->rx_buffer_size_bytes, r->tx_buffer_size_bytes);
-      } else {
-        LOG_ERROR("invalid response in device_get_buffer_info()");
-        return std::nullopt;
-      }
-    } else {
-      LOG_ERROR("timeout in device_get_buffer_info()");
-      return std::nullopt;
-    }
+    return cmd_queue_push_check(p);
   }
 
-  std::optional<std::tuple<uint32_t, uint32_t>> device_get_buffer_use(const uint8_t subdev, const uint8_t flags = 0) {
+  bool device_get_buffer_use(const uint8_t subdev, const uint8_t flags = 0) {
     cmd_packet p;
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_GET_BUFFER_USE, subdev, flags, sizeof(p), 0 };
-    if(not cmd_queue_push_check(p)) {
-      return std::nullopt;
-    }
-    response_queue_element q;
-    bool got_response = false;
-    unsigned wait_time_ms = 0;
-    while(not (got_response = response_queue.pop(q)) and wait_time_ms < device_response_timeout_ms) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(device_response_wait_ms));
-      wait_time_ms += device_response_wait_ms;
-    }
-    if(got_response) {
-      auto *r = reinterpret_cast<get_buffer_use_rsp_packet *>(&q);
-      if(r->hdr.packet_type == PACKET_TYPE_DEVICE_CMD_RSP and r->hdr.command == p.hdr.command) {
-        return std::tuple<uint32_t, uint32_t>(r->rx_buffer_used_bytes, r->tx_buffer_used_bytes);
-      } else {
-        LOG_ERROR("invalid response in device_get_buffer_use()");
-        return std::nullopt;
-      }
-    } else {
-      LOG_ERROR("timeout in device_get_buffer_use()");
-      return std::nullopt;
-    }
+    return cmd_queue_push_check(p);
   }
 
   static int device_cmd_has_response(const uint8_t cmd) {
@@ -1276,16 +1234,16 @@ class vxsdr {
                   rx_buffer_used_bytes = r->rx_buffer_used_bytes;
                   tx_buffer_fill_percent = std::min(100U, (100U * tx_buffer_used_bytes) / tx_buffer_size_bytes);
                   rx_buffer_fill_percent = std::min(100U, (100U * rx_buffer_used_bytes) / rx_buffer_size_bytes);
-                  auto *p = reinterpret_cast<response_queue_element *>(&recv_buffer);
-                  response_queue.push(*p);
+                  //auto *p = reinterpret_cast<response_queue_element *>(&recv_buffer);
+                  //response_queue.push(*p);
                 }
                 break;
               case DEVICE_CMD_GET_BUFFER_INFO: {
                   auto *r = reinterpret_cast<get_buffer_info_rsp_packet *>(&recv_buffer);
                   tx_buffer_size_bytes = r->tx_buffer_size_bytes;
                   rx_buffer_size_bytes = r->rx_buffer_size_bytes;
-                  auto *p = reinterpret_cast<response_queue_element *>(&recv_buffer);
-                  response_queue.push(*p);
+                  //auto *p = reinterpret_cast<response_queue_element *>(&recv_buffer);
+                  //response_queue.push(*p);
                 }
                 break;
               default: {
@@ -1401,15 +1359,15 @@ class vxsdr {
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     // clear the status registers
     device_clear_status(device_subdev);
-    device_get_status(device_subdev);
+    //device_get_status(device_subdev);
   }
 
   void close_sdr(const uint8_t device_subdev, const uint8_t tx_subdev, const uint8_t rx_subdev) {
     // get the status at the end
-    device_get_status(device_subdev);
+    //device_get_status(device_subdev);
     // send a stop, requesting an ack so that the rx will see an incoming packet
-    tx_stop_now(tx_subdev, FLAGS_REQUEST_ACK);
-    rx_stop_now(rx_subdev, FLAGS_REQUEST_ACK);
+    tx_stop_now(tx_subdev);
+    rx_stop_now(rx_subdev);
   }
 
   void start_send() {
