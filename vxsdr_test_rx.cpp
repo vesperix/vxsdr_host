@@ -54,10 +54,6 @@ int main(int argc, char *argv[])
     set_common_options(vm, radio);
     set_rx_1ch_options(vm, radio);
 
-    LOG_INFO(fmt::format("using frequency {:.5e}", vm["freq"].as<double>()));
-    LOG_INFO(fmt::format("using rate      {:.5e}", vm["rate"].as<double>()));
-    LOG_INFO(fmt::format("using rx_gain   {:.1f}", vm["rx_gain"].as<double>()));
-
     if(vm["duration"].as<double>() <= 0.0) {
       LOG_FATAL("duration must be positive");
       return EXIT_CMD_LINE_ERROR;
@@ -80,6 +76,29 @@ int main(int argc, char *argv[])
     //radio->rx_start_now_for_n_samples(n_samp);
     //size_t n_written = radio->write_rx_data(outfile, n_samp);
     //radio->rx_stop_now();
+
+    LOG_DEBUG("sleeping for 1 s");
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    LOG_DEBUG("getting time once");
+    auto t1 = radio->device_get_time_now();
+    if(t1.has_value()) {
+      LOG_INFO(fmt::format("t1:           {:s}", format_time(t1.value())));
+    } else {
+      LOG_INFO("t1 has no value");
+    }
+    LOG_DEBUG("sleeping for 1 s");
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    LOG_DEBUG("getting time again");
+    auto t2 = radio->device_get_time_now();
+    if(t2.has_value()) {
+      LOG_INFO(fmt::format("t2:           {:s}", format_time(t2.value())));
+    } else {
+      LOG_INFO("t2 has no value");
+    }
+
+    LOG_INFO(fmt::format("using frequency {:.5e}", radio->get_rx_freq().value_or(-1)));
+    LOG_INFO(fmt::format("using rate      {:.5e}", radio->get_rx_rate().value_or(-1)));
+    LOG_INFO(fmt::format("using rx_gain   {:.1f}", radio->get_rx_gain().value_or(-1)));
 
     //radio->rx_start_now_for_n_samples(n_samp);
     radio->rx_start_now_until_stop();
