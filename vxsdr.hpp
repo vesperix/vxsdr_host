@@ -518,6 +518,50 @@ class vxsdr {
     cmd_queue_push(p);
   }
 
+  void device_set_time_now(const uint32_t sec, const uint32_t nsec, const uint8_t subdev = 0, const uint8_t flags = 0) {
+    device_time_packet p;
+    p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_SET_TIME_NOW, subdev, flags, sizeof(p), 0 };
+    p.time.seconds = sec;
+    p.time.nanoseconds = nsec;
+    cmd_queue_push(p);
+  }
+
+  void device_set_time_next_pps(const uint32_t sec, const uint32_t nsec, const uint8_t subdev = 0, const uint8_t flags = 0) {
+    device_time_packet p;
+    p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_SET_TIME_NEXT_PPS, subdev, flags, sizeof(p), 0 };
+    p.time.seconds = sec;
+    p.time.nanoseconds = nsec;
+    cmd_queue_push(p);
+  }
+
+  void device_get_time_now(uint32_t &sec, uint32_t &nsec, const uint8_t subdev = 0, const uint8_t flags = 0) {
+    device_time_packet p;
+    p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_GET_TIME, subdev, flags, sizeof(p), 0 };
+    cmd_queue_push(p);
+    response_queue_element q;
+    bool got_response = false;
+    unsigned wait_time_ms = 0;
+    while(not (got_response = response_queue.pop(q)) and wait_time_ms < device_response_timeout_ms) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(device_response_wait_ms));
+      wait_time_ms += device_response_wait_ms;
+    }
+    if(got_response) {
+      auto *r = reinterpret_cast<device_time_packet *>(&q);
+      if(r->hdr.packet_type == PACKET_TYPE_DEVICE_CMD_RSP and r->hdr.command == p.hdr.command) {
+        sec = r->time.seconds;
+        nsec = r->time.nanoseconds;
+      } else {
+        LOG_ERROR("invalid response in device_get_time_now()");
+        sec = 0;
+        nsec = 0;
+      }
+    } else {
+      LOG_ERROR("response timeout in device_get_time_now()");
+      sec = 0;
+      nsec = 0;
+    }
+  }
+
   std::chrono::time_point<std::chrono::system_clock> device_get_time_now(const uint8_t subdev = 0, const uint8_t flags = 0) {
     device_time_packet p;
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_GET_TIME, subdev, flags, sizeof(p), 0 };
@@ -540,7 +584,7 @@ class vxsdr {
       }
     } else {
       LOG_ERROR("response timeout in device_get_time_now()");
-      return std::chrono::time_point<std::chrono::system_clock>(std::chrono::seconds(1));
+      return std::chrono::time_point<std::chrono::system_clock>(std::chrono::seconds(0));
     }
   }
 
