@@ -711,11 +711,9 @@ class vxsdr {
     return cmd_queue_push_check(p);
   }
 
-  std::optional<double> get_tx_freq(const double freq, const uint8_t subdev = 0, const uint8_t flags = 0) {
+  std::optional<double> get_tx_freq(const uint8_t subdev = 0, const uint8_t flags = 0) {
     radio_rf_freq_packet p;
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_GET_RF_FREQ, subdev, flags, sizeof(p), 0 };
-    p.freq = freq;
-    p.rtol = 1e-9;
     if(not cmd_queue_push_check(p)) {
       return std::nullopt;
     }
@@ -740,11 +738,9 @@ class vxsdr {
     }
   }
 
-  std::optional<double> get_rx_freq(const double freq, const uint8_t subdev = 0, const uint8_t flags = 0) {
+  std::optional<double> get_rx_freq(const uint8_t subdev = 0, const uint8_t flags = 0) {
     radio_rf_freq_packet p;
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_GET_RF_FREQ, subdev, flags, sizeof(p), 0 };
-    p.freq = freq;
-    p.rtol = 1e-9;
     if(not cmd_queue_push_check(p)) {
       return std::nullopt;
     }
@@ -783,10 +779,9 @@ class vxsdr {
     return cmd_queue_push_check(p);
   }
 
-  std::optional<double> get_tx_gain(const double gain_db, const uint8_t subdev = 0, const uint8_t flags = 0) {
+  std::optional<double> get_tx_gain(const uint8_t subdev = 0, const uint8_t flags = 0) {
     radio_rf_gain_packet p;
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_GET_RF_GAIN, subdev, flags, sizeof(p), 0 };
-    p.gain = gain_db;
     if(not cmd_queue_push_check(p)) {
       return std::nullopt;
     }
@@ -811,10 +806,9 @@ class vxsdr {
     }
   }
 
-  std::optional<double> get_rx_gain(const double gain_db, const uint8_t subdev = 0, const uint8_t flags = 0) {
+  std::optional<double> get_rx_gain(const uint8_t subdev = 0, const uint8_t flags = 0) {
     radio_rf_gain_packet p;
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_GET_RF_GAIN, subdev, flags, sizeof(p), 0 };
-    p.gain = gain_db;
     if(not cmd_queue_push_check(p)) {
       return std::nullopt;
     }
@@ -853,10 +847,9 @@ class vxsdr {
     return cmd_queue_push_check(p);
   }
 
-  std::optional<double> get_tx_rate(const double rate_samples_sec, const uint8_t subdev = 0, const uint8_t flags = 0) {
+  std::optional<double> get_tx_rate(const uint8_t subdev = 0, const uint8_t flags = 0) {
     radio_sample_rate_packet p;
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_GET_SAMPLE_RATE, subdev, flags, sizeof(p), 0 };
-    p.rate = rate_samples_sec;
     if(not cmd_queue_push_check(p)) {
       return std::nullopt;
     }
@@ -881,10 +874,9 @@ class vxsdr {
     }
   }
 
-  std::optional<double> get_rx_rate(const double rate_samples_sec, const uint8_t subdev = 0, const uint8_t flags = 0) {
+  std::optional<double> get_rx_rate(const uint8_t subdev = 0, const uint8_t flags = 0) {
     radio_sample_rate_packet p;
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_GET_SAMPLE_RATE, subdev, flags, sizeof(p), 0 };
-    p.rate = rate_samples_sec;
     if(not cmd_queue_push_check(p)) {
       return std::nullopt;
     }
