@@ -66,8 +66,13 @@ class vxsdr {
   static constexpr unsigned response_queue_wait_us       =       10;
 
   // timeouts and waits for responses from device
-   static constexpr unsigned device_response_timeout_ms  =      100;
-   static constexpr unsigned device_response_wait_ms     =        1;
+  static constexpr unsigned device_response_timeout_ms   =      100;
+  static constexpr unsigned device_response_wait_ms      =        1;
+
+  // the UDP tx waits for the rx to reach RUNNING state before entering RUNNING itself
+  static constexpr unsigned udp_tx_ready_timeout_ms      =     1000;
+  static constexpr unsigned udp_tx_ready_wait_ms         =        1;
+
 
   // parameters used to set the OS's network buffer
   static constexpr unsigned network_send_buffer_bytes    =   4194304;   // ~6.6 ms at 160 MSPS
@@ -106,6 +111,10 @@ class vxsdr {
 
   boost::asio::ip::udp::endpoint destination_endpoint;
 
+  // flags used for startup
+  enum interface_state { UNINITIALIZED, STARTING, WAITING, RUNNING, SHUTTING_DOWN, SHUTDOWN };
+  std::atomic<interface_state> udp_tx_state { UNINITIALIZED }, udp_rx_state { UNINITIALIZED };
+
   // flags used for orderly shutdown
   std::atomic<bool> sender_thread_stop_flag = false, receiver_thread_stop_flag = false;
 
@@ -143,8 +152,10 @@ class vxsdr {
     context_thread = std::thread([&] { context.run(); });
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
 #endif // VXSDR_ASYNC_RX
+    udp_rx_state = STARTING;
     receiver_thread = std::thread([&] { receiver(); });
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    udp_tx_state = STARTING;
     sender_thread = std::thread([&] { sender(); });
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
     set_tx_enable(true);
@@ -170,6 +181,7 @@ class vxsdr {
     if(receiver_thread.joinable()) {
       receiver_thread.join();
     }
+    udp_rx_state = SHUTDOWN;
     receiver_socket.close(err);
     if(err != boost::system::errc::success) {
       LOG_ERROR(fmt::format("receiver socket close: {:s}", err.message()));
@@ -179,6 +191,7 @@ class vxsdr {
     if(sender_thread.joinable()) {
       sender_thread.join();
     }
+    udp_tx_state = SHUTDOWN;
     sender_socket.close(err);
     if(err != boost::system::errc::success) {
       LOG_ERROR(fmt::format("sender socket close: {:s}", err.message()));
@@ -1130,6 +1143,8 @@ class vxsdr {
     packets_received = 0;
     sequence_errors = 0;
 
+    udp_rx_state = RUNNING;
+
     while(not receiver_thread_stop_flag) {
       static data_queue_element recv_buffer;
       size_t bytes_in_packet = 0;
@@ -1285,6 +1300,9 @@ class vxsdr {
         }
       }
     }
+
+    udp_rx_state = SHUTTING_DOWN;
+
     LOG_INFO("start_receive exiting:");
     LOG_INFO(fmt::format("   {:12d} packets received", packets_received));
     for(unsigned i = 0; i < packet_types_received.size(); i++) {
@@ -1387,6 +1405,23 @@ class vxsdr {
     uint64_t last_check = 0;
     uint64_t buffer_check_interval_samples = initial_check_interval_samples;
 
+    udp_tx_state = WAITING;
+
+    // wait for the rx to reach RUNNING
+    unsigned total_wait_ms = 0;
+    while(udp_rx_state != RUNNING and total_wait_ms < udp_tx_ready_timeout_ms) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(udp_tx_ready_wait_ms));
+      total_wait_ms += udp_tx_ready_wait_ms;
+    }
+
+    if(total_wait_ms >= udp_tx_ready_timeout_ms) {
+      LOG_ERROR("udp tx timed out waiting for rx to become ready; shutting down");
+      receiver_thread_stop_flag = true;
+      sender_thread_stop_flag = true;
+    } else {
+      udp_tx_state = RUNNING;
+    }
+
     while(not sender_thread_stop_flag) {
       if(command_queue.read_available() > 0) {
         size_t n_popped = command_queue.pop(&cmd_buffer.front(), cmd_buffer.size());
@@ -1425,6 +1460,9 @@ class vxsdr {
         }
       }
     }
+
+    udp_tx_state = SHUTTING_DOWN;
+
     close_sdr(device_subdev, tx_subdev, rx_subdev);
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     LOG_INFO("start_send exiting:");
