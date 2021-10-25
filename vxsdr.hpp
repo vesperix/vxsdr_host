@@ -1372,14 +1372,6 @@ class vxsdr {
     //device_get_status(device_subdev);
   }
 
-  void close_sdr(const uint8_t device_subdev, const uint8_t tx_subdev, const uint8_t rx_subdev) {
-    // get the status at the end
-    //device_get_status(device_subdev);
-    // send a stop, requesting an ack so that the rx will see an incoming packet
-    tx_stop_now(tx_subdev);
-    rx_stop_now(rx_subdev);
-  }
-
   void start_send() {
     LOG_DEBUG("start_send started");
 
@@ -1462,10 +1454,8 @@ class vxsdr {
         }
       }
     }
-
+    // FIXME: if shutdown is needed, make packets here and send them
     udp_tx_state = SHUTTING_DOWN;
-
-    close_sdr(device_subdev, tx_subdev, rx_subdev);
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     LOG_INFO("start_send exiting:");
     LOG_INFO(fmt::format("   {:12d} packets sent", packets_sent));
