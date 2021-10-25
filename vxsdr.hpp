@@ -526,7 +526,7 @@ class vxsdr {
       p.time.nanoseconds = nsec;
       cmd_queue_push(p);
     } else {
-      LOG_ERROR("time out of range in device_set_time_now()")
+      LOG_ERROR("time out of range in device_set_time_now()");
     }
   }
 
@@ -538,7 +538,7 @@ class vxsdr {
       p.time.nanoseconds = nsec;
       cmd_queue_push(p);
     } else {
-      LOG_ERROR("time out of range in device_set_time_next_pps()")
+      LOG_ERROR("time out of range in device_set_time_next_pps()");
     }
   }
 
