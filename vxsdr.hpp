@@ -68,8 +68,6 @@ class vxsdr {
   // timeouts and waits for responses from device
    static constexpr unsigned device_response_timeout_ms  =      100;
    static constexpr unsigned device_response_wait_ms     =        1;
-   static constexpr double RESPONSE_ERROR                =    -1e99;
-   static constexpr double RESPONSE_TIMEOUT              =    -2e99;
 
   // parameters used to set the OS's network buffer
   static constexpr unsigned network_send_buffer_bytes    =   4194304;   // ~6.6 ms at 160 MSPS
@@ -713,13 +711,13 @@ class vxsdr {
     return cmd_queue_push_check(p);
   }
 
-  double get_tx_freq(const double freq, const uint8_t subdev = 0, const uint8_t flags = 0) {
+  std::optional<double> get_tx_freq(const double freq, const uint8_t subdev = 0, const uint8_t flags = 0) {
     radio_rf_freq_packet p;
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_GET_RF_FREQ, subdev, flags, sizeof(p), 0 };
     p.freq = freq;
     p.rtol = 1e-9;
     if(not cmd_queue_push_check(p)) {
-      return RESPONSE_ERROR;
+      return std::nullopt;
     }
     response_queue_element q;
     bool got_response = false;
@@ -734,21 +732,21 @@ class vxsdr {
         return r->freq;
       } else {
         LOG_ERROR("invalid response in get_tx_freq()");
-        return RESPONSE_ERROR;
+        return std::nullopt;
       }
     } else {
       LOG_ERROR("timeout in get_tx_freq()");
-      return RESPONSE_TIMEOUT;
+      return std::nullopt;
     }
   }
 
-  double get_rx_freq(const double freq, const uint8_t subdev = 0, const uint8_t flags = 0) {
+  std::optional<double> get_rx_freq(const double freq, const uint8_t subdev = 0, const uint8_t flags = 0) {
     radio_rf_freq_packet p;
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_GET_RF_FREQ, subdev, flags, sizeof(p), 0 };
     p.freq = freq;
     p.rtol = 1e-9;
     if(not cmd_queue_push_check(p)) {
-      return RESPONSE_ERROR;
+      return std::nullopt;
     }
     response_queue_element q;
     bool got_response = false;
@@ -763,11 +761,11 @@ class vxsdr {
         return r->freq;
       } else {
         LOG_ERROR("invalid response in get_rx_freq()");
-        return RESPONSE_ERROR;
+        return std::nullopt;
       }
     } else {
       LOG_ERROR("timeout in get_rx_freq()");
-      return RESPONSE_TIMEOUT;
+      return std::nullopt;
     }
   }
 
@@ -785,12 +783,12 @@ class vxsdr {
     return cmd_queue_push_check(p);
   }
 
-  double get_tx_gain(const double gain_db, const uint8_t subdev = 0, const uint8_t flags = 0) {
+  std::optional<double> get_tx_gain(const double gain_db, const uint8_t subdev = 0, const uint8_t flags = 0) {
     radio_rf_gain_packet p;
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_GET_RF_GAIN, subdev, flags, sizeof(p), 0 };
     p.gain = gain_db;
     if(not cmd_queue_push_check(p)) {
-      return RESPONSE_ERROR;
+      return std::nullopt;
     }
     response_queue_element q;
     bool got_response = false;
@@ -805,20 +803,20 @@ class vxsdr {
         return r->gain;
       } else {
         LOG_ERROR("invalid response in get_tx_gain()");
-        return RESPONSE_ERROR;
+        return std::nullopt;
       }
     } else {
       LOG_ERROR("timeout in get_tx_gain()");
-      return RESPONSE_TIMEOUT;
+      return std::nullopt;
     }
   }
 
-  double get_rx_gain(const double gain_db, const uint8_t subdev = 0, const uint8_t flags = 0) {
+  std::optional<double> get_rx_gain(const double gain_db, const uint8_t subdev = 0, const uint8_t flags = 0) {
     radio_rf_gain_packet p;
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_GET_RF_GAIN, subdev, flags, sizeof(p), 0 };
     p.gain = gain_db;
     if(not cmd_queue_push_check(p)) {
-      return RESPONSE_ERROR;
+      return std::nullopt;
     }
     response_queue_element q;
     bool got_response = false;
@@ -833,11 +831,11 @@ class vxsdr {
         return r->gain;
       } else {
         LOG_ERROR("invalid response in get_rx_gain()");
-        return RESPONSE_ERROR;
+        return std::nullopt;
       }
     } else {
       LOG_ERROR("timeout in get_rx_gain()");
-      return RESPONSE_TIMEOUT;
+      return std::nullopt;
     }
   }
 
@@ -855,12 +853,12 @@ class vxsdr {
     return cmd_queue_push_check(p);
   }
 
-  double get_tx_rate(const double rate_samples_sec, const uint8_t subdev = 0, const uint8_t flags = 0) {
+  std::optional<double> get_tx_rate(const double rate_samples_sec, const uint8_t subdev = 0, const uint8_t flags = 0) {
     radio_sample_rate_packet p;
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_GET_SAMPLE_RATE, subdev, flags, sizeof(p), 0 };
     p.rate = rate_samples_sec;
     if(not cmd_queue_push_check(p)) {
-      return RESPONSE_ERROR;
+      return std::nullopt;
     }
     response_queue_element q;
     bool got_response = false;
@@ -875,20 +873,20 @@ class vxsdr {
         return r->rate;
       } else {
         LOG_ERROR("invalid response in get_tx_rate()");
-        return RESPONSE_ERROR;
+        return std::nullopt;
       }
     } else {
       LOG_ERROR("timeout in get_tx_rate()");
-      return RESPONSE_TIMEOUT;
+      return std::nullopt;
     }
   }
 
-  double get_rx_rate(const double rate_samples_sec, const uint8_t subdev = 0, const uint8_t flags = 0) {
+  std::optional<double> get_rx_rate(const double rate_samples_sec, const uint8_t subdev = 0, const uint8_t flags = 0) {
     radio_sample_rate_packet p;
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_GET_SAMPLE_RATE, subdev, flags, sizeof(p), 0 };
     p.rate = rate_samples_sec;
     if(not cmd_queue_push_check(p)) {
-      return RESPONSE_ERROR;
+      return std::nullopt;
     }
     response_queue_element q;
     bool got_response = false;
@@ -903,11 +901,11 @@ class vxsdr {
         return r->rate;
       } else {
         LOG_ERROR("invalid response in get_rx_rate()");
-        return RESPONSE_ERROR;
+        return std::nullopt;
       }
     } else {
       LOG_ERROR("timeout in get_rx_rate()");
-      return RESPONSE_TIMEOUT;
+      return std::nullopt;
     }
   }
 
@@ -991,9 +989,6 @@ class vxsdr {
     }
     return true;
   }
-
-  boost::asio::ip::udp::socket sender_socket;
-  boost::asio::ip::udp::socket receiver_socket;
 
   std::optional<std::tuple<uint32_t, uint32_t>> device_get_buffer_info(const uint8_t subdev, const uint8_t flags = 0) {
     cmd_packet p;
@@ -1154,6 +1149,9 @@ class vxsdr {
     context.run();
     LOG_DEBUG("sender thread finished");
   }
+
+  boost::asio::ip::udp::socket sender_socket;
+  boost::asio::ip::udp::socket receiver_socket;
 
   void udp_receiver() {
 
