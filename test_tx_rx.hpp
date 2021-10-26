@@ -255,87 +255,87 @@ class udp_sender {
     uint64_t send_errors = 0, packets_sent = 0, bytes_sent = 0;
 
     void send_device_hello(const uint8_t subdev, const uint8_t flags = 0) {
-      cmd_packet p;
+      header_only_packet  p;
       p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_HELLO, subdev, flags, sizeof(p), 0 };
       send_packet(p);
     }
 
     void send_device_reset(const uint8_t subdev, const uint8_t flags = 0) {
-      cmd_packet p;
+      header_only_packet  p;
       p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_RESET, subdev, flags, sizeof(p), 0 };
       send_packet(p);
     }
 
     void send_device_open_session(const uint8_t subdev, const uint8_t flags = 0) {
-      cmd_packet p;
+      header_only_packet  p;
       p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_OPEN_SESSION, subdev, flags, sizeof(p), 0 };
       send_packet(p);
     }
 
     void send_device_close_session(const uint8_t subdev, const uint8_t flags = 0) {
-      cmd_packet p;
+      header_only_packet  p;
       p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_CLOSE_SESSION, subdev, flags, sizeof(p), 0 };
       send_packet(p);
     }
 
     void send_device_get_buffer_info(const uint8_t subdev, const uint8_t flags = 0) {
-      cmd_packet p;
+      header_only_packet  p;
       p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_GET_BUFFER_INFO, subdev, flags, sizeof(p), 0 };
       send_packet(p);
     }
 
     void send_device_get_buffer_use(const uint8_t subdev, const uint8_t flags = 0) {
-      cmd_packet p;
+      header_only_packet  p;
       p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_GET_BUFFER_USE, subdev, flags, sizeof(p), 0 };
       send_packet(p);
     }
 
     void send_device_clear_status(const uint8_t subdev, const uint8_t flags = 0) {
-      cmd_packet p;
+      header_only_packet  p;
       p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_CLEAR_STATUS, subdev, flags, sizeof(p), 0 };
       send_packet(p);
     }
 
     void send_device_get_status(const uint8_t subdev, const uint8_t flags = 0) {
-      cmd_packet p;
+      header_only_packet  p;
       p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_GET_STATUS, subdev, flags, sizeof(p), 0 };
       send_packet(p);
     }
 
     void send_tx_start_now_until_stop(const uint8_t subdev, const uint8_t flags = 0) {
-      stream_ctrl_packet p;
+      header_only_packet p;
       p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_START_NOW_UNTIL_STOP, subdev, flags, sizeof(p), 0 };
       send_packet(p);
     }
 
     void send_rx_start_now_until_stop(const uint8_t subdev, const uint8_t flags = 0) {
-      stream_ctrl_packet p;
+      header_only_packet p;
       p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_START_NOW_UNTIL_STOP, subdev, flags, sizeof(p), 0 };
       send_packet(p);
     }
 
     void send_tx_start_now_for_n_samples(const uint64_t n, const uint8_t subdev, const uint8_t flags = 0) {
-      stream_ctrl_packet_time_samples p;
+      cmd_or_rsp_packet_time_samples p;
       p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_START_NOW_FOR_N_SAMPLES, subdev, flags, sizeof(p), 0 };
       p.n_samples = n;
       send_packet(p);
     }
 
     void send_rx_start_now_for_n_samples(const uint64_t n, const uint8_t subdev, const uint8_t flags = 0) {
-      stream_ctrl_packet_time_samples p;
+      cmd_or_rsp_packet_time_samples p;
       p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_START_NOW_FOR_N_SAMPLES, subdev, flags, sizeof(p), 0 };
       p.n_samples = n;
       send_packet(p);
     }
 
     void send_tx_stop_now(const uint8_t subdev, const uint8_t flags = 0) {
-      stream_ctrl_packet p;
+      header_only_packet p;
       p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_STOP_NOW, subdev, flags, sizeof(p), 0 };
       send_packet(p);
     }
 
     void send_rx_stop_now(const uint8_t subdev, const uint8_t flags = 0) {
-      cmd_packet p;
+      header_only_packet  p;
       p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_STOP_NOW, subdev, flags, sizeof(p), 0 };
       send_packet(p);
     }

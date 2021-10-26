@@ -126,7 +126,7 @@ std::string device_command_error_to_name(const uint8_t cmd) {
 }
 
 
-void log_packet_info(cmd_or_rsp_packet &packet)
+void log_packet_info(packet &packet)
 {
   switch(packet.hdr.packet_type) {
     case PACKET_TYPE_DEVICE_CMD_ACK:
@@ -176,7 +176,7 @@ void log_packet_info(cmd_or_rsp_packet &packet)
         case DEVICE_CMD_GET_TIME:
           {
             LOG_INFO(fmt::format("DEVICE_CMD_RSP: GET_TIME"));
-            auto *tr = reinterpret_cast<device_time_packet *>(&packet);
+            auto *tr = reinterpret_cast<cmd_or_rsp_packet_time *>(&packet);
             LOG_INFO(fmt::format("   seconds                   = {:d}", (uint32_t)(tr->time.seconds)));
             LOG_INFO(fmt::format("   nanoseconds               = {:09d}", (uint32_t)(tr->time.nanoseconds)));
           }

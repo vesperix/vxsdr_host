@@ -423,7 +423,7 @@ class vxsdr {
   }
 
   std::optional<std::tuple<uint32_t, uint32_t>> device_hello(const uint8_t subdev = 0, const uint8_t flags = 0) {
-    cmd_packet p;
+    header_only_packet p;
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_HELLO, subdev, flags, sizeof(p), 0 };
     if(not cmd_queue_push_check(p)) {
       return std::nullopt;
@@ -450,31 +450,31 @@ class vxsdr {
   }
 
   bool device_reset(const uint8_t subdev = 0, const uint8_t flags = 0) {
-    cmd_packet p;
+    header_only_packet p;
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_RESET, subdev, flags, sizeof(p), 0 };
     return cmd_queue_push_check(p);
   }
 
   bool device_open_session(const uint8_t subdev = 0, const uint8_t flags = 0) {
-    cmd_packet p;
+    header_only_packet p;
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_OPEN_SESSION, subdev, flags, sizeof(p), 0 };
     return cmd_queue_push_check(p);
   }
 
   bool device_close_session(const uint8_t subdev = 0, const uint8_t flags = 0) {
-    cmd_packet p;
+    header_only_packet p;
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_CLOSE_SESSION, subdev, flags, sizeof(p), 0 };
     return cmd_queue_push_check(p);
   }
 
   bool device_clear_status(const uint8_t subdev = 0, const uint8_t flags = 0) {
-    cmd_packet p;
+    header_only_packet p;
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_CLEAR_STATUS, subdev, flags, sizeof(p), 0 };
     return cmd_queue_push_check(p);
   }
 
   std::optional<std::tuple<uint16_t, uint16_t, uint32_t, uint32_t, uint32_t, uint32_t>> device_get_status(const uint8_t subdev = 0, const uint8_t flags = 0) {
-    cmd_packet p;
+    header_only_packet p;
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_GET_STATUS, subdev, flags, sizeof(p), 0 };
     if(not cmd_queue_push_check(p)) {
       return std::nullopt;
@@ -502,21 +502,21 @@ class vxsdr {
   }
 
   bool device_set_time_now(const std::chrono::time_point<std::chrono::system_clock> &t, const uint8_t subdev = 0, const uint8_t flags = 0) {
-    device_time_packet p;
+    cmd_or_rsp_packet_time p;
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_SET_TIME_NOW, subdev, flags, sizeof(p), 0 };
     time_point_to_time_spec_t(t, p.time);
     return cmd_queue_push_check(p);
   }
 
   bool device_set_time_next_pps(const std::chrono::time_point<std::chrono::system_clock> &t, const uint8_t subdev = 0, const uint8_t flags = 0) {
-    device_time_packet p;
+    cmd_or_rsp_packet_time p;
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_SET_TIME_NEXT_PPS, subdev, flags, sizeof(p), 0 };
     time_point_to_time_spec_t(t, p.time);
     return cmd_queue_push_check(p);
   }
 
   bool device_set_time_now(const int64_t sec, const int32_t nsec, const uint8_t subdev = 0, const uint8_t flags = 0) {
-    device_time_packet p;
+    cmd_or_rsp_packet_time p;
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_SET_TIME_NOW, subdev, flags, sizeof(p), 0 };
     if(sec >= 0 and sec <= UINT32_MAX and nsec >= 0 and nsec < 1'000'000'000) {
       p.time.seconds = sec;
@@ -529,7 +529,7 @@ class vxsdr {
   }
 
   bool device_set_time_next_pps(const int64_t sec, const int32_t nsec, const uint8_t subdev = 0, const uint8_t flags = 0) {
-    device_time_packet p;
+    cmd_or_rsp_packet_time p;
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_SET_TIME_NEXT_PPS, subdev, flags, sizeof(p), 0 };
     if(sec >= 0 and sec <= UINT32_MAX and nsec >= 0 and nsec < 1'000'000'000) {
       p.time.seconds = sec;
@@ -542,7 +542,7 @@ class vxsdr {
   }
 
   bool device_get_time_now(uint32_t &sec, uint32_t &nsec, const uint8_t subdev = 0, const uint8_t flags = 0) {
-    device_time_packet p;
+    cmd_or_rsp_packet_time p;
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_GET_TIME, subdev, flags, sizeof(p), 0 };
     if(not cmd_queue_push_check(p)) {
       return false;
@@ -555,7 +555,7 @@ class vxsdr {
       wait_time_ms += device_response_wait_ms;
     }
     if(got_response) {
-      auto *r = reinterpret_cast<device_time_packet *>(&q);
+      auto *r = reinterpret_cast<cmd_or_rsp_packet_time *>(&q);
       if(r->hdr.packet_type == PACKET_TYPE_DEVICE_CMD_RSP and r->hdr.command == p.hdr.command) {
         sec = r->time.seconds;
         nsec = r->time.nanoseconds;
@@ -574,7 +574,7 @@ class vxsdr {
   }
 
   std::optional<std::chrono::time_point<std::chrono::system_clock>> device_get_time_now(const uint8_t subdev = 0, const uint8_t flags = 0) {
-    device_time_packet p;
+    cmd_or_rsp_packet_time p;
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_GET_TIME, subdev, flags, sizeof(p), 0 };
     if(not cmd_queue_push_check(p)) {
       return std::nullopt;
@@ -587,7 +587,7 @@ class vxsdr {
       wait_time_ms += device_response_wait_ms;
     }
     if(got_response) {
-      auto *r = reinterpret_cast<device_time_packet *>(&q);
+      auto *r = reinterpret_cast<cmd_or_rsp_packet_time *>(&q);
       if(r->hdr.packet_type == PACKET_TYPE_DEVICE_CMD_RSP and r->hdr.command == p.hdr.command) {
         return std::chrono::time_point<std::chrono::system_clock>(std::chrono::seconds(r->time.seconds) +
                                                                   std::chrono::nanoseconds(r->time.nanoseconds));
@@ -602,33 +602,33 @@ class vxsdr {
   }
 
   bool tx_start_now_until_stop(const uint8_t subdev = 0, const uint8_t flags = 0) {
-    stream_ctrl_packet p;
+    header_only_packet p;
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_START_NOW_UNTIL_STOP, subdev, flags, sizeof(p), 0 };
     return cmd_queue_push_check(p);
   }
 
   bool rx_start_now_until_stop(const uint8_t subdev = 0, const uint8_t flags = 0) {
-    stream_ctrl_packet p;
+    header_only_packet p;
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_START_NOW_UNTIL_STOP, subdev, flags, sizeof(p), 0 };
     return cmd_queue_push_check(p);
   }
 
   bool tx_start_now_for_n_samples(const uint64_t n, const uint8_t subdev = 0, const uint8_t flags = 0) {
-    stream_ctrl_packet_samples p;
+    cmd_or_rsp_packet_samples p;
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_START_NOW_FOR_N_SAMPLES, subdev, flags, sizeof(p), 0 };
     p.n_samples = n;
     return cmd_queue_push_check(p);
   }
 
   bool rx_start_now_for_n_samples(const uint64_t n, const uint8_t subdev = 0, const uint8_t flags = 0) {
-    stream_ctrl_packet_samples p;
+    cmd_or_rsp_packet_samples p;
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_START_NOW_FOR_N_SAMPLES, subdev, flags, sizeof(p), 0 };
     p.n_samples = n;
     return cmd_queue_push_check(p);
   }
 
   bool tx_start_at_time_for_n_samples(const std::chrono::time_point<std::chrono::system_clock> &t, const uint64_t n, const uint8_t subdev = 0, const uint8_t flags = 0) {
-    stream_ctrl_packet_time_samples p;
+    cmd_or_rsp_packet_time_samples p;
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_START_AT_TIME_FOR_N_SAMPLES, subdev, flags, sizeof(p), 0 };
     time_point_to_time_spec_t(t, p.time);
     p.n_samples = n;
@@ -636,7 +636,7 @@ class vxsdr {
   }
 
   bool rx_start_at_time_for_n_samples(const std::chrono::time_point<std::chrono::system_clock> &t,const uint64_t n, const uint8_t subdev = 0, const uint8_t flags = 0) {
-    stream_ctrl_packet_time_samples p;
+    cmd_or_rsp_packet_time_samples p;
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_START_AT_TIME_FOR_N_SAMPLES, subdev, flags, sizeof(p), 0 };
     time_point_to_time_spec_t(t, p.time);
     p.n_samples = n;
@@ -644,14 +644,14 @@ class vxsdr {
   }
 
   bool tx_start_at_time_until_stop(const std::chrono::time_point<std::chrono::system_clock> &t, const uint8_t subdev = 0, const uint8_t flags = 0) {
-    stream_ctrl_packet_time p;
+    cmd_or_rsp_packet_time p;
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_START_AT_TIME_UNTIL_STOP, subdev, flags, sizeof(p), 0 };
     time_point_to_time_spec_t(t, p.time);
     return cmd_queue_push_check(p);
   }
 
   bool rx_start_at_time_until_stop(const std::chrono::time_point<std::chrono::system_clock> &t, const uint8_t subdev = 0, const uint8_t flags = 0) {
-    stream_ctrl_packet_time p;
+    cmd_or_rsp_packet_time p;
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_START_AT_TIME_UNTIL_STOP, subdev, flags, sizeof(p), 0 };
     time_point_to_time_spec_t(t, p.time);
     return cmd_queue_push_check(p);
@@ -696,13 +696,13 @@ class vxsdr {
   }
 
   bool tx_stop_now(const uint8_t subdev = 0, const uint8_t flags = 0) {
-    stream_ctrl_packet p;
+    header_only_packet p;
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_STOP_NOW, subdev, flags, sizeof(p), 0 };
     return cmd_queue_push_check(p);
   }
 
   bool rx_stop_now(const uint8_t subdev = 0, const uint8_t flags = 0) {
-    stream_ctrl_packet p;
+    header_only_packet p;
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_STOP_NOW, subdev, flags, sizeof(p), 0 };
     return cmd_queue_push_check(p);
   }
@@ -982,7 +982,7 @@ class vxsdr {
         wait_time_ms += device_response_wait_ms;
       }
       if(got_response) {
-        auto *r = reinterpret_cast<ack_packet *>(&a);
+        auto *r = reinterpret_cast<header_only_packet *>(&a);
         bool packet_types_match = false;
         if((q.hdr.packet_type == PACKET_TYPE_DEVICE_CMD   and r->hdr.packet_type == PACKET_TYPE_DEVICE_CMD_ACK)   or
            (q.hdr.packet_type == PACKET_TYPE_RX_RADIO_CMD and r->hdr.packet_type == PACKET_TYPE_RX_RADIO_CMD_ACK) or
@@ -1005,13 +1005,13 @@ class vxsdr {
   }
 
   bool device_get_buffer_info(const uint8_t subdev, const uint8_t flags = 0) {
-    cmd_packet p;
+    header_only_packet p;
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_GET_BUFFER_INFO, subdev, flags, sizeof(p), 0 };
     return cmd_queue_push_check(p);
   }
 
   bool device_get_buffer_use(const uint8_t subdev, const uint8_t flags = 0) {
-    cmd_packet p;
+    header_only_packet p;
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_GET_BUFFER_USE, subdev, flags, sizeof(p), 0 };
     return cmd_queue_push_check(p);
   }
@@ -1384,7 +1384,7 @@ class vxsdr {
   void stop_sdr(const uint8_t device_subdev, const uint8_t tx_subdev, const uint8_t rx_subdev) {
     // NOTE: this is normally called after the command queue loop has stopped,
     // so packets are set up and sent directly to the socket
-    cmd_packet p;
+    header_only_packet p;
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_STOP_NOW, tx_subdev, 0, sizeof(p), 0 };
     send_packet(p);
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_STOP_NOW, rx_subdev, 0, sizeof(p), 0 };
