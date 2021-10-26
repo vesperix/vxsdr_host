@@ -159,20 +159,20 @@ extern "C" {
 #define MAX_DATA_LENGTH_SAMPLES                (2048UL)
 #define MAX_PAYLOAD_LENGTH_BYTES               (32UL)  // maximum length of a CMD or RSP packet, excluding header
 
-struct packet_header {
+typedef struct {
   uint8_t                  packet_type;
   uint8_t                  command;
   uint8_t                  target_subdevice;  // for cases where multiple devices exist (e.g. multiple network I/F or multichannel TX/RX)
   uint8_t                  flags;
   uint16_t                 packet_size;       // length of packet including header in bytes
   uint16_t                 sequence_counter;  // need to figure out when this resets (every new data stream, power up, ?)
-};
+} packet_header;
 
-struct time_spec_t {
+typedef struct {
   // FIXME: temporary workaround for order in FPGA and MCU code
   uint32_t                 nanoseconds;
   uint32_t                 seconds;
-};
+} time_spec_t;
 
 typedef uint64_t          stream_spec_t;
 
