@@ -702,7 +702,7 @@ class vxsdr {
   }
 
   bool rx_stop_now(const uint8_t subdev = 0, const uint8_t flags = 0) {
-    cmd_packet p;
+    stream_ctrl_packet p;
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_STOP_NOW, subdev, flags, sizeof(p), 0 };
     return cmd_queue_push_check(p);
   }
@@ -921,6 +921,16 @@ class vxsdr {
   bool set_rx_antenna(const std::string &ant, const uint8_t subdev = 0, const uint8_t flags = 0) {
     //FIXME: implement
     return false;
+  }
+
+  std::optional<std::string> get_tx_antenna(const uint8_t subdev = 0, const uint8_t flags = 0) {
+    //FIXME: implement
+    return "not implemented";
+  }
+
+  std::optional<std::string> get_rx_antenna(const uint8_t subdev = 0, const uint8_t flags = 0) {
+    //FIXME: implement
+    return "not implemented";
   }
 
   bool set_tx_enable(const bool enabled, const uint8_t subdev = 0, const uint8_t flags = 0) {
