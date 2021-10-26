@@ -164,19 +164,19 @@ extern "C" {
 
 #define ATTRIBUTE_PACKED                       __attribute__((packed))
 
-typedef struct {
-  uint8_t                  packet_type      ATTRIBUTE_PACKED;
-  uint8_t                  command          ATTRIBUTE_PACKED;
-  uint8_t                  target_subdevice ATTRIBUTE_PACKED;  // for cases where multiple devices exist (e.g. multiple network I/F or multichannel TX/RX)
-  uint8_t                  flags            ATTRIBUTE_PACKED;
-  uint16_t                 packet_size      ATTRIBUTE_PACKED;  // length of packet including header in bytes
-  uint16_t                 sequence_counter ATTRIBUTE_PACKED;  // need to figure out when this resets (every new data stream, power up, ?)
+typedef struct ATTRIBUTE_PACKED {
+  uint8_t                  packet_type;
+  uint8_t                  command;
+  uint8_t                  target_subdevice;  // for cases where multiple devices exist (e.g. multiple network I/F or multichannel TX/RX)
+  uint8_t                  flags;
+  uint16_t                 packet_size;       // length of packet including header in bytes
+  uint16_t                 sequence_counter;  // need to figure out when this resets (every new data stream, power up, ?)
 } packet_header;
 
-typedef struct {
+typedef struct ATTRIBUTE_PACKED {
   // FIXME: temporary workaround for order in FPGA and MCU code
-  uint32_t                 nanoseconds      ATTRIBUTE_PACKED;
-  uint32_t                 seconds          ATTRIBUTE_PACKED;
+  uint32_t                 nanoseconds;
+  uint32_t                 seconds;
 } time_spec_t;
 
 typedef uint64_t           stream_spec_t;
