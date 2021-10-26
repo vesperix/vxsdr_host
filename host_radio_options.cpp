@@ -166,7 +166,7 @@ int set_rx_1ch_options(boost::program_options::variables_map &vm, std::unique_pt
   }
 
   if (vm.count("rx_ant") > 0) {
-    radio->set_rx_antenna(vm["rx_ant"].as<std::string>());
+    radio->set_rx_rf_port(vm["rx_ant"].as<std::string>());
   }
 
   if (vm.count("rx_gain") > 0) {
@@ -207,7 +207,7 @@ int set_tx_1ch_options(boost::program_options::variables_map &vm, std::unique_pt
   }
 
   if(vm.count("tx_ant") > 0) {
-    radio->set_tx_antenna(vm["tx_ant"].as<std::string>());
+    radio->set_tx_rf_port(vm["tx_ant"].as<std::string>());
   }
 
   if(vm.count("tx_gain") > 0) {

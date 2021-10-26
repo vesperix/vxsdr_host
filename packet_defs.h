@@ -9,7 +9,7 @@ extern "C" {
 
 /*
   VXSDR packet definitions
-  Version 0.9.0 7 Oct 2021
+  Version 0.9.1 26 Oct 2021
 */
 
 // Packet Types
@@ -38,6 +38,7 @@ extern "C" {
 #define PACKET_TYPE_DEVICE_CMD_ACK             (0x82)
 #define PACKET_TYPE_TX_RADIO_CMD_ACK           (0x83)
 #define PACKET_TYPE_RX_RADIO_CMD_ACK           (0x84)
+// nothing should ever send this
 #define PACKET_TYPE_INVALID_PACKET             (0xFF)
 
 // Flags
@@ -103,8 +104,8 @@ extern "C" {
 #define RADIO_CMD_START_AT_TIME_FOR_N_SAMPLES  (0x05)  // error if TIME_PRESENT is 0
   // 0x06-0x0F reserved
 #define RADIO_CMD_GET_RF_INFO                  (0x10)  // unimplemented // available frequency, gain, sample rate, and bandwidth ranges, number of selectable I/Os
-#define RADIO_CMD_GET_RF_FREQ                  (0x11)  // unimplemented
-#define RADIO_CMD_GET_RF_GAIN                  (0x12)  // unimplemented
+#define RADIO_CMD_GET_RF_FREQ                  (0x11)
+#define RADIO_CMD_GET_RF_GAIN                  (0x12)
 #define RADIO_CMD_GET_SAMPLE_RATE              (0x13)
 #define RADIO_CMD_GET_RF_BW                    (0x14)  // unimplemented
 #define RADIO_CMD_GET_RF_ENABLED               (0x15)  // unimplemented
@@ -114,10 +115,11 @@ extern "C" {
 #define RADIO_CMD_SET_RF_GAIN                  (0x22)
 #define RADIO_CMD_SET_SAMPLE_RATE              (0x23)
 #define RADIO_CMD_SET_RF_BW                    (0x24)  // unimplemented
-#define RADIO_CMD_SET_RF_ENABLED               (0x25)  // enables(0x1) or disables(0x0) RX/TX RF path
+#define RADIO_CMD_SET_RF_ENABLED               (0x25)
 #define RADIO_CMD_SET_RF_PORT                  (0x26)  // FIXME: this selects input and output ports
   // 0x27-0x30 reserved
-#define RADIO_CMD_GET_NUM_SUBDEVS              (0x31)  //unimplemented // return the number of subdevices
+#define RADIO_CMD_GET_NUM_SUBDEVS              (0x31)  // unimplemented - return the number of subdevices
+#define RADIO_CMD_GET_CAPABILITIES             (0x32)  // unimplemented
   // 0x32-0x40 reserved
 #define RADIO_CMD_GET_IQ_BIAS                  (0x41)
 #define RADIO_CMD_GET_IQ_CORR                  (0x42)
@@ -145,16 +147,17 @@ extern "C" {
 // Capabilities
 #define CAPABILITY_HAS_LOCK_DETECT             (0x00000001U)
 #define CAPABILITY_HAS_EXTERNAL_REF            (0x00000002U)
-#define CAPABILITY_HAS_AGC                     (0x00000004U)
-#define CAPABILITY_HAS_LIMITER                 (0x00000008U)
-#define CAPABILITY_HAS_LIMIT_DETECT            (0x00000010U)
-#define CAPABILITY_HAS_MANUAL_IQ_BIAS_CORR     (0x00000020U)
-#define CAPABILITY_HAS_MANUAL_IQ_BALANCE_CORR  (0x00000040U)
-#define CAPABILITY_HAS_AUTO_IQ_BIAS_CORR       (0x00000080U)
-#define CAPABILITY_HAS_AUTO_IQ_BALANCE_CORR    (0x00000100U)
-#define CAPABILITY_HAS_TEMP_MEASURE            (0x00000200U)
-#define CAPABILITY_HAS_POWER_MEASURE           (0x00000400U)
-#define CAPABILITY_HAS_EXTERNAL_LO             (0x00000800U)
+#define CAPABILITY_HAS_EXTERNAL_PPS            (0x00000004U)
+#define CAPABILITY_HAS_AGC                     (0x00000008U)
+#define CAPABILITY_HAS_LIMITER                 (0x00000010U)
+#define CAPABILITY_HAS_LIMIT_DETECT            (0x00000020U)
+#define CAPABILITY_HAS_MANUAL_IQ_BIAS_CORR     (0x00000040U)
+#define CAPABILITY_HAS_MANUAL_IQ_BALANCE_CORR  (0x00000080U)
+#define CAPABILITY_HAS_AUTO_IQ_BIAS_CORR       (0x00000100U)
+#define CAPABILITY_HAS_AUTO_IQ_BALANCE_CORR    (0x00000200U)
+#define CAPABILITY_HAS_TEMP_MEASURE            (0x00000400U)
+#define CAPABILITY_HAS_POWER_MEASURE           (0x00000800U)
+#define CAPABILITY_HAS_EXTERNAL_LO             (0x00001000U)
 
 #define MAX_DATA_LENGTH_SAMPLES                (2048UL)
 #define MAX_PAYLOAD_LENGTH_BYTES               (32UL)  // maximum length of a CMD or RSP packet, excluding header

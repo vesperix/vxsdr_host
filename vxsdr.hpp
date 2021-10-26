@@ -913,22 +913,22 @@ class vxsdr {
     }
   }
 
-  bool set_tx_antenna(const std::string &ant, const uint8_t subdev = 0, const uint8_t flags = 0) {
+  bool set_tx_rf_port(const std::string &port, const uint8_t subdev = 0, const uint8_t flags = 0) {
     //FIXME: implement
     return false;
   }
 
-  bool set_rx_antenna(const std::string &ant, const uint8_t subdev = 0, const uint8_t flags = 0) {
+  bool set_rx_rf_port(const std::string &port, const uint8_t subdev = 0, const uint8_t flags = 0) {
     //FIXME: implement
     return false;
   }
 
-  std::optional<std::string> get_tx_antenna(const uint8_t subdev = 0, const uint8_t flags = 0) {
+  std::optional<std::string> get_tx_rf_port(const uint8_t subdev = 0, const uint8_t flags = 0) {
     //FIXME: implement
     return "not implemented";
   }
 
-  std::optional<std::string> get_rx_antenna(const uint8_t subdev = 0, const uint8_t flags = 0) {
+  std::optional<std::string> get_rx_rf_port(const uint8_t subdev = 0, const uint8_t flags = 0) {
     //FIXME: implement
     return "not implemented";
   }
