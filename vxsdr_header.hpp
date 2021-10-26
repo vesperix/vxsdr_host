@@ -39,6 +39,14 @@ class data_packet_time_stream : public packet {
 
 class largest_data_packet : public data_packet_time_stream {};
 
+class async_msg_packet : public packet {
+  public:
+    uint8_t                severity = 0;
+    uint8_t                device_subdev = 0;
+    uint8_t                tx_subdev = 0;
+    uint8_t                rx_subdev = 0;
+};
+
 class cmd_or_rsp_packet : public packet {};
 
 class cmd_or_rsp_packet_time : public cmd_or_rsp_packet {
@@ -105,6 +113,14 @@ class get_buffer_info_rsp_packet : public rsp_packet {
   public:
     uint32_t               rx_buffer_size_bytes = 0;
     uint32_t               tx_buffer_size_bytes = 0;
+};
+
+class clear_data_buffer_packet : public cmd_packet {
+  public:
+    uint8_t                clear_all = 0;
+    uint8_t                device_subdev = 0;
+    uint8_t                tx_subdev = 0;
+    uint8_t                rx_subdev = 0;
 };
 
 class hello_rsp_packet : public rsp_packet {

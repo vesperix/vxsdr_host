@@ -1371,6 +1371,18 @@ class vxsdr {
     //device_get_status(device_subdev);
   }
 
+  void stop_sdr(const uint8_t device_subdev, const uint8_t tx_subdev, const uint8_t rx_subdev) {
+    // NOTE: this is normally called after the command queue loop has stopped,
+    // so packets are set up and sent directly to the socket
+    cmd_packet p;
+    p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_STOP_NOW, tx_subdev, 0, sizeof(p), 0 };
+    send_packet(p);
+    p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_STOP_NOW, rx_subdev, 0, sizeof(p), 0 };
+    send_packet(p);
+    p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_CLEAR_STATUS, device_subdev, 0, sizeof(p), 0 };    \
+    send_packet(p);
+  }
+
   void start_send() {
     LOG_DEBUG("start_send started");
 
@@ -1453,7 +1465,7 @@ class vxsdr {
         }
       }
     }
-    // FIXME: if shutdown is needed, make packets here and send them
+    stop_sdr(device_subdev, tx_subdev, rx_subdev);
     udp_tx_state = SHUTTING_DOWN;
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     LOG_INFO("start_send exiting:");

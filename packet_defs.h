@@ -61,7 +61,8 @@ extern "C" {
 #define DEVICE_CMD_GET_TRANSPORT_INFO          (0x10)  // unimplemented // how many interfaces, what kind
 #define DEVICE_CMD_GET_TRANSPORT_ADDR          (0x11)
 #define DEVICE_CMD_GET_MAX_PAYLOAD             (0x12)
-  // 0x12-0x1F reserved for more get_transport stuff as needed
+#define DEVICE_CMD_CLEAR_DATA_BUFFER           (0x13)
+  // 0x14-0x1F reserved for more get_transport stuff as needed
 #define DEVICE_CMD_SET_TRANSPORT_ADDR          (0x21)
 #define DEVICE_CMD_SET_MAX_PAYLOAD             (0x22)
 #define DEVICE_CMD_SAVE_TRANSPORT_ADDR         (0x23)
