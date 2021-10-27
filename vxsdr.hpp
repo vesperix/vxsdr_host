@@ -1192,6 +1192,10 @@ class vxsdr {
         packets_received++;
         packet_types_received[recv_buffer.hdr.packet_type]++;
         bytes_received += bytes_in_packet;
+        if(recv_buffer.hdr.packet_size != bytes_in_packet) {
+          LOG_ERROR("packet_size in header incorrect; resetting");
+          recv_buffer.hdr.packet_size = std::min(bytes_in_packet, (unsigned long)recv_buffer.hdr.packet_size);
+        }
         if(recv_buffer.hdr.packet_type == PACKET_TYPE_RX_SIGNAL_DATA) {
           uint16_t header_size = sizeof(packet_header);
           if((bool)(recv_buffer.hdr.flags & FLAGS_TIME_PRESENT)) {
