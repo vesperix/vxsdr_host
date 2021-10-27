@@ -40,6 +40,28 @@ inline int set_current_thread_priority_realtime(const int priority)
 #endif
 }
 
+inline int set_current_thread_priority_realtime_relative(double priority)
+{
+#ifdef HAVE_PTHREADS
+  pthread_t current_thread = pthread_self();
+  int policy = SCHED_RR;
+  int pri_min = sched_get_priority_min(policy);
+  int pri_max = sched_get_priority_max(policy);
+  struct sched_param param;
+  if(priority > 1.0) {
+    priority = 1.0;
+  }
+  else if(priority < 0.0) {
+    priority = 0.0;
+  }
+  param.sched_priority = lround(priority * (pri_max - pri_min)) + pri_min;
+  // returns 0 on success
+  return pthread_setschedparam(current_thread, policy, &param);
+#else
+  return -1;
+#endif
+}
+
 #ifdef __cplusplus
 }
 #endif
