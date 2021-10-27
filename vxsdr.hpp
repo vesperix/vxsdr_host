@@ -503,21 +503,21 @@ class vxsdr {
 
   bool device_set_time_now(const std::chrono::time_point<std::chrono::system_clock> &t, const uint8_t subdev = 0, const uint8_t flags = 0) {
     cmd_or_rsp_packet_time p;
-    p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_SET_TIME_NOW, subdev, flags, sizeof(p), 0 };
+    p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_SET_TIME_NOW, subdev, static_cast<uint8_t>(flags | FLAGS_TIME_PRESENT), sizeof(p), 0 };
     time_point_to_time_spec_t(t, p.time);
     return cmd_queue_push_check(p);
   }
 
   bool device_set_time_next_pps(const std::chrono::time_point<std::chrono::system_clock> &t, const uint8_t subdev = 0, const uint8_t flags = 0) {
     cmd_or_rsp_packet_time p;
-    p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_SET_TIME_NEXT_PPS, subdev, flags, sizeof(p), 0 };
+    p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_SET_TIME_NEXT_PPS, subdev, static_cast<uint8_t>(flags | FLAGS_TIME_PRESENT), sizeof(p), 0 };
     time_point_to_time_spec_t(t, p.time);
     return cmd_queue_push_check(p);
   }
 
   bool device_set_time_now(const int64_t sec, const int32_t nsec, const uint8_t subdev = 0, const uint8_t flags = 0) {
     cmd_or_rsp_packet_time p;
-    p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_SET_TIME_NOW, subdev, flags, sizeof(p), 0 };
+    p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_SET_TIME_NOW, subdev, static_cast<uint8_t>(flags | FLAGS_TIME_PRESENT), sizeof(p), 0 };
     if(sec >= 0 and sec <= UINT32_MAX and nsec >= 0 and nsec < 1'000'000'000) {
       p.time.seconds = sec;
       p.time.nanoseconds = nsec;
@@ -530,7 +530,7 @@ class vxsdr {
 
   bool device_set_time_next_pps(const int64_t sec, const int32_t nsec, const uint8_t subdev = 0, const uint8_t flags = 0) {
     cmd_or_rsp_packet_time p;
-    p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_SET_TIME_NEXT_PPS, subdev, flags, sizeof(p), 0 };
+    p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_SET_TIME_NEXT_PPS, subdev, static_cast<uint8_t>(flags | FLAGS_TIME_PRESENT), sizeof(p), 0 };
     if(sec >= 0 and sec <= UINT32_MAX and nsec >= 0 and nsec < 1'000'000'000) {
       p.time.seconds = sec;
       p.time.nanoseconds = nsec;
@@ -556,7 +556,7 @@ class vxsdr {
     }
     if(got_response) {
       auto *r = reinterpret_cast<cmd_or_rsp_packet_time *>(&q);
-      if(r->hdr.packet_type == PACKET_TYPE_DEVICE_CMD_RSP and r->hdr.command == p.hdr.command) {
+      if(r->hdr.packet_type == PACKET_TYPE_DEVICE_CMD_RSP and r->hdr.command == p.hdr.command and (r->hdr.flags & FLAGS_TIME_PRESENT)) {
         sec = r->time.seconds;
         nsec = r->time.nanoseconds;
         return true;
@@ -588,7 +588,7 @@ class vxsdr {
     }
     if(got_response) {
       auto *r = reinterpret_cast<cmd_or_rsp_packet_time *>(&q);
-      if(r->hdr.packet_type == PACKET_TYPE_DEVICE_CMD_RSP and r->hdr.command == p.hdr.command) {
+      if(r->hdr.packet_type == PACKET_TYPE_DEVICE_CMD_RSP and r->hdr.command == p.hdr.command and (r->hdr.flags & FLAGS_TIME_PRESENT)) {
         return std::chrono::time_point<std::chrono::system_clock>(std::chrono::seconds(r->time.seconds) +
                                                                   std::chrono::nanoseconds(r->time.nanoseconds));
       } else {
@@ -629,7 +629,7 @@ class vxsdr {
 
   bool tx_start_at_time_for_n_samples(const std::chrono::time_point<std::chrono::system_clock> &t, const uint64_t n, const uint8_t subdev = 0, const uint8_t flags = 0) {
     cmd_or_rsp_packet_time_samples p;
-    p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_START_AT_TIME_FOR_N_SAMPLES, subdev, flags, sizeof(p), 0 };
+    p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_START_AT_TIME_FOR_N_SAMPLES, subdev, static_cast<uint8_t>(flags | FLAGS_TIME_PRESENT), sizeof(p), 0 };
     time_point_to_time_spec_t(t, p.time);
     p.n_samples = n;
     return cmd_queue_push_check(p);
@@ -637,7 +637,7 @@ class vxsdr {
 
   bool rx_start_at_time_for_n_samples(const std::chrono::time_point<std::chrono::system_clock> &t,const uint64_t n, const uint8_t subdev = 0, const uint8_t flags = 0) {
     cmd_or_rsp_packet_time_samples p;
-    p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_START_AT_TIME_FOR_N_SAMPLES, subdev, flags, sizeof(p), 0 };
+    p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_START_AT_TIME_FOR_N_SAMPLES, subdev, static_cast<uint8_t>(flags | FLAGS_TIME_PRESENT), sizeof(p), 0 };
     time_point_to_time_spec_t(t, p.time);
     p.n_samples = n;
     return cmd_queue_push_check(p);
@@ -645,14 +645,14 @@ class vxsdr {
 
   bool tx_start_at_time_until_stop(const std::chrono::time_point<std::chrono::system_clock> &t, const uint8_t subdev = 0, const uint8_t flags = 0) {
     cmd_or_rsp_packet_time p;
-    p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_START_AT_TIME_UNTIL_STOP, subdev, flags, sizeof(p), 0 };
+    p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_START_AT_TIME_UNTIL_STOP, subdev, static_cast<uint8_t>(flags | FLAGS_TIME_PRESENT), sizeof(p), 0 };
     time_point_to_time_spec_t(t, p.time);
     return cmd_queue_push_check(p);
   }
 
   bool rx_start_at_time_until_stop(const std::chrono::time_point<std::chrono::system_clock> &t, const uint8_t subdev = 0, const uint8_t flags = 0) {
     cmd_or_rsp_packet_time p;
-    p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_START_AT_TIME_UNTIL_STOP, subdev, flags, sizeof(p), 0 };
+    p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_START_AT_TIME_UNTIL_STOP, subdev, static_cast<uint8_t>(flags | FLAGS_TIME_PRESENT), sizeof(p), 0 };
     time_point_to_time_spec_t(t, p.time);
     return cmd_queue_push_check(p);
   }
