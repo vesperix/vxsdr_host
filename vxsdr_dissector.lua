@@ -237,6 +237,18 @@ function vxsdr.dissector(tvbuf, pktinfo, root)
             -- set freq, gain, or rate
             elseif pkt_cmd == 0x21 or pkt_cmd == 0x22 or pkt_cmd == 0x23  then
                 tree:add_le(pf_double_data, tvbuf:range(8, 8))
+            -- start at time
+            elseif pkt_cmd == 0x02  then
+                tree:add_le(pf_uint32_data, tvbuf:range( 8, 4))
+                tree:add_le(pf_uint32_data, tvbuf:range(12, 4))
+            -- start now for n samples
+            elseif pkt_cmd == 0x04  then
+                tree:add_le(pf_uint64_data, tvbuf:range( 8, 8))
+            -- start at time for n samples
+            elseif pkt_cmd == 0x05  then
+                tree:add_le(pf_uint32_data, tvbuf:range( 8, 4))
+                tree:add_le(pf_uint32_data, tvbuf:range(12, 4))
+                tree:add_le(pf_uint64_data, tvbuf:range(16, 8))
             end
         elseif pkt_type == 0x80 then
             -- tx signal data ack
