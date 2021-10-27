@@ -20,7 +20,8 @@ local packet_types = {
     [0x81] = "RX_SIGNAL_DATA_ACK",
     [0x82] = "DEVICE_CMD_ACK",
     [0x83] = "TX_RADIO_CMD_ACK",
-    [0x84] = "RX_RADIO_CMD_ACK"
+    [0x84] = "RX_RADIO_CMD_ACK",
+    [0xFF] = "INVALID_PACKET"
 }
 
 local device_cmds = {
@@ -37,10 +38,11 @@ local device_cmds = {
     -- 0x0A-0x0F reserved
     [0x10] = "GET_TRANSPORT_INFO", -- unimplemented
     [0x11] = "GET_TRANSPORT_ADDR",
-    [0x12] = "GET_TRANSPORT_PKTSIZ",
-    -- 0x12-0x1F reserved
+    [0x12] = "GET_MAX_PAYLOAD",
+    [0x13] = "CLEAR_DATA_BUFFER",
+    -- 0x14-0x1F reserved
     [0x21] = "SET_TRANSPORT_ADDR",
-    [0x22] = "SET_TRANSPORT_PKTSIZ",
+    [0x22] = "SET_MAX_PAYLOAD",
     [0x23] = "SAVE_TRANSPORT_ADDR",
     -- 0x22-0x2F reserved
     [0x30] = "GET_CHANNEL_INFO",  -- unimplemented
@@ -53,30 +55,33 @@ local device_cmds = {
     [0x61] = "WRITE_DAC_REG",
     [0x62] = "READ_ADC_REG",
     [0x63] = "WRITE_ADC_REG",
-    -- 0x64-0xFD reserved
+    -- 0x64-0x9F reserved
+    [0xA0] = "APP_UPDATE_MODE_SET",
+    [0xA1] = "APP_UPDATE_DATA",
+    [0xA2] = "APP_UPDATE_DONE",
     [0xFE] = "STOP",  -- unimplemented
     [0xFF] = "RESET"  -- unimplemented
 }
 
 local device_cmd_rsps = {
-    [0x00] = "HELLO_RSP",
-    [0x03] = "GET_TIME_RSP",
-    [0x04] = "GET_STATUS_RSP",
-    [0x06] = "GET_BUFFER_INFO_RSP",
-    [0x07] = "GET_BUFFER_USE_RSP",
-    [0x08] = "OPEN_SESSION_RSP",  -- unimplemented
-    [0x09] = "CLOSE_SESSION_RSP", --unimplemented
+    [0x00] = "HELLO",
+    [0x03] = "GET_TIME",
+    [0x04] = "GET_STATUS",
+    [0x06] = "GET_BUFFER_INFO",
+    [0x07] = "GET_BUFFER_USE",
+    [0x08] = "OPEN_SESSION",  -- unimplemented
+    [0x09] = "CLOSE_SESSION", --unimplemented
     -- 0x0A-0x0F reserved
-    [0x10] = "GET_TRANSPORT_INFO_RSP", -- unimplemented
-    [0x11] = "GET_TRANSPORT_ADDR_RSP",
-    [0x12] = "GET_TRANSPORT_PKTSIZ_RSP",
-    [0x30] = "GET_CHANNEL_INFO_RSP",  -- unimplemented
+    [0x10] = "GET_TRANSPORT_INFO", -- unimplemented
+    [0x11] = "GET_TRANSPORT_ADDR",
+    [0x12] = "GET_MAX_PAYLOAD",
+    [0x30] = "GET_CHANNEL_INFO",  -- unimplemented
     -- 0x31-0x4F reserved
-    [0x50] = "GET_TIMING_INFO_RSP",   -- unimplemented
-    [0x51] = "GET_TIMING_STATUS_RSP",
-    [0x52] = "GET_TIMING_REF_RSP",  -- unimplemented
-    [0x60] = "READ_DAC_REG_RSP",
-    [0x62] = "READ_ADC_REG_RSP"
+    [0x50] = "GET_TIMING_INFO",   -- unimplemented
+    [0x51] = "GET_TIMING_STATUS",
+    [0x52] = "GET_TIMING_REF",  -- unimplemented
+    [0x60] = "READ_DAC_REG",
+    [0x62] = "READ_ADC_REG"
 }
 
 local radio_cmds = {
@@ -99,18 +104,31 @@ local radio_cmds = {
     [0x23] = "SET_SAMPLE_RATE",
     [0x24] = "SET_RF_BW",  -- unimplemented
     [0x25] = "SET_RF_ENABLED",
-    [0x26] = "SET_RF_PORT"
-    -- 0x27-0xFF reserved
+    [0x26] = "SET_RF_PORT",
+    -- 0x27-0x30 reserved
+    [0x31] = "GET_NUM_SUBDEVS",
+    [0x32] = "GET_CAPABILITIES",
+    -- 0x33-0x40 reserved
+    [0x41] = "GET_IQ_BIAS",
+    [0x42] = "GET_IQ_CORR",
+    -- 0x43 - 0x50 reserved
+    [0x51] = "SET_IQ_BIAS",
+    [0x52] = "SET_IQ_CORR"
+    -- 0x53 - 0xFF reserved
 }
 
 local radio_cmd_rsps = {
-    [0x10] = "GET_RF_INFO_RSP",  -- unimplemented
-    [0x11] = "GET_RF_FREQ_RSP",  -- unimplemented
-    [0x12] = "GET_RF_GAIN_RSP",  -- unimplemented
-    [0x13] = "GET_SAMPLE_RATE_RSP",
-    [0x14] = "GET_RF_BW_RSP",  -- unimplemented
-    [0x15] = "GET_RF_ENABLED_RSP",  -- unimplemented
-    [0x16] = "GET_RF_PORT_RSP"  -- unimplemented
+    [0x10] = "GET_RF_INFO",  -- unimplemented
+    [0x11] = "GET_RF_FREQ",
+    [0x12] = "GET_RF_GAIN",
+    [0x13] = "GET_SAMPLE_RATE",
+    [0x14] = "GET_RF_BW",  -- unimplemented
+    [0x15] = "GET_RF_ENABLED",  -- unimplemented
+    [0x16] = "GET_RF_PORT",  -- unimplemented
+    [0x31] = "GET_NUM_SUBDEVS",
+    [0x32] = "GET_CAPABILITIES",
+    [0x41] = "GET_IQ_BIAS",
+    [0x42] = "GET_IQ_CORR"
 }
 
 local errors = {
@@ -218,6 +236,20 @@ function vxsdr.dissector(tvbuf, pktinfo, root)
                 tree:add_le(pf_uint32_data, tvbuf:range(8, 4))
             -- set freq, gain, or rate
             elseif pkt_cmd == 0x21 or pkt_cmd == 0x22 or pkt_cmd == 0x23  then
+                tree:add_le(pf_double_data, tvbuf:range(8, 8))
+            end
+        elseif pkt_type == 0x80 then
+            -- tx signal data ack
+            tree:add_le(pf_uint64_data, tvbuf:range( 8, 8))
+            tree:add_le(pf_uint32_data, tvbuf:range(16, 4))
+            tree:add_le(pf_uint32_data, tvbuf:range(20, 4))
+        -- radio command responses
+        elseif (pkt_type == 0x0E or pkt_type == 0x0F) then
+            -- get rf_enabled
+            if pkt_cmd == 0x15 then
+                tree:add_le(pf_uint32_data, tvbuf:range(8, 4))
+            -- get freq, gain, or rate
+            elseif pkt_cmd == 0x11 or pkt_cmd == 0x12 or pkt_cmd == 0x13  then
                 tree:add_le(pf_double_data, tvbuf:range(8, 8))
             end
         elseif pkt_type == 0x80 then
