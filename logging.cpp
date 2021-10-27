@@ -19,7 +19,7 @@ void log_set_level(const int verbose) {
   switch(verbose) {
     case 6:
       spdlog::get("multi")->set_level(spdlog::level::trace);
-      break;    
+      break;
     case 5:
       spdlog::get("multi")->set_level(spdlog::level::debug);
       break;
@@ -34,10 +34,10 @@ void log_set_level(const int verbose) {
       break;
     case 1:
       spdlog::get("multi")->set_level(spdlog::level::critical);
-      break;   
+      break;
     case 0:
       spdlog::get("multi")->set_level(spdlog::level::off);
-      break;               
+      break;
     default:
       LOG_ERROR("unknown log level requested");
   }

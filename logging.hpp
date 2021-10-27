@@ -10,8 +10,9 @@
 #include <spdlog/sinks/stdout_sinks.h>
 #include <spdlog/sinks/basic_file_sink.h>
 
-#define INIT_LOGGER(x)           log_init(x)
+#define INIT_LOGGER(x)          log_init(x)
 
+#define LOG_TRACE(x)            spdlog::get("multi")->trace(x)
 #define LOG_DEBUG(x)            spdlog::get("multi")->debug(x)
 #define LOG_INFO(x)             spdlog::get("multi")->info(x)
 #define LOG_WARN(x)             spdlog::get("multi")->warn(x)
