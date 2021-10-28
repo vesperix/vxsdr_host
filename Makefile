@@ -16,9 +16,14 @@ endif
 COMMON_INCLUDES = packet_proc.hpp packet_defs.h vxsdr_header.hpp host_radio_options.hpp utility.hpp logging.hpp
 COMMON_SRC = packet_proc.cpp utility.cpp logging.cpp
 
+LIB_SRC = vxsdr.cpp vxsdr_udp.cpp
+LIB_LDFLAGS = -lpthread -lspdlog
+
 PROGS = vxsdr_test vxsdr_test_rx test_rx test_tx test_rx_seq_only
 
-all: $(PROGS) Makefile
+LIBS = libvxsdr.so
+
+all: $(PROGS) $(LIBS) Makefile
 
 .PHONY: all
 
@@ -31,13 +36,16 @@ test_rx_seq_only: test_rx_seq_only.cpp test_tx_rx.hpp $(COMMON_INCLUDES) $(COMMO
 test_tx: test_tx.cpp test_tx_rx.hpp $(COMMON_INCLUDES) $(COMMON_SRC)
 	$(CXX) $(CXX_FLAGS) -DBOOST_BIND_GLOBAL_PLACEHOLDERS -o $@ $< $(COMMON_SRC) $(CXX_LDFLAGS)
 
-vxsdr_test: vxsdr_test.cpp host_radio_options.cpp vxsdr.cpp vxsdr.hpp vxsdr_udp.cpp $(COMMON_INCLUDES) $(COMMON_SRC)
-	$(CXX) $(CXX_FLAGS) -o $@ $< vxsdr.cpp vxsdr_udp.cpp host_radio_options.cpp $(COMMON_SRC) $(CXX_LDFLAGS)
+vxsdr_test: vxsdr_test.cpp host_radio_options.cpp $(COMMON_INCLUDES) $(COMMON_SRC) libvxsdr.so
+	$(CXX) $(CXX_FLAGS) -o $@ $< host_radio_options.cpp $(COMMON_SRC) $(CXX_LDFLAGS) -L. -lvxsdr
 
-vxsdr_test_rx: vxsdr_test_rx.cpp host_radio_options.cpp vxsdr.cpp vxsdr.hpp vxsdr_udp.cpp $(COMMON_INCLUDES) $(COMMON_SRC)
-	$(CXX) $(CXX_FLAGS) -o $@ $< vxsdr.cpp vxsdr_udp.cpp host_radio_options.cpp $(COMMON_SRC) $(CXX_LDFLAGS)
+vxsdr_test_rx: vxsdr_test_rx.cpp host_radio_options.cpp $(COMMON_INCLUDES) $(COMMON_SRC) libvxsdr.so
+	$(CXX) $(CXX_FLAGS) -o $@ $< host_radio_options.cpp $(COMMON_SRC) $(CXX_LDFLAGS) -L. -lvxsdr
+
+libvxsdr.so: vxsdr.hpp $(LIB_SRC) $(COMMON_INCLUDES) $(COMMON_SRC)
+	$(CXX) $(CXX_FLAGS) -o $@ -fPIC -shared $(LIB_SRC) $(COMMON_SRC) $(LIB_LDFLAGS)
 
 clean:
-	rm -f $(PROGS) *.o *~
+	rm -f $(PROGS) $(LIBS) *.o *~
 
 .PHONY: clean
