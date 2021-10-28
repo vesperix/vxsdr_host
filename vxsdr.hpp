@@ -1,3 +1,6 @@
+#ifndef VXSDR_HPP
+#define VXSDR_HPP
+
 #include <complex>
 #include <vector>
 #include <cstring>
@@ -6,8 +9,12 @@
 #include <optional>
 #include <future>
 #include <fstream>
+#include <chrono>
+#include <atomic>
+#include <thread>
 
 #include <boost/lockfree/spsc_queue.hpp>
+#include <boost/lockfree/queue.hpp>
 #include <boost/asio/io_service.hpp>
 #include <boost/asio/ip/udp.hpp>
 #ifdef VXSDR_ASYNC_RX
@@ -20,9 +27,6 @@
 
 #include "vxsdr_header.hpp"
 #include "packet_proc.hpp"
-
-#ifndef VXSDR_HPP
-#define VXSDR_HPP
 
 class vxsdr {
 
@@ -59,12 +63,6 @@ class vxsdr {
   static constexpr unsigned rx_data_queue_timeout_us     =    40000;
   static constexpr unsigned rx_data_queue_wait_us        =       10;
 
-  static constexpr unsigned command_queue_timeout_us     =   100000;
-  static constexpr unsigned command_queue_wait_us        =       10;
-
-  static constexpr unsigned response_queue_timeout_us    =   100000;
-  static constexpr unsigned response_queue_wait_us       =       10;
-
   // timeouts and waits for responses from device
   static constexpr unsigned device_response_timeout_ms   =      100;
   static constexpr unsigned device_response_wait_ms      =        1;
@@ -90,15 +88,15 @@ class vxsdr {
   using cmd_ack_queue_element = largest_cmd_or_rsp_packet;
   using async_msg_queue_element = largest_cmd_or_rsp_packet;
 
-  // data queues
+  // data queues are SPSC
   boost::lockfree::spsc_queue<data_queue_element, boost::lockfree::capacity<rx_data_queue_length> > rx_data_queue;
   boost::lockfree::spsc_queue<data_queue_element, boost::lockfree::capacity<tx_data_queue_length> > tx_data_queue;
-  // command and response queues
-  boost::lockfree::spsc_queue<command_queue_element, boost::lockfree::capacity<command_queue_length> > command_queue;
-  boost::lockfree::spsc_queue<response_queue_element, boost::lockfree::capacity<response_queue_length> > response_queue;
-  boost::lockfree::spsc_queue<error_queue_element, boost::lockfree::capacity<error_queue_length> > error_queue;
-  boost::lockfree::spsc_queue<cmd_ack_queue_element, boost::lockfree::capacity<cmd_ack_queue_length> > cmd_ack_queue;
-  boost::lockfree::spsc_queue<async_msg_queue_element, boost::lockfree::capacity<async_msg_queue_length> > async_msg_queue;
+  // other queues are MPMC
+  boost::lockfree::queue<command_queue_element, boost::lockfree::capacity<command_queue_length> > command_queue;
+  boost::lockfree::queue<response_queue_element, boost::lockfree::capacity<response_queue_length> > response_queue;
+  boost::lockfree::queue<error_queue_element, boost::lockfree::capacity<error_queue_length> > error_queue;
+  boost::lockfree::queue<cmd_ack_queue_element, boost::lockfree::capacity<cmd_ack_queue_length> > cmd_ack_queue;
+  boost::lockfree::queue<async_msg_queue_element, boost::lockfree::capacity<async_msg_queue_length> > async_msg_queue;
 
   // Boost context
   boost::asio::io_context context;
@@ -419,7 +417,8 @@ class vxsdr {
   static void time_point_to_time_spec_t(const std::chrono::time_point<std::chrono::system_clock> &t, time_spec_t &ts) {
     auto secs = std::chrono::time_point_cast<std::chrono::seconds>(t);
     auto nsecs = std::chrono::time_point_cast<std::chrono::nanoseconds>(t) - std::chrono::time_point_cast<std::chrono::nanoseconds>(secs);
-    ts = { (uint32_t)secs.time_since_epoch().count(), (uint32_t)nsecs.count() };
+    ts.seconds = (uint32_t)secs.time_since_epoch().count();
+    ts.nanoseconds = (uint32_t)nsecs.count();
   }
 
   std::optional<std::tuple<uint32_t, uint32_t>> device_hello(const uint8_t subdev = 0, const uint8_t flags = 0) {
@@ -939,17 +938,8 @@ class vxsdr {
   [[nodiscard]] bool cmd_queue_push_check(packet &p) {
     command_queue_element q;
     std::memcpy(&q, &p, std::min((size_t)p.hdr.packet_size, sizeof(q)));
-    unsigned wait_time_us = 0;
-    // setting command_queue_wait_us = 0 results in a busy wait with no timeout
-    while(command_queue.write_available() == 0 and wait_time_us < command_queue_timeout_us) {
-      if(command_queue_wait_us > 0) {
-        std::this_thread::sleep_for(std::chrono::microseconds(command_queue_wait_us));
-        wait_time_us += command_queue_wait_us;
-      }
-    }
-
-    if(not command_queue.push(q)) {
-      LOG_ERROR("timeout pushing to command queue");
+     if(not command_queue.bounded_push(q)) {
+      LOG_ERROR("out of space pushing to command queue");
       return false;
     }
     if((q.hdr.flags & FLAGS_REQUEST_ACK) != 0) {
@@ -1133,7 +1123,7 @@ class vxsdr {
 
     while(not receiver_thread_stop_flag) {
       static data_queue_element recv_buffer;
-      size_t bytes_in_packet = 0;
+      size_t bytes_in_packet = 0, n_samps = 0;
 #ifndef VXSDR_ASYNC_RX
       bytes_in_packet = receiver_socket.receive_from(boost::asio::buffer(&recv_buffer, sizeof(recv_buffer)), remote_endpoint);
 #else
@@ -1170,7 +1160,8 @@ class vxsdr {
         packet_types_received[recv_buffer.hdr.packet_type]++;
         bytes_received += bytes_in_packet;
         if(recv_buffer.hdr.packet_size != bytes_in_packet) {
-          LOG_ERROR("packet_size in header incorrect; resetting");
+          LOG_ERROR(fmt::format("packet_size in {:s} header incorrect ({:d}, {:d})",
+                packet_type_to_name(recv_buffer.hdr.packet_type), recv_buffer.hdr.packet_size, bytes_in_packet));
           recv_buffer.hdr.packet_size = std::min(bytes_in_packet, (unsigned long)recv_buffer.hdr.packet_size);
         }
         if(recv_buffer.hdr.packet_type == PACKET_TYPE_RX_SIGNAL_DATA) {
@@ -1181,7 +1172,8 @@ class vxsdr {
           if((bool)(recv_buffer.hdr.flags & FLAGS_STREAM_ID_PRESENT)) {
             header_size += sizeof(stream_spec_t);
           }
-          samples_received += (recv_buffer.hdr.packet_size - header_size) / sizeof(std::complex<int16_t>);
+          n_samps = (recv_buffer.hdr.packet_size - header_size) / sizeof(std::complex<int16_t>);
+          samples_received += n_samps;
         }
         if(packets_received > 1 and recv_buffer.hdr.sequence_counter != (uint16_t)(last_seq + 1)) {
           sequence_errors++;
@@ -1245,7 +1237,7 @@ class vxsdr {
                 break;
               default: {
                   auto *p = reinterpret_cast<response_queue_element *>(&recv_buffer);
-                  response_queue.push(*p);
+                  response_queue.bounded_push(*p);
                 }
                 break;
             }
@@ -1254,27 +1246,27 @@ class vxsdr {
           case PACKET_TYPE_RX_RADIO_CMD_ACK:
           case PACKET_TYPE_TX_RADIO_CMD_ACK: {
               auto *p = reinterpret_cast<cmd_ack_queue_element *>(&recv_buffer);
-              cmd_ack_queue.push(*p);
+              cmd_ack_queue.bounded_push(*p);
             }
             break;
           // DEVICE_CMD_RSP handled above
           case PACKET_TYPE_ASYNC_MSG: {
               // FIXME: do whatever is needed to notify or shut down!!!
               auto *p = reinterpret_cast<async_msg_queue_element *>(&recv_buffer);
-              async_msg_queue.push(*p);
+              async_msg_queue.bounded_push(*p);
             }
             break;
           case PACKET_TYPE_RX_RADIO_CMD_RSP:
           case PACKET_TYPE_TX_RADIO_CMD_RSP: {
               auto *p = reinterpret_cast<response_queue_element *>(&recv_buffer);
-              response_queue.push(*p);
+              response_queue.bounded_push(*p);
             }
             break;
           case PACKET_TYPE_DEVICE_CMD_ERR:
           case PACKET_TYPE_TX_RADIO_CMD_ERR:
           case PACKET_TYPE_RX_RADIO_CMD_ERR: {
               auto *p = reinterpret_cast<error_queue_element *>(&recv_buffer);
-              error_queue.push(*p);
+              error_queue.bounded_push(*p);
             }
             break;
           // packet types that should never show up at the host are sent to the error queue
@@ -1284,7 +1276,7 @@ class vxsdr {
           case PACKET_TYPE_TX_RADIO_CMD:
           default: { // unrecognized packet types
               auto *p = reinterpret_cast<error_queue_element *>(&recv_buffer);
-              error_queue.push(*p);
+              error_queue.bounded_push(*p);
             }
             break;
         }
@@ -1381,9 +1373,9 @@ class vxsdr {
     samples_sent = 0;
     bytes_sent = 0;
 
-    static constexpr size_t data_buffer_size = 16, cmd_buffer_size = 16;
+    static constexpr size_t data_buffer_size = 16;
     std::array<data_queue_element, data_buffer_size> data_buffer;
-    std::array<command_queue_element, cmd_buffer_size> cmd_buffer;
+    command_queue_element cmd_buffer;
 
     constexpr float throttle_on_percent     = 75;
     constexpr float throttle_off_percent    = 50;
@@ -1419,11 +1411,8 @@ class vxsdr {
     }
 
     while(not sender_thread_stop_flag) {
-      if(command_queue.read_available() > 0) {
-        size_t n_popped = command_queue.pop(&cmd_buffer.front(), cmd_buffer.size());
-        for(size_t i = 0; i < n_popped; i++) {
-          send_packet(cmd_buffer[i]);
-        }
+      while(command_queue.pop(cmd_buffer)) {
+        send_packet(cmd_buffer);
       }
       if(buffer_check_interval_samples == initial_check_interval_samples and tx_buffer_size_bytes > 0) {
         // once tx_buffer_size_bytes has been set, update buffer_check_interval_samples
