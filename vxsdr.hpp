@@ -7,11 +7,11 @@
 #include <tuple>
 #include <cstdint>
 #include <optional>
-#include <future>
 #include <fstream>
 #include <chrono>
 #include <atomic>
 #include <thread>
+#include <future>
 
 #include <boost/lockfree/spsc_queue.hpp>
 #include <boost/lockfree/queue.hpp>
@@ -167,7 +167,7 @@ class vxsdr {
     LOG_DEBUG("joining receiver_thread");
     receiver_thread_stop_flag = true;
     boost::system::error_code err;
-#ifndef ASYNCH__RX
+#ifndef VXSDR_ASYNCH__RX
     // use shutdown() to terminate the blocking read
     receiver_socket.shutdown(boost::asio::ip::udp::socket::shutdown_receive, err);
     if(err != boost::system::errc::success and err != boost::system::errc::not_connected) {
