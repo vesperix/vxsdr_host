@@ -109,19 +109,20 @@ class vxsdr {
   boost::asio::ip::udp::endpoint destination_endpoint;
 
   // flags used for startup
-  enum interface_state { UNINITIALIZED, STARTING, WAITING, RUNNING, SHUTTING_DOWN, SHUTDOWN };
-  std::atomic<interface_state> udp_tx_state { UNINITIALIZED }, udp_rx_state { UNINITIALIZED };
+  enum udp_interface_state { UNINITIALIZED, STARTING, WAITING, RUNNING, SHUTTING_DOWN, SHUTDOWN };
+  std::atomic<udp_interface_state> udp_tx_state { UNINITIALIZED }, udp_rx_state { UNINITIALIZED };
 
   // flags used for orderly shutdown
   std::atomic<bool> sender_thread_stop_flag = false, receiver_thread_stop_flag = false;
 
+  // statistics
   uint64_t send_errors = 0, packets_sent = 0, samples_sent = 0, bytes_sent = 0;
   std::array<uint64_t, UINT8_MAX + 1> packet_types_sent = { 0 };
 
   uint64_t sequence_errors = 0, packets_received = 0, samples_received = 0, bytes_received = 0;
   std::array<uint64_t, UINT8_MAX + 1> packet_types_received = { 0 };
 
-  // FIXME: diagnostic info gathering: remove when unneeded
+  // diagnostic info gathering for sequence errors
 #ifdef VXSDR_SEQ_ERR_DIAG
   std::vector<std::chrono::time_point<std::chrono::system_clock> > seq_error_times;
   std::vector<uint8_t> seq_error_packet_type;
