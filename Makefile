@@ -17,7 +17,7 @@ COMMON_INCLUDES = packet_proc.hpp packet_defs.h vxsdr_header.hpp host_radio_opti
 COMMON_SRC = packet_proc.cpp utility.cpp logging.cpp
 
 LIB_SRC = vxsdr.cpp vxsdr_udp.cpp
-LIB_LDFLAGS = -lpthread -lspdlog
+LIB_LDFLAGS = -lpthread
 
 PROGS = vxsdr_test vxsdr_test_rx test_rx test_tx test_rx_seq_only
 
