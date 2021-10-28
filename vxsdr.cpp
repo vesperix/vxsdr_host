@@ -1,5 +1,76 @@
 #include "vxsdr.hpp"
 
+  // constructor
+  vxsdr::vxsdr(const boost::asio::ip::udp::endpoint &local_send_endpoint,
+        const boost::asio::ip::udp::endpoint &local_receive_endpoint,
+        const boost::asio::ip::udp::endpoint &radio_endpoint) :
+    sender_socket(context, local_send_endpoint),
+    receiver_socket(context, local_receive_endpoint) {
+    LOG_DEBUG("vxsdr constructor entered");
+    destination_endpoint = radio_endpoint;
+#ifdef VXSDR_ASYNC_RX
+    // https://www.boost.org/doc/libs/1_77_0/doc/html/boost_asio/example/cpp11/futures/daytime_client.cpp
+    // We run the io_context off in its own thread so that it operates
+    // completely asynchronously with respect to the rest of the program.
+    //
+    // boost::asio::execution needs Boost 1.76 or higher; use make_work_guard for backwards compatibility
+    //auto work = boost::asio::require(context.get_executor(), boost::asio::execution::outstanding_work.tracked);
+    auto work = boost::asio::make_work_guard(context);
+    context_thread = std::thread([&] { context.run(); });
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+#endif // VXSDR_ASYNC_RX
+    udp_rx_state = STARTING;
+    receiver_thread = std::thread([&] { receiver(); });
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    udp_tx_state = STARTING;
+    sender_thread = std::thread([&] { sender(); });
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    set_tx_enable(true);
+    set_rx_enable(true);
+    LOG_DEBUG("vxsdr constructor complete");
+  }
+
+  // destructor
+  vxsdr::~vxsdr() {
+    LOG_DEBUG("vxsdr destructor entered");
+    set_tx_enable(false);
+    set_rx_enable(false);
+    LOG_DEBUG("joining receiver_thread");
+    receiver_thread_stop_flag = true;
+    boost::system::error_code err;
+#ifndef VXSDR_ASYNCH__RX
+    // use shutdown() to terminate the blocking read
+    receiver_socket.shutdown(boost::asio::ip::udp::socket::shutdown_receive, err);
+    if(err != boost::system::errc::success and err != boost::system::errc::not_connected) {
+      // the not connected error is expected since it's a UDP socket
+      LOG_ERROR(fmt::format("receiver socket shutdown: {:s}", err.message()));
+    }
+#endif // VXSDR_ASYNC_RX
+    if(receiver_thread.joinable()) {
+      receiver_thread.join();
+    }
+    udp_rx_state = SHUTDOWN;
+    receiver_socket.close(err);
+    if(err != boost::system::errc::success) {
+      LOG_ERROR(fmt::format("receiver socket close: {:s}", err.message()));
+    }
+    LOG_DEBUG("joining sender thread");
+    sender_thread_stop_flag = true;
+    if(sender_thread.joinable()) {
+      sender_thread.join();
+    }
+    udp_tx_state = SHUTDOWN;
+    sender_socket.close(err);
+    if(err != boost::system::errc::success) {
+      LOG_ERROR(fmt::format("sender socket close: {:s}", err.message()));
+    }
+#ifdef VXSDR_ASYNC_RX
+    LOG_DEBUG("joining context thread");
+    context_thread.join();
+#endif // VXSDR_ASYNC_RX
+    LOG_DEBUG("vxsdr destructor complete");
+  }
+
   size_t vxsdr::get_rx_data(std::vector<std::complex<int16_t> > &data, size_t n_desired) {
     LOG_DEBUG("get_rx_data entered");
     size_t n_received = 0;
@@ -722,4 +793,61 @@
       p.enabled = 0;
     }
     return vxsdr::cmd_queue_push_check(p);
+  }
+
+// private functions
+
+  void vxsdr::time_point_to_time_spec_t(const std::chrono::time_point<std::chrono::system_clock> &t, time_spec_t &ts) {
+    auto secs = std::chrono::time_point_cast<std::chrono::seconds>(t);
+    auto nsecs = std::chrono::time_point_cast<std::chrono::nanoseconds>(t) - std::chrono::time_point_cast<std::chrono::nanoseconds>(secs);
+    ts.seconds = (uint32_t)secs.time_since_epoch().count();
+    ts.nanoseconds = (uint32_t)nsecs.count();
+  }
+
+  bool vxsdr::device_get_buffer_info(const uint8_t subdev, const uint8_t flags) {
+    header_only_packet p;
+    p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_GET_BUFFER_INFO, subdev, flags, sizeof(p), 0 };
+    return vxsdr::cmd_queue_push_check(p);
+  }
+
+  bool vxsdr::device_get_buffer_use(const uint8_t subdev, const uint8_t flags) {
+    header_only_packet p;
+    p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_GET_BUFFER_USE, subdev, flags, sizeof(p), 0 };
+    return vxsdr::cmd_queue_push_check(p);
+  }
+
+  [[nodiscard]] bool vxsdr::cmd_queue_push_check(packet &p) {
+    command_queue_element q;
+    std::memcpy(&q, &p, std::min((size_t)p.hdr.packet_size, sizeof(q)));
+     if(not command_queue.bounded_push(q)) {
+      LOG_ERROR("out of space pushing to command queue");
+      return false;
+    }
+    if((q.hdr.flags & FLAGS_REQUEST_ACK) != 0) {
+      cmd_ack_queue_element a;
+      bool got_response = false;
+      unsigned wait_time_ms = 0;
+      while(not (got_response = vxsdr::cmd_ack_queue.pop(a)) and wait_time_ms < device_response_timeout_ms) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(device_response_wait_ms));
+        wait_time_ms += device_response_wait_ms;
+      }
+      if(got_response) {
+        auto *r = reinterpret_cast<header_only_packet *>(&a);
+        bool packet_types_match = false;
+        if((q.hdr.packet_type == PACKET_TYPE_DEVICE_CMD   and r->hdr.packet_type == PACKET_TYPE_DEVICE_CMD_ACK)   or
+           (q.hdr.packet_type == PACKET_TYPE_RX_RADIO_CMD and r->hdr.packet_type == PACKET_TYPE_RX_RADIO_CMD_ACK) or
+           (q.hdr.packet_type == PACKET_TYPE_TX_RADIO_CMD and r->hdr.packet_type == PACKET_TYPE_TX_RADIO_CMD_ACK)) {
+          packet_types_match = true;
+        }
+        // for an ack to match, packet types, commands, and subdevices must all match
+        if(packet_types_match and r->hdr.command == q.hdr.command and r->hdr.target_subdevice == q.hdr.target_subdevice) {
+          return true;
+        }
+        LOG_ERROR("invalid ack received");
+        return false;
+      }
+      LOG_ERROR("timeout waiting for ack");
+      return false;
+    }
+    return true;
   }

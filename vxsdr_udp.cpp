@@ -3,14 +3,14 @@
   void vxsdr::receiver() {
     LOG_DEBUG("receiver thread started");
 
-    if(thread_set_priority) {
-      if(set_current_thread_priority_realtime(receive_thread_priority) != 0) {
+    if(vxsdr::thread_set_priority) {
+      if(set_current_thread_priority_realtime(vxsdr::receive_thread_priority) != 0) {
         LOG_ERROR("unable to set receiver thread realtime priority");
       }
     }
 
-    if(thread_set_affinity) {
-      if(set_current_thread_affinity(receive_thread_cpu) != 0) {
+    if(vxsdr::thread_set_affinity) {
+      if(set_current_thread_affinity(vxsdr::receive_thread_cpu) != 0) {
         LOG_ERROR("unable to set receiver thread CPU affinity");
       }
     }
@@ -23,14 +23,14 @@
   void vxsdr::sender() {
     LOG_DEBUG("sender thread started");
 
-    if(thread_set_priority) {
-      if(set_current_thread_priority_realtime(send_thread_priority) != 0) {
+    if(vxsdr::thread_set_priority) {
+      if(set_current_thread_priority_realtime(vxsdr::send_thread_priority) != 0) {
         LOG_ERROR("unable to set sender thread realtime priority");
       }
     }
 
-    if(thread_set_affinity) {
-      if(set_current_thread_affinity(send_thread_cpu) != 0) {
+    if(vxsdr::thread_set_affinity) {
+      if(set_current_thread_affinity(vxsdr::send_thread_cpu) != 0) {
         LOG_ERROR("unable to set sender thread CPU affinity");
       }
     }
@@ -43,13 +43,13 @@
   void vxsdr::udp_receiver() {
 
     vxsdr::receiver_socket.set_option(boost::asio::ip::udp::socket::reuse_address(true));
-    vxsdr::receiver_socket.set_option(boost::asio::socket_base::receive_buffer_size(network_receive_buffer_bytes));
+    vxsdr::receiver_socket.set_option(boost::asio::socket_base::receive_buffer_size(vxsdr::network_receive_buffer_bytes));
     boost::asio::socket_base::receive_buffer_size option;
     vxsdr::receiver_socket.get_option(option);
     unsigned network_buffer_size = option.value();
-    if(network_buffer_size != network_receive_buffer_bytes) {
+    if(network_buffer_size != vxsdr::network_receive_buffer_bytes) {
       LOG_ERROR(fmt::format("cannot set network receive buffer size to {:d} (got {:d})",
-                    network_receive_buffer_bytes, network_buffer_size));
+                    vxsdr::network_receive_buffer_bytes, network_buffer_size));
     } else {
       LOG_INFO(fmt::format("network receive buffer size set to {:d}", network_buffer_size));
     }
@@ -62,10 +62,10 @@
     boost::asio::ip::udp::endpoint remote_endpoint;
     uint16_t last_seq = 0;
 
-    bytes_received = 0;
-    samples_received = 0;
-    packets_received = 0;
-    sequence_errors = 0;
+    vxsdr::bytes_received = 0;
+    vxsdr::samples_received = 0;
+    vxsdr::packets_received = 0;
+    vxsdr::sequence_errors = 0;
 
     vxsdr::udp_rx_state = RUNNING;
 
@@ -95,7 +95,7 @@
       std::future<size_t> result = vxsdr::receiver_socket.async_receive_from(boost::asio::buffer(&recv_buffer,
                                    sizeof(recv_buffer)), remote_endpoint,
                                    boost::asio::use_future);
-      if(result.wait_for(std::chrono::milliseconds(receiver_socket_timeout_ms)) == std::future_status::timeout) {
+      if(result.wait_for(std::chrono::milliseconds(vxsdr::receiver_socket_timeout_ms)) == std::future_status::timeout) {
         bytes_in_packet = 0;
         //LOG_DEBUG("timeout");
       } else {
@@ -104,9 +104,9 @@
 #endif // VXSDR_ASYNC_RX
 
       if(bytes_in_packet >= sizeof(packet_header) and remote_endpoint == destination_endpoint) {
-        packets_received++;
-        packet_types_received[recv_buffer.hdr.packet_type]++;
-        bytes_received += bytes_in_packet;
+        vxsdr::packets_received++;
+        vxsdr::packet_types_received[recv_buffer.hdr.packet_type]++;
+        vxsdr::bytes_received += bytes_in_packet;
         if(recv_buffer.hdr.packet_size != bytes_in_packet) {
           LOG_ERROR(fmt::format("packet_size in {:s} header incorrect ({:d}, {:d})",
                 packet_type_to_name(recv_buffer.hdr.packet_type), recv_buffer.hdr.packet_size, bytes_in_packet));
@@ -121,10 +121,10 @@
             header_size += sizeof(stream_spec_t);
           }
           n_samps = (recv_buffer.hdr.packet_size - header_size) / sizeof(std::complex<int16_t>);
-          samples_received += n_samps;
+          vxsdr::samples_received += n_samps;
         }
-        if(packets_received > 1 and recv_buffer.hdr.sequence_counter != (uint16_t)(last_seq + 1)) {
-          sequence_errors++;
+        if(vxsdr::packets_received > 1 and recv_buffer.hdr.sequence_counter != (uint16_t)(last_seq + 1)) {
+          vxsdr::sequence_errors++;
 #ifdef VXSDR_SEQ_ERR_DIAG
           vxsdr::seq_error_times.push_back(std::chrono::system_clock::now());
           vxsdr::seq_error_packet_type.push_back(recv_buffer.hdr.packet_type);
@@ -137,19 +137,19 @@
         switch(recv_buffer.hdr.packet_type) {
           // receive buffers go into the rx data queue
           case PACKET_TYPE_RX_SIGNAL_DATA: {
-              if(not rx_data_queue.push(recv_buffer)) {
+              if(not vxsdr::rx_data_queue.push(recv_buffer)) {
                 unsigned wait_time_us = 0;
-                while(rx_data_queue.write_available() == 0 and wait_time_us < rx_data_queue_timeout_us) {
-                  if(rx_data_queue_wait_us > 0) {
-                    std::this_thread::sleep_for(std::chrono::microseconds(rx_data_queue_wait_us));
-                    wait_time_us += rx_data_queue_wait_us;
+                while(vxsdr::rx_data_queue.write_available() == 0 and wait_time_us < vxsdr::rx_data_queue_timeout_us) {
+                  if(vxsdr::rx_data_queue_wait_us > 0) {
+                    std::this_thread::sleep_for(std::chrono::microseconds(vxsdr::rx_data_queue_wait_us));
+                    wait_time_us += vxsdr::rx_data_queue_wait_us;
                   }
                   else {
                     break; // avoid an endless loop if rx_data_queue_wait_us = 0
                   }
                 }
                 if(not vxsdr::rx_data_queue.push(recv_buffer)) {
-                  LOG_ERROR(fmt::format("timeout pushing to rx data queue: {:d}", samples_received));
+                  LOG_ERROR(fmt::format("timeout pushing to rx data queue: {:d}", vxsdr::samples_received));
                 }
               }
             }
@@ -157,8 +157,8 @@
           // tx sginal data acks special cased since they contain throttling information
           case PACKET_TYPE_TX_SIGNAL_DATA_ACK: {
               auto *r = reinterpret_cast<tx_signal_data_ack_packet *>(&recv_buffer);
-              tx_buffer_used_bytes = r->tx_buffer_used_bytes;
-              tx_buffer_fill_percent = std::min(100U, (100U * tx_buffer_used_bytes) / tx_buffer_size_bytes);
+              vxsdr::tx_buffer_used_bytes = r->tx_buffer_used_bytes;
+              vxsdr::tx_buffer_fill_percent = std::min(100U, (100U * vxsdr::tx_buffer_used_bytes) / vxsdr::tx_buffer_size_bytes);
               // DO NOT PUSH DATA ACKS TO COMMAND ACK QUEUE!!
             }
             break;
@@ -167,16 +167,16 @@
             switch(recv_buffer.hdr.command) {
               case DEVICE_CMD_GET_BUFFER_USE: {
                   auto *r = reinterpret_cast<get_buffer_use_rsp_packet *>(&recv_buffer);
-                  tx_buffer_used_bytes = r->tx_buffer_used_bytes;
-                  rx_buffer_used_bytes = r->rx_buffer_used_bytes;
-                  tx_buffer_fill_percent = std::min(100U, (100U * tx_buffer_used_bytes) / tx_buffer_size_bytes);
-                  rx_buffer_fill_percent = std::min(100U, (100U * rx_buffer_used_bytes) / rx_buffer_size_bytes);
+                  vxsdr::tx_buffer_used_bytes = r->tx_buffer_used_bytes;
+                  vxsdr::rx_buffer_used_bytes = r->rx_buffer_used_bytes;
+                  vxsdr::tx_buffer_fill_percent = std::min(100U, (100U * vxsdr::tx_buffer_used_bytes) / vxsdr::tx_buffer_size_bytes);
+                  vxsdr::rx_buffer_fill_percent = std::min(100U, (100U * vxsdr::rx_buffer_used_bytes) / vxsdr::rx_buffer_size_bytes);
                 }
                 break;
               case DEVICE_CMD_GET_BUFFER_INFO: {
                   auto *r = reinterpret_cast<get_buffer_info_rsp_packet *>(&recv_buffer);
-                  tx_buffer_size_bytes = r->tx_buffer_size_bytes;
-                  rx_buffer_size_bytes = r->rx_buffer_size_bytes;
+                  vxsdr::tx_buffer_size_bytes = r->tx_buffer_size_bytes;
+                  vxsdr::rx_buffer_size_bytes = r->rx_buffer_size_bytes;
                 }
                 break;
               default: {
@@ -230,15 +230,15 @@
     vxsdr::udp_rx_state = SHUTTING_DOWN;
 
     LOG_INFO("start_receive exiting:");
-    LOG_INFO(fmt::format("   {:12d} packets received", packets_received));
-    for(unsigned i = 0; i < packet_types_received.size(); i++) {
-      if(packet_types_received[i] > 0) {
-        LOG_INFO(fmt::format("   {:12d} {:20s} ({:d})", packet_types_received[i], packet_type_to_name(i), i));
+    LOG_INFO(fmt::format("   {:12d} packets received", vxsdr::packets_received));
+    for(unsigned i = 0; i < vxsdr::packet_types_received.size(); i++) {
+      if(vxsdr::packet_types_received[i] > 0) {
+        LOG_INFO(fmt::format("   {:12d} {:20s} ({:d})", vxsdr::packet_types_received[i], packet_type_to_name(i), i));
       }
     }
-    LOG_INFO(fmt::format("   {:12d} samples received", samples_received));
-    LOG_INFO(fmt::format("   {:12d} bytes received", bytes_received));
-    LOG_INFO(fmt::format("   {:12d} sequence errors", sequence_errors));
+    LOG_INFO(fmt::format("   {:12d} samples received", vxsdr::samples_received));
+    LOG_INFO(fmt::format("   {:12d} bytes received", vxsdr::bytes_received));
+    LOG_INFO(fmt::format("   {:12d} sequence errors", vxsdr::sequence_errors));
 #ifdef VXSDR_SEQ_ERR_DIAG
     for(unsigned i =0; i < vxsdr::seq_error_times.size(); i++) {
       LOG_INFO(fmt::format(" {:30s} {:20s} {:8d} {:8d}", format_time(vxsdr::seq_error_times[i]), packet_type_to_name(vxsdr::seq_error_packet_type[i]),
@@ -270,7 +270,7 @@
     packet.hdr.sequence_counter = (uint16_t)(vxsdr::packets_sent++ % (UINT16_MAX + 1));
     size_t bytes = vxsdr::sender_socket.send_to(boost::asio::buffer(&packet, packet.hdr.packet_size), vxsdr::destination_endpoint);
     if(bytes != packet.hdr.packet_size) {
-      send_errors++;
+      vxsdr::send_errors++;
     }
     if(packet.hdr.packet_type == PACKET_TYPE_TX_SIGNAL_DATA) {
       uint16_t header_size = sizeof(packet_header);
@@ -280,9 +280,9 @@
       if((bool)(packet.hdr.flags & FLAGS_STREAM_ID_PRESENT)) {
         header_size += sizeof(stream_spec_t);
       }
-      samples_sent += (packet.hdr.packet_size - header_size) / sizeof(std::complex<int16_t>);
+      vxsdr::samples_sent += (packet.hdr.packet_size - header_size) / sizeof(std::complex<int16_t>);
     }
-    bytes_sent += bytes;
+    vxsdr::bytes_sent += bytes;
   }
 
   void vxsdr::initialize_sdr(const uint8_t device_subdev, const uint8_t tx_subdev, const uint8_t rx_subdev) {
@@ -313,9 +313,9 @@
   void vxsdr::start_send() {
     LOG_DEBUG("start_send started");
 
-    packets_sent = 0;
-    samples_sent = 0;
-    bytes_sent = 0;
+    vxsdr::packets_sent = 0;
+    vxsdr::samples_sent = 0;
+    vxsdr::bytes_sent = 0;
 
     static constexpr size_t data_buffer_size = 16;
     std::array<data_queue_element, data_buffer_size> data_buffer;
@@ -361,11 +361,11 @@
       else if(vxsdr::tx_data_queue.read_available() > 0) {
         size_t n_popped = vxsdr::tx_data_queue.pop(&data_buffer.front(), data_buffer.size());
         for(size_t i = 0; i < n_popped; i++) {
-          if(samples_sent - last_check >= buffer_check_interval_samples) {
+          if(vxsdr::samples_sent - last_check >= buffer_check_interval_samples) {
             // request ack to update buffer use
             data_buffer[i].hdr.flags |= FLAGS_REQUEST_ACK;
             vxsdr::send_packet(data_buffer[i]);
-            last_check = samples_sent;
+            last_check = vxsdr::samples_sent;
           } else {
             vxsdr::send_packet(data_buffer[i]);
           }
@@ -395,7 +395,7 @@
         LOG_INFO(fmt::format("   {:12d} {:20s} ({:d})", vxsdr::packet_types_sent[i], packet_type_to_name(i), i));
       }
     }
-    LOG_INFO(fmt::format("   {:12d} samples sent", samples_sent));
-    LOG_INFO(fmt::format("   {:12d} bytes sent", bytes_sent));
-    LOG_INFO(fmt::format("   {:12d} send errors", send_errors));
+    LOG_INFO(fmt::format("   {:12d} samples sent", vxsdr::samples_sent));
+    LOG_INFO(fmt::format("   {:12d} bytes sent", vxsdr::bytes_sent));
+    LOG_INFO(fmt::format("   {:12d} send errors", vxsdr::send_errors));
   }
