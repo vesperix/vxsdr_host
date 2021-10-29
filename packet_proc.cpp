@@ -1,6 +1,6 @@
 #include <bitset>
 #include "logging.hpp"
-#include "vxsdr_header.hpp"
+#include "vxsdr_header.h"
 
 std::string packet_type_to_name(const uint8_t number) {
   switch(number) {

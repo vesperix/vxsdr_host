@@ -3,7 +3,7 @@
 #include <boost/format.hpp>
 
 #include "logging.hpp"
-#include "vxsdr_header.hpp"
+#include "vxsdr_header.h"
 
 #ifndef PACKET_PROC_HPP
 #define PACKET_PROC_HPP

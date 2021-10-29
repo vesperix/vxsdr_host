@@ -9,7 +9,7 @@
 #include "thread_utils.h"
 #include "utility.hpp"
 
-#include "vxsdr_header.hpp"
+#include "vxsdr_header.h"
 #include "packet_proc.hpp"
 
 #ifndef TEST_TX_RX_HPP

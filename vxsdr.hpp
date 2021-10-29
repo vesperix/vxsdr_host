@@ -25,12 +25,8 @@
 #include "thread_utils.h"
 #include "utility.hpp"
 
-#include "vxsdr_header.hpp"
+#include "vxsdr_header.h"
 #include "packet_proc.hpp"
-
-/*! @file vxsdr.hpp
-    @brief Contains the prototypes
-*/
 
 /*! @class vxsdr vxsdr.hpp
     @brief The vxsdr class contains the host interface for the VXSDR
