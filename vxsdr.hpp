@@ -145,8 +145,8 @@ class vxsdr {
  public:
   /*!
     @brief Constructor for the @p vxsdr host interface class.
-    @param local_send_endpoint the endpoint (IP address and port) to send from
-    @param local_receive_endpoint the endpoint (IP address and port) to send from
+    @param local_send_endpoint the endpoint (IP address and port) used to send
+    @param local_receive_endpoint the endpoint used to receive
     @param device_endpoint the endpoint of the target device
     @param set_affinity controls whether threads set affinity for a specific processor
     @param base_cpu_number the starting processor to use if affinity is set
