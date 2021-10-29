@@ -28,6 +28,15 @@
 #include "vxsdr_header.hpp"
 #include "packet_proc.hpp"
 
+/*! @file vxsdr.hpp
+    @brief Contains the prototypes
+*/
+
+
+/*! @class vxsdr vxsdr.hpp
+    @brief The vxsdr class contains the host interface for the VXSDR
+*/
+
 class vxsdr {
 
  private:
@@ -143,15 +152,20 @@ class vxsdr {
         const boost::asio::ip::udp::endpoint &local_receive_endpoint,
         const boost::asio::ip::udp::endpoint &radio_endpoint);
   ~vxsdr();
+  //! @brief Deleted copy constructor for the @p vxsdr class.
   vxsdr(const vxsdr &) = delete;
+  //! @brief Deleted copy assignment for the @p vxsdr class.
   vxsdr& operator=(const vxsdr &) = delete;
+  //! @brief Deleted move constructor for the @p vxsdr class.
   vxsdr(vxsdr &&) = delete;
+  //! @brief Deleted move assignment for the @p vxsdr class.
   vxsdr& operator=(vxsdr &&) = delete;
 
   size_t get_rx_data(std::vector<std::complex<int16_t> > &data, size_t n_desired = 0);
   size_t write_rx_data(std::ofstream &out_stream, size_t n_desired, size_t write_size_samples = 65536);
   size_t check_rx_data_sequence_only(size_t n_desired);
   size_t put_tx_data(std::vector<std::complex<int16_t> > data, const uint8_t subdev = 0);
+
   std::optional<std::tuple<uint32_t, uint32_t>> device_hello(const uint8_t subdev = 0, const uint8_t flags = 0);
   bool device_reset(const uint8_t subdev = 0, const uint8_t flags = 0);
   bool device_open_session(const uint8_t subdev = 0, const uint8_t flags = 0);

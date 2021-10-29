@@ -1,5 +1,9 @@
 #include "vxsdr.hpp"
 
+/*! @file vxsdr_udp.cpp
+    @brief Contains the private UDP interface functions
+*/
+
   void vxsdr::receiver() {
     LOG_DEBUG("receiver thread started");
 
