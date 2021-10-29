@@ -721,6 +721,20 @@ class vxsdr {
     @param flags the packet flags
   */
   bool set_rx_enable(const bool enabled, const uint8_t subdev = 0, const uint8_t flags = 0);
+  /*!
+    @brief Gets the transmit capabilites.
+    - returns a @p capabilities_t indicating the transmit capabilities
+    @param subdev the subdevice number
+    @param flags the packet flags
+  */
+  std::optional<capabilities_t> get_tx_capabilities(const uint8_t subdev = 0, const uint8_t flags = 0);
+  /*!
+    @brief Gets the receive capabilites.
+    - returns a @p capabilities_t indicating the receive capabilities
+    @param subdev the subdevice number
+    @param flags the packet flags
+  */
+  std::optional<capabilities_t> get_rx_capabilities(const uint8_t subdev = 0, const uint8_t flags = 0);
 
  private:
 

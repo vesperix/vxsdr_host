@@ -113,7 +113,9 @@ extern "C" {
 #define RADIO_CMD_GET_RF_BW                    (0x14)  // unimplemented
 #define RADIO_CMD_GET_RF_ENABLED               (0x15)  // unimplemented
 #define RADIO_CMD_GET_RF_PORT                  (0x16)  // unimplemented
-  // 0x17-0x20 reserved
+#define RADIO_CMD_GET_NUM_RF_PORTS             (0x17)  // unimplemented
+#define RADIO_CMD_GET_RF_PORT_NAME             (0x18)  // unimplemented
+  // 0x19-0x20 reserved
 #define RADIO_CMD_SET_RF_FREQ                  (0x21)
 #define RADIO_CMD_SET_RF_GAIN                  (0x22)
 #define RADIO_CMD_SET_SAMPLE_RATE              (0x23)
@@ -123,6 +125,9 @@ extern "C" {
   // 0x27-0x30 reserved
 #define RADIO_CMD_GET_NUM_SUBDEVS              (0x31)  // unimplemented - return the number of subdevices
 #define RADIO_CMD_GET_CAPABILITIES             (0x32)  // unimplemented
+#define RADIO_CMD_GET_RF_FREQ_RANGE            (0x33)  // unimplemented
+#define RADIO_CMD_GET_GAIN_RANGE               (0x34)  // unimplemented
+#define RADIO_CMD_GET_RATE_RANGE               (0x35)  // unimplemented
   // 0x32-0x40 reserved
 #define RADIO_CMD_GET_IQ_BIAS                  (0x41)
 #define RADIO_CMD_GET_IQ_CORR                  (0x42)
@@ -148,19 +153,19 @@ extern "C" {
   // 0x06-0xFF reserved
 
 // Capabilities
-#define CAPABILITY_HAS_LOCK_DETECT             (0x00000001U)
-#define CAPABILITY_HAS_EXTERNAL_REF            (0x00000002U)
-#define CAPABILITY_HAS_EXTERNAL_PPS            (0x00000004U)
-#define CAPABILITY_HAS_AGC                     (0x00000008U)
-#define CAPABILITY_HAS_LIMITER                 (0x00000010U)
-#define CAPABILITY_HAS_LIMIT_DETECT            (0x00000020U)
-#define CAPABILITY_HAS_MANUAL_IQ_BIAS_CORR     (0x00000040U)
-#define CAPABILITY_HAS_MANUAL_IQ_BALANCE_CORR  (0x00000080U)
-#define CAPABILITY_HAS_AUTO_IQ_BIAS_CORR       (0x00000100U)
-#define CAPABILITY_HAS_AUTO_IQ_BALANCE_CORR    (0x00000200U)
-#define CAPABILITY_HAS_TEMP_MEASURE            (0x00000400U)
-#define CAPABILITY_HAS_POWER_MEASURE           (0x00000800U)
-#define CAPABILITY_HAS_EXTERNAL_LO             (0x00001000U)
+#define CAPABILITY_HAS_LOCK_DETECT             (0x00000001ULL)
+#define CAPABILITY_HAS_EXTERNAL_REF            (0x00000002ULL)
+#define CAPABILITY_HAS_EXTERNAL_PPS            (0x00000004ULL)
+#define CAPABILITY_HAS_AGC                     (0x00000008ULL)
+#define CAPABILITY_HAS_LIMITER                 (0x00000010ULL)
+#define CAPABILITY_HAS_LIMIT_DETECT            (0x00000020ULL)
+#define CAPABILITY_HAS_MANUAL_IQ_BIAS_CORR     (0x00000040ULL)
+#define CAPABILITY_HAS_MANUAL_IQ_BALANCE_CORR  (0x00000080ULL)
+#define CAPABILITY_HAS_AUTO_IQ_BIAS_CORR       (0x00000100ULL)
+#define CAPABILITY_HAS_AUTO_IQ_BALANCE_CORR    (0x00000200ULL)
+#define CAPABILITY_HAS_TEMP_MEASURE            (0x00000400ULL)
+#define CAPABILITY_HAS_POWER_MEASURE           (0x00000800ULL)
+#define CAPABILITY_HAS_EXTERNAL_LO_INPUT       (0x00001000ULL)
 
 #define MAX_DATA_LENGTH_SAMPLES                (2048UL)
 #define MAX_PAYLOAD_LENGTH_BYTES               (32UL)  // maximum length of a CMD or RSP packet, excluding header
@@ -184,6 +189,8 @@ typedef struct ATTRIBUTE_PACKED {
 
 typedef uint64_t           stream_spec_t;
 
+typedef uint64_t           capabilities_t;
+
 #ifdef __cplusplus
 }
 
@@ -195,6 +202,27 @@ class packet {
 };
 
 class header_only_packet : public packet {};
+
+class integer_packet : public packet {
+  public:
+    int64_t                number;
+};
+
+class name_packet : public packet {
+  public:
+    char                   name[MAX_PAYLOAD_LENGTH_BYTES];
+};
+
+class capabilities_packet : public packet {
+  public:
+    capabilities_t         capabilities;
+};
+
+class range_packet : public packet {
+  public:
+    double                 range_min;
+    double                 range_max;
+};
 
 //FIXME: Need to add number of samples so that we don't always use MAX_DATA_LENGTH_SAMPLES!
 
