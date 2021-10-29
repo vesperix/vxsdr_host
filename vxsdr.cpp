@@ -573,7 +573,7 @@
 
    /*!
     @brief Gets the device time immediately.
-    - returns a @p std::chrono::time_point<std::chrono::system_clock> containing the device time
+    - returns a @p time_point containing the device time
     @param subdev the subdevice number
     @param flags the packet flags
   */
@@ -739,22 +739,57 @@
     return vxsdr::cmd_queue_push_check(p);
   }
 
+   /*!
+    @brief Sets the IQ DC bias for the transmiiter to control LO feedthrough.
+    - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
+        the command is sent, @b false otherwise
+    - if the FLAG_REQUEST_ACK bit in @p flags is set, returns @b true if
+         the command is sent and an ACK is received, @b false otherwise
+    @param i_bias the I channel bias (-1 >= @p i_bias >= 1)
+    @param q_bias the Q channel bias (-1 >= @p q_bias >= 1)
+    @param subdev the subdevice number
+    @param flags the packet flags
+  */
   bool vxsdr::tx_set_iq_bias(const double i_bias, const double q_bias, const uint8_t subdev, const uint8_t flags) {
     radio_iq_bias_packet p;
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_SET_IQ_BIAS, subdev, flags, sizeof(p), 0 };
-    p.i_bias = i_bias;
-    p.q_bias = q_bias;
+    p.i_bias = std::min(1.0, std::max(-1.0, i_bias));
+    p.q_bias = std::min(1.0, std::max(-1.0, q_bias));
     return vxsdr::cmd_queue_push_check(p);
   }
 
+   /*!
+    @brief Sets the IQ DC bias for the receiver to control LO feedthrough.
+    - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
+        the command is sent, @b false otherwise
+    - if the FLAG_REQUEST_ACK bit in @p flags is set, returns @b true if
+         the command is sent and an ACK is received, @b false otherwise
+    @param i_bias the I channel bias (-1 >= @p i_bias >= 1)
+    @param q_bias the Q channel bias (-1 >= @p q_bias >= 1)
+    @param subdev the subdevice number
+    @param flags the packet flags
+  */
   bool vxsdr::rx_set_iq_bias(const double i_bias, const double q_bias, const uint8_t subdev, const uint8_t flags) {
     radio_iq_bias_packet p;
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_SET_IQ_BIAS, subdev, flags, sizeof(p), 0 };
-    p.i_bias = i_bias;
-    p.q_bias = q_bias;
+    p.i_bias = std::min(1.0, std::max(-1.0, i_bias));
+    p.q_bias = std::min(1.0, std::max(-1.0, q_bias));
     return vxsdr::cmd_queue_push_check(p);
   }
 
+   /*!
+    @brief Sets the IQ correction for the transmitter to control image rejection.
+    - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
+        the command is sent, @b false otherwise
+    - if the FLAG_REQUEST_ACK bit in @p flags is set, returns @b true if
+         the command is sent and an ACK is received, @b false otherwise
+    @param ii_corr I-I channel correction
+    @param iq_corr I-Q channel correction
+    @param qi_corr Q-I channel correction
+    @param qq_corr Q-Q channel correction
+    @param subdev the subdevice number
+    @param flags the packet flags
+  */
   bool vxsdr::tx_set_iq_corr(const double ii_corr, const double iq_corr, const double qi_corr, const double qq_corr,
       const uint8_t subdev, const uint8_t flags) {
     radio_iq_corr_packet p;
@@ -766,6 +801,19 @@
     return vxsdr::cmd_queue_push_check(p);
   }
 
+   /*!
+    @brief Sets the IQ correction for the receiver to control image rejection.
+    - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
+        the command is sent, @b false otherwise
+    - if the FLAG_REQUEST_ACK bit in @p flags is set, returns @b true if
+         the command is sent and an ACK is received, @b false otherwise
+    @param ii_corr I-I channel correction
+    @param iq_corr I-Q channel correction
+    @param qi_corr Q-I channel correction
+    @param qq_corr Q-Q channel correction
+    @param subdev the subdevice number
+    @param flags the packet flags
+  */
   bool vxsdr::rx_set_iq_corr(const double ii_corr, const double iq_corr, const double qi_corr, const double qq_corr,
       const uint8_t subdev, const uint8_t flags) {
     radio_iq_corr_packet p;
@@ -777,19 +825,47 @@
     return vxsdr::cmd_queue_push_check(p);
   }
 
+   /*!
+    @brief Stops transmitting immediately.
+    - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
+        the command is sent, @b false otherwise
+    - if the FLAG_REQUEST_ACK bit in @p flags is set, returns @b true if
+         the command is sent and an ACK is received, @b false otherwise
+    @param subdev the subdevice number
+    @param flags the packet flags
+  */
   bool vxsdr::tx_stop_now(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p;
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_STOP_NOW, subdev, flags, sizeof(p), 0 };
     return vxsdr::cmd_queue_push_check(p);
   }
 
+   /*!
+    @brief Stops receiving immediately.
+    - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
+        the command is sent, @b false otherwise
+    - if the FLAG_REQUEST_ACK bit in @p flags is set, returns @b true if
+         the command is sent and an ACK is received, @b false otherwise
+    @param subdev the subdevice number
+    @param flags the packet flags
+  */
   bool vxsdr::rx_stop_now(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p;
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_STOP_NOW, subdev, flags, sizeof(p), 0 };
     return vxsdr::cmd_queue_push_check(p);
   }
 
-  bool vxsdr::set_tx_freq(const double freq, const uint8_t subdev, const uint8_t flags) {
+   /*!
+    @brief Sets the transmit center frequency.
+    - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
+        the command is sent, @b false otherwise
+    - if the FLAG_REQUEST_ACK bit in @p flags is set, returns @b true if
+         the command is sent and an ACK is received, @b false otherwise
+    @param freq the desired frequency in Hz
+    @param subdev the subdevice number
+    @param flags the packet flags
+  */
+  bool vxsdr::set_tx_freq(const double freq_hz, const uint8_t subdev, const uint8_t flags) {
     radio_rf_freq_packet p;
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_SET_RF_FREQ, subdev, flags, sizeof(p), 0 };
     p.freq = freq;
@@ -797,7 +873,17 @@
     return vxsdr::cmd_queue_push_check(p);
   }
 
-  bool vxsdr::set_rx_freq(const double freq, const uint8_t subdev, const uint8_t flags) {
+   /*!
+    @brief Sets the receive center frequency.
+    - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
+        the command is sent, @b false otherwise
+    - if the FLAG_REQUEST_ACK bit in @p flags is set, returns @b true if
+         the command is sent and an ACK is received, @b false otherwise
+    @param freq the desired frequency in Hz
+    @param subdev the subdevice number
+    @param flags the packet flags
+  */
+  bool vxsdr::set_rx_freq(const double freq_hz, const uint8_t subdev, const uint8_t flags) {
     radio_rf_freq_packet p;
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_SET_RF_FREQ, subdev, flags, sizeof(p), 0 };
     p.freq = freq;
@@ -805,6 +891,12 @@
     return vxsdr::cmd_queue_push_check(p);
   }
 
+   /*!
+    @brief Gets the current transmit center frequency.
+    - returns the center frequency in Hz
+    @param subdev the subdevice number
+    @param flags the packet flags
+  */
   std::optional<double> vxsdr::get_tx_freq(const uint8_t subdev, const uint8_t flags) {
     radio_rf_freq_packet p;
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_GET_RF_FREQ, subdev, flags, sizeof(p), 0 };
@@ -830,6 +922,12 @@
     return std::nullopt;
   }
 
+   /*!
+    @brief Gets the current receive center frequency.
+    - returns the center frequency in Hz
+    @param subdev the subdevice number
+    @param flags the packet flags
+  */
   std::optional<double> vxsdr::get_rx_freq(const uint8_t subdev, const uint8_t flags) {
     radio_rf_freq_packet p;
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_GET_RF_FREQ, subdev, flags, sizeof(p), 0 };
@@ -855,6 +953,16 @@
     return std::nullopt;
   }
 
+   /*!
+    @brief Sets the transmit gain.
+    - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
+        the command is sent, @b false otherwise
+    - if the FLAG_REQUEST_ACK bit in @p flags is set, returns @b true if
+         the command is sent and an ACK is received, @b false otherwise
+    @param gain_db the desired gain in dB
+    @param subdev the subdevice number
+    @param flags the packet flags
+  */
   bool vxsdr::set_tx_gain(const double gain_db, const uint8_t subdev, const uint8_t flags) {
     radio_rf_gain_packet p;
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_SET_RF_GAIN, subdev, flags, sizeof(p), 0 };
@@ -862,6 +970,16 @@
     return vxsdr::cmd_queue_push_check(p);
   }
 
+   /*!
+    @brief Sets the receive gain.
+    - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
+        the command is sent, @b false otherwise
+    - if the FLAG_REQUEST_ACK bit in @p flags is set, returns @b true if
+         the command is sent and an ACK is received, @b false otherwise
+    @param gain_db the desired gain in dB
+    @param subdev the subdevice number
+    @param flags the packet flags
+  */
   bool vxsdr::set_rx_gain(const double gain_db, const uint8_t subdev, const uint8_t flags) {
     radio_rf_gain_packet p;
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_SET_RF_GAIN, subdev, flags, sizeof(p), 0 };
@@ -869,6 +987,12 @@
     return vxsdr::cmd_queue_push_check(p);
   }
 
+   /*!
+    @brief Gets the current transmit gain.
+    - returns the gain in dB
+    @param subdev the subdevice number
+    @param flags the packet flags
+  */
   std::optional<double> vxsdr::get_tx_gain(const uint8_t subdev, const uint8_t flags) {
     radio_rf_gain_packet p;
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_GET_RF_GAIN, subdev, flags, sizeof(p), 0 };
@@ -894,6 +1018,12 @@
     return std::nullopt;
   }
 
+   /*!
+    @brief Gets the current receive gain.
+    - returns the gain in dB
+    @param subdev the subdevice number
+    @param flags the packet flags
+  */
   std::optional<double> vxsdr::get_rx_gain(const uint8_t subdev, const uint8_t flags) {
     radio_rf_gain_packet p;
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_GET_RF_GAIN, subdev, flags, sizeof(p), 0 };
@@ -919,6 +1049,16 @@
     return std::nullopt;
   }
 
+   /*!
+    @brief Sets the transmit sample rate.
+    - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
+        the command is sent, @b false otherwise
+    - if the FLAG_REQUEST_ACK bit in @p flags is set, returns @b true if
+         the command is sent and an ACK is received, @b false otherwise
+    @param rate_samples_sec the desired rate in samples/s
+    @param subdev the subdevice number
+    @param flags the packet flags
+  */
   bool vxsdr::set_tx_rate(const double rate_samples_sec, const uint8_t subdev, const uint8_t flags) {
     radio_sample_rate_packet p;
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_SET_SAMPLE_RATE, subdev, flags, sizeof(p), 0 };
@@ -926,6 +1066,16 @@
     return vxsdr::cmd_queue_push_check(p);
   }
 
+   /*!
+    @brief Sets the receive sample rate.
+    - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
+        the command is sent, @b false otherwise
+    - if the FLAG_REQUEST_ACK bit in @p flags is set, returns @b true if
+         the command is sent and an ACK is received, @b false otherwise
+    @param rate_samples_sec the desired rate in samples/s
+    @param subdev the subdevice number
+    @param flags the packet flags
+  */
   bool vxsdr::set_rx_rate(const double rate_samples_sec, const uint8_t subdev, const uint8_t flags) {
     radio_sample_rate_packet p;
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_SET_SAMPLE_RATE, subdev, flags, sizeof(p), 0 };
@@ -933,6 +1083,12 @@
     return vxsdr::cmd_queue_push_check(p);
   }
 
+   /*!
+    @brief Gets the current transmit sample rate.
+    - returns the rate in samples/s
+    @param subdev the subdevice number
+    @param flags the packet flags
+  */
   std::optional<double> vxsdr::get_tx_rate(const uint8_t subdev, const uint8_t flags) {
     radio_sample_rate_packet p;
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_GET_SAMPLE_RATE, subdev, flags, sizeof(p), 0 };
@@ -958,6 +1114,12 @@
     return std::nullopt;
   }
 
+   /*!
+    @brief Gets the current receive sample rate.
+    - returns the rate in samples/s
+    @param subdev the subdevice number
+    @param flags the packet flags
+  */
   std::optional<double> vxsdr::get_rx_rate(const uint8_t subdev, const uint8_t flags) {
     radio_sample_rate_packet p;
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_GET_SAMPLE_RATE, subdev, flags, sizeof(p), 0 };
@@ -983,26 +1145,68 @@
     return std::nullopt;
   }
 
+   /*!
+    @brief Sets the transmit output port.
+    - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
+        the command is sent, @b false otherwise
+    - if the FLAG_REQUEST_ACK bit in @p flags is set, returns @b true if
+         the command is sent and an ACK is received, @b false otherwise
+    @param port the desired output port
+    @param subdev the subdevice number
+    @param flags the packet flags
+  */
   bool vxsdr::set_tx_rf_port(const std::string &port, const uint8_t subdev, const uint8_t flags) {
     // p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_SET_RF_PORT, subdev, flags, sizeof(p), 0 };
     return false;
   }
 
+   /*!
+    @brief Sets the receive input port.
+    - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
+        the command is sent, @b false otherwise
+    - if the FLAG_REQUEST_ACK bit in @p flags is set, returns @b true if
+         the command is sent and an ACK is received, @b false otherwise
+    @param port the desired input port
+    @param subdev the subdevice number
+    @param flags the packet flags
+  */
   bool vxsdr::set_rx_rf_port(const std::string &port, const uint8_t subdev, const uint8_t flags) {
     // p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_SET_RF_PORT, subdev, flags, sizeof(p), 0 };
     return false;
   }
 
+   /*!
+    @brief Gets the current transmit output port.
+    - returns the port name
+    @param subdev the subdevice number
+    @param flags the packet flags
+  */
   std::optional<std::string> vxsdr::get_tx_rf_port(const uint8_t subdev, const uint8_t flags) {
     //p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_GET_RF_PORT, subdev, flags, sizeof(p), 0 };
     return "not implemented";
   }
 
+   /*!
+    @brief Gets the current receive input port.
+    - returns the port name
+    @param subdev the subdevice number
+    @param flags the packet flags
+  */
   std::optional<std::string> vxsdr::get_rx_rf_port(const uint8_t subdev, const uint8_t flags) {
     //p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_GET_RF_PORT, subdev, flags, sizeof(p), 0 };
     return "not implemented";
   }
 
+   /*!
+    @brief Enables or disables the transmit RF section.
+    - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
+        the command is sent, @b false otherwise
+    - if the FLAG_REQUEST_ACK bit in @p flags is set, returns @b true if
+         the command is sent and an ACK is received, @b false otherwise
+    @param enabled the desired state
+    @param subdev the subdevice number
+    @param flags the packet flags
+  */
   bool vxsdr::set_tx_enable(const bool enabled, const uint8_t subdev, const uint8_t flags) {
     radio_rf_enable_packet p;
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_SET_RF_ENABLED, subdev, flags, sizeof(p), 0 };
@@ -1014,6 +1218,16 @@
     return vxsdr::cmd_queue_push_check(p);
   }
 
+   /*!
+    @brief Enables or disables the receive RF section.
+    - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
+        the command is sent, @b false otherwise
+    - if the FLAG_REQUEST_ACK bit in @p flags is set, returns @b true if
+         the command is sent and an ACK is received, @b false otherwise
+    @param enabled the desired state
+    @param subdev the subdevice number
+    @param flags the packet flags
+  */
   bool vxsdr::set_rx_enable(const bool enabled, const uint8_t subdev, const uint8_t flags) {
     radio_rf_enable_packet p;
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_SET_RF_ENABLED, subdev, flags, sizeof(p), 0 };

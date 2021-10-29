@@ -192,8 +192,8 @@ class vxsdr {
   bool rx_set_iq_corr(const double ii_corr, const double iq_corr, const double qi_corr, const double qq_corr, const uint8_t subdev = 0, const uint8_t flags = 0);
   bool tx_stop_now(const uint8_t subdev = 0, const uint8_t flags = 0);
   bool rx_stop_now(const uint8_t subdev = 0, const uint8_t flags = 0);
-  bool set_tx_freq(const double freq, const uint8_t subdev = 0, const uint8_t flags = 0);
-  bool set_rx_freq(const double freq, const uint8_t subdev = 0, const uint8_t flags = 0);
+  bool set_tx_freq(const double freq_hz, const uint8_t subdev = 0, const uint8_t flags = 0);
+  bool set_rx_freq(const double freq_hz, const uint8_t subdev = 0, const uint8_t flags = 0);
   std::optional<double> get_tx_freq(const uint8_t subdev = 0, const uint8_t flags = 0);
   std::optional<double> get_rx_freq(const uint8_t subdev = 0, const uint8_t flags = 0);
   bool set_tx_gain(const double gain_db, const uint8_t subdev = 0, const uint8_t flags = 0);
