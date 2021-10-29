@@ -15,8 +15,7 @@
 
 #include <boost/lockfree/spsc_queue.hpp>
 #include <boost/lockfree/queue.hpp>
-#include <boost/asio/io_service.hpp>
-#include <boost/asio/ip/udp.hpp>
+#include <boost/asio/ts/net.hpp>
 #ifdef VXSDR_ASYNC_RX
 #include <boost/asio/use_future.hpp>
 #endif // VXSDR_ASYNC_RX
@@ -50,22 +49,38 @@ class vxsdr {
   int send_thread_cpu;
   int receive_thread_cpu;
 
-  // parameters of the internal spsc queues (ring buffers)
+  // parameters of the internal SPSC queues used for data
   static constexpr size_t rx_data_queue_length           =    65536;    // slots in rx data queue; 65536 * 2048 / 160e6 = 840 ms at 160 MSPS
   static constexpr size_t tx_data_queue_length           =     1024;    // slots in tx data queue;  1024 * 2048 / 160e6 =  13 ms at 160 MSPS
-  static constexpr size_t command_queue_length           =       64;    // slots in command msg queue
-  static constexpr size_t response_queue_length          =      256;    // slots in response msg queue
-  static constexpr size_t error_queue_length             =      256;    // slots in error queue
-  static constexpr size_t cmd_ack_queue_length           =      256;    // slots in command ack queue
-  static constexpr size_t async_msg_queue_length         =      256;    // slots in async msg queue
+
+  // parameters used to set the OS's network buffer
+  static constexpr unsigned network_send_buffer_bytes    =   4194304;   // ~6.6 ms at 160 MSPS
+  static constexpr unsigned network_receive_buffer_bytes =  16777216;   // ~26 ms at 160 MSPS
 
   // timeouts and waits between tries for queue push/pop
-
   static constexpr unsigned tx_data_queue_timeout_us     =   100000;
   static constexpr unsigned tx_data_queue_wait_us        =       10;
 
   static constexpr unsigned rx_data_queue_timeout_us     =    40000;
   static constexpr unsigned rx_data_queue_wait_us        =       10;
+
+  // parameters used to monitor status of the radio's internal buffers (on the other end of the network connection)
+  std::atomic<unsigned> tx_buffer_size_bytes = 0, tx_buffer_used_bytes = 0;
+  std::atomic<unsigned> rx_buffer_size_bytes = 0, rx_buffer_used_bytes = 0;
+  std::atomic<unsigned> tx_buffer_fill_percent = 0, rx_buffer_fill_percent = 0;
+
+  // transmit throttling settings
+  static constexpr float throttle_on_percent             =        75;
+  static constexpr float throttle_off_percent            =        50;
+  static constexpr unsigned throttle_amount_us           =        10; // send time for 8200 bytes over 10 GbE is about 6.7 us
+  static constexpr unsigned send_thread_sleep_us         =         5;
+
+  // parmeters of the internal MPMC queues used for commands, responses, errors, acks, and async messages
+  static constexpr size_t command_queue_length           =       64;    // slots in command msg queue
+  static constexpr size_t response_queue_length          =      256;    // slots in response msg queue
+  static constexpr size_t error_queue_length             =      256;    // slots in error queue
+  static constexpr size_t cmd_ack_queue_length           =      256;    // slots in command ack queue
+  static constexpr size_t async_msg_queue_length         =      256;    // slots in async msg queue
 
   // timeouts and waits for responses from device
   static constexpr unsigned device_response_timeout_ms   =      100;
@@ -74,22 +89,6 @@ class vxsdr {
   // the UDP tx waits for the rx to reach RUNNING state before entering RUNNING itself
   static constexpr unsigned udp_tx_ready_timeout_ms      =     1000;
   static constexpr unsigned udp_tx_ready_wait_ms         =        1;
-
-  // parameters used to set the OS's network buffer
-  static constexpr unsigned network_send_buffer_bytes    =   4194304;   // ~6.6 ms at 160 MSPS
-  static constexpr unsigned network_receive_buffer_bytes =  16777216;   // ~26 ms at 160 MSPS
-
-  // transmit throttling settings
-  static constexpr float throttle_on_percent             =        75;
-  static constexpr float throttle_off_percent            =        50;
-  static constexpr unsigned throttle_amount_us           =        10; // send time for 8200 bytes over 10 GbE is about 6.7 us
-  static constexpr unsigned send_thread_sleep_us         =         5;
-
-
-  // parameters used to monitor status of the radio's internal buffers (on the other end of the network connection)
-  std::atomic<unsigned> tx_buffer_size_bytes = 0, tx_buffer_used_bytes = 0;
-  std::atomic<unsigned> rx_buffer_size_bytes = 0, rx_buffer_used_bytes = 0;
-  std::atomic<unsigned> tx_buffer_fill_percent = 0, rx_buffer_fill_percent = 0;
 
   using data_queue_element = largest_data_packet;
   using command_queue_element = largest_cmd_or_rsp_packet;
