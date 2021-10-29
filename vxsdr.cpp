@@ -6,11 +6,19 @@
 
   vxsdr::vxsdr(const boost::asio::ip::udp::endpoint &local_send_endpoint,
         const boost::asio::ip::udp::endpoint &local_receive_endpoint,
-        const boost::asio::ip::udp::endpoint &radio_endpoint) :
+        const boost::asio::ip::udp::endpoint &device_endpoint,
+        const bool set_affinity, const unsigned base_cpu_number,
+        const bool set_priority, const unsigned base_priority) :
     sender_socket(context, local_send_endpoint),
     receiver_socket(context, local_receive_endpoint) {
     LOG_DEBUG("vxsdr constructor entered");
-    destination_endpoint = radio_endpoint;
+    thread_set_affinity = set_affinity;
+    send_thread_cpu = base_cpu_number;
+    receive_thread_cpu = base_cpu_number + 1;
+    thread_set_priority = set_priority;
+    send_thread_priority = base_priority;
+    receive_thread_priority = base_priority;
+    destination_endpoint = device_endpoint;
 #ifdef VXSDR_ASYNC_RX
     // https://www.boost.org/doc/libs/1_77_0/doc/html/boost_asio/example/cpp11/futures/daytime_client.cpp
     // We run the io_context off in its own thread so that it operates

@@ -41,14 +41,14 @@ class vxsdr {
 #endif // VXSDR_ASYNC_RX
 
   // thread realtime priority settings
-  static constexpr bool thread_set_priority = true;
-  static constexpr int send_thread_priority = 20;
-  static constexpr int receive_thread_priority = 20;
+  bool thread_set_priority;
+  int send_thread_priority;
+  int receive_thread_priority;
 
   // thread cpu affinity settings
-  static constexpr bool thread_set_affinity = true;
-  static constexpr int send_thread_cpu = 0;
-  static constexpr int receive_thread_cpu = 2;
+  bool thread_set_affinity;
+  int send_thread_cpu;
+  int receive_thread_cpu;
 
   // parameters of the internal spsc queues (ring buffers)
   static constexpr size_t rx_data_queue_length           =    65536;    // slots in rx data queue; 65536 * 2048 / 160e6 = 840 ms at 160 MSPS
@@ -145,10 +145,19 @@ class vxsdr {
  public:
   /*!
     @brief Constructor for the @p vxsdr host interface class.
+    @param local_send_endpoint the endpoint (IP address and port) to send from
+    @param local_receive_endpoint the endpoint (IP address and port) to send from
+    @param device_endpoint the endpoint of the target device
+    @param set_affinity controls whether threads set affinity for a specific processor
+    @param base_cpu_number the starting processor to use if affinity is set
+    @param set_priority controls whether threads set realtime priority
+    @param base_priority the priority to use if realtime priority is set
   */
   vxsdr(const boost::asio::ip::udp::endpoint &local_send_endpoint,
         const boost::asio::ip::udp::endpoint &local_receive_endpoint,
-        const boost::asio::ip::udp::endpoint &radio_endpoint);
+        const boost::asio::ip::udp::endpoint &device_endpoint,
+        const bool set_affinity = true, const unsigned base_cpu_number = 0,
+        const bool set_priority = true, const unsigned base_priority = 15);
   //! Destructor for the vxsdr host interface class.
   ~vxsdr();
   //! @brief Deleted copy constructor for the @p vxsdr host interface class.
