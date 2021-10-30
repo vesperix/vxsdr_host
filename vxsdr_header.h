@@ -12,7 +12,7 @@ extern "C" {
 
 /*
   VXSDR packet definitions
-  Version 0.9.1 26 Oct 2021
+  Version 0.9.2 30 Oct 2021
 */
 
 // Packet Types
@@ -98,6 +98,7 @@ extern "C" {
 #define DEVICE_CMD_ERR_BAD_PARAMETER           (0x05)  // command parameter is out of allowed range
 #define DEVICE_CMD_ERR_OUT_OF_SEQUENCE         (0x06)  // command received with sequence error
 #define DEVICE_CMD_ERR_CTRL_BUFFER_OVERFLOW    (0x07)  // overflow control buffer
+#define DEVICE_CMD_ERR_NOT_SUPPORTED           (0x08)  // this device can't do that command
 #define DEVICE_CMD_ERR_PPS_TIMEOUT             (0x0A)
 
 // Radio Commands
@@ -112,23 +113,25 @@ extern "C" {
 #define RADIO_CMD_GET_RF_GAIN                  (0x12)
 #define RADIO_CMD_GET_SAMPLE_RATE              (0x13)
 #define RADIO_CMD_GET_RF_BW                    (0x14)  // unimplemented
-#define RADIO_CMD_GET_RF_ENABLED               (0x15)  // unimplemented
-#define RADIO_CMD_GET_RF_PORT                  (0x16)  // unimplemented
-#define RADIO_CMD_GET_NUM_RF_PORTS             (0x17)  // unimplemented
-#define RADIO_CMD_GET_RF_PORT_NAME             (0x18)  // unimplemented
-  // 0x19-0x20 reserved
+#define RADIO_CMD_GET_RF_ENABLED               (0x15)
+#define RADIO_CMD_GET_RF_PORT                  (0x16)
+#define RADIO_CMD_GET_NUM_RF_PORTS             (0x17)
+#define RADIO_CMD_GET_RF_PORT_NAME             (0x18)
+#define RADIO_CMD_GET_LO_INPUT                 (0x19)  // unimplemented
+#define RADIO_CMD_GET_MASTER_CLK               (0x20)  // unimplemented
 #define RADIO_CMD_SET_RF_FREQ                  (0x21)
 #define RADIO_CMD_SET_RF_GAIN                  (0x22)
 #define RADIO_CMD_SET_SAMPLE_RATE              (0x23)
 #define RADIO_CMD_SET_RF_BW                    (0x24)  // unimplemented
 #define RADIO_CMD_SET_RF_ENABLED               (0x25)
-#define RADIO_CMD_SET_RF_PORT                  (0x26)  // FIXME: this selects input and output ports
-  // 0x27-0x30 reserved
-#define RADIO_CMD_GET_NUM_SUBDEVS              (0x31)  // unimplemented - return the number of subdevices
-#define RADIO_CMD_GET_CAPABILITIES             (0x32)  // unimplemented
-#define RADIO_CMD_GET_RF_FREQ_RANGE            (0x33)  // unimplemented
-#define RADIO_CMD_GET_GAIN_RANGE               (0x34)  // unimplemented
-#define RADIO_CMD_GET_RATE_RANGE               (0x35)  // unimplemented
+#define RADIO_CMD_SET_RF_PORT                  (0x26)
+#define RADIO_CMD_SET_LO_INPUT                 (0x29)  // unimplemented
+#define RADIO_CMD_SET_MASTER_CLK               (0x30)  // unimplemented
+#define RADIO_CMD_GET_NUM_SUBDEVS              (0x31)
+#define RADIO_CMD_GET_CAPABILITIES             (0x32)
+#define RADIO_CMD_GET_RF_FREQ_RANGE            (0x33)
+#define RADIO_CMD_GET_GAIN_RANGE               (0x34)
+#define RADIO_CMD_GET_RATE_RANGE               (0x35)
   // 0x32-0x40 reserved
 #define RADIO_CMD_GET_IQ_BIAS                  (0x41)
 #define RADIO_CMD_GET_IQ_CORR                  (0x42)
@@ -143,6 +146,7 @@ extern "C" {
 #define RADIO_CMD_ERR_NO_SUCH_SUBDEVICE        (0x03)
 #define RADIO_CMD_ERR_TIMEOUT                  (0x04)
 #define RADIO_CMD_ERR_BAD_PARAMETER            (0x05)
+#define RADIO_CMD_ERR_NOT_SUPPORTED            (0x06)
 
 // Async messages
 #define ASYNC_NO_ERROR                         (0x00)
@@ -154,26 +158,29 @@ extern "C" {
   // 0x06-0xFF reserved
 
 // Capabilities
-#define CAPABILITY_HAS_LOCK_DETECT             (0x00000001ULL)
-#define CAPABILITY_HAS_EXTERNAL_REF            (0x00000002ULL)
-#define CAPABILITY_HAS_EXTERNAL_PPS            (0x00000004ULL)
-#define CAPABILITY_HAS_AGC                     (0x00000008ULL)
-#define CAPABILITY_HAS_LIMITER                 (0x00000010ULL)
-#define CAPABILITY_HAS_LIMIT_DETECT            (0x00000020ULL)
-#define CAPABILITY_HAS_MANUAL_IQ_BIAS_CORR     (0x00000040ULL)
-#define CAPABILITY_HAS_MANUAL_IQ_BALANCE_CORR  (0x00000080ULL)
-#define CAPABILITY_HAS_AUTO_IQ_BIAS_CORR       (0x00000100ULL)
-#define CAPABILITY_HAS_AUTO_IQ_BALANCE_CORR    (0x00000200ULL)
-#define CAPABILITY_HAS_TEMP_MEASURE            (0x00000400ULL)
-#define CAPABILITY_HAS_POWER_MEASURE           (0x00000800ULL)
-#define CAPABILITY_HAS_EXTERNAL_LO_INPUT       (0x00001000ULL)
+#define CAPABILITY_HAS_LOCK_DETECT             (0x1ULL)
+#define CAPABILITY_HAS_EXTERNAL_REF            (0x2ULL)
+#define CAPABILITY_HAS_EXTERNAL_PPS            (0x4ULL)
+#define CAPABILITY_HAS_AGC                     (0x8ULL)
+#define CAPABILITY_HAS_LIMITER                 (0x10ULL)
+#define CAPABILITY_HAS_LIMIT_DETECT            (0x20ULL)
+#define CAPABILITY_HAS_MANUAL_IQ_BIAS_CORR     (0x40ULL)
+#define CAPABILITY_HAS_MANUAL_IQ_BALANCE_CORR  (0x80ULL)
+#define CAPABILITY_HAS_AUTO_IQ_BIAS_CORR       (0x100ULL)
+#define CAPABILITY_HAS_AUTO_IQ_BALANCE_CORR    (0x200ULL)
+#define CAPABILITY_HAS_TEMP_MEASURE            (0x400ULL)
+#define CAPABILITY_HAS_POWER_MEASURE           (0x800ULL)
+#define CAPABILITY_HAS_EXTERNAL_LO_INPUT       (0x1000ULL)
+#define CAPABILITY_HAS_ADJUSTABLE_RF_BW        (0x2000ULL)
+#define CAPABILITY_HAS_ADJUSTABLE_IF_BW        (0x4000ULL)
+#define CAPABILITY_HAS_ADJUSTABLE_MASTER_CLK   (0x8000ULL)
 
 #define MAX_DATA_LENGTH_SAMPLES                (2048UL)
 #define MAX_PAYLOAD_LENGTH_BYTES               (32UL)  // maximum length of a CMD or RSP packet, excluding header
 
-#define ATTRIBUTE_PACKED                       __attribute__((packed))
+#define MAKE_PACKED                            __attribute__((packed))
 
-typedef struct ATTRIBUTE_PACKED {
+typedef struct MAKE_PACKED {
   uint8_t                  packet_type;
   uint8_t                  command;
   uint8_t                  target_subdevice;  // for cases where multiple devices exist (e.g. multiple network I/F or multichannel TX/RX)
@@ -182,7 +189,7 @@ typedef struct ATTRIBUTE_PACKED {
   uint16_t                 sequence_counter;  // need to figure out when this resets (every new data stream, power up, ?)
 } packet_header;
 
-typedef struct ATTRIBUTE_PACKED {
+typedef struct MAKE_PACKED {
   // FIXME: temporary workaround for order in FPGA and MCU code
   uint32_t                 nanoseconds;
   uint32_t                 seconds;
