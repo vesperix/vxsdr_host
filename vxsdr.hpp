@@ -672,7 +672,18 @@ class vxsdr {
   */
   std::optional<std::string> get_rx_port_name(const unsigned port_num, const uint8_t subdev = 0, const uint8_t flags = 0);
   /*!
-    @brief Sets the transmit output port.
+    @brief Sets the transmit output port by number.
+    - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
+        the command is sent, @b false otherwise
+    - if the FLAG_REQUEST_ACK bit in @p flags is set, returns @b true if
+         the command is sent and an ACK is received, @b false otherwise
+    @param port_num the desired output port number
+    @param subdev the subdevice number
+    @param flags the packet flags
+  */
+  bool set_tx_rf_port(const unsigned port_num, const uint8_t subdev = 0, const uint8_t flags = 0);
+  /*!
+    @brief Sets the transmit output port by name.
     - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
         the command is sent, @b false otherwise
     - if the FLAG_REQUEST_ACK bit in @p flags is set, returns @b true if
@@ -683,7 +694,18 @@ class vxsdr {
   */
   bool set_tx_rf_port(const std::string &port_name, const uint8_t subdev = 0, const uint8_t flags = 0);
   /*!
-    @brief Sets the receive input port.
+    @brief Sets the receive input port by number.
+    - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
+        the command is sent, @b false otherwise
+    - if the FLAG_REQUEST_ACK bit in @p flags is set, returns @b true if
+         the command is sent and an ACK is received, @b false otherwise
+    @param port_num the desired input port number
+    @param subdev the subdevice number
+    @param flags the packet flags
+  */
+  bool set_rx_rf_port(const unsigned port_num, const uint8_t subdev = 0, const uint8_t flags = 0);
+  /*!
+    @brief Sets the receive input port by name.
     - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
         the command is sent, @b false otherwise
     - if the FLAG_REQUEST_ACK bit in @p flags is set, returns @b true if
@@ -695,18 +717,18 @@ class vxsdr {
   bool set_rx_rf_port(const std::string &port_name, const uint8_t subdev = 0, const uint8_t flags = 0);
   /*!
     @brief Gets the current transmit output port.
-    - returns the port name
+    - returns the port number
     @param subdev the subdevice number
     @param flags the packet flags
   */
-  std::optional<std::string> get_tx_rf_port(const uint8_t subdev = 0, const uint8_t flags = 0);
+  std::optional<unsigned> get_tx_rf_port(const uint8_t subdev = 0, const uint8_t flags = 0);
   /*!
     @brief Gets the current receive input port.
-    - returns the port name
+    - returns the port number
     @param subdev the subdevice number
     @param flags the packet flags
   */
-  std::optional<std::string> get_rx_rf_port(const uint8_t subdev = 0, const uint8_t flags = 0);
+  std::optional<unsigned> get_rx_rf_port(const uint8_t subdev = 0, const uint8_t flags = 0);
   /*!
     @brief Enables or disables the transmit RF section.
     - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if

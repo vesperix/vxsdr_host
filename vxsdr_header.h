@@ -98,6 +98,7 @@ extern "C" {
 #define DEVICE_CMD_ERR_BAD_PARAMETER           (0x05)  // command parameter is out of allowed range
 #define DEVICE_CMD_ERR_OUT_OF_SEQUENCE         (0x06)  // command received with sequence error
 #define DEVICE_CMD_ERR_CTRL_BUFFER_OVERFLOW    (0x07)  // overflow control buffer
+#define DEVICE_CMD_ERR_PPS_TIMEOUT             (0x0A)
 
 // Radio Commands
 #define RADIO_CMD_START_NOW_UNTIL_STOP         (0x01)
@@ -106,7 +107,7 @@ extern "C" {
 #define RADIO_CMD_START_NOW_FOR_N_SAMPLES      (0x04)
 #define RADIO_CMD_START_AT_TIME_FOR_N_SAMPLES  (0x05)  // error if TIME_PRESENT is 0
   // 0x06-0x0F reserved
-#define RADIO_CMD_GET_RF_INFO                  (0x10)  // unimplemented // available frequency, gain, sample rate, and bandwidth ranges, number of selectable I/Os
+//#define RADIO_CMD_GET_RF_INFO                  (0x10)  // unimplemented // available frequency, gain, sample rate, and bandwidth ranges, number of selectable I/Os
 #define RADIO_CMD_GET_RF_FREQ                  (0x11)
 #define RADIO_CMD_GET_RF_GAIN                  (0x12)
 #define RADIO_CMD_GET_SAMPLE_RATE              (0x13)
@@ -203,25 +204,26 @@ class packet {
 
 class header_only_packet : public packet {};
 
-class integer_packet : public packet {
+class unsigned_packet : public packet {
   public:
-    int64_t                number;
+    uint32_t                number = 0;
+    uint32_t                reserved = 0;
 };
 
 class name_packet : public packet {
   public:
-    char                   name[MAX_PAYLOAD_LENGTH_BYTES];
+    char                   name[MAX_PAYLOAD_LENGTH_BYTES] = { 0 };
 };
 
 class capabilities_packet : public packet {
   public:
-    capabilities_t         capabilities;
+    capabilities_t         capabilities = 0;
 };
 
 class range_packet : public packet {
   public:
-    double                 range_min;
-    double                 range_max;
+    double                 range_min =  0;
+    double                 range_max = 0;
 };
 
 //FIXME: Need to add number of samples so that we don't always use MAX_DATA_LENGTH_SAMPLES!
@@ -354,21 +356,6 @@ class dataflow_status_packet : public packet {
     uint16_t               tx_radio_status = 0;
     uint16_t               rx_radio_status = 0;
     uint32_t               device_status = 0;
-};
-
-class radio_rf_info_packet : public packet {
-  public:
-    double                 min_freq = 0.0;
-    double                 max_freq = 0.0;
-    double                 min_gain = 0.0;
-    double                 max_gain = 0.0;
-    double                 min_rate = 0.0;
-    double                 max_rate = 0.0;
-    double                 min_bw   = 0.0;
-    double                 max_bw   = 0.0;
-    uint16_t               num_ports = 0;
-    uint16_t               reserved = 0;
-    uint32_t               capabilities = 0;
 };
 
 class radio_rf_freq_packet : public packet {
