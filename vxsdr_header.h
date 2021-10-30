@@ -401,6 +401,11 @@ class radio_iq_corr_packet : public packet {
     double                 qq_corr = 1;
 };
 
+class device_timing_status_packet : public packet {
+  public:
+  //FIXME: need to define this!!!
+}
+
 #endif // __cplusplus
 
 #endif // VXSDR_HEADER_H
