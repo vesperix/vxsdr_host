@@ -64,11 +64,6 @@ class vxsdr {
   static constexpr unsigned rx_data_queue_timeout_us     =    40000;
   static constexpr unsigned rx_data_queue_wait_us        =       10;
 
-  // parameters used to monitor status of the radio's internal buffers (on the other end of the network connection)
-  std::atomic<unsigned> tx_buffer_size_bytes = 0, tx_buffer_used_bytes = 0;
-  std::atomic<unsigned> rx_buffer_size_bytes = 0, rx_buffer_used_bytes = 0;
-  std::atomic<unsigned> tx_buffer_fill_percent = 0, rx_buffer_fill_percent = 0;
-
   // transmit throttling settings
   static constexpr float throttle_on_percent             =        75;
   static constexpr float throttle_off_percent            =        50;
@@ -76,19 +71,24 @@ class vxsdr {
   static constexpr unsigned send_thread_sleep_us         =         5;
 
   // parmeters of the internal MPMC queues used for commands, responses, errors, acks, and async messages
-  static constexpr size_t command_queue_length           =       64;    // slots in command msg queue
-  static constexpr size_t response_queue_length          =      256;    // slots in response msg queue
-  static constexpr size_t error_queue_length             =      256;    // slots in error queue
-  static constexpr size_t cmd_ack_queue_length           =      256;    // slots in command ack queue
-  static constexpr size_t async_msg_queue_length         =      256;    // slots in async msg queue
+  static constexpr size_t command_queue_length           =         8;    // slots in command msg queue
+  static constexpr size_t response_queue_length          =         8;    // slots in response msg queue
+  static constexpr size_t cmd_ack_queue_length           =         8;    // slots in command ack queue
+  static constexpr size_t error_queue_length             =       256;    // slots in error queue
+  static constexpr size_t async_msg_queue_length         =       256;    // slots in async msg queue
 
   // timeouts and waits for responses from device
-  static constexpr unsigned device_response_timeout_ms   =      100;
-  static constexpr unsigned device_response_wait_ms      =        1;
+  static constexpr unsigned device_response_timeout_ms   =       100;
+  static constexpr unsigned device_response_wait_ms      =         1;
 
   // the UDP tx waits for the rx to reach RUNNING state before entering RUNNING itself
-  static constexpr unsigned udp_tx_ready_timeout_ms      =     1000;
-  static constexpr unsigned udp_tx_ready_wait_ms         =        1;
+  static constexpr unsigned udp_tx_ready_timeout_ms      =      1000;
+  static constexpr unsigned udp_tx_ready_wait_ms         =         1;
+
+  // parameters used to monitor status of the radio's internal buffers (on the other end of the network connection)
+  std::atomic<unsigned> tx_buffer_size_bytes = 0, tx_buffer_used_bytes = 0;
+  std::atomic<unsigned> rx_buffer_size_bytes = 0, rx_buffer_used_bytes = 0;
+  std::atomic<unsigned> tx_buffer_fill_percent = 0, rx_buffer_fill_percent = 0;
 
   using data_queue_element = largest_data_packet;
   using command_queue_element = largest_cmd_or_rsp_packet;
