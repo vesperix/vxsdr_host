@@ -233,6 +233,12 @@ class range_packet : public packet {
     double                 range_max = 0;
 };
 
+class error_packet : public packet {
+  public:
+    uint32_t                reason;
+    uint32_t               reserved;
+};
+
 //FIXME: Need to add number of samples so that we don't always use MAX_DATA_LENGTH_SAMPLES!
 
 class data_packet : public packet {
@@ -404,7 +410,7 @@ class radio_iq_corr_packet : public packet {
 class device_timing_status_packet : public packet {
   public:
   //FIXME: need to define this!!!
-}
+};
 
 #endif // __cplusplus
 
