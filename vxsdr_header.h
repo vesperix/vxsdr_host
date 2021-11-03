@@ -190,9 +190,8 @@ typedef struct MAKE_PACKED {
 } packet_header;
 
 typedef struct MAKE_PACKED {
-  // FIXME: temporary workaround for order in FPGA and MCU code
-  uint32_t                 nanoseconds;
   uint32_t                 seconds;
+  uint32_t                 nanoseconds;
 } time_spec_t;
 
 typedef uint64_t           stream_spec_t;
@@ -235,7 +234,7 @@ class range_packet : public packet {
 
 class error_packet : public packet {
   public:
-    uint32_t                reason;
+    uint32_t               reason;
     uint32_t               reserved;
 };
 
