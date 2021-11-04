@@ -68,6 +68,29 @@ int main(int argc, char *argv[])
     set_rx_1ch_options(vm, radio);
     set_tx_1ch_options(vm, radio);
 
+    auto tnow = radio->device_get_time_now();
+    if(tnow.has_value()) {
+      LOG_INFO(fmt::format("current FPGA time: {:s}", format_time(tnow.value())));
+      } else {
+        LOG_ERROR("failed to read FPGA time");
+      }
+
+    auto tset = std::chrono::system_clock::now();
+
+    LOG_INFO(fmt::format("setting FPGA time to: {:s}", format_time(tset)));
+
+    if(radio->device_set_time_now(tset)) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+      tnow = radio->device_get_time_now();
+      if(tnow.has_value()) {
+        LOG_INFO(fmt::format("current FPGA time: {:s}", format_time(tnow.value())));
+      } else {
+        LOG_ERROR("failed to read FPGA time after set");
+      }
+    } else {
+      LOG_ERROR("failed to set FPGA time");
+    }
+
     size_t n_samp = std::llround(vm["duration"].as<double>() * vm["rate"].as<double>());
 
     LOG_INFO(fmt::format("preparing {:.3f} seconds ({:d} samples) of data", vm["duration"].as<double>(), n_samp));

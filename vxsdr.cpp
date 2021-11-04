@@ -1198,6 +1198,7 @@
     std::memcpy(&q, &p, std::min((size_t)p.hdr.packet_size, sizeof(q)));
      if(not command_queue.bounded_push(q)) {
       LOG_ERROR("out of space pushing to command queue");
+      log_packet_info(p);
       return false;
     }
     if((q.hdr.flags & FLAGS_REQUEST_ACK) != 0) {

@@ -37,7 +37,7 @@ test_tx: test_tx.cpp test_tx_rx.hpp $(COMMON_INCLUDES) $(COMMON_SRC)
 	$(CXX) $(CXX_FLAGS) -DBOOST_BIND_GLOBAL_PLACEHOLDERS -o $@ $< $(COMMON_SRC) $(CXX_LDFLAGS)
 
 vxsdr_test: vxsdr_test.cpp host_radio_options.cpp $(COMMON_INCLUDES) $(COMMON_SRC) libvxsdr.so
-	$(CXX) $(CXX_FLAGS) -o $@ $< host_radio_options.cpp $(COMMON_SRC) $(CXX_LDFLAGS) -L. -lvxsdr
+	$(CXX) $(CXX_FLAGS) -o $@ $< host_radio_options.cpp $(COMMON_SRC) $(LIB_SRC) $(CXX_LDFLAGS) #-L. -lvxsdr
 
 vxsdr_test_rx: vxsdr_test_rx.cpp host_radio_options.cpp $(COMMON_INCLUDES) $(COMMON_SRC) libvxsdr.so
 	$(CXX) $(CXX_FLAGS) -o $@ $< host_radio_options.cpp $(COMMON_SRC) $(CXX_LDFLAGS) -L. -lvxsdr

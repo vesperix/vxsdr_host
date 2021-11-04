@@ -71,9 +71,9 @@ class vxsdr {
   static constexpr unsigned send_thread_sleep_us         =         5;
 
   // parmeters of the internal MPMC queues used for commands, responses, errors, acks, and async messages
-  static constexpr size_t command_queue_length           =         8;    // slots in command msg queue
-  static constexpr size_t response_queue_length          =         8;    // slots in response msg queue
-  static constexpr size_t cmd_ack_queue_length           =         8;    // slots in command ack queue
+  static constexpr size_t command_queue_length           =        32;    // slots in command msg queue
+  static constexpr size_t response_queue_length          =        32;    // slots in response msg queue
+  static constexpr size_t cmd_ack_queue_length           =        32;    // slots in command ack queue
   static constexpr size_t error_queue_length             =       256;    // slots in error queue
   static constexpr size_t async_msg_queue_length         =       256;    // slots in async msg queue
 
