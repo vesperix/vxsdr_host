@@ -103,9 +103,16 @@ int main(int argc, char *argv[])
 
     LOG_INFO("sending data...");
 
-    radio->tx_start_now_for_n_samples(n_samp);
-    radio->put_tx_data(data, n_samp);
-    radio->tx_stop_now();
+    if(not radio->tx_start_now_for_n_samples(n_samp)) {
+      LOG_ERROR("error in tx_start_now_for_n_samples");
+    }
+    size_t n_sent = radio->put_tx_data(data, n_samp);
+    if(n_sent != n_samp) {
+      LOG_ERROR(fmt::format("error in put_tx_data ({:d} of {:d} sent)", n_sent, n_samp));
+    }
+    if(not radio->tx_stop_now()) {
+      LOG_ERROR("error in tx_stop_now");
+    }
 
     LOG_INFO("send complete");
 
@@ -120,9 +127,16 @@ int main(int argc, char *argv[])
 
     LOG_INFO(fmt::format("receiving data to file {:s}", filename));
 
-    radio->rx_start_now_for_n_samples(n_samp);
-    radio->get_rx_data(data, n_samp);
-    radio->rx_stop_now();
+    if(not radio->rx_start_now_for_n_samples(n_samp)) {
+      LOG_ERROR("error in rx_start_now_for_n_samples");
+    }
+    size_t n_rec = radio->get_rx_data(data, n_samp);
+    if(n_rec != n_samp) {
+      LOG_ERROR(fmt::format("error in get_rx_data ({:d} of {:d} received)", n_rec, n_samp));
+    }
+    if(not radio->tx_stop_now()) {
+      LOG_ERROR("error in rx_stop_now");
+    }
 
     LOG_INFO("receive complete");
 
