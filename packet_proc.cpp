@@ -57,6 +57,8 @@ std::string device_cmd_to_name(const uint8_t cmd) {
       return "GET_TIME";
     case DEVICE_CMD_GET_STATUS:
       return "GET_STATUS";
+    case DEVICE_CMD_CLEAR_STATUS:
+      return "CLEAR_STATUS";
     case DEVICE_CMD_GET_BUFFER_INFO:
       return "GET_BUFFER_INFO";
     case DEVICE_CMD_GET_BUFFER_USE:
@@ -250,6 +252,9 @@ std::string async_msg_to_name(const uint8_t msg) {
 void log_packet_info(packet &packet)
 {
   switch(packet.hdr.packet_type) {
+    case PACKET_TYPE_DEVICE_CMD:
+      LOG_INFO(fmt::format("DEVICE_CMD: {:s}", device_cmd_to_name(packet.hdr.command)));
+      break;
     case PACKET_TYPE_DEVICE_CMD_ACK:
       LOG_INFO(fmt::format("DEVICE_CMD_ACK: {:s}", device_cmd_to_name(packet.hdr.command)));
       break;
@@ -310,6 +315,9 @@ void log_packet_info(packet &packet)
           break;
       }
       break;
+    case PACKET_TYPE_RX_RADIO_CMD:
+      LOG_INFO(fmt::format("RX_RADIO_CMD: {:s}", radio_cmd_to_name(packet.hdr.command)));
+      break;
     case PACKET_TYPE_RX_RADIO_CMD_RSP:
       switch(packet.hdr.command) {
         case RADIO_CMD_GET_RF_FREQ:
@@ -356,18 +364,19 @@ void log_packet_info(packet &packet)
       }
       break;
     case PACKET_TYPE_RX_RADIO_CMD_ERR:
-      switch(packet.hdr.command) {
-        default: {
-          LOG_INFO(fmt::format("RX_RADIO_CMD_ERR: {:s}", radio_cmd_to_name(packet.hdr.command)));
-          auto *er = reinterpret_cast<error_packet *>(&packet);
-          LOG_INFO(fmt::format("   reason                      = {:s}", radio_cmd_error_to_name(er->reason)));
-        }
-        break;
+      {
+        LOG_INFO(fmt::format("RX_RADIO_CMD_ERR: {:s}", radio_cmd_to_name(packet.hdr.command)));
+        auto *er = reinterpret_cast<error_packet *>(&packet);
+        LOG_INFO(fmt::format("   reason                      = {:s}", radio_cmd_error_to_name(er->reason)));
       }
+      break;
     case PACKET_TYPE_RX_RADIO_CMD_ACK:
       LOG_INFO(fmt::format("RX_RADIO_CMD_ACK: {:s}", radio_cmd_to_name(packet.hdr.command)));
       break;
     case PACKET_TYPE_TX_RADIO_CMD:
+      LOG_INFO(fmt::format("TX_RADIO_CMD: {:s}", radio_cmd_to_name(packet.hdr.command)));
+      break;
+    case PACKET_TYPE_TX_RADIO_CMD_RSP:
       switch(packet.hdr.command) {
         case RADIO_CMD_GET_RF_FREQ:
           {
