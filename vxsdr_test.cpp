@@ -90,7 +90,7 @@ int main(int argc, char *argv[])
     } else {
       LOG_ERROR("failed to set FPGA time");
     }
-
+/*
     size_t n_samp = std::llround(vm["duration"].as<double>() * vm["rate"].as<double>());
 
     LOG_INFO(fmt::format("preparing {:.3f} seconds ({:d} samples) of data", vm["duration"].as<double>(), n_samp));
@@ -142,6 +142,7 @@ int main(int argc, char *argv[])
 
     size_t n_written = write_cplx_16(filename, data);
     LOG_INFO(fmt::format("{:d} samples written", n_written));
+*/
   }
   catch (std::exception& e) {
     LOG_FATAL(fmt::format("exception caught: {:s}", e.what()));

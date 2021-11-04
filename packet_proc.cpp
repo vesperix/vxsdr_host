@@ -251,6 +251,8 @@ std::string async_msg_to_name(const uint8_t msg) {
 
 void log_packet_info(packet &packet)
 {
+  LOG_INFO(fmt::format("packet: type 0x{:X} command 0x{:X} flags 0x{:X} subdevice {:d} size {:d} sequence {:d}",
+        packet.hdr.packet_type, packet.hdr.command, packet.hdr.flags, packet.hdr.target_subdevice, packet.hdr.packet_size, packet.hdr.sequence_counter));
   switch(packet.hdr.packet_type) {
     case PACKET_TYPE_DEVICE_CMD:
       LOG_INFO(fmt::format("DEVICE_CMD: {:s}", device_cmd_to_name(packet.hdr.command)));
@@ -464,7 +466,7 @@ void log_packet_info(packet &packet)
           break;
       }
     default:
-      LOG_INFO(fmt::format("PACKET_TYPE: {:d} COMMAND {:d}", packet.hdr.packet_type, (int)packet.hdr.command));
+      LOG_INFO(fmt::format("PACKET_TYPE: {:s} COMMAND {:d}", packet_type_to_name(packet.hdr.packet_type), (int)packet.hdr.command));
       break;
   }
 }
