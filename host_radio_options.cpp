@@ -109,7 +109,9 @@ int set_common_options(boost::program_options::variables_map &vm, std::unique_pt
     std::string ts_str = vm["time_source"].as<std::string>();
     boost::algorithm::to_lower(ts_str);
     if(ts_str.compare("system") == 0) {
-        radio->device_set_time_now(std::chrono::system_clock::now());
+        if(not radio->device_set_time_now(std::chrono::system_clock::now())) {
+          LOG_ERROR("error in set_common_options: device_set_time_now");
+        }
     } else if(ts_str.compare("pps") == 0) {
       std::chrono::time_point<std::chrono::system_clock> t_set;
       double frac;
@@ -121,7 +123,9 @@ int set_common_options(boost::program_options::variables_map &vm, std::unique_pt
         frac = 1e-3 * msecs.count();
         t_set = std::chrono::ceil<std::chrono::seconds>(t);
       } while(frac < 0.2 or frac > 0.8);
-      radio->device_set_time_next_pps(t_set);
+      if(not radio->device_set_time_next_pps(t_set)) {
+        LOG_ERROR("error in set_common_options: device_set_time_next_pps");
+      }
       // wait until time is set
       std::this_thread::sleep_until(t_set + std::chrono::milliseconds(10));
     } else {
@@ -138,13 +142,17 @@ int set_common_options(boost::program_options::variables_map &vm, std::unique_pt
 int set_rx_1ch_options(boost::program_options::variables_map &vm, std::unique_ptr<vxsdr> &radio)
 {
   if(vm.count("rate") > 0) {
-    radio->set_rx_rate(vm["rate"].as<double>());
+    if(not radio->set_rx_rate(vm["rate"].as<double>())) {
+      LOG_ERROR("error in set_rx_1ch_options: set_rx_rate");
+    }
     if(vm.count("rx_rate") > 0) {
       LOG_WARN("Global option --rate overrides --rx_rate");
     }
   }
   else if(vm.count("rx_rate") > 0) {
-    radio->set_rx_rate(vm["rx_rate"].as<double>());
+    if(not radio->set_rx_rate(vm["rx_rate"].as<double>())) {
+      LOG_ERROR("error in set_rx_1ch_options: set_rx_rate");
+    }
   }
   else {
     LOG_FATAL("Please specify the global sample rate with --rate or the RX sample rate with --rx_rate");
@@ -152,13 +160,17 @@ int set_rx_1ch_options(boost::program_options::variables_map &vm, std::unique_pt
   }
 
   if(vm.count("freq") > 0) {
-    radio->set_rx_freq(vm["freq"].as<double>());
+    if(not radio->set_rx_freq(vm["freq"].as<double>())) {
+      LOG_ERROR("error in set_rx_1ch_options: set_rx_freq");
+    }
     if(vm.count("rx_freq") > 0) {
       LOG_WARN("Global option --freq overrides --rx_freq");
     }
   }
   else if(vm.count("rx_freq") > 0) {
-    radio->set_rx_freq(vm["rx_freq"].as<double>());
+    if(not radio->set_rx_freq(vm["rx_freq"].as<double>())) {
+      LOG_ERROR("error in set_rx_1ch_options: set_rx_freq");
+    }
   }
   else {
     LOG_FATAL("Please specify the global center frequency with --freq or the RX center frequency with --rx_freq");
@@ -166,11 +178,15 @@ int set_rx_1ch_options(boost::program_options::variables_map &vm, std::unique_pt
   }
 
   if (vm.count("rx_ant") > 0) {
-    radio->set_rx_rf_port(vm["rx_ant"].as<std::string>());
+    if(not radio->set_rx_rf_port(vm["rx_ant"].as<std::string>())) {
+      LOG_ERROR("error in set_rx_1ch_options: set_rx_port");
+    }
   }
 
   if (vm.count("rx_gain") > 0) {
-    radio->set_rx_gain(vm["rx_gain"].as<double>());
+    if(not radio->set_rx_gain(vm["rx_gain"].as<double>())) {
+      LOG_ERROR("error in set_rx_1ch_options: set_rx_gain");
+    }
   }
 
   return 0;
@@ -179,13 +195,17 @@ int set_rx_1ch_options(boost::program_options::variables_map &vm, std::unique_pt
 int set_tx_1ch_options(boost::program_options::variables_map &vm, std::unique_ptr<vxsdr> &radio)
 {
   if(vm.count("rate") > 0) {
-    radio->set_tx_rate(vm["rate"].as<double>());
+    if(not radio->set_tx_rate(vm["rate"].as<double>())) {
+      LOG_ERROR("error in set_tx_1ch_options: set_tx_rate");
+    }
     if(vm.count("tx_rate") > 0) {
       LOG_WARN("Global option --rate overrides --tx_rate");
     }
   }
   else if(vm.count("tx_rate") > 0) {
-    radio->set_tx_rate(vm["tx_rate"].as<double>());
+    if(not radio->set_tx_rate(vm["tx_rate"].as<double>())) {
+      LOG_ERROR("error in set_tx_1ch_options: set_tx_rate");
+    }
   }
   else {
     LOG_FATAL("Please specify the global sample rate with --rate or the TX sample rate with --tx_rate");
@@ -193,13 +213,17 @@ int set_tx_1ch_options(boost::program_options::variables_map &vm, std::unique_pt
   }
 
   if(vm.count("freq") > 0) {
-    radio->set_tx_freq(vm["freq"].as<double>());
+    if(not radio->set_tx_freq(vm["freq"].as<double>())) {
+      LOG_ERROR("error in set_tx_1ch_options: set_tx_freq");
+    }
     if(vm.count("tx_freq") > 0) {
       LOG_WARN("Global option --freq overrides --tx_freq");
     }
   }
   else if(vm.count("tx_freq") > 0) {
-    radio->set_tx_freq(vm["tx_freq"].as<double>());
+    if(not radio->set_tx_freq(vm["tx_freq"].as<double>())) {
+      LOG_ERROR("error in set_tx_1ch_options: set_tx_freq");
+    }
   }
   else {
     LOG_WARN("Please specify the global center frequency with --freq or the TX center frequency with --tx_freq");
@@ -207,11 +231,15 @@ int set_tx_1ch_options(boost::program_options::variables_map &vm, std::unique_pt
   }
 
   if(vm.count("tx_ant") > 0) {
-    radio->set_tx_rf_port(vm["tx_ant"].as<std::string>());
+    if(not radio->set_tx_rf_port(vm["tx_ant"].as<std::string>())) {
+      LOG_ERROR("error in set_tx_1ch_options: set_tx_rf_port");
+    }
   }
 
   if(vm.count("tx_gain") > 0) {
-    radio->set_tx_gain(vm["tx_gain"].as<double>());
+    if(not radio->set_tx_gain(vm["tx_gain"].as<double>())) {
+      LOG_ERROR("error in set_tx_1ch_options: set_tx_gain");
+    }
   }
 
   return 0;
