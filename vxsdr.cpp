@@ -30,6 +30,8 @@
     context_thread = std::thread([&] { context.run(); });
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
 #endif // VXSDR_ASYNC_RX
+    error_handler_thread = std::thread([&] { error_handler(); });
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
     udp_rx_state = STARTING;
     receiver_thread = std::thread([&] { receiver(); });
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -78,6 +80,10 @@
     LOG_DEBUG("joining context thread");
     context_thread.join();
 #endif // VXSDR_ASYNC_RX
+    LOG_DEBUG("joining error_handler thread");
+    if(error_handler_thread.joinable()) {
+      error_handler_thread.join();
+    }
     LOG_DEBUG("vxsdr destructor complete");
   }
 
@@ -1179,6 +1185,22 @@
     auto nsecs = std::chrono::time_point_cast<std::chrono::nanoseconds>(t) - std::chrono::time_point_cast<std::chrono::nanoseconds>(secs);
     ts.seconds = (uint32_t)secs.time_since_epoch().count();
     ts.nanoseconds = (uint32_t)nsecs.count();
+  }
+
+  void vxsdr::error_handler() {
+    LOG_DEBUG("error_handler started");
+    while(not (udp_rx_state == SHUTDOWN) or (udp_rx_state == SHUTTING_DOWN)) {
+      error_queue_element e;
+      async_msg_queue_element a;
+      while(error_queue.pop(e)) {
+        log_packet_info(e);
+      }
+      while(async_msg_queue.pop(a)) {
+        log_packet_info(a);
+      }
+      std::this_thread::sleep_for(std::chrono::milliseconds(error_queue_check_ms));
+    }
+    LOG_DEBUG("error_handler finished");
   }
 
   bool vxsdr::device_get_buffer_info(const uint8_t subdev, const uint8_t flags) {

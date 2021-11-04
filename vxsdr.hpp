@@ -81,6 +81,9 @@ class vxsdr {
   static constexpr unsigned device_response_timeout_ms   =       100;
   static constexpr unsigned device_response_wait_ms      =         1;
 
+  // how often to check the error queue
+  static constexpr unsigned error_queue_check_ms         =         1;
+
   // the UDP tx waits for the rx to reach RUNNING state before entering RUNNING itself
   static constexpr unsigned udp_tx_ready_timeout_ms      =      1000;
   static constexpr unsigned udp_tx_ready_wait_ms         =         1;
@@ -116,6 +119,7 @@ class vxsdr {
   std::thread sender_thread;
   std::thread receiver_thread;
   std::thread context_thread;
+  std::thread error_handler_thread;
 
   boost::asio::ip::udp::endpoint destination_endpoint;
 
@@ -772,6 +776,7 @@ class vxsdr {
   bool device_get_buffer_info(const uint8_t subdev, const uint8_t flags = 0);
   bool device_get_buffer_use(const uint8_t subdev, const uint8_t flags = 0);
   [[nodiscard]] bool cmd_queue_push_check(packet &p);
+  void error_handler();
   void receiver();
   void sender();
   void udp_receiver();
