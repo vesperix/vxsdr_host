@@ -75,6 +75,7 @@ void init_vm(boost::program_options::options_description &desc, boost::program_o
   if(vm.count("help") > 0) {
     // just write help to stderr, not to log
     std::cerr << desc << std::endl;
+    LOG_INFO("exiting after showing help");
     exit(EXIT_SUCCESS);
   }
 
