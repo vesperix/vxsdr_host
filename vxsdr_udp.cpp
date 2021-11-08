@@ -108,9 +108,12 @@
 #endif // VXSDR_ASYNC_RX
 
       if(bytes_in_packet >= sizeof(packet_header) and remote_endpoint == destination_endpoint) {
+        n_samps = 0;
         vxsdr::packets_received++;
         vxsdr::packet_types_received[recv_buffer.hdr.packet_type]++;
         vxsdr::bytes_received += bytes_in_packet;
+        bool has_time = recv_buffer.hdr.flags & (uint8_t)FLAGS_TIME_PRESENT;
+        bool has_stream = recv_buffer.hdr.flags & (uint8_t)FLAGS_STREAM_ID_PRESENT;
         if(recv_buffer.hdr.packet_size != bytes_in_packet) {
           LOG_ERROR(fmt::format("packet_size in {:s} header incorrect ({:d}, {:d})",
                 packet_type_to_name(recv_buffer.hdr.packet_type), recv_buffer.hdr.packet_size, bytes_in_packet));
@@ -118,10 +121,10 @@
         }
         if(recv_buffer.hdr.packet_type == PACKET_TYPE_RX_SIGNAL_DATA) {
           uint16_t header_size = sizeof(packet_header);
-          if((bool)(recv_buffer.hdr.flags & FLAGS_TIME_PRESENT)) {
+          if(has_time) {
             header_size += sizeof(time_spec_t);
           }
-          if((bool)(recv_buffer.hdr.flags & FLAGS_STREAM_ID_PRESENT)) {
+          if(has_stream) {
             header_size += sizeof(stream_spec_t);
           }
           n_samps = (recv_buffer.hdr.packet_size - header_size) / sizeof(std::complex<int16_t>);
