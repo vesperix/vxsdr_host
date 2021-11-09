@@ -34,6 +34,7 @@
 class vxsdr {
 
  private:
+
 #ifdef VXSDR_ASYNC_RX
   // socket_receive_timeout setting for async rx
   static constexpr unsigned receiver_socket_timeout_ms    =      100;
