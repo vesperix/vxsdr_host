@@ -255,7 +255,27 @@ void log_packet_info(packet &packet)
         packet.hdr.packet_type, packet.hdr.command, packet.hdr.flags, packet.hdr.target_subdevice, packet.hdr.packet_size, packet.hdr.sequence_counter));
   switch(packet.hdr.packet_type) {
     case PACKET_TYPE_DEVICE_CMD:
-      LOG_INFO(fmt::format("DEVICE_CMD: {:s}", device_cmd_to_name(packet.hdr.command)));
+      switch(packet.hdr.command) {
+        case DEVICE_CMD_SET_TIME_NOW:
+          {
+            LOG_INFO(fmt::format("DEVICE_CMD: SET_TIME_NOW"));
+            auto *tr = reinterpret_cast<cmd_or_rsp_packet_time *>(&packet);
+            LOG_INFO(fmt::format("   seconds                   = {:d}", (uint32_t)(tr->time.seconds)));
+            LOG_INFO(fmt::format("   nanoseconds               = {:09d}", (uint32_t)(tr->time.nanoseconds)));
+          }
+          break;
+        case DEVICE_CMD_SET_TIME_NEXT_PPS:
+          {
+            LOG_INFO(fmt::format("DEVICE_CMD: SET_TIME_NEXT_PPS"));
+            auto *tr = reinterpret_cast<cmd_or_rsp_packet_time *>(&packet);
+            LOG_INFO(fmt::format("   seconds                   = {:d}", (uint32_t)(tr->time.seconds)));
+            LOG_INFO(fmt::format("   nanoseconds               = {:09d}", (uint32_t)(tr->time.nanoseconds)));
+          }
+          break;
+        default:
+          LOG_INFO(fmt::format("DEVICE_CMD: {:s}", device_cmd_to_name(packet.hdr.command)));
+          break;
+      }
       break;
     case PACKET_TYPE_DEVICE_CMD_ACK:
       LOG_INFO(fmt::format("DEVICE_CMD_ACK: {:s}", device_cmd_to_name(packet.hdr.command)));
