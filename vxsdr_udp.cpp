@@ -119,6 +119,15 @@
                 packet_type_to_name(recv_buffer.hdr.packet_type), recv_buffer.hdr.packet_size, bytes_in_packet));
           recv_buffer.hdr.packet_size = std::min(bytes_in_packet, (unsigned long)recv_buffer.hdr.packet_size);
         }
+
+        if(log_nondata_packets and recv_buffer.hdr.packet_type != PACKET_TYPE_TX_SIGNAL_DATA
+                               and recv_buffer.hdr.packet_type != PACKET_TYPE_RX_SIGNAL_DATA
+                               and recv_buffer.hdr.packet_type != PACKET_TYPE_TX_SIGNAL_DATA_ACK
+                               and recv_buffer.hdr.packet_type != PACKET_TYPE_RX_SIGNAL_DATA_ACK) {
+          auto *p = reinterpret_cast<largest_cmd_or_rsp_packet *>(&recv_buffer);
+          log_packet_info(*p, -1);
+        }
+
         if(recv_buffer.hdr.packet_type == PACKET_TYPE_RX_SIGNAL_DATA) {
           uint16_t header_size = sizeof(packet_header);
           if(has_time) {
@@ -275,6 +284,15 @@
   void vxsdr::send_packet(packet &packet) {
     vxsdr::packet_types_sent[packet.hdr.packet_type]++;
     packet.hdr.sequence_counter = (uint16_t)(vxsdr::packets_sent++ % (UINT16_MAX + 1));
+
+    if(log_nondata_packets and packet.hdr.packet_type != PACKET_TYPE_TX_SIGNAL_DATA
+                           and packet.hdr.packet_type != PACKET_TYPE_RX_SIGNAL_DATA
+                           and packet.hdr.packet_type != PACKET_TYPE_TX_SIGNAL_DATA_ACK
+                           and packet.hdr.packet_type != PACKET_TYPE_RX_SIGNAL_DATA_ACK) {
+      auto *p = reinterpret_cast<largest_cmd_or_rsp_packet *>(&packet);
+      log_packet_info(*p, 1);
+    }
+
     size_t bytes = vxsdr::sender_socket.send_to(boost::asio::buffer(&packet, packet.hdr.packet_size), vxsdr::destination_endpoint);
     if(bytes != packet.hdr.packet_size) {
       vxsdr::send_errors++;
