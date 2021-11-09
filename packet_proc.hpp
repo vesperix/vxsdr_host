@@ -10,6 +10,6 @@
 
 std::string packet_type_to_name(const uint8_t number);
 std::string device_command_to_name(const uint8_t cmd);
-void log_packet_info(packet &packet);
+void log_packet_info(packet &packet, const int direction = 0);
 
 #endif // PACKET_PROC_HPP

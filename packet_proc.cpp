@@ -249,10 +249,18 @@ std::string async_msg_to_name(const uint8_t msg) {
   }
 }
 
-void log_packet_info(packet &packet)
+void log_packet_info(packet &packet, const int direction)
 {
-  LOG_INFO(fmt::format("packet: type 0x{:X} command 0x{:X} flags 0x{:X} subdevice {:d} size {:d} sequence {:d}",
+  if(direction == 0) {
+    LOG_INFO(fmt::format("PACKET: type 0x{:X} command 0x{:X} flags 0x{:X} subdevice {:d} size {:d} sequence {:d}",
         packet.hdr.packet_type, packet.hdr.command, packet.hdr.flags, packet.hdr.target_subdevice, packet.hdr.packet_size, packet.hdr.sequence_counter));
+  } else if(direction > 0) {
+    LOG_INFO(fmt::format("PACKET SENT: type 0x{:X} command 0x{:X} flags 0x{:X} subdevice {:d} size {:d} sequence {:d}",
+        packet.hdr.packet_type, packet.hdr.command, packet.hdr.flags, packet.hdr.target_subdevice, packet.hdr.packet_size, packet.hdr.sequence_counter));
+  } else {
+    LOG_INFO(fmt::format("PACKET RECEIVED: type 0x{:X} command 0x{:X} flags 0x{:X} subdevice {:d} size {:d} sequence {:d}",
+        packet.hdr.packet_type, packet.hdr.command, packet.hdr.flags, packet.hdr.target_subdevice, packet.hdr.packet_size, packet.hdr.sequence_counter));
+  }
   switch(packet.hdr.packet_type) {
     case PACKET_TYPE_DEVICE_CMD:
       switch(packet.hdr.command) {
