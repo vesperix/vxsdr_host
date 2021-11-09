@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
     boost::asio::ip::udp::endpoint destination_endpoint(destination_ip, vm["destination_port"].as<unsigned>());
     LOG_INFO(fmt::format("using destination IP {:s} and port {:d}", destination_endpoint.address().to_string(), destination_endpoint.port()));
 
-    auto radio = std::make_unique<vxsdr>(local_send_endpoint, local_receive_endpoint, destination_endpoint);
+    auto radio = std::make_unique<vxsdr>(local_send_endpoint, local_receive_endpoint, destination_endpoint, vm["log_packets"].as<bool>());
 
     LOG_INFO(fmt::format("using frequency {:.5e}", vm["freq"].as<double>()));
     LOG_INFO(fmt::format("using rate      {:.5e}", vm["rate"].as<double>()));

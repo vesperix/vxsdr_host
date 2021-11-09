@@ -21,6 +21,9 @@
 #define LOG_ERROR(x)            spdlog::get("multi")->error(x)
 #define LOG_FATAL(x)            spdlog::get("multi")->critical(x)
 
+// what level to use for packet logs
+#define LOG_PACKET(x)           spdlog::get("multi")->trace(x)
+
 void log_init(const std::string &logfilename);
 void log_set_level(const int level);
 

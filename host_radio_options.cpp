@@ -44,6 +44,7 @@ void add_common_options(boost::program_options::options_description &desc)
     ("freq", boost::program_options::value<double>()->required(), "TX/RX center frequency in Hz")
     ("verbose_level", boost::program_options::value<int>(), "log level (6 = trace, 5 = debug, 4 = info, 3 = warning, 2 = error, 1 = fatal, 0 = none)")
     ("quit_on_error", boost::program_options::value<bool>()->default_value(true), "quit on errors")
+    ("log_packets", boost::program_options::value<bool>()->default_value(false), "log nondata packets sent and received")
   ;
 }
 
@@ -55,7 +56,6 @@ void add_network_options(boost::program_options::options_description &desc)
     ("local_send_port", boost::program_options::value<unsigned>()->default_value(55123), "port to send on local interface")
     ("destination_address", boost::program_options::value<std::string>()->required(), "IPv4 address of destination (including broadcast/multicast)")
     ("netmask", boost::program_options::value<std::string>()->default_value("255.255.255.0"), "IPv4 netmask of local interface")
-    ("broadcast", boost::program_options::bool_switch()->default_value(false), "flag to enable broadcast")
     ("destination_port", boost::program_options::value<unsigned>()->default_value(1030), "port to use on destination")
     ("payload_size", boost::program_options::value<size_t>()->default_value(8192), "maximum data packet payload size in bytes")
   ;
