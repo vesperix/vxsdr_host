@@ -15,6 +15,10 @@ void log_init(const std::string &logfilename) {
   spdlog::register_logger(multi_logger);
 }
 
+void log_close() {
+  spdlog::shutdown();
+}
+
 void log_set_level(const int verbose) {
   switch(verbose) {
     case 6:
