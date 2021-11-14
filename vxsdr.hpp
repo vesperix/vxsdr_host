@@ -164,7 +164,7 @@ class vxsdr {
         const boost::asio::ip::udp::endpoint &device_endpoint,
         const bool nondata_packet_logging = false,
         const bool set_affinity = true, const unsigned base_cpu_number = 0,
-        const bool set_priority = true, const unsigned base_priority = 15);
+        const bool set_priority = true, const unsigned base_priority = 5);
   //! Destructor for the vxsdr host interface class.
   ~vxsdr();
   //! @brief Deleted copy constructor for the @p vxsdr host interface class.
