@@ -34,10 +34,13 @@
 class vxsdr {
 
  private:
+
 #ifdef VXSDR_ASYNC_RX
   // socket_receive_timeout setting for async rx
   static constexpr unsigned receiver_socket_timeout_ms    =      100;
 #endif // VXSDR_ASYNC_RX
+  // packet logging settings
+  bool log_nondata_packets;
 
   // thread realtime priority settings
   bool thread_set_priority;
@@ -163,8 +166,9 @@ class vxsdr {
   vxsdr(const boost::asio::ip::udp::endpoint &local_send_endpoint,
         const boost::asio::ip::udp::endpoint &local_receive_endpoint,
         const boost::asio::ip::udp::endpoint &device_endpoint,
+        const bool nondata_packet_logging = false,
         const bool set_affinity = true, const unsigned base_cpu_number = 0,
-        const bool set_priority = true, const unsigned base_priority = 15);
+        const bool set_priority = true, const unsigned base_priority = 5);
   //! Destructor for the vxsdr host interface class.
   ~vxsdr();
   //! @brief Deleted copy constructor for the @p vxsdr host interface class.

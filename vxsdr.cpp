@@ -7,11 +7,13 @@
   vxsdr::vxsdr(const boost::asio::ip::udp::endpoint &local_send_endpoint,
         const boost::asio::ip::udp::endpoint &local_receive_endpoint,
         const boost::asio::ip::udp::endpoint &device_endpoint,
+        const bool nondata_packet_logging,
         const bool set_affinity, const unsigned base_cpu_number,
         const bool set_priority, const unsigned base_priority) :
     sender_socket(context, local_send_endpoint),
     receiver_socket(context, local_receive_endpoint) {
     LOG_DEBUG("vxsdr constructor entered");
+    log_nondata_packets = nondata_packet_logging;
     thread_set_affinity = set_affinity;
     send_thread_cpu = base_cpu_number;
     receive_thread_cpu = base_cpu_number + 1;
