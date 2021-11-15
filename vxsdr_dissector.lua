@@ -90,11 +90,20 @@ local device_cmd_errs = {
     [0x03] = "NO_SUCH_SUBDEVICE",
     [0x04] = "TIMEOUT",
     [0x05] = "BAD_PARAMETER",
+    [0x06] = "NOT_SUPPORTED",
+    [0x07] = "BAD_PKT_SIZE",
+}
+
+local async_msgs = {
+    [0x00] = "NO_ERROR",
+    [0x01] = "DATA_UNDERFLOW",
+    [0x02] = "DATA_OVERFLOW",
+    [0x03] = "OVER_TEMP",
+    [0x04] = "POWER_ERROR",
+    [0x05] = "FREQ_ERROR",
     [0x06] = "OUT_OF_SEQUENCE",
-    [0x07] = "NOT_SUPPORTED",
-    [0x08] = "BAD_PKT_SIZE",
-    [0x21] = "CTRL_BUFFER_OVERFLOW",
-    [0x22] = "PPS_TIMEOUT"
+    [0x07] = "CTRL_OVERFLOW",
+    [0x08] = "PPS_TIMEOUT"
 }
 
 local radio_cmds = {
@@ -150,20 +159,9 @@ local radio_cmd_errs = {
     [0x03] = "NO_SUCH_SUBDEVICE",
     [0x04] = "TIMEOUT",
     [0x05] = "BAD_PARAMETER",
-    [0x06] = "OUT_OF_SEQUENCE",
-    [0x07] = "NOT_SUPPORTED",
-    [0x08] = "BAD_PKT_SIZE"
+    [0x06] = "NOT_SUPPORTED",
+    [0x07] = "BAD_PKT_SIZE"
 }
-
-local asyncs = {
-    [0x00] = "NO_ERROR",
-    [0x01] = "DATA_UNDERFLOW",
-    [0x02] = "DATA_OVERFLOW",
-    [0x03] = "OVER_TEMP",
-    [0x04] = "POWER_ERROR",
-    [0x05] = "FREQ_ERROR"
-}
-
 
 local pf_packet_type       = ProtoField.uint8("vxsdr.packet_type", "Packet Type", base.HEX, packet_types)
 local pf_command           = ProtoField.uint8("vxsdr.command", "Command", base.HEX)
@@ -180,7 +178,7 @@ local pf_radio_command_err  = ProtoField.uint8("vxsdr.radio_command_err", "Radio
 local pf_radio_command_rsp  = ProtoField.uint8("vxsdr.device_command", "Radio Command Response", base.HEX, radio_cmd_rsps)
 local pf_device_error       = ProtoField.uint32("vxsdr.device_error", "Device Error Reason", base.HEX, device_cmd_errs)
 local pf_radio_error        = ProtoField.uint32("vxsdr.radio_error", "Radio Error Reason", base.HEX, radio_cmd_errs)
-local pf_async_msg          = ProtoField.uint8("vxsdr.async_msg", "Async Mesaage", base.HEX, asyncs)
+local pf_async_msg          = ProtoField.uint8("vxsdr.async_msg", "Async Mesaage", base.HEX, async_msgs)
 
 local pf_uint16_data        = ProtoField.uint16("vxsdr.data", "UInt16 Data", base.DEC)
 local pf_uint32_data        = ProtoField.uint32("vxsdr.data", "UInt32 Data", base.DEC)
@@ -207,20 +205,22 @@ function vxsdr.dissector(tvbuf, pktinfo, root)
     end
 
     tree:add(   pf_packet_type,      tvbuf:range(0, 1))
-    if pkt_type == 0x02 then
+    if pkt_type == 0x02 then -- device command
         tree:add(   pf_device_command,         tvbuf:range(1, 1))
-    elseif pkt_type == 0x0D then
+    elseif pkt_type == 0x0D then -- device command responses
         tree:add(   pf_device_command_rsp,     tvbuf:range(1, 1))
-    elseif pkt_type == 0x0A then
-        tree:add(   pf_device_command_err,     tvbuf:range(1, 1))
-    elseif pkt_type == 0x03 or pkt_type == 0x04 then
+    elseif pkt_type == 0x0A then  -- device command errors
+        tree:add(   pf_device_command,         tvbuf:range(1, 1))
+    elseif pkt_type == 0x03 or pkt_type == 0x04 then -- tx and rx radio commands
         tree:add(   pf_radio_command,          tvbuf:range(1, 1))
-    elseif pkt_type == 0x0E or pkt_type == 0x0F then
+    elseif pkt_type == 0x0E or pkt_type == 0x0F then -- tx and rx radio command responses
         tree:add(   pf_radio_command_rsp,      tvbuf:range(1, 1))
-    elseif pkt_type == 0x0B or pkt_type == 0x0C then
-        tree:add(   pf_radio_command_err,      tvbuf:range(1, 1))
+    elseif pkt_type == 0x0B or pkt_type == 0x0C then -- tx and rx radio command errors
+        tree:add(   pf_radio_command,          tvbuf:range(1, 1))
+    elseif pkt_type == 0x05 then -- async messages
+        tree:add(   pf_async_msg,              tvbuf:range(1, 1))
     else
-        tree:add(   pf_command,          tvbuf:range(1, 1))
+        tree:add(   pf_command,                tvbuf:range(1, 1))
     end
     tree:add(   pf_target_subdevice, tvbuf:range(2, 1))
     tree:add(   pf_flags,            tvbuf:range(3, 1))
