@@ -127,14 +127,10 @@ std::string device_cmd_error_to_name(const uint32_t reason) {
       return "TIMEOUT";
     case DEVICE_CMD_ERR_BAD_PARAMETER:
       return "BAD_PARAMETER";
-    case DEVICE_CMD_ERR_OUT_OF_SEQUENCE:
-      return "OUT_OF_SEQUENCE";
-    case DEVICE_CMD_ERR_CTRL_BUFFER_OVERFLOW:
-      return "CTRL_BUFFER_OVERFLOW";
     case DEVICE_CMD_ERR_NOT_SUPPORTED:
       return "NOT_SUPPORTED";
-    case DEVICE_CMD_ERR_PPS_TIMEOUT:
-      return "PPS_TIMEOUT";
+    case DEVICE_CMD_ERR_BAD_PKT_SIZE:
+      return "BAD_PKT_SIZE";
     default:
       return fmt::format("reason {:d}", reason);
   }
@@ -225,6 +221,8 @@ std::string radio_cmd_error_to_name(const uint32_t reason) {
       return "BAD_PARAMETER";
     case RADIO_CMD_ERR_NOT_SUPPORTED:
       return "NOT_SUPPORTED";
+    case RADIO_CMD_ERR_BAD_PKT_SIZE:
+      return "BAD_PKT_SIZE";
     default:
       return fmt::format("reason {:d}", reason);
   }
@@ -244,6 +242,12 @@ std::string async_msg_to_name(const uint8_t msg) {
       return "POWER_ERROR";
     case ASYNC_FREQ_ERROR:
       return "FREQ_ERROR";
+    case ASYNC_OUT_OF_SEQUENCE:
+      return "OUT_OF_SEQUENCE";
+    case ASYNC_CTRL_OVERFLOW:
+      return "CTRL_OVERFLOW";
+    case ASYNC_PPS_TIMEOUT:
+      return "PPS_TIMEOUT";
     default:
       return fmt::format("message {:d}", msg);
   }
@@ -474,20 +478,32 @@ void log_packet_info(packet &packet, const int direction)
       break;
     case PACKET_TYPE_ASYNC_MSG:
       switch(packet.hdr.command) {
+        case ASYNC_NO_ERROR:
+          LOG_PACKET(fmt::format("ASYNC_MSG: NO_ERROR"));
+          break;
         case ASYNC_DATA_UNDERFLOW:
-          LOG_PACKET(fmt::format("ASYNC_DATA_UNDERFLOW"));
+          LOG_PACKET(fmt::format("ASYNC_MSG: DATA_UNDERFLOW"));
           break;
         case ASYNC_DATA_OVERFLOW:
-          LOG_PACKET(fmt::format("ASYNC_DATA_OVERFLOW"));
+          LOG_PACKET(fmt::format("ASYNC_MSG: DATA_OVERFLOW"));
           break;
         case ASYNC_OVER_TEMP:
-          LOG_PACKET(fmt::format("ASYNC_OVER_TEMP"));
+          LOG_PACKET(fmt::format("ASYNC_MSG: OVER_TEMP"));
           break;
         case ASYNC_POWER_ERROR:
-          LOG_PACKET(fmt::format("ASYNC_POWER_ERROR"));
+          LOG_PACKET(fmt::format("ASYNC_MSG: POWER_ERROR"));
           break;
         case ASYNC_FREQ_ERROR:
-          LOG_PACKET(fmt::format("ASYNC_FREQ_ERROR"));
+          LOG_PACKET(fmt::format("ASYNC_MSG: FREQ_ERROR"));
+          break;
+        case ASYNC_OUT_OF_SEQUENCE:
+          LOG_PACKET(fmt::format("ASYNC_MSG: OUT_OF_SEQUENCE"));
+          break;
+        case ASYNC_CTRL_OVERFLOW:
+          LOG_PACKET(fmt::format("ASYNC_MSG: CTRL_OVERFLOW"));
+          break;
+        case ASYNC_PPS_TIMEOUT:
+          LOG_PACKET(fmt::format("ASYNC_MSG: PPS_TIMEOUT"));
           break;
         default:
           LOG_PACKET(fmt::format("ASYNC_MSG: {:d}", (int)packet.hdr.command));
