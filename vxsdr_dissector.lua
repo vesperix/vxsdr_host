@@ -84,6 +84,19 @@ local device_cmd_rsps = {
     [0x62] = "READ_ADC_REG"
 }
 
+local device_cmd_errs = {
+    [0x01] = "BAD_CMD",
+    [0x02] = "BUSY",
+    [0x03] = "NO_SUCH_SUBDEVICE",
+    [0x04] = "TIMEOUT",
+    [0x05] = "BAD_PARAMETER",
+    [0x06] = "OUT_OF_SEQUENCE",
+    [0x07] = "NOT_SUPPORTED",
+    [0x08] = "BAD_PKT_SIZE",
+    [0x21] = "CTRL_BUFFER_OVERFLOW",
+    [0x22] = "PPS_TIMEOUT"
+}
+
 local radio_cmds = {
     [0x01] = "START_NOW_UNTIL_STOP",
     [0x02] = "START_AT_TIME_UNTIL_STOP",
@@ -131,13 +144,15 @@ local radio_cmd_rsps = {
     [0x42] = "GET_IQ_CORR"
 }
 
-local errors = {
+local radio_cmd_errs = {
     [0x01] = "BAD_CMD",
     [0x02] = "BUSY",
     [0x03] = "NO_SUCH_SUBDEVICE",
     [0x04] = "TIMEOUT",
     [0x05] = "BAD_PARAMETER",
-    [0x06] = "CMD_OUT_OF_SEQUENCE"
+    [0x06] = "OUT_OF_SEQUENCE",
+    [0x07] = "NOT_SUPPORTED",
+    [0x08] = "BAD_PKT_SIZE"
 }
 
 local asyncs = {
@@ -163,8 +178,8 @@ local pf_device_command_rsp = ProtoField.uint8("vxsdr.device_command_rsp", "Devi
 local pf_radio_command      = ProtoField.uint8("vxsdr.radio_command", "Radio Command", base.HEX, radio_cmds)
 local pf_radio_command_err  = ProtoField.uint8("vxsdr.radio_command_err", "Radio Command Error", base.HEX, radio_cmds)
 local pf_radio_command_rsp  = ProtoField.uint8("vxsdr.device_command", "Radio Command Response", base.HEX, radio_cmd_rsps)
-local pf_device_error       = ProtoField.uint32("vxsdr.device_error", "Device Error Reason", base.HEX, errors)
-local pf_radio_error        = ProtoField.uint32("vxsdr.radio_error", "Radio Error Reason", base.HEX, errors)
+local pf_device_error       = ProtoField.uint32("vxsdr.device_error", "Device Error Reason", base.HEX, device_cmd_errs)
+local pf_radio_error        = ProtoField.uint32("vxsdr.radio_error", "Radio Error Reason", base.HEX, radio_cmd_errs)
 local pf_async_msg          = ProtoField.uint8("vxsdr.async_msg", "Async Mesaage", base.HEX, asyncs)
 
 local pf_uint16_data        = ProtoField.uint16("vxsdr.data", "UInt16 Data", base.DEC)
@@ -238,6 +253,7 @@ function vxsdr.dissector(tvbuf, pktinfo, root)
         -- device command errors
         elseif pkt_type == 0x0A then
             tree:add_le(pf_device_error, tvbuf:range( 8, 4))
+            tree:add_le(pf_uint32_data,  tvbuf:range(12, 4))
         -- radio commands
         elseif (pkt_type == 0x03 or pkt_type == 0x04) then
             -- set rf_enabled
@@ -276,6 +292,7 @@ function vxsdr.dissector(tvbuf, pktinfo, root)
         -- radio command errors
         elseif pkt_type == 0x0B or pkt_type == 0x0C then
             tree:add_le(pf_radio_error, tvbuf:range( 8, 4))
+            tree:add_le(pf_uint32_data, tvbuf:range(12, 4))
         elseif pkt_type == 0x80 then
             -- tx signal data ack
             tree:add_le(pf_uint64_data, tvbuf:range( 8, 8))
