@@ -150,6 +150,7 @@ extern "C" {
 #define RADIO_CMD_ERR_BAD_PARAMETER            (0x05)
 #define RADIO_CMD_ERR_NOT_SUPPORTED            (0x06)
 #define RADIO_CMD_ERR_BAD_PKT_SIZE             (0x07)
+#define RADIO_CMD_ERR_OUT_OF_SEQUENCE          (0x08)
 
 // Async messages
 #define ASYNC_NO_ERROR                         (0x00)
