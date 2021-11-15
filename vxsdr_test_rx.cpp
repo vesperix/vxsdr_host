@@ -48,7 +48,7 @@ int main(int argc, char *argv[])
     boost::asio::ip::udp::endpoint destination_endpoint(destination_ip, vm["destination_port"].as<unsigned>());
     LOG_INFO(fmt::format("using destination IP {:s} and port {:d}", destination_endpoint.address().to_string(), destination_endpoint.port()));
 
-    auto radio = std::make_unique<vxsdr>(local_send_endpoint, local_receive_endpoint, destination_endpoint);
+    auto radio = std::make_unique<vxsdr>(local_send_endpoint, local_receive_endpoint, destination_endpoint, vm["log_packets"].as<bool>());
     // let radio complete initialization
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
     set_common_options(vm, radio);
