@@ -96,10 +96,20 @@ int main(int argc, char *argv[])
       LOG_INFO("t2 has no value");
     }
 
+    LOG_DEBUG("setting time to system clock");
+    radio->device_set_time_now(std::chrono::system_clock::now());
+    LOG_DEBUG("getting time again");
+    auto t3 = radio->device_get_time_now();
+    if(t3.has_value()) {
+      LOG_INFO(fmt::format("t3:           {:s}", format_time(t3.value())));
+    } else {
+      LOG_INFO("t3 has no value");
+    }
+
     LOG_INFO(fmt::format("using frequency {:.5e}", radio->get_rx_freq().value_or(-1)));
     LOG_INFO(fmt::format("using rate      {:.5e}", radio->get_rx_rate().value_or(-1)));
     LOG_INFO(fmt::format("using rx_gain   {:.1f}", radio->get_rx_gain().value_or(-1)));
-
+/*
     //radio->rx_start_now_for_n_samples(n_samp);
     radio->rx_start_now_until_stop();
     size_t n_written = radio->check_rx_data_sequence_only(n_samp);
@@ -109,6 +119,7 @@ int main(int argc, char *argv[])
     //outfile.close();
     //LOG_INFO(fmt::format("{:d} samples written", n_written));
     LOG_INFO(fmt::format("{:d} samples checked", n_written));
+*/
   }
   catch (std::exception& e) {
     LOG_FATAL(fmt::format("exception caught: {:s}", e.what()));

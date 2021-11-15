@@ -28,7 +28,7 @@
 #define LOG_CLOSE()             log_close();
 
 // what level to use for packet logs
-#define LOG_PACKET(x)           SPDLOG_LOGGER_TRACE(spdlog::get("multi"), x)
+#define LOG_PACKET(x)           SPDLOG_LOGGER_INFO(spdlog::get("multi"), x)
 
 void log_init(const std::string &logfilename);
 void log_close();
