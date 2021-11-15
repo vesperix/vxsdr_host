@@ -159,6 +159,7 @@ extern "C" {
 #define ASYNC_OVER_TEMP                        (0x03)  // too hot
 #define ASYNC_POWER_ERROR                      (0x04)  // voltage low/current high
 #define ASYNC_FREQ_ERROR                       (0x05)  // loss of lock, etc
+#define ASYNC_OUT_OF_SEQUENCE                  (0x06)
   // 0x06-0xFF reserved
 
 // Capabilities
