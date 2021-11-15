@@ -409,7 +409,7 @@
   }
 
   bool vxsdr::device_get_time_now(uint32_t &sec, uint32_t &nsec, const uint8_t subdev, const uint8_t flags) {
-    header_only_packet p = {};
+    header_only_packet p;
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_GET_TIME, subdev, flags, sizeof(p), 0 };
     if(not vxsdr::cmd_queue_push_check(p)) {
       return false;
@@ -440,7 +440,7 @@
   }
 
   std::optional<std::chrono::time_point<std::chrono::system_clock>> vxsdr::device_get_time_now(const uint8_t subdev, const uint8_t flags) {
-    cmd_or_rsp_packet_time p = {};
+    header_only_packet p;
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_GET_TIME, subdev, flags, sizeof(p), 0 };
     if(not vxsdr::cmd_queue_push_check(p)) {
       return std::nullopt;
