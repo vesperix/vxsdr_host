@@ -187,7 +187,7 @@ local pf_double_data        = ProtoField.double("vxsdr.data", "Double Data")
 
 vxsdr.fields = { pf_packet_type, pf_command, pf_target_subdevice, pf_flags, pf_packet_size, pf_sequence_counter,
                  pf_device_command, pf_radio_command, pf_device_command_err, pf_radio_command_err,
-                 pf_device_command_rsp, pf_radio_command_rsp, pf_device_error, pf_radio_error,
+                 pf_device_command_rsp, pf_radio_command_rsp, pf_device_error, pf_radio_error, pf_async_msg,
                  pf_uint16_data, pf_uint32_data, pf_uint64_data, pf_double_data }
 
 function vxsdr.dissector(tvbuf, pktinfo, root)
