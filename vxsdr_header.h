@@ -96,12 +96,8 @@ extern "C" {
 #define DEVICE_CMD_ERR_NO_SUCH_SUBDEVICE       (0x03)  // the specified subdevice doesn't exist
 #define DEVICE_CMD_ERR_TIMEOUT                 (0x04)  // tried to do command but something didn't answer
 #define DEVICE_CMD_ERR_BAD_PARAMETER           (0x05)  // command parameter is out of allowed range
-#define DEVICE_CMD_ERR_OUT_OF_SEQUENCE         (0x06)  // command received with sequence error
-#define DEVICE_CMD_ERR_NOT_SUPPORTED           (0x07)  // this device can't do that command
-#define DEVICE_CMD_ERR_BAD_PKT_SIZE            (0x08)  // packet size incorrect for this command
-#define DEVICE_CMD_ERR_PPS_TIMEOUT             (0x21)
-#define DEVICE_CMD_ERR_CTRL_BUFFER_OVERFLOW    (0x22)  // overflow control buffer
-
+#define DEVICE_CMD_ERR_NOT_SUPPORTED           (0x06)  // this device can't do that command
+#define DEVICE_CMD_ERR_BAD_PKT_SIZE            (0x07)  // packet size incorrect for this command
 
 // Radio Commands
 #define RADIO_CMD_START_NOW_UNTIL_STOP         (0x01)
@@ -148,9 +144,8 @@ extern "C" {
 #define RADIO_CMD_ERR_NO_SUCH_SUBDEVICE        (0x03)
 #define RADIO_CMD_ERR_TIMEOUT                  (0x04)
 #define RADIO_CMD_ERR_BAD_PARAMETER            (0x05)
-#define RADIO_CMD_ERR_OUT_OF_SEQUENCE          (0x06)
-#define RADIO_CMD_ERR_NOT_SUPPORTED            (0x07)
-#define RADIO_CMD_ERR_BAD_PKT_SIZE             (0x08)
+#define RADIO_CMD_ERR_NOT_SUPPORTED            (0x06)
+#define RADIO_CMD_ERR_BAD_PKT_SIZE             (0x07)
 
 // Async messages
 #define ASYNC_NO_ERROR                         (0x00)
@@ -160,6 +155,8 @@ extern "C" {
 #define ASYNC_POWER_ERROR                      (0x04)  // voltage low/current high
 #define ASYNC_FREQ_ERROR                       (0x05)  // loss of lock, etc
 #define ASYNC_OUT_OF_SEQUENCE                  (0x06)
+#define ASYNC_CTRL_OVERFLOW                    (0x07)
+#define ASYNC_PPS_TIMEOUT                      (0x08)
   // 0x06-0xFF reserved
 
 // Capabilities
