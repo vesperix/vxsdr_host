@@ -193,17 +193,404 @@ void test_time(std::unique_ptr<vxsdr> &radio) {
 void test_rate(std::unique_ptr<vxsdr> &radio) {
   LOG_INFO("starting rate tests");
 
+  LOG_INFO("   testing tx");
+  {
+    LOG_INFO("      getting rate range");
+
+    auto rate = radio->get_tx_rate_range();
+    if(rate.has_value()) {
+      LOG_INFO("      passed");
+    } else {
+      LOG_ERROR("     no value returned by get_tx_rate_range()");
+      total_errors++;
+    }
+
+    if(rate.has_value()) {
+      double rmin = rate.value()[0], rmax = rate.value()[1];
+
+      LOG_INFO("      setting maximum rate");
+      bool sent = radio->set_tx_rate(rmax);
+
+      if(not sent) {
+        LOG_ERROR("     false returned by set_tx_rate()");
+        total_errors++;
+      }
+
+      auto rmx = radio->get_tx_rate();
+      if(rmx.has_value()) {
+        double diff = rmx.value() - rmax;
+        if(abs(diff) < 1e-3) {
+          LOG_INFO("      passed");
+        } else {
+          LOG_ERROR("      incorrect value returned by get_tx_rate()");
+          total_errors++;
+        }
+      } else {
+        LOG_ERROR("     no value returned by get_tx_rate()");
+        total_errors++;
+      }
+
+      LOG_INFO("      setting minimum rate");
+      sent = radio->set_tx_rate(rmin);
+
+      if(not sent) {
+        LOG_ERROR("     false returned by set_tx_rate()");
+        total_errors++;
+      }
+
+      rmx = radio->get_tx_rate();
+      if(rmx.has_value()) {
+        double diff = rmx.value() - rmin;
+        if(abs(diff) < 1e-3) {
+          LOG_INFO("      passed");
+        } else {
+          LOG_ERROR("      incorrect value returned by get_tx_rate()");
+          total_errors++;
+        }
+      } else {
+        LOG_ERROR("     no value returned by get_tx_rate()");
+        total_errors++;
+      }
+
+    } else {
+      LOG_INFO("   skipping tests because of rate range failure");
+    }
+  }
+
+  LOG_INFO("   testing rx");
+  {
+    LOG_INFO("      getting rate range");
+
+    auto rate = radio->get_rx_rate_range();
+    if(rate.has_value()) {
+      LOG_INFO("      passed");
+    } else {
+      LOG_ERROR("     no value returned by get_rx_rate_range()");
+      total_errors++;
+    }
+
+    if(rate.has_value()) {
+      double rmin = rate.value()[0], rmax = rate.value()[1];
+
+      LOG_INFO("      setting maximum rate");
+      bool sent = radio->set_rx_rate(rmax);
+
+      if(not sent) {
+        LOG_ERROR("     false returned by set_rx_rate()");
+        total_errors++;
+      }
+
+      auto rmx = radio->get_rx_rate();
+      if(rmx.has_value()) {
+        double diff = rmx.value() - rmax;
+        if(abs(diff) < 1e-3) {
+          LOG_INFO("      passed");
+        } else {
+          LOG_ERROR("      incorrect value returned by get_rx_rate()");
+          total_errors++;
+        }
+      } else {
+        LOG_ERROR("     no value returned by get_rx_rate()");
+        total_errors++;
+      }
+
+      LOG_INFO("      setting minimum rate");
+      sent = radio->set_rx_rate(rmin);
+
+      if(not sent) {
+        LOG_ERROR("     false returned by set_rx_rate()");
+        total_errors++;
+      }
+
+      rmx = radio->get_rx_rate();
+      if(rmx.has_value()) {
+        double diff = rmx.value() - rmin;
+        if(abs(diff) < 1e-3) {
+          LOG_INFO("      passed");
+        } else {
+          LOG_ERROR("      incorrect value returned by get_rx_rate()");
+          total_errors++;
+        }
+      } else {
+        LOG_ERROR("     no value returned by get_rx_rate()");
+        total_errors++;
+      }
+
+    } else {
+      LOG_INFO("   skipping tests because of rate range failure");
+    }
+  }
+
   LOG_INFO("completed rate tests");
 }
 
 void test_gain(std::unique_ptr<vxsdr> &radio) {
   LOG_INFO("starting gain tests");
 
+  LOG_INFO("   testing tx");
+  {
+    LOG_INFO("      getting gain range");
+
+    auto gain = radio->get_tx_gain_range();
+    if(gain.has_value()) {
+      LOG_INFO("      passed");
+    } else {
+      LOG_ERROR("     no value returned by get_tx_gain_range()");
+      total_errors++;
+    }
+
+    if(gain.has_value()) {
+      double rmin = gain.value()[0], rmax = gain.value()[1];
+
+      LOG_INFO("      setting maximum gain");
+      bool sent = radio->set_tx_gain(rmax);
+
+      if(not sent) {
+        LOG_ERROR("     false returned by set_tx_gain()");
+        total_errors++;
+      }
+
+      auto rmx = radio->get_tx_gain();
+      if(rmx.has_value()) {
+        double diff = rmx.value() - rmax;
+        if(abs(diff) < 1e-3) {
+          LOG_INFO("      passed");
+        } else {
+          LOG_ERROR("      incorrect value returned by get_tx_gain()");
+          total_errors++;
+        }
+      } else {
+        LOG_ERROR("     no value returned by get_tx_gain()");
+        total_errors++;
+      }
+
+      LOG_INFO("      setting minimum gain");
+      sent = radio->set_tx_gain(rmin);
+
+      if(not sent) {
+        LOG_ERROR("     false returned by set_tx_gain()");
+        total_errors++;
+      }
+
+      rmx = radio->get_tx_gain();
+      if(rmx.has_value()) {
+        double diff = rmx.value() - rmin;
+        if(abs(diff) < 1e-3) {
+          LOG_INFO("      passed");
+        } else {
+          LOG_ERROR("      incorrect value returned by get_tx_gain()");
+          total_errors++;
+        }
+      } else {
+        LOG_ERROR("     no value returned by get_tx_gain()");
+        total_errors++;
+      }
+
+    } else {
+      LOG_INFO("   skipping tests because of gain range failure");
+    }
+  }
+
+  LOG_INFO("   testing rx");
+  {
+    LOG_INFO("      getting gain range");
+
+    auto gain = radio->get_rx_gain_range();
+    if(gain.has_value()) {
+      LOG_INFO("      passed");
+    } else {
+      LOG_ERROR("     no value returned by get_rx_gain_range()");
+      total_errors++;
+    }
+
+    if(gain.has_value()) {
+      double rmin = gain.value()[0], rmax = gain.value()[1];
+
+      LOG_INFO("      setting maximum gain");
+      bool sent = radio->set_rx_gain(rmax);
+
+      if(not sent) {
+        LOG_ERROR("     false returned by set_rx_gain()");
+        total_errors++;
+      }
+
+      auto rmx = radio->get_rx_gain();
+      if(rmx.has_value()) {
+        double diff = rmx.value() - rmax;
+        if(abs(diff) < 1e-3) {
+          LOG_INFO("      passed");
+        } else {
+          LOG_ERROR("      incorrect value returned by get_rx_gain()");
+          total_errors++;
+        }
+      } else {
+        LOG_ERROR("     no value returned by get_rx_gain()");
+        total_errors++;
+      }
+
+      LOG_INFO("      setting minimum gain");
+      sent = radio->set_rx_gain(rmin);
+
+      if(not sent) {
+        LOG_ERROR("     false returned by set_rx_gain()");
+        total_errors++;
+      }
+
+      rmx = radio->get_rx_gain();
+      if(rmx.has_value()) {
+        double diff = rmx.value() - rmin;
+        if(abs(diff) < 1e-3) {
+          LOG_INFO("      passed");
+        } else {
+          LOG_ERROR("      incorrect value returned by get_rx_gain()");
+          total_errors++;
+        }
+      } else {
+        LOG_ERROR("     no value returned by get_rx_gain()");
+        total_errors++;
+      }
+
+    } else {
+      LOG_INFO("   skipping tests because of gain range failure");
+    }
+
+  }
+
   LOG_INFO("completed gain tests");
 }
 
 void test_freq(std::unique_ptr<vxsdr> &radio) {
+
   LOG_INFO("starting freq tests");
+
+  LOG_INFO("   testing tx");
+  {
+    LOG_INFO("      getting freq range");
+
+    auto freq = radio->get_tx_freq_range();
+    if(freq.has_value()) {
+      LOG_INFO("      passed");
+    } else {
+      LOG_ERROR("     no value returned by get_tx_freq_range()");
+      total_errors++;
+    }
+
+    if(freq.has_value()) {
+      double rmin = freq.value()[0], rmax = freq.value()[1];
+
+      LOG_INFO("      setting maximum freq");
+      bool sent = radio->set_tx_freq(rmax);
+
+      if(not sent) {
+        LOG_ERROR("     false returned by set_tx_freq()");
+        total_errors++;
+      }
+
+      auto rmx = radio->get_tx_freq();
+      if(rmx.has_value()) {
+        double diff = rmx.value() - rmax;
+        if(abs(diff) < 1e-3) {
+          LOG_INFO("      passed");
+        } else {
+          LOG_ERROR("      incorrect value returned by get_tx_freq()");
+          total_errors++;
+        }
+      } else {
+        LOG_ERROR("     no value returned by get_tx_freq()");
+        total_errors++;
+      }
+
+      LOG_INFO("      setting minimum freq");
+      sent = radio->set_tx_freq(rmin);
+
+      if(not sent) {
+        LOG_ERROR("     false returned by set_tx_freq()");
+        total_errors++;
+      }
+
+      rmx = radio->get_tx_freq();
+      if(rmx.has_value()) {
+        double diff = rmx.value() - rmin;
+        if(abs(diff) < 1e-3) {
+          LOG_INFO("      passed");
+        } else {
+          LOG_ERROR("      incorrect value returned by get_tx_freq()");
+          total_errors++;
+        }
+      } else {
+        LOG_ERROR("     no value returned by get_tx_freq()");
+        total_errors++;
+      }
+
+    } else {
+      LOG_INFO("   skipping tests because of freq range failure");
+    }
+  }
+
+  LOG_INFO("   testing rx");
+  {
+    LOG_INFO("      getting freq range");
+
+    auto freq = radio->get_rx_freq_range();
+    if(freq.has_value()) {
+      LOG_INFO("      passed");
+    } else {
+      LOG_ERROR("     no value returned by get_rx_freq_range()");
+      total_errors++;
+    }
+
+    if(freq.has_value()) {
+      double rmin = freq.value()[0], rmax = freq.value()[1];
+
+      LOG_INFO("      setting maximum freq");
+      bool sent = radio->set_rx_freq(rmax);
+
+      if(not sent) {
+        LOG_ERROR("     false returned by set_rx_freq()");
+        total_errors++;
+      }
+
+      auto rmx = radio->get_rx_freq();
+      if(rmx.has_value()) {
+        double diff = rmx.value() - rmax;
+        if(abs(diff) < 1e-3) {
+          LOG_INFO("      passed");
+        } else {
+          LOG_ERROR("      incorrect value returned by get_rx_freq()");
+          total_errors++;
+        }
+      } else {
+        LOG_ERROR("     no value returned by get_rx_freq()");
+        total_errors++;
+      }
+
+      LOG_INFO("      setting minimum freq");
+      sent = radio->set_rx_freq(rmin);
+
+      if(not sent) {
+        LOG_ERROR("     false returned by set_rx_freq()");
+        total_errors++;
+      }
+
+      rmx = radio->get_rx_freq();
+      if(rmx.has_value()) {
+        double diff = rmx.value() - rmin;
+        if(abs(diff) < 1e-3) {
+          LOG_INFO("      passed");
+        } else {
+          LOG_ERROR("      incorrect value returned by get_rx_freq()");
+          total_errors++;
+        }
+      } else {
+        LOG_ERROR("     no value returned by get_rx_freq()");
+        total_errors++;
+      }
+
+    } else {
+      LOG_INFO("   skipping tests because of freq range failure");
+    }
+
+  }
 
   LOG_INFO("completed freq tests");
 }

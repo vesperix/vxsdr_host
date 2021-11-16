@@ -669,7 +669,7 @@
     return vxsdr::cmd_queue_push_check(p);
   }
 
-  std::optional<std::tuple<double, double>> vxsdr::tx_get_iq_bias(const uint8_t subdev, const uint8_t flags) {
+  std::optional<std::array<double, 2>> vxsdr::tx_get_iq_bias(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p;
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_GET_IQ_BIAS, subdev, flags, sizeof(p), 0 };
     if(not vxsdr::cmd_queue_push_check(p)) {
@@ -685,7 +685,8 @@
     if(got_response) {
       auto *r = reinterpret_cast<radio_iq_bias_packet *>(&q);
       if(r->hdr.packet_type == PACKET_TYPE_DEVICE_CMD_RSP and r->hdr.command == p.hdr.command) {
-        return std::tuple<double, double>(r->i_bias, r->q_bias);
+        std::array<double, 2> res = {r->i_bias, r->q_bias};
+        return res;
        }
       LOG_ERROR("invalid response in tx_get_iq_bias()");
       return std::nullopt;
@@ -694,7 +695,7 @@
     return std::nullopt;
   }
 
-  std::optional<std::tuple<double, double>> vxsdr::rx_get_iq_bias(const uint8_t subdev, const uint8_t flags) {
+  std::optional<std::array<double, 2>> vxsdr::rx_get_iq_bias(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p;
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_GET_IQ_BIAS, subdev, flags, sizeof(p), 0 };
     if(not vxsdr::cmd_queue_push_check(p)) {
@@ -710,7 +711,8 @@
     if(got_response) {
       auto *r = reinterpret_cast<radio_iq_bias_packet *>(&q);
       if(r->hdr.packet_type == PACKET_TYPE_DEVICE_CMD_RSP and r->hdr.command == p.hdr.command) {
-        return std::tuple<double, double>(r->i_bias, r->q_bias);
+        std::array<double, 2> res = {r->i_bias, r->q_bias};
+        return res;
        }
       LOG_ERROR("invalid response in rx_get_iq_bias()");
       return std::nullopt;
@@ -757,11 +759,7 @@
     if(got_response) {
       auto *r = reinterpret_cast<radio_iq_corr_packet *>(&q);
       if(r->hdr.packet_type == PACKET_TYPE_DEVICE_CMD_RSP and r->hdr.command == p.hdr.command) {
-        std::array<double, 4> corr = {1, 0, 0, 1};
-        corr[0] = r->ii_corr;
-        corr[1] = r->iq_corr;
-        corr[2] = r->qi_corr;
-        corr[3] = r->qq_corr;
+        std::array<double, 4> corr = {r->ii_corr, r->iq_corr, r->qi_corr, r->qq_corr};
         return corr;
        }
       LOG_ERROR("invalid response in tx_get_iq_corr()");
@@ -787,11 +785,7 @@
     if(got_response) {
       auto *r = reinterpret_cast<radio_iq_corr_packet *>(&q);
       if(r->hdr.packet_type == PACKET_TYPE_DEVICE_CMD_RSP and r->hdr.command == p.hdr.command) {
-        std::array<double, 4> corr = {1, 0, 0, 1};
-        corr[0] = r->ii_corr;
-        corr[1] = r->iq_corr;
-        corr[2] = r->qi_corr;
-        corr[3] = r->qq_corr;
+        std::array<double, 4> corr = {r->ii_corr, r->iq_corr, r->qi_corr, r->qq_corr};
         return corr;
        }
       LOG_ERROR("invalid response in rx_get_iq_corr()");
@@ -833,7 +827,7 @@
     return false;
   }
 
-  std::optional<std::tuple<double, double>> vxsdr::get_tx_freq_range(const uint8_t subdev, const uint8_t flags) {
+  std::optional<std::array<double, 2>> vxsdr::get_tx_freq_range(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p = {};
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_GET_RF_FREQ_RANGE, subdev, flags, sizeof(p), 0 };
     if(not vxsdr::cmd_queue_push_check(p)) {
@@ -849,7 +843,8 @@
     if(got_response) {
       auto *r = reinterpret_cast<range_packet *>(&q);
       if(r->hdr.packet_type == PACKET_TYPE_TX_RADIO_CMD_RSP and r->hdr.command == p.hdr.command) {
-        return std::tuple<double, double>(r->range_min, r->range_max);
+        std::array<double, 2> res = {r->range_min, r->range_max};
+        return res;
       }
       LOG_ERROR("invalid response in get_tx_freq_range()");
       return std::nullopt;
@@ -858,7 +853,7 @@
     return std::nullopt;
   }
 
-  std::optional<std::tuple<double, double>> vxsdr::get_rx_freq_range(const uint8_t subdev, const uint8_t flags) {
+  std::optional<std::array<double, 2>> vxsdr::get_rx_freq_range(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p = {};
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_GET_RF_FREQ_RANGE, subdev, flags, sizeof(p), 0 };
     if(not vxsdr::cmd_queue_push_check(p)) {
@@ -874,7 +869,8 @@
     if(got_response) {
       auto *r = reinterpret_cast<range_packet *>(&q);
       if(r->hdr.packet_type == PACKET_TYPE_RX_RADIO_CMD_RSP and r->hdr.command == p.hdr.command) {
-        return std::tuple<double, double>(r->range_min, r->range_max);
+        std::array<double, 2> res = {r->range_min, r->range_max};
+        return res;
       }
       LOG_ERROR("invalid response in get_rx_freq_range()");
       return std::nullopt;
@@ -949,7 +945,7 @@
     return std::nullopt;
   }
 
-  std::optional<std::tuple<double, double>> vxsdr::get_tx_gain_range(const uint8_t subdev, const uint8_t flags) {
+  std::optional<std::array<double, 2>> vxsdr::get_tx_gain_range(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p = {};
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_GET_GAIN_RANGE, subdev, flags, sizeof(p), 0 };
     if(not vxsdr::cmd_queue_push_check(p)) {
@@ -965,7 +961,8 @@
     if(got_response) {
       auto *r = reinterpret_cast<range_packet *>(&q);
       if(r->hdr.packet_type == PACKET_TYPE_TX_RADIO_CMD_RSP and r->hdr.command == p.hdr.command) {
-        return std::tuple<double, double>(r->range_min, r->range_max);
+        std::array<double, 2> res = {r->range_min, r->range_max};
+        return res;
       }
       LOG_ERROR("invalid response in get_tx_gain_range()");
       return std::nullopt;
@@ -974,7 +971,7 @@
     return std::nullopt;
   }
 
-  std::optional<std::tuple<double, double>> vxsdr::get_rx_gain_range(const uint8_t subdev, const uint8_t flags) {
+  std::optional<std::array<double, 2>> vxsdr::get_rx_gain_range(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p = {};
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_GET_GAIN_RANGE, subdev, flags, sizeof(p), 0 };
     if(not vxsdr::cmd_queue_push_check(p)) {
@@ -990,7 +987,8 @@
     if(got_response) {
       auto *r = reinterpret_cast<range_packet *>(&q);
       if(r->hdr.packet_type == PACKET_TYPE_RX_RADIO_CMD_RSP and r->hdr.command == p.hdr.command) {
-        return std::tuple<double, double>(r->range_min, r->range_max);
+        std::array<double, 2> res = {r->range_min, r->range_max};
+        return res;
       }
       LOG_ERROR("invalid response in get_rx_gain_range()");
       return std::nullopt;
@@ -1063,7 +1061,7 @@
     return std::nullopt;
   }
 
-  std::optional<std::tuple<double, double>> vxsdr::get_tx_rate_range(const uint8_t subdev, const uint8_t flags) {
+  std::optional<std::array<double, 2>> vxsdr::get_tx_rate_range(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p = {};
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_GET_RATE_RANGE, subdev, flags, sizeof(p), 0 };
     if(not vxsdr::cmd_queue_push_check(p)) {
@@ -1079,7 +1077,8 @@
     if(got_response) {
       auto *r = reinterpret_cast<range_packet *>(&q);
       if(r->hdr.packet_type == PACKET_TYPE_TX_RADIO_CMD_RSP and r->hdr.command == p.hdr.command) {
-        return std::tuple<double, double>(r->range_min, r->range_max);
+        std::array<double, 2> res = {r->range_min, r->range_max};
+        return res;
       }
       LOG_ERROR("invalid response in get_tx_rate_range()");
       return std::nullopt;
@@ -1088,7 +1087,7 @@
     return std::nullopt;
   }
 
-  std::optional<std::tuple<double, double>> vxsdr::get_rx_rate_range(const uint8_t subdev, const uint8_t flags) {
+  std::optional<std::array<double, 2>> vxsdr::get_rx_rate_range(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p = {};
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_GET_RATE_RANGE, subdev, flags, sizeof(p), 0 };
     if(not vxsdr::cmd_queue_push_check(p)) {
@@ -1104,7 +1103,8 @@
     if(got_response) {
       auto *r = reinterpret_cast<range_packet *>(&q);
       if(r->hdr.packet_type == PACKET_TYPE_RX_RADIO_CMD_RSP and r->hdr.command == p.hdr.command) {
-        return std::tuple<double, double>(r->range_min, r->range_max);
+        std::array<double, 2> res = {r->range_min, r->range_max};
+        return res;
       }
       LOG_ERROR("invalid response in get_rx_rate_range()");
       return std::nullopt;

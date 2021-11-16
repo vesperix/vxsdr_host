@@ -498,21 +498,21 @@ class vxsdr {
 
   /*!
     @brief Gets the IQ DC bias for the transmitter.
-    - returns a tuple of doubles containing (i_bias, q_bias) with
+    - returns an array of doubles containing (i_bias, q_bias) with
         (-1 >= @p i_bias >= 1) and (-1 >= @p q_bias >= 1)
     @param subdev the subdevice number
     @param flags the packet flags
   */
-  std::optional<std::tuple<double, double>> tx_get_iq_bias(const uint8_t subdev = 0, const uint8_t flags = 0);
+  std::optional<std::array<double, 2>> tx_get_iq_bias(const uint8_t subdev = 0, const uint8_t flags = 0);
 
   /*!
     @brief Gets the IQ DC bias for the receiver.
-    - returns a tuple of doubles containing (i_bias, q_bias) with
+    - returns an array of doubles containing (i_bias, q_bias) with
         (-1 >= @p i_bias >= 1) and (-1 >= @p q_bias >= 1)
     @param subdev the subdevice number
     @param flags the packet flags
   */
-  std::optional<std::tuple<double, double>> rx_get_iq_bias(const uint8_t subdev = 0, const uint8_t flags = 0);
+  std::optional<std::array<double, 2>> rx_get_iq_bias(const uint8_t subdev = 0, const uint8_t flags = 0);
 
   /*!
     @brief Sets the IQ correction for the transmitter to control image rejection.
@@ -586,19 +586,19 @@ class vxsdr {
 
   /*!
     @brief Gets the transmit center frequency range.
-    - returns a tuple containing the minimum and maximum frequencies in Hz
+    - returns an array containing the minimum and maximum frequencies in Hz
     @param subdev the subdevice number
     @param flags the packet flags
   */
-  std::optional<std::tuple<double, double>> get_tx_freq_range(const uint8_t subdev = 0, const uint8_t flags = 0);
+  std::optional<std::array<double, 2>> get_tx_freq_range(const uint8_t subdev = 0, const uint8_t flags = 0);
 
   /*!
     @brief Gets the receive center frequency range.
-    - returns a tuple containing the minimum and maximum frequencies in Hz
+    - returns an array containing the minimum and maximum frequencies in Hz
     @param subdev the subdevice number
     @param flags the packet flags
   */
-  std::optional<std::tuple<double, double>> get_rx_freq_range(const uint8_t subdev = 0, const uint8_t flags = 0);
+  std::optional<std::array<double, 2>> get_rx_freq_range(const uint8_t subdev = 0, const uint8_t flags = 0);
 
   /*!
     @brief Sets the transmit center frequency.
@@ -642,19 +642,19 @@ class vxsdr {
 
   /*!
     @brief Gets the transmit gain range.
-    - returns a tuple containing the minimum and maximum gains in dB
+    - returns an array containing the minimum and maximum gains in dB
     @param subdev the subdevice number
     @param flags the packet flags
   */
-  std::optional<std::tuple<double, double>> get_tx_gain_range(const uint8_t subdev = 0, const uint8_t flags = 0);
+  std::optional<std::array<double, 2>> get_tx_gain_range(const uint8_t subdev = 0, const uint8_t flags = 0);
 
   /*!
     @brief Gets the receive gain range.
-    - returns a tuple containing the minimum and maximum gains in dB
+    - returns an array containing the minimum and maximum gains in dB
     @param subdev the subdevice number
     @param flags the packet flags
   */
-  std::optional<std::tuple<double, double>> get_rx_gain_range(const uint8_t subdev = 0, const uint8_t flags = 0);
+  std::optional<std::array<double, 2>> get_rx_gain_range(const uint8_t subdev = 0, const uint8_t flags = 0);
 
   /*!
     @brief Sets the transmit gain.
@@ -698,19 +698,19 @@ class vxsdr {
 
   /*!
     @brief Gets the transmit sample rate range.
-    - returns a tuple containing the minimum and maximum sample rates in samples/s
+    - returns an array containing the minimum and maximum sample rates in samples/s
     @param subdev the subdevice number
     @param flags the packet flags
   */
-  std::optional<std::tuple<double, double>> get_tx_rate_range(const uint8_t subdev = 0, const uint8_t flags = 0);
+  std::optional<std::array<double, 2>> get_tx_rate_range(const uint8_t subdev = 0, const uint8_t flags = 0);
 
   /*!
     @brief Gets the receive sample rate range.
-    - returns a tuple containing the minimum and maximum sample rates in samples/s
+    - returns an array containing the minimum and maximum sample rates in samples/s
     @param subdev the subdevice number
     @param flags the packet flags
   */
-  std::optional<std::tuple<double, double>> get_rx_rate_range(const uint8_t subdev = 0, const uint8_t flags = 0);
+  std::optional<std::array<double, 2>> get_rx_rate_range(const uint8_t subdev = 0, const uint8_t flags = 0);
 
   /*!
     @brief Sets the transmit sample rate.
