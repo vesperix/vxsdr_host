@@ -581,6 +581,18 @@
     return vxsdr::cmd_queue_push_check(p);
   }
 
+  std::optional<std::tuple<double, double>> vxsdr::tx_get_iq_bias(const uint8_t subdev, const uint8_t flags) {
+    double i_bias = 0, q_bias = 0;
+    // FIXME: implement
+    return std::tuple<double, double>(i_bias, q_bias);
+  }
+
+  std::optional<std::tuple<double, double>> vxsdr::rx_get_iq_bias(const uint8_t subdev, const uint8_t flags) {
+    double i_bias = 0, q_bias = 0;
+    // FIXME: implement
+    return std::tuple<double, double>(i_bias, q_bias);
+  }
+
   bool vxsdr::tx_set_iq_corr(const double ii_corr, const double iq_corr, const double qi_corr, const double qq_corr,
       const uint8_t subdev, const uint8_t flags) {
     radio_iq_corr_packet p;
@@ -601,6 +613,18 @@
     p.qi_corr = qi_corr;
     p.qq_corr = qq_corr;
     return vxsdr::cmd_queue_push_check(p);
+  }
+
+  std::optional<std::array<double, 4>> vxsdr::tx_get_iq_corr(const uint8_t subdev, const uint8_t flags) {
+    std::array<double, 4> corr = {1, 0, 0, 1};
+    // FIXME: implement
+    return corr;
+  }
+
+  std::optional<std::array<double, 4>> vxsdr::rx_get_iq_corr(const uint8_t subdev, const uint8_t flags) {
+    std::array<double, 4> corr = {1, 0, 0, 1};
+    // FIXME: implement
+    return corr;
   }
 
   bool vxsdr::tx_stop_now(const uint8_t subdev, const uint8_t flags) {
