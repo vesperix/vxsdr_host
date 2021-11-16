@@ -89,26 +89,29 @@
     LOG_DEBUG("vxsdr destructor complete");
   }
 
-  size_t vxsdr::get_rx_data(std::vector<std::complex<int16_t> > &data, size_t n_desired) {
+  size_t vxsdr::get_rx_data(std::vector<std::complex<int16_t> > &data, size_t n_desired, const double timeout_s) {
     LOG_DEBUG("get_rx_data entered");
     size_t n_received = 0;
     data_queue_element q;
 
     if(n_desired == 0) {
       n_desired = data.size();
+    } else {
+      data.reserve(n_desired);
     }
+
     data.clear();
-    data.reserve(n_desired);
+
 
     LOG_INFO(fmt::format("receiving {:d} samples", n_desired));
 
     while(n_received < n_desired) {
-      unsigned wait_time_us = 0;
+      double wait_time_s = 0;
       // setting rx_data_queue_wait_us = 0 results in a busy wait with no timeout
-      while(rx_data_queue.read_available() == 0 and wait_time_us < rx_data_queue_timeout_us) {
+      while(rx_data_queue.read_available() == 0 and wait_time_s < timeout_s) {
         if(rx_data_queue_wait_us > 0) {
           std::this_thread::sleep_for(std::chrono::microseconds(rx_data_queue_wait_us));
-          wait_time_us += rx_data_queue_wait_us;
+          wait_time_s += 1e-6 * rx_data_queue_wait_us;
         }
       }
       if(rx_data_queue.pop(q)) {
@@ -141,13 +144,16 @@
         }
       } else {
         LOG_ERROR(fmt::format("timeout popping from rx data queue ({:d} of {:d} samples)", n_received, n_desired));
+        data.resize(n_received);
+        return n_received;
       }
     }
     LOG_DEBUG(fmt::format("get_rx_data complete ({:d} samples)", data.size()));
     return n_received;
   }
 
-  size_t vxsdr::write_rx_data(std::ofstream &out_stream, size_t n_desired, size_t write_size_samples) {
+  size_t vxsdr::write_rx_data(std::ofstream &out_stream, const size_t n_desired, const double timeout_s,
+                              size_t write_size_samples) {
     LOG_DEBUG("write_rx_data entered");
     size_t n_received = 0, n_written = 0;
     data_queue_element q;
@@ -162,12 +168,12 @@
     LOG_INFO(fmt::format("receiving {:d} samples", n_desired));
 
     while(n_written < n_desired) {
-      unsigned wait_time_us = 0;
+      double wait_time_s = 0;
       // setting rx_data_queue_wait_us = 0 results in a busy wait with no timeout
-      while(rx_data_queue.read_available() == 0 and wait_time_us < rx_data_queue_timeout_us) {
+      while(rx_data_queue.read_available() == 0 and wait_time_s < timeout_s) {
         if(rx_data_queue_wait_us > 0) {
           std::this_thread::sleep_for(std::chrono::microseconds(rx_data_queue_wait_us));
-          wait_time_us += rx_data_queue_wait_us;
+          wait_time_s += 1e-6 * rx_data_queue_wait_us;
         }
       }
       if(rx_data_queue.pop(q)) {
@@ -216,13 +222,14 @@
 
       } else {
         LOG_ERROR(fmt::format("timeout popping from rx data queue ({:d} of {:d} samples)", n_written, n_desired));
+        return n_written;
       }
     }
     LOG_DEBUG(fmt::format("write_rx_data complete ({:d} samples)", n_written));
     return n_written;
   }
 
-  size_t vxsdr::check_rx_data_sequence_only(size_t n_desired) {
+  size_t vxsdr::check_rx_data_sequence_only(size_t n_desired, const double timeout_s) {
     // FIXME: diagnostic routine for data transfer only;
     // drops data after sequence check and byte/sample counts
     LOG_DEBUG("check_rx_data_sequence_only started");
@@ -232,12 +239,12 @@
     LOG_INFO(fmt::format("checking sequence for {:d} samples", n_desired));
 
     while(n_received < n_desired) {
-      unsigned wait_time_us = 0;
+      double wait_time_s = 0;
       // setting rx_data_queue_wait_us = 0 results in a busy wait with no timeout
-      while(rx_data_queue.read_available() == 0 and wait_time_us < rx_data_queue_timeout_us) {
+      while(rx_data_queue.read_available() == 0 and wait_time_s < timeout_s) {
         if(rx_data_queue_wait_us > 0) {
           std::this_thread::sleep_for(std::chrono::microseconds(rx_data_queue_wait_us));
-          wait_time_us += rx_data_queue_wait_us;
+          wait_time_s += 1e-6 * rx_data_queue_wait_us;
         }
       }
       if(rx_data_queue.pop(q)) {
@@ -254,13 +261,14 @@
         n_received += data_samples;
       } else {
         LOG_ERROR(fmt::format("timeout popping from rx data queue ({:d} of {:d} samples)", n_received, n_desired));
+        return n_received;
       }
     }
     LOG_DEBUG(fmt::format("check_rx_data_sequence_only complete ({:d} samples)", n_received));
     return n_received;
   }
 
-  size_t vxsdr::put_tx_data(std::vector<std::complex<int16_t> > data, const uint8_t subdev) {
+  size_t vxsdr::put_tx_data(std::vector<std::complex<int16_t> > data, const uint8_t subdev, const double timeout_s) {
     LOG_DEBUG("put_tx_data started");
     // puts plain data_packets (no time, no stream)
     size_t n_put = 0;
@@ -275,12 +283,12 @@
         p->data[j] = data[i + j];
       }
 
-      unsigned wait_time_us = 0;
+      double wait_time_s = 0;
       // setting tx_data_queue_wait_us = 0 results in a busy wait with no timeout
-      while(tx_data_queue.write_available() == 0 and wait_time_us < tx_data_queue_timeout_us) {
+      while(tx_data_queue.write_available() == 0 and wait_time_s < timeout_s) {
         if(tx_data_queue_wait_us > 0) {
           std::this_thread::sleep_for(std::chrono::microseconds(tx_data_queue_wait_us));
-          wait_time_us += tx_data_queue_wait_us;
+          wait_time_s += 1e-6 * tx_data_queue_wait_us;
         }
       }
 
@@ -288,7 +296,7 @@
         n_put += n_samples;
       } else {
         LOG_ERROR("timeout pushing to tx data queue");
-        break;
+        return n_put;
       }
     }
     LOG_DEBUG(fmt::format("put_tx_data complete ({:d} samples)", n_put));
@@ -466,29 +474,73 @@
   }
 
   bool vxsdr::tx_start_now_until_stop(const uint8_t subdev, const uint8_t flags) {
-    header_only_packet p;
-    p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_START_NOW_UNTIL_STOP, subdev, flags, sizeof(p), 0 };
-    return vxsdr::cmd_queue_push_check(p);
+    if(vxsdr::tx_stream_state != NO_STREAM) {
+      LOG_ERROR(fmt::format("tx stream state is {:s} in tx_start_now_until_stop()",
+                vxsdr::stream_state_to_string(vxsdr::tx_stream_state)));
+      return false;
+    } else {
+      header_only_packet p;
+      p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_START_NOW_UNTIL_STOP, subdev, flags, sizeof(p), 0 };
+      auto sent = vxsdr::cmd_queue_push_check(p);
+      if(sent) {
+        vxsdr::tx_stream_state = STREAMING;
+        return true;
+      }
+      return false;
+    }
   }
 
   bool vxsdr::rx_start_now_until_stop(const uint8_t subdev, const uint8_t flags) {
-    header_only_packet p;
-    p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_START_NOW_UNTIL_STOP, subdev, flags, sizeof(p), 0 };
-    return vxsdr::cmd_queue_push_check(p);
+    if(vxsdr::rx_stream_state != NO_STREAM) {
+      LOG_ERROR(fmt::format("rx stream state is {:s} in rx_start_now_until_stop()",
+                vxsdr::stream_state_to_string(vxsdr::rx_stream_state)));
+      return false;
+    } else {
+      header_only_packet p;
+      p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_START_NOW_UNTIL_STOP, subdev, flags, sizeof(p), 0 };
+      auto sent = vxsdr::cmd_queue_push_check(p);
+      if(sent) {
+        vxsdr::rx_stream_state = STREAMING;
+        return true;
+      }
+      return false;
+    }
   }
 
   bool vxsdr::tx_start_now_for_n_samples(const uint64_t n, const uint8_t subdev, const uint8_t flags) {
-    cmd_or_rsp_packet_samples p;
-    p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_START_NOW_FOR_N_SAMPLES, subdev, flags, sizeof(p), 0 };
-    p.n_samples = n;
-    return vxsdr::cmd_queue_push_check(p);
+    if(vxsdr::tx_stream_state != NO_STREAM) {
+      LOG_ERROR(fmt::format("tx stream state is {:s} in tx_start_now_for_n_samples()",
+                vxsdr::stream_state_to_string(vxsdr::tx_stream_state)));
+      return false;
+    } else {
+      cmd_or_rsp_packet_samples p;
+      p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_START_NOW_FOR_N_SAMPLES, subdev, flags, sizeof(p), 0 };
+      p.n_samples = n;
+      auto sent = vxsdr::cmd_queue_push_check(p);
+      if(sent) {
+        vxsdr::tx_stream_state = STREAMING;
+        return true;
+      }
+      return false;
+    }
   }
 
   bool vxsdr::rx_start_now_for_n_samples(const uint64_t n, const uint8_t subdev, const uint8_t flags) {
-    cmd_or_rsp_packet_samples p;
-    p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_START_NOW_FOR_N_SAMPLES, subdev, flags, sizeof(p), 0 };
-    p.n_samples = n;
-    return vxsdr::cmd_queue_push_check(p);
+    if(vxsdr::rx_stream_state != NO_STREAM) {
+      LOG_ERROR(fmt::format("rx stream state is {:s} in rx_start_now_for_n_samples()",
+                vxsdr::stream_state_to_string(vxsdr::rx_stream_state)));
+      return false;
+    } else {
+      cmd_or_rsp_packet_samples p;
+      p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_START_NOW_FOR_N_SAMPLES, subdev, flags, sizeof(p), 0 };
+      p.n_samples = n;
+      auto sent = vxsdr::cmd_queue_push_check(p);
+      if(sent) {
+        vxsdr::rx_stream_state = STREAMING;
+        return true;
+      }
+      return false;
+    }
   }
 
   bool vxsdr::tx_start_at_time_for_n_samples(const std::chrono::time_point<std::chrono::system_clock> &t, const uint64_t n, const uint8_t subdev, const uint8_t flags) {
@@ -537,6 +589,56 @@
     return vxsdr::cmd_queue_push_check(p);
   }
 
+  std::optional<std::tuple<double, double>> vxsdr::tx_get_iq_bias(const uint8_t subdev, const uint8_t flags) {
+    header_only_packet p;
+    p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_GET_IQ_BIAS, subdev, flags, sizeof(p), 0 };
+    if(not vxsdr::cmd_queue_push_check(p)) {
+      return std::nullopt;
+    }
+    response_queue_element q;
+    bool got_response = false;
+    unsigned wait_time_ms = 0;
+    while(not (got_response = response_queue.pop(q)) and wait_time_ms < device_response_timeout_ms) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(device_response_wait_ms));
+      wait_time_ms += device_response_wait_ms;
+    }
+    if(got_response) {
+      auto *r = reinterpret_cast<radio_iq_bias_packet *>(&q);
+      if(r->hdr.packet_type == PACKET_TYPE_DEVICE_CMD_RSP and r->hdr.command == p.hdr.command) {
+        return std::tuple<double, double>(r->i_bias, r->q_bias);
+       }
+      LOG_ERROR("invalid response in tx_get_iq_bias()");
+      return std::nullopt;
+    }
+    LOG_ERROR("timeout in tx_get_iq_bias()");
+    return std::nullopt;
+  }
+
+  std::optional<std::tuple<double, double>> vxsdr::rx_get_iq_bias(const uint8_t subdev, const uint8_t flags) {
+    header_only_packet p;
+    p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_GET_IQ_BIAS, subdev, flags, sizeof(p), 0 };
+    if(not vxsdr::cmd_queue_push_check(p)) {
+      return std::nullopt;
+    }
+    response_queue_element q;
+    bool got_response = false;
+    unsigned wait_time_ms = 0;
+    while(not (got_response = response_queue.pop(q)) and wait_time_ms < device_response_timeout_ms) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(device_response_wait_ms));
+      wait_time_ms += device_response_wait_ms;
+    }
+    if(got_response) {
+      auto *r = reinterpret_cast<radio_iq_bias_packet *>(&q);
+      if(r->hdr.packet_type == PACKET_TYPE_DEVICE_CMD_RSP and r->hdr.command == p.hdr.command) {
+        return std::tuple<double, double>(r->i_bias, r->q_bias);
+       }
+      LOG_ERROR("invalid response in rx_get_iq_bias()");
+      return std::nullopt;
+    }
+    LOG_ERROR("timeout in rx_get_iq_bias()");
+    return std::nullopt;
+  }
+
   bool vxsdr::tx_set_iq_corr(const double ii_corr, const double iq_corr, const double qi_corr, const double qq_corr,
       const uint8_t subdev, const uint8_t flags) {
     radio_iq_corr_packet p;
@@ -559,16 +661,96 @@
     return vxsdr::cmd_queue_push_check(p);
   }
 
+  std::optional<std::array<double, 4>> vxsdr::tx_get_iq_corr(const uint8_t subdev, const uint8_t flags) {
+    header_only_packet p;
+    p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_GET_IQ_BIAS, subdev, flags, sizeof(p), 0 };
+    if(not vxsdr::cmd_queue_push_check(p)) {
+      return std::nullopt;
+    }
+    response_queue_element q;
+    bool got_response = false;
+    unsigned wait_time_ms = 0;
+    while(not (got_response = response_queue.pop(q)) and wait_time_ms < device_response_timeout_ms) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(device_response_wait_ms));
+      wait_time_ms += device_response_wait_ms;
+    }
+    if(got_response) {
+      auto *r = reinterpret_cast<radio_iq_corr_packet *>(&q);
+      if(r->hdr.packet_type == PACKET_TYPE_DEVICE_CMD_RSP and r->hdr.command == p.hdr.command) {
+        std::array<double, 4> corr = {1, 0, 0, 1};
+        corr[0] = r->ii_corr;
+        corr[1] = r->iq_corr;
+        corr[2] = r->qi_corr;
+        corr[3] = r->qq_corr;
+        return corr;
+       }
+      LOG_ERROR("invalid response in tx_get_iq_corr()");
+      return std::nullopt;
+    }
+    LOG_ERROR("timeout in tx_get_iq_corr()");
+    return std::nullopt;
+  }
+
+  std::optional<std::array<double, 4>> vxsdr::rx_get_iq_corr(const uint8_t subdev, const uint8_t flags) {
+    header_only_packet p;
+    p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_GET_IQ_BIAS, subdev, flags, sizeof(p), 0 };
+    if(not vxsdr::cmd_queue_push_check(p)) {
+      return std::nullopt;
+    }
+    response_queue_element q;
+    bool got_response = false;
+    unsigned wait_time_ms = 0;
+    while(not (got_response = response_queue.pop(q)) and wait_time_ms < device_response_timeout_ms) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(device_response_wait_ms));
+      wait_time_ms += device_response_wait_ms;
+    }
+    if(got_response) {
+      auto *r = reinterpret_cast<radio_iq_corr_packet *>(&q);
+      if(r->hdr.packet_type == PACKET_TYPE_DEVICE_CMD_RSP and r->hdr.command == p.hdr.command) {
+        std::array<double, 4> corr = {1, 0, 0, 1};
+        corr[0] = r->ii_corr;
+        corr[1] = r->iq_corr;
+        corr[2] = r->qi_corr;
+        corr[3] = r->qq_corr;
+        return corr;
+       }
+      LOG_ERROR("invalid response in rx_get_iq_corr()");
+      return std::nullopt;
+    }
+    LOG_ERROR("timeout in rx_get_iq_corr()");
+    return std::nullopt;
+  }
+
   bool vxsdr::tx_stop_now(const uint8_t subdev, const uint8_t flags) {
+    if(vxsdr::tx_stream_state != STREAMING) {
+      LOG_WARN(fmt::format("tx stream state is {:s} in tx_stop_now()",
+                vxsdr::stream_state_to_string(vxsdr::tx_stream_state)));
+    }
+    // send a stop anyway, even if we think the state is wrong
     header_only_packet p;
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_STOP_NOW, subdev, flags, sizeof(p), 0 };
-    return vxsdr::cmd_queue_push_check(p);
+    auto sent = vxsdr::cmd_queue_push_check(p);
+    if(sent) {
+      vxsdr::tx_stream_state = NO_STREAM;
+      return true;
+    }
+    return false;
   }
 
   bool vxsdr::rx_stop_now(const uint8_t subdev, const uint8_t flags) {
+    if(vxsdr::rx_stream_state != STREAMING) {
+      LOG_WARN(fmt::format("rx stream state is {:s} in rx_stop_now()",
+                vxsdr::stream_state_to_string(vxsdr::rx_stream_state)));
+    }
+    // send a stop anyway, even if we think the state is wrong
     header_only_packet p;
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_STOP_NOW, subdev, flags, sizeof(p), 0 };
-    return vxsdr::cmd_queue_push_check(p);
+    auto sent = vxsdr::cmd_queue_push_check(p);
+    if(sent) {
+      vxsdr::rx_stream_state = NO_STREAM;
+      return true;
+    }
+    return false;
   }
 
   std::optional<std::tuple<double, double>> vxsdr::get_tx_freq_range(const uint8_t subdev, const uint8_t flags) {
@@ -1187,6 +1369,23 @@
     auto nsecs = std::chrono::time_point_cast<std::chrono::nanoseconds>(t) - std::chrono::time_point_cast<std::chrono::nanoseconds>(secs);
     ts.seconds = (uint32_t)secs.time_since_epoch().count();
     ts.nanoseconds = (uint32_t)nsecs.count();
+  }
+
+  std::string vxsdr::stream_state_to_string(const stream_state_t state) {
+    switch(state) {
+      case NO_STREAM:
+        return "NO_STREAM";
+      case WAITING_FOR_START:
+        return "WAITING_FOR_START";
+      case STREAMING:
+        return "STREAMING";
+      case CLOSING:
+        return "CLOSING";
+      case ERROR:
+        return "ERROR";
+      default:
+        return "UNKNOWN";
+    }
   }
 
   void vxsdr::error_handler() {
