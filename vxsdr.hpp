@@ -169,16 +169,22 @@ class vxsdr {
         const bool nondata_packet_logging = false,
         const bool set_affinity = true, const unsigned base_cpu_number = 0,
         const bool set_priority = true, const unsigned base_priority = 5);
+
   //! Destructor for the vxsdr host interface class.
   ~vxsdr();
+
   //! @brief Deleted copy constructor for the @p vxsdr host interface class.
   vxsdr(const vxsdr &) = delete;
+
   //! @brief Deleted copy assignment for the @p vxsdr host interface class.
   vxsdr& operator=(const vxsdr &) = delete;
+
   //! @brief Deleted move constructor for the @p vxsdr host interface class.
   vxsdr(vxsdr &&) = delete;
+
   //! @brief Deleted move assignment for the @p vxsdr host interface class.
   vxsdr& operator=(vxsdr &&) = delete;
+
   /*!
     @brief Receives data from the device and returns it in a vector.
     - returns the number of samples received
@@ -186,6 +192,7 @@ class vxsdr {
     @param n_desired the number of samples to be received
   */
   size_t get_rx_data(std::vector<std::complex<int16_t> > &data, size_t n_desired = 0);
+
   /*!
     @brief Receives data from the device and writes to an open file.
     - returns the number of samples written
@@ -194,12 +201,14 @@ class vxsdr {
     @param write_size_samples the block size for file writes
   */
   size_t write_rx_data(std::ofstream &out_stream, size_t n_desired, size_t write_size_samples = 65536);
+
   /*!
     @brief Receives data from the device and checks packet sequence, discarding the data.
     - returns the number of samples received
     @param n_desired the number of samples to be received
   */
   size_t check_rx_data_sequence_only(size_t n_desired);
+
   /*!
     @brief Sends transmit data to the device.
     - returns the number of samples placed in the queue for transmission
@@ -207,6 +216,7 @@ class vxsdr {
     @param subdev the subdevice number
   */
   size_t put_tx_data(std::vector<std::complex<int16_t> > data, const uint8_t subdev = 0);
+
   /*!
     @brief Requests basic information from the device.
     - returns a tuple containing the FPGA and MCU code version numbers
@@ -214,16 +224,19 @@ class vxsdr {
     @param flags the packet flags
   */
   std::optional<std::tuple<uint32_t, uint32_t>> device_hello(const uint8_t subdev = 0, const uint8_t flags = 0);
+
   /*!
     @brief Resets the device.
     - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if the command is sent,
         @b false otherwise
     - if the FLAG_REQUEST_ACK bit in @p flags is set, returns @b true if the command is sent
         and an ACK is received, @b false otherwise
+    - returns FIXME
     @param subdev the subdevice number
     @param flags the packet flags
   */
   bool device_reset(const uint8_t subdev = 0, const uint8_t flags = 0);
+
   /*!
     @brief Opens a session on the device.
     - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if the command is sent,
@@ -234,6 +247,7 @@ class vxsdr {
     @param flags the packet flags
   */
   bool device_open_session(const uint8_t subdev = 0, const uint8_t flags = 0);
+
   /*!
     @brief Closes a session on the device.
     - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if the command is sent,
@@ -244,6 +258,7 @@ class vxsdr {
     @param flags the packet flags
   */
   bool device_close_session(const uint8_t subdev = 0, const uint8_t flags = 0);
+
   /*!
     @brief Clears the device status.
     - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if the command is sent,
@@ -254,6 +269,7 @@ class vxsdr {
     @param flags the packet flags
   */
   bool device_clear_status(const uint8_t subdev = 0, const uint8_t flags = 0);
+
   /*!
     @brief Gets the device status.
     - returns a device-dependent status type
@@ -261,6 +277,7 @@ class vxsdr {
     @param flags the packet flags
   */
   std::optional<std::tuple<uint16_t, uint16_t, uint32_t, uint32_t, uint32_t, uint32_t>> device_get_status(const uint8_t subdev = 0, const uint8_t flags = 0);
+
   /*!
     @brief Sets the device time immediately.
     - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if the command is sent,
@@ -272,6 +289,7 @@ class vxsdr {
     @param flags the packet flags (FLAGS_TIME_PRESENT is added automatically)
   */
   bool device_set_time_now(const std::chrono::time_point<std::chrono::system_clock> &t, const uint8_t subdev = 0, const uint8_t flags = 0);
+
   /*!
     @brief Sets the device time when the next PPS is recieved by the device.
     - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if the command is sent,
@@ -283,6 +301,7 @@ class vxsdr {
     @param flags the packet flags (FLAGS_TIME_PRESENT is added automatically)
   */
   bool device_set_time_next_pps(const std::chrono::time_point<std::chrono::system_clock> &t, const uint8_t subdev = 0, const uint8_t flags = 0);
+
   /*!
     @brief Sets the device time immediately.
     - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
@@ -303,6 +322,7 @@ class vxsdr {
     @param flags the packet flags (FLAGS_TIME_PRESENT is added automatically)
   */
   bool device_set_time_now(const int64_t sec, const int32_t nsec, const uint8_t subdev = 0, const uint8_t flags = 0);
+
   /*!
     @brief Sets the device time when the next PPS is recieved by the device.
     - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
@@ -323,6 +343,7 @@ class vxsdr {
     @param flags the packet flags (FLAGS_TIME_PRESENT is added automatically)
   */
   bool device_set_time_next_pps(const int64_t sec, const int32_t nsec, const uint8_t subdev = 0, const uint8_t flags = 0);
+
   /*!
     @brief Gets the device time immediately.
     - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
@@ -336,6 +357,7 @@ class vxsdr {
     @param flags the packet flags (FLAGS_TIME_PRESENT is added automatically)
   */
   bool device_get_time_now(uint32_t &sec, uint32_t &nsec, const uint8_t subdev = 0, const uint8_t flags = 0);
+
   /*!
     @brief Gets the device time immediately.
     - returns a @p time_point containing the device time
@@ -343,6 +365,7 @@ class vxsdr {
     @param flags the packet flags
   */
   std::optional<std::chrono::time_point<std::chrono::system_clock>> device_get_time_now(const uint8_t subdev = 0, const uint8_t flags = 0);
+
   /*!
     @brief Starts transmitting immediately until a stop command is sent.
     - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
@@ -353,6 +376,7 @@ class vxsdr {
     @param flags the packet flags
   */
   bool tx_start_now_until_stop(const uint8_t subdev = 0, const uint8_t flags = 0);
+
   /*!
     @brief Starts receiving immediately until a stop command is sent.
     - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
@@ -363,6 +387,7 @@ class vxsdr {
     @param flags the packet flags
   */
   bool rx_start_now_until_stop(const uint8_t subdev = 0, const uint8_t flags = 0);
+
   /*!
     @brief Starts transmitting immediately until @p n samples are sent.
     - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
@@ -374,6 +399,7 @@ class vxsdr {
     @param flags the packet flags
   */
   bool tx_start_now_for_n_samples(const uint64_t n, const uint8_t subdev = 0, const uint8_t flags = 0);
+
   /*!
     @brief Starts receiving immediately until @p n samples are received.
     - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
@@ -385,6 +411,7 @@ class vxsdr {
     @param flags the packet flags
   */
   bool rx_start_now_for_n_samples(const uint64_t n, const uint8_t subdev = 0, const uint8_t flags = 0);
+
   /*!
     @brief Starts transmitting at time @p t until @p n samples are sent.
     - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
@@ -397,6 +424,7 @@ class vxsdr {
     @param flags the packet flags
   */
   bool tx_start_at_time_for_n_samples(const std::chrono::time_point<std::chrono::system_clock> &t, const uint64_t n, const uint8_t subdev = 0, const uint8_t flags = 0);
+
   /*!
     @brief Starts receiving at time @p t until @p n samples are received.
     - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
@@ -409,6 +437,7 @@ class vxsdr {
     @param flags the packet flags
   */
   bool rx_start_at_time_for_n_samples(const std::chrono::time_point<std::chrono::system_clock> &t,const uint64_t n, const uint8_t subdev = 0, const uint8_t flags = 0);
+
   /*!
     @brief Starts transmitting at time @p t until a stop command is sent.
     - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
@@ -420,6 +449,7 @@ class vxsdr {
     @param flags the packet flags
   */
   bool tx_start_at_time_until_stop(const std::chrono::time_point<std::chrono::system_clock> &t, const uint8_t subdev = 0, const uint8_t flags = 0);
+
   /*!
     @brief Starts receiving at time @p t until a stop command is sent.
     - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
@@ -431,6 +461,7 @@ class vxsdr {
     @param flags the packet flags
   */
   bool rx_start_at_time_until_stop(const std::chrono::time_point<std::chrono::system_clock> &t, const uint8_t subdev = 0, const uint8_t flags = 0);
+
   /*!
     @brief Sets the IQ DC bias for the transmitter to control LO feedthrough.
     - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
@@ -443,6 +474,7 @@ class vxsdr {
     @param flags the packet flags
   */
   bool tx_set_iq_bias(const double i_bias, const double q_bias, const uint8_t subdev = 0, const uint8_t flags = 0);
+
   /*!
     @brief Sets the IQ DC bias for the receiver to control LO feedthrough.
     - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
@@ -455,6 +487,25 @@ class vxsdr {
     @param flags the packet flags
   */
   bool rx_set_iq_bias(const double i_bias, const double q_bias, const uint8_t subdev = 0, const uint8_t flags = 0);
+
+  /*!
+    @brief Gets the IQ DC bias for the transmitter.
+    - returns a tuple of doubles containing (i_bias, q_bias) with
+        (-1 >= @p i_bias >= 1) and (-1 >= @p q_bias >= 1)
+    @param subdev the subdevice number
+    @param flags the packet flags
+  */
+  std::optional<std::tuple<double, double>> tx_get_iq_bias(const uint8_t subdev = 0, const uint8_t flags = 0);
+
+  /*!
+    @brief Gets the IQ DC bias for the receiver.
+    - returns a tuple of doubles containing (i_bias, q_bias) with
+        (-1 >= @p i_bias >= 1) and (-1 >= @p q_bias >= 1)
+    @param subdev the subdevice number
+    @param flags the packet flags
+  */
+  std::optional<std::tuple<double, double>> rx_get_iq_bias(const uint8_t subdev = 0, const uint8_t flags = 0);
+
   /*!
     @brief Sets the IQ correction for the transmitter to control image rejection.
     - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
@@ -468,7 +519,9 @@ class vxsdr {
     @param subdev the subdevice number
     @param flags the packet flags
   */
-  bool tx_set_iq_corr(const double ii_corr, const double iq_corr, const double qi_corr, const double qq_corr, const uint8_t subdev = 0, const uint8_t flags = 0);
+  bool tx_set_iq_corr(const double ii_corr, const double iq_corr, const double qi_corr, const double qq_corr,
+                      const uint8_t subdev = 0, const uint8_t flags = 0);
+
   /*!
     @brief Sets the IQ correction for the receiver to control image rejection.
     - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
@@ -482,7 +535,25 @@ class vxsdr {
     @param subdev the subdevice number
     @param flags the packet flags
   */
-  bool rx_set_iq_corr(const double ii_corr, const double iq_corr, const double qi_corr, const double qq_corr, const uint8_t subdev = 0, const uint8_t flags = 0);
+  bool rx_set_iq_corr(const double ii_corr, const double iq_corr, const double qi_corr, const double qq_corr,
+                      const uint8_t subdev = 0, const uint8_t flags = 0);
+
+  /*!
+    @brief Gets the IQ correction for the transmitter.
+    - returns an array of 4 doubles containing (ii_corr, iq_corr, qi_corr, qq_corr)
+    @param subdev the subdevice number
+    @param flags the packet flags
+  */
+  std::optional<std::array<double, 4>> tx_get_iq_corr(const uint8_t subdev = 0, const uint8_t flags = 0);
+
+  /*!
+    @brief Gets the IQ correction for the receiver.
+    - returns an array of 4 doubles containing (ii_corr, iq_corr, qi_corr, qq_corr)
+    @param subdev the subdevice number
+    @param flags the packet flags
+  */
+  std::optional<std::array<double, 4>> rx_get_iq_corr(const uint8_t subdev = 0, const uint8_t flags = 0);
+
   /*!
     @brief Stops transmitting immediately.
     - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
@@ -493,6 +564,7 @@ class vxsdr {
     @param flags the packet flags
   */
   bool tx_stop_now(const uint8_t subdev = 0, const uint8_t flags = 0);
+
   /*!
     @brief Stops receiving immediately.
     - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
@@ -503,6 +575,7 @@ class vxsdr {
     @param flags the packet flags
   */
   bool rx_stop_now(const uint8_t subdev = 0, const uint8_t flags = 0);
+
   /*!
     @brief Gets the transmit center frequency range.
     - returns a tuple containing the minimum and maximum frequencies in Hz
@@ -510,6 +583,7 @@ class vxsdr {
     @param flags the packet flags
   */
   std::optional<std::tuple<double, double>> get_tx_freq_range(const uint8_t subdev = 0, const uint8_t flags = 0);
+
   /*!
     @brief Gets the receive center frequency range.
     - returns a tuple containing the minimum and maximum frequencies in Hz
@@ -517,6 +591,7 @@ class vxsdr {
     @param flags the packet flags
   */
   std::optional<std::tuple<double, double>> get_rx_freq_range(const uint8_t subdev = 0, const uint8_t flags = 0);
+
   /*!
     @brief Sets the transmit center frequency.
     - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
@@ -528,6 +603,7 @@ class vxsdr {
     @param flags the packet flags
   */
   bool set_tx_freq(const double freq_hz, const uint8_t subdev = 0, const uint8_t flags = 0);
+
   /*!
     @brief Sets the receive center frequency.
     - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
@@ -539,6 +615,7 @@ class vxsdr {
     @param flags the packet flags
   */
   bool set_rx_freq(const double freq_hz, const uint8_t subdev = 0, const uint8_t flags = 0);
+
   /*!
     @brief Gets the current transmit center frequency.
     - returns the center frequency in Hz
@@ -546,6 +623,7 @@ class vxsdr {
     @param flags the packet flags
   */
   std::optional<double> get_tx_freq(const uint8_t subdev = 0, const uint8_t flags = 0);
+
   /*!
     @brief Gets the current receive center frequency.
     - returns the center frequency in Hz
@@ -553,6 +631,7 @@ class vxsdr {
     @param flags the packet flags
   */
   std::optional<double> get_rx_freq(const uint8_t subdev = 0, const uint8_t flags = 0);
+
   /*!
     @brief Gets the transmit gain range.
     - returns a tuple containing the minimum and maximum gains in dB
@@ -560,6 +639,7 @@ class vxsdr {
     @param flags the packet flags
   */
   std::optional<std::tuple<double, double>> get_tx_gain_range(const uint8_t subdev = 0, const uint8_t flags = 0);
+
   /*!
     @brief Gets the receive gain range.
     - returns a tuple containing the minimum and maximum gains in dB
@@ -567,6 +647,7 @@ class vxsdr {
     @param flags the packet flags
   */
   std::optional<std::tuple<double, double>> get_rx_gain_range(const uint8_t subdev = 0, const uint8_t flags = 0);
+
   /*!
     @brief Sets the transmit gain.
     - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
@@ -578,6 +659,7 @@ class vxsdr {
     @param flags the packet flags
   */
   bool set_tx_gain(const double gain_db, const uint8_t subdev = 0, const uint8_t flags = 0);
+
   /*!
     @brief Sets the receive gain.
     - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
@@ -589,6 +671,7 @@ class vxsdr {
     @param flags the packet flags
   */
   bool set_rx_gain(const double gain_db, const uint8_t subdev = 0, const uint8_t flags = 0);
+
   /*!
     @brief Gets the current transmit gain.
     - returns the gain in dB
@@ -596,6 +679,7 @@ class vxsdr {
     @param flags the packet flags
   */
   std::optional<double> get_tx_gain(const uint8_t subdev = 0, const uint8_t flags = 0);
+
   /*!
     @brief Gets the current receive gain.
     - returns the gain in dB
@@ -603,6 +687,7 @@ class vxsdr {
     @param flags the packet flags
   */
   std::optional<double> get_rx_gain(const uint8_t subdev = 0, const uint8_t flags = 0);
+
   /*!
     @brief Gets the transmit sample rate range.
     - returns a tuple containing the minimum and maximum sample rates in samples/s
@@ -610,6 +695,7 @@ class vxsdr {
     @param flags the packet flags
   */
   std::optional<std::tuple<double, double>> get_tx_rate_range(const uint8_t subdev = 0, const uint8_t flags = 0);
+
   /*!
     @brief Gets the receive sample rate range.
     - returns a tuple containing the minimum and maximum sample rates in samples/s
@@ -617,6 +703,7 @@ class vxsdr {
     @param flags the packet flags
   */
   std::optional<std::tuple<double, double>> get_rx_rate_range(const uint8_t subdev = 0, const uint8_t flags = 0);
+
   /*!
     @brief Sets the transmit sample rate.
     - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
@@ -628,6 +715,7 @@ class vxsdr {
     @param flags the packet flags
   */
   bool set_tx_rate(const double rate_samples_sec, const uint8_t subdev = 0, const uint8_t flags = 0);
+
   /*!
     @brief Sets the receive sample rate.
     - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
@@ -639,6 +727,7 @@ class vxsdr {
     @param flags the packet flags
   */
   bool set_rx_rate(const double rate_samples_sec, const uint8_t subdev = 0, const uint8_t flags = 0);
+
   /*!
     @brief Gets the current transmit sample rate.
     - returns the rate in samples/s
@@ -646,6 +735,7 @@ class vxsdr {
     @param flags the packet flags
   */
   std::optional<double> get_tx_rate(const uint8_t subdev = 0, const uint8_t flags = 0);
+
   /*!
     @brief Gets the current receive sample rate.
     - returns the rate in samples/s
@@ -653,6 +743,7 @@ class vxsdr {
     @param flags the packet flags
   */
   std::optional<double> get_rx_rate(const uint8_t subdev = 0, const uint8_t flags = 0);
+
   /*!
     @brief Gets the number of transmit output ports.
     - returns the number of output ports
@@ -660,6 +751,7 @@ class vxsdr {
     @param flags the packet flags
   */
   std::optional<unsigned> get_num_tx_ports(const uint8_t subdev = 0, const uint8_t flags = 0);
+
    /*!
     @brief Gets the number of receive input ports.
     - returns the number of input ports
@@ -667,6 +759,7 @@ class vxsdr {
     @param flags the packet flags
   */
   std::optional<unsigned> get_num_rx_ports(const uint8_t subdev = 0, const uint8_t flags = 0);
+
   /*!
     @brief Gets the name of a transmit output port.
     - returns the name of the specified output port
@@ -675,6 +768,7 @@ class vxsdr {
     @param flags the packet flags
   */
   std::optional<std::string> get_tx_port_name(const unsigned port_num, const uint8_t subdev = 0, const uint8_t flags = 0);
+
   /*!
     @brief Gets the name of a receive input port.
     - returns the name of the specified input port
@@ -683,6 +777,7 @@ class vxsdr {
     @param flags the packet flags
   */
   std::optional<std::string> get_rx_port_name(const unsigned port_num, const uint8_t subdev = 0, const uint8_t flags = 0);
+
   /*!
     @brief Sets the transmit output port by number.
     - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
@@ -694,6 +789,7 @@ class vxsdr {
     @param flags the packet flags
   */
   bool set_tx_rf_port(const unsigned port_num, const uint8_t subdev = 0, const uint8_t flags = 0);
+
   /*!
     @brief Sets the transmit output port by name.
     - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
@@ -705,6 +801,7 @@ class vxsdr {
     @param flags the packet flags
   */
   bool set_tx_rf_port(const std::string &port_name, const uint8_t subdev = 0, const uint8_t flags = 0);
+
   /*!
     @brief Sets the receive input port by number.
     - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
@@ -716,6 +813,7 @@ class vxsdr {
     @param flags the packet flags
   */
   bool set_rx_rf_port(const unsigned port_num, const uint8_t subdev = 0, const uint8_t flags = 0);
+
   /*!
     @brief Sets the receive input port by name.
     - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
@@ -727,6 +825,7 @@ class vxsdr {
     @param flags the packet flags
   */
   bool set_rx_rf_port(const std::string &port_name, const uint8_t subdev = 0, const uint8_t flags = 0);
+
   /*!
     @brief Gets the current transmit output port.
     - returns the port number
@@ -734,6 +833,7 @@ class vxsdr {
     @param flags the packet flags
   */
   std::optional<unsigned> get_tx_rf_port(const uint8_t subdev = 0, const uint8_t flags = 0);
+
   /*!
     @brief Gets the current receive input port.
     - returns the port number
@@ -741,6 +841,7 @@ class vxsdr {
     @param flags the packet flags
   */
   std::optional<unsigned> get_rx_rf_port(const uint8_t subdev = 0, const uint8_t flags = 0);
+
   /*!
     @brief Enables or disables the transmit RF section.
     - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
@@ -752,6 +853,7 @@ class vxsdr {
     @param flags the packet flags
   */
   bool set_tx_enable(const bool enabled, const uint8_t subdev = 0, const uint8_t flags = 0);
+
   /*!
     @brief Enables or disables the receive RF section.
     - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
@@ -763,6 +865,7 @@ class vxsdr {
     @param flags the packet flags
   */
   bool set_rx_enable(const bool enabled, const uint8_t subdev = 0, const uint8_t flags = 0);
+
   /*!
     @brief Gets the transmit capabilites.
     - returns a @p capabilities_t indicating the transmit capabilities
@@ -770,6 +873,7 @@ class vxsdr {
     @param flags the packet flags
   */
   std::optional<capabilities_t> get_tx_capabilities(const uint8_t subdev = 0, const uint8_t flags = 0);
+
   /*!
     @brief Gets the receive capabilites.
     - returns a @p capabilities_t indicating the receive capabilities
