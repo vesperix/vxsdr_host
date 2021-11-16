@@ -67,7 +67,7 @@ void test_hello(std::unique_ptr<vxsdr> &radio) {
 void test_time(std::unique_ptr<vxsdr> &radio) {
   LOG_INFO("starting time tests");
 
-  LOG_INFO("   testing get_time with default arguments");
+  LOG_INFO("   testing get_time_now() with default arguments");
   {
     auto result = radio->device_get_time_now();
 
@@ -79,10 +79,10 @@ void test_time(std::unique_ptr<vxsdr> &radio) {
     }
   }
 
-  LOG_INFO("   testing set_time_now with time point");
+  LOG_INFO("   testing set_time_now() and get_time_now() with time point");
   {
-    auto t_set = std::chrono::system_clock::now();
-    bool sent = radio->device_set_time_now(t_set);
+    auto tp_set = std::chrono::system_clock::now();
+    bool sent = radio->device_set_time_now(tp_set);
 
     if(not sent) {
       LOG_ERROR("     false returned by device_set_time_now()");
@@ -93,9 +93,9 @@ void test_time(std::unique_ptr<vxsdr> &radio) {
 
     auto result = radio->device_get_time_now();
     if(result.has_value()) {
-      std::chrono::duration<double> diff = result.value() - t_set;
-      if(diff.count() > 1.0 and diff.count() < 1.01) {
-        LOG_INFO("      passed");
+      std::chrono::duration<double> diff = result.value() - tp_set;
+      if(diff.count() > 0.99 and diff.count() <= 1.01) {
+        LOG_INFO("      passed with time_point");
       } else {
       LOG_ERROR(fmt::format("     time difference is too large: {:e}", diff.count()));
       total_errors++;
@@ -106,6 +106,86 @@ void test_time(std::unique_ptr<vxsdr> &radio) {
     }
   }
 
+  LOG_INFO("   testing set_time_now and get_time_now with s and ns");
+  {
+    struct timespec ts_set;
+    timespec_get(&ts_set, TIME_UTC);
+    bool sent = radio->device_set_time_now(ts_set.tv_sec, ts_set.tv_nsec);
+
+    if(not sent) {
+      LOG_ERROR("     false returned by device_set_time_now()");
+      total_errors++;
+    }
+
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+
+    uint32_t t_sec, t_ns;
+    bool result = radio->device_get_time_now(t_sec, t_ns);
+    if(result) {
+      double diff = t_sec - ts_set.tv_sec + 1e-9 * (t_ns - ts_set.tv_nsec);
+      if(diff > 0.99 and diff <= 1.01) {
+        LOG_INFO("      passed with s and ns");
+      } else {
+      LOG_ERROR(fmt::format("     time difference is too large: {:e}", diff));
+      total_errors++;
+      }
+    } else {
+      LOG_ERROR("     no value returned by device_get_time_now()");
+      total_errors++;
+    }
+  }
+
+  LOG_INFO("   testing set_time_now and get_time_now with mixed arguments");
+  {
+    auto tp_set = std::chrono::system_clock::now();
+    bool sent = radio->device_set_time_now(tp_set);
+
+    if(not sent) {
+      LOG_ERROR("     false returned by device_set_time_now()");
+      total_errors++;
+    }
+
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+
+    uint32_t t_sec, t_ns;
+    bool result = radio->device_get_time_now(t_sec, t_ns);
+    if(result) {
+      double diff = std::chrono::duration<double>(tp_set.time_since_epoch()).count() - (t_sec + 1e-9 * t_ns);
+      if(diff > 0.99 and diff <= 1.01) {
+        LOG_INFO("      passed set with time_point read with s and ns");
+      } else {
+      LOG_ERROR(fmt::format("     time difference is too large: {:e}", diff));
+      total_errors++;
+      }
+    } else {
+      LOG_ERROR("     no value returned by device_get_time_now()");
+      total_errors++;
+    }
+    struct timespec ts_set;
+    timespec_get(&ts_set, TIME_UTC);
+    sent = radio->device_set_time_now(ts_set.tv_sec, ts_set.tv_nsec);
+
+    if(not sent) {
+      LOG_ERROR("     false returned by device_set_time_now()");
+      total_errors++;
+    }
+
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+
+    auto result2 = radio->device_get_time_now();
+    if(result2.has_value()) {
+      double diff = std::chrono::duration<double>(result2.value().time_since_epoch()).count() - (ts_set.tv_sec + 1e-9 * ts_set.tv_nsec);
+      if(diff > 0.99 and diff <= 1.01) {
+        LOG_INFO("      passed set with s and ns read with time_point");
+      } else {
+      LOG_ERROR(fmt::format("     time difference is too large: {:e}", diff));
+      total_errors++;
+      }
+    } else {
+      LOG_ERROR("     no value returned by device_get_time_now()");
+      total_errors++;
+    }
+  }
 
   LOG_INFO("completed time tests");
 }
