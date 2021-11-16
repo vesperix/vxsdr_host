@@ -128,7 +128,11 @@
           log_packet_info(*p, -1);
         }
 
-        if(recv_buffer.hdr.packet_type == PACKET_TYPE_RX_SIGNAL_DATA) {
+        if(recv_buffer.hdr.packet_type == PACKET_TYPE_RX_SIGNAL_DATA and
+           (vxsdr::rx_stream_state == WAITING_FOR_START or vxsdr::rx_stream_state == STREAMING)) {
+          if(vxsdr::rx_stream_state == WAITING_FOR_START) {
+            vxsdr::rx_stream_state = STREAMING;
+          }
           uint16_t header_size = sizeof(packet_header);
           if(has_time) {
             header_size += sizeof(time_spec_t);
@@ -152,7 +156,8 @@
         last_seq = recv_buffer.hdr.sequence_counter;
         switch(recv_buffer.hdr.packet_type) {
           // receive buffers go into the rx data queue
-          case PACKET_TYPE_RX_SIGNAL_DATA: {
+          case PACKET_TYPE_RX_SIGNAL_DATA:
+            if(vxsdr::rx_stream_state == STREAMING) {
               if(not vxsdr::rx_data_queue.push(recv_buffer)) {
                 unsigned wait_time_us = 0;
                 while(vxsdr::rx_data_queue.write_available() == 0 and wait_time_us < vxsdr::rx_data_queue_push_timeout_us) {
@@ -166,6 +171,7 @@
                 }
                 if(not vxsdr::rx_data_queue.push(recv_buffer)) {
                   LOG_ERROR(fmt::format("timeout pushing to rx data queue: {:d}", vxsdr::samples_received));
+                  vxsdr::rx_stream_state = ERROR;
                 }
               }
             }
