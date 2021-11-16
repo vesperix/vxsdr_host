@@ -664,9 +664,9 @@ int main(int argc, char *argv[])
     test_freq(radio);
     test_rate(radio);
     test_gain(radio);
-    test_iq(radio);
-    test_status(radio);
-    test_capabilities(radio);
+    //test_iq(radio);
+    //test_status(radio);
+    //test_capabilities(radio);
   }
     catch (std::exception& e) {
     LOG_FATAL(fmt::format("testing exception caught: {:s}", e.what()));
