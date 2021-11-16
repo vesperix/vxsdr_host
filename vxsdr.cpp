@@ -1017,7 +1017,7 @@
     return std::nullopt;
   }
 
-  bool vxsdr::set_tx_rf_port(const unsigned port_num, const uint8_t subdev, const uint8_t flags) {
+  bool vxsdr::set_tx_port(const unsigned port_num, const uint8_t subdev, const uint8_t flags) {
     unsigned_packet p = {};
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_SET_RF_PORT, subdev, flags, sizeof(p), 0 };
     p.number = port_num;
@@ -1027,7 +1027,7 @@
     return true;
   }
 
-  bool vxsdr::set_tx_rf_port(const std::string &port_name, const uint8_t subdev, const uint8_t flags) {
+  bool vxsdr::set_tx_port(const std::string &port_name, const uint8_t subdev, const uint8_t flags) {
     unsigned_packet p = {};
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_SET_RF_PORT, subdev, flags, sizeof(p), 0 };
     //FIXME!!!
@@ -1038,7 +1038,7 @@
     return true;
   }
 
-  bool vxsdr::set_rx_rf_port(const unsigned port_num, const uint8_t subdev, const uint8_t flags) {
+  bool vxsdr::set_rx_port(const unsigned port_num, const uint8_t subdev, const uint8_t flags) {
     unsigned_packet p = {};
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_SET_RF_PORT, subdev, flags, sizeof(p), 0 };
     p.number = port_num;
@@ -1048,7 +1048,7 @@
     return true;
   }
 
-  bool vxsdr::set_rx_rf_port(const std::string &port_name, const uint8_t subdev, const uint8_t flags) {
+  bool vxsdr::set_rx_port(const std::string &port_name, const uint8_t subdev, const uint8_t flags) {
     unsigned_packet p = {};
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_SET_RF_PORT, subdev, flags, sizeof(p), 0 };
     //FIXME!!!
@@ -1059,7 +1059,7 @@
     return true;
   }
 
-  std::optional<unsigned> vxsdr::get_tx_rf_port(const uint8_t subdev, const uint8_t flags) {
+  std::optional<unsigned> vxsdr::get_tx_port(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p = {};
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_GET_RF_PORT_NAME, subdev, flags, sizeof(p), 0 };
     if(not vxsdr::cmd_queue_push_check(p)) {
@@ -1077,14 +1077,14 @@
       if(r->hdr.packet_type == PACKET_TYPE_RX_RADIO_CMD_RSP and r->hdr.command == p.hdr.command) {
         return r->number;
       }
-      LOG_ERROR("invalid response in get_tx_rf_port()");
+      LOG_ERROR("invalid response in get_tx_port()");
       return std::nullopt;
     }
-    LOG_ERROR("response timeout in get_tx_rf_port()");
+    LOG_ERROR("response timeout in get_tx_port()");
     return std::nullopt;
   }
 
-  std::optional<unsigned> vxsdr::get_rx_rf_port(const uint8_t subdev, const uint8_t flags) {
+  std::optional<unsigned> vxsdr::get_rx_port(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p = {};
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_GET_RF_PORT_NAME, subdev, flags, sizeof(p), 0 };
     if(not vxsdr::cmd_queue_push_check(p)) {
@@ -1102,10 +1102,10 @@
       if(r->hdr.packet_type == PACKET_TYPE_RX_RADIO_CMD_RSP and r->hdr.command == p.hdr.command) {
         return r->number;
       }
-      LOG_ERROR("invalid response in get_rx_rf_port()");
+      LOG_ERROR("invalid response in get_rx_port()");
       return std::nullopt;
     }
-    LOG_ERROR("response timeout in get_rx_rf_port()");
+    LOG_ERROR("response timeout in get_rx_port()");
     return std::nullopt;
   }
 

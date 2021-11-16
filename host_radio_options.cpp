@@ -179,7 +179,7 @@ int set_rx_1ch_options(boost::program_options::variables_map &vm, std::unique_pt
   }
 
   if (vm.count("rx_ant") > 0) {
-    if(not radio->set_rx_rf_port(vm["rx_ant"].as<std::string>())) {
+    if(not radio->set_rx_port(vm["rx_ant"].as<std::string>())) {
       LOG_ERROR("error in set_rx_1ch_options: set_rx_port");
     }
   }
@@ -232,7 +232,7 @@ int set_tx_1ch_options(boost::program_options::variables_map &vm, std::unique_pt
   }
 
   if(vm.count("tx_ant") > 0) {
-    if(not radio->set_tx_rf_port(vm["tx_ant"].as<std::string>())) {
+    if(not radio->set_tx_port(vm["tx_ant"].as<std::string>())) {
       LOG_ERROR("error in set_tx_1ch_options: set_tx_rf_port");
     }
   }
