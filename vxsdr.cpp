@@ -582,15 +582,53 @@
   }
 
   std::optional<std::tuple<double, double>> vxsdr::tx_get_iq_bias(const uint8_t subdev, const uint8_t flags) {
-    double i_bias = 0, q_bias = 0;
-    // FIXME: implement
-    return std::tuple<double, double>(i_bias, q_bias);
+    header_only_packet p;
+    p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_GET_IQ_BIAS, subdev, flags, sizeof(p), 0 };
+    if(not vxsdr::cmd_queue_push_check(p)) {
+      return std::nullopt;
+    }
+    response_queue_element q;
+    bool got_response = false;
+    unsigned wait_time_ms = 0;
+    while(not (got_response = response_queue.pop(q)) and wait_time_ms < device_response_timeout_ms) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(device_response_wait_ms));
+      wait_time_ms += device_response_wait_ms;
+    }
+    if(got_response) {
+      auto *r = reinterpret_cast<radio_iq_bias_packet *>(&q);
+      if(r->hdr.packet_type == PACKET_TYPE_DEVICE_CMD_RSP and r->hdr.command == p.hdr.command) {
+        return std::tuple<double, double>(r->i_bias, r->q_bias);
+       }
+      LOG_ERROR("invalid response in tx_get_iq_bias()");
+      return std::nullopt;
+    }
+    LOG_ERROR("timeout in tx_get_iq_bias()");
+    return std::nullopt;
   }
 
   std::optional<std::tuple<double, double>> vxsdr::rx_get_iq_bias(const uint8_t subdev, const uint8_t flags) {
-    double i_bias = 0, q_bias = 0;
-    // FIXME: implement
-    return std::tuple<double, double>(i_bias, q_bias);
+    header_only_packet p;
+    p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_GET_IQ_BIAS, subdev, flags, sizeof(p), 0 };
+    if(not vxsdr::cmd_queue_push_check(p)) {
+      return std::nullopt;
+    }
+    response_queue_element q;
+    bool got_response = false;
+    unsigned wait_time_ms = 0;
+    while(not (got_response = response_queue.pop(q)) and wait_time_ms < device_response_timeout_ms) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(device_response_wait_ms));
+      wait_time_ms += device_response_wait_ms;
+    }
+    if(got_response) {
+      auto *r = reinterpret_cast<radio_iq_bias_packet *>(&q);
+      if(r->hdr.packet_type == PACKET_TYPE_DEVICE_CMD_RSP and r->hdr.command == p.hdr.command) {
+        return std::tuple<double, double>(r->i_bias, r->q_bias);
+       }
+      LOG_ERROR("invalid response in rx_get_iq_bias()");
+      return std::nullopt;
+    }
+    LOG_ERROR("timeout in rx_get_iq_bias()");
+    return std::nullopt;
   }
 
   bool vxsdr::tx_set_iq_corr(const double ii_corr, const double iq_corr, const double qi_corr, const double qq_corr,
@@ -616,15 +654,63 @@
   }
 
   std::optional<std::array<double, 4>> vxsdr::tx_get_iq_corr(const uint8_t subdev, const uint8_t flags) {
-    std::array<double, 4> corr = {1, 0, 0, 1};
-    // FIXME: implement
-    return corr;
+    header_only_packet p;
+    p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_GET_IQ_BIAS, subdev, flags, sizeof(p), 0 };
+    if(not vxsdr::cmd_queue_push_check(p)) {
+      return std::nullopt;
+    }
+    response_queue_element q;
+    bool got_response = false;
+    unsigned wait_time_ms = 0;
+    while(not (got_response = response_queue.pop(q)) and wait_time_ms < device_response_timeout_ms) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(device_response_wait_ms));
+      wait_time_ms += device_response_wait_ms;
+    }
+    if(got_response) {
+      auto *r = reinterpret_cast<radio_iq_corr_packet *>(&q);
+      if(r->hdr.packet_type == PACKET_TYPE_DEVICE_CMD_RSP and r->hdr.command == p.hdr.command) {
+        std::array<double, 4> corr = {1, 0, 0, 1};
+        corr[0] = r->ii_corr;
+        corr[1] = r->iq_corr;
+        corr[2] = r->qi_corr;
+        corr[3] = r->qq_corr;
+        return corr;
+       }
+      LOG_ERROR("invalid response in tx_get_iq_corr()");
+      return std::nullopt;
+    }
+    LOG_ERROR("timeout in tx_get_iq_corr()");
+    return std::nullopt;
   }
 
   std::optional<std::array<double, 4>> vxsdr::rx_get_iq_corr(const uint8_t subdev, const uint8_t flags) {
-    std::array<double, 4> corr = {1, 0, 0, 1};
-    // FIXME: implement
-    return corr;
+    header_only_packet p;
+    p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_GET_IQ_BIAS, subdev, flags, sizeof(p), 0 };
+    if(not vxsdr::cmd_queue_push_check(p)) {
+      return std::nullopt;
+    }
+    response_queue_element q;
+    bool got_response = false;
+    unsigned wait_time_ms = 0;
+    while(not (got_response = response_queue.pop(q)) and wait_time_ms < device_response_timeout_ms) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(device_response_wait_ms));
+      wait_time_ms += device_response_wait_ms;
+    }
+    if(got_response) {
+      auto *r = reinterpret_cast<radio_iq_corr_packet *>(&q);
+      if(r->hdr.packet_type == PACKET_TYPE_DEVICE_CMD_RSP and r->hdr.command == p.hdr.command) {
+        std::array<double, 4> corr = {1, 0, 0, 1};
+        corr[0] = r->ii_corr;
+        corr[1] = r->iq_corr;
+        corr[2] = r->qi_corr;
+        corr[3] = r->qq_corr;
+        return corr;
+       }
+      LOG_ERROR("invalid response in rx_get_iq_corr()");
+      return std::nullopt;
+    }
+    LOG_ERROR("timeout in rx_get_iq_corr()");
+    return std::nullopt;
   }
 
   bool vxsdr::tx_stop_now(const uint8_t subdev, const uint8_t flags) {
