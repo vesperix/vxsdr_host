@@ -233,7 +233,7 @@ int set_tx_1ch_options(boost::program_options::variables_map &vm, std::unique_pt
 
   if(vm.count("tx_ant") > 0) {
     if(not radio->set_tx_port(vm["tx_ant"].as<std::string>())) {
-      LOG_ERROR("error in set_tx_1ch_options: set_tx_rf_port");
+      LOG_ERROR("error in set_tx_1ch_options: set_tx_port");
     }
   }
 
