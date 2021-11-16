@@ -667,12 +667,17 @@ int main(int argc, char *argv[])
     //test_iq(radio);
     //test_status(radio);
     //test_capabilities(radio);
+    //test_stream(radio);
   }
     catch (std::exception& e) {
     LOG_FATAL(fmt::format("testing exception caught: {:s}", e.what()));
     return EXIT_INTERNAL_ERROR;
   }
 
-  LOG_INFO(fmt::format("{:s} finished", argv[0]));
+  LOG_INFO(fmt::format("{:s} finished with {:d} erors and {:d} warnings", argv[0], total_errors, total_warnings));
+  if(total_errors > 0) {
+    return EXIT_FAILURE;
+  }
+
   return EXIT_SUCCESS;
 }
