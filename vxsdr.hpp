@@ -53,43 +53,44 @@ class vxsdr {
   int receive_thread_cpu;
 
   // parameters of the internal SPSC queues used for data
-  static constexpr size_t rx_data_queue_length           =    65536;    // slots in rx data queue; 65536 * 2048 / 160e6 = 840 ms at 160 MSPS
-  static constexpr size_t tx_data_queue_length           =     1024;    // slots in tx data queue;  1024 * 2048 / 160e6 =  13 ms at 160 MSPS
+  static constexpr size_t rx_data_queue_length            =    65'536;    // slots in rx data queue; 65536 * 2048 / 160e6 = 840 ms at 160 MSPS
+  static constexpr size_t tx_data_queue_length            =     1'024;    // slots in tx data queue;  1024 * 2048 / 160e6 =  13 ms at 160 MSPS
 
   // parameters used to set the OS's network buffer
-  static constexpr unsigned network_send_buffer_bytes    =   4194304;   // ~6.6 ms at 160 MSPS
-  static constexpr unsigned network_receive_buffer_bytes =  16777216;   // ~26 ms at 160 MSPS
+  static constexpr unsigned network_send_buffer_bytes     =  4'194'304;   // ~6.6 ms at 160 MSPS
+  static constexpr unsigned network_receive_buffer_bytes  = 16'777'216;   // ~26 ms at 160 MSPS
 
   // timeouts and waits between tries for queue push/pop
-  static constexpr unsigned tx_data_queue_timeout_us     =   100000;
-  static constexpr unsigned tx_data_queue_wait_us        =       10;
+  static constexpr double   tx_data_queue_timeout_s       =       1.0;
+  static constexpr unsigned tx_data_queue_wait_us         =        10;
 
-  static constexpr unsigned rx_data_queue_timeout_us     =    40000;
-  static constexpr unsigned rx_data_queue_wait_us        =       10;
+  static constexpr double   rx_data_queue_pop_timeout_s   =       1.0;
+  static constexpr unsigned rx_data_queue_push_timeout_us =    40'000;
+  static constexpr unsigned rx_data_queue_wait_us         =        10;
 
   // transmit throttling settings
-  static constexpr float throttle_on_percent             =        75;
-  static constexpr float throttle_off_percent            =        50;
-  static constexpr unsigned throttle_amount_us           =        10; // send time for 8200 bytes over 10 GbE is about 6.7 us
-  static constexpr unsigned send_thread_sleep_us         =         5;
+  static constexpr float throttle_on_percent              =         75;
+  static constexpr float throttle_off_percent             =         50;
+  static constexpr unsigned throttle_amount_us            =         10; // send time for 8200 bytes over 10 GbE is about 6.7 us
+  static constexpr unsigned send_thread_sleep_us          =          5;
 
   // parmeters of the internal MPMC queues used for commands, responses, errors, acks, and async messages
-  static constexpr size_t command_queue_length           =        32;    // slots in command msg queue
-  static constexpr size_t response_queue_length          =        32;    // slots in response msg queue
-  static constexpr size_t cmd_ack_queue_length           =        32;    // slots in command ack queue
-  static constexpr size_t error_queue_length             =       256;    // slots in error queue
-  static constexpr size_t async_msg_queue_length         =       256;    // slots in async msg queue
+  static constexpr size_t command_queue_length            =         32;    // slots in command msg queue
+  static constexpr size_t response_queue_length           =         32;    // slots in response msg queue
+  static constexpr size_t cmd_ack_queue_length            =         32;    // slots in command ack queue
+  static constexpr size_t error_queue_length              =        256;    // slots in error queue
+  static constexpr size_t async_msg_queue_length          =        256;    // slots in async msg queue
 
   // timeouts and waits for responses from device
-  static constexpr unsigned device_response_timeout_ms   =       100;
-  static constexpr unsigned device_response_wait_ms      =         1;
+  static constexpr unsigned device_response_timeout_ms    =        100;
+  static constexpr unsigned device_response_wait_ms       =          1;
 
   // how often to check the error queue
-  static constexpr unsigned error_queue_check_ms         =         1;
+  static constexpr unsigned error_queue_check_ms         =          1;
 
   // the UDP tx waits for the rx to reach RUNNING state before entering RUNNING itself
-  static constexpr unsigned udp_tx_ready_timeout_ms      =      1000;
-  static constexpr unsigned udp_tx_ready_wait_ms         =         1;
+  static constexpr unsigned udp_tx_ready_timeout_ms      =      1'000;
+  static constexpr unsigned udp_tx_ready_wait_ms         =          1;
 
   // parameters used to monitor status of the radio's internal buffers (on the other end of the network connection)
   std::atomic<unsigned> tx_buffer_size_bytes = 0, tx_buffer_used_bytes = 0;
@@ -190,8 +191,10 @@ class vxsdr {
     - returns the number of samples received
     @param data the vector for the received data
     @param n_desired the number of samples to be received
+    @param timeout_s timeout in seconds
   */
-  size_t get_rx_data(std::vector<std::complex<int16_t> > &data, size_t n_desired = 0);
+  size_t get_rx_data(std::vector<std::complex<int16_t> > &data, size_t n_desired = 0,
+                     const double timeout_s = rx_data_queue_pop_timeout_s);
 
   /*!
     @brief Receives data from the device and writes to an open file.
@@ -199,23 +202,28 @@ class vxsdr {
     @param out_stream the file to write the data to
     @param n_desired the number of samples to be received
     @param write_size_samples the block size for file writes
+    @param timeout_s timeout in seconds
   */
-  size_t write_rx_data(std::ofstream &out_stream, size_t n_desired, size_t write_size_samples = 65536);
+  size_t write_rx_data(std::ofstream &out_stream, const size_t n_desired,
+                       const double timeout_s = rx_data_queue_pop_timeout_s, size_t write_size_samples = 65536);
 
   /*!
     @brief Receives data from the device and checks packet sequence, discarding the data.
     - returns the number of samples received
     @param n_desired the number of samples to be received
+    @param timeout_s timeout in seconds
   */
-  size_t check_rx_data_sequence_only(size_t n_desired);
+  size_t check_rx_data_sequence_only(const size_t n_desired, const double timeout_s = rx_data_queue_pop_timeout_s);
 
   /*!
     @brief Sends transmit data to the device.
     - returns the number of samples placed in the queue for transmission
     @param data the complex @p itn16_t samples to be sent
     @param subdev the subdevice number
+    @param timeout_s timeout in seconds
   */
-  size_t put_tx_data(std::vector<std::complex<int16_t> > data, const uint8_t subdev = 0);
+  size_t put_tx_data(std::vector<std::complex<int16_t> > data, const uint8_t subdev = 0,
+                     const double timeout_s = tx_data_queue_timeout_s);
 
   /*!
     @brief Requests basic information from the device.

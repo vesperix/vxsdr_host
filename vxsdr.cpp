@@ -89,26 +89,29 @@
     LOG_DEBUG("vxsdr destructor complete");
   }
 
-  size_t vxsdr::get_rx_data(std::vector<std::complex<int16_t> > &data, size_t n_desired) {
+  size_t vxsdr::get_rx_data(std::vector<std::complex<int16_t> > &data, size_t n_desired, const double timeout_s) {
     LOG_DEBUG("get_rx_data entered");
     size_t n_received = 0;
     data_queue_element q;
 
     if(n_desired == 0) {
       n_desired = data.size();
+    } else {
+      data.reserve(n_desired);
     }
+
     data.clear();
-    data.reserve(n_desired);
+
 
     LOG_INFO(fmt::format("receiving {:d} samples", n_desired));
 
     while(n_received < n_desired) {
-      unsigned wait_time_us = 0;
+      double wait_time_s = 0;
       // setting rx_data_queue_wait_us = 0 results in a busy wait with no timeout
-      while(rx_data_queue.read_available() == 0 and wait_time_us < rx_data_queue_timeout_us) {
+      while(rx_data_queue.read_available() == 0 and wait_time_s < timeout_s) {
         if(rx_data_queue_wait_us > 0) {
           std::this_thread::sleep_for(std::chrono::microseconds(rx_data_queue_wait_us));
-          wait_time_us += rx_data_queue_wait_us;
+          wait_time_s += 1e-6 * rx_data_queue_wait_us;
         }
       }
       if(rx_data_queue.pop(q)) {
@@ -141,13 +144,16 @@
         }
       } else {
         LOG_ERROR(fmt::format("timeout popping from rx data queue ({:d} of {:d} samples)", n_received, n_desired));
+        data.resize(n_received);
+        return n_received;
       }
     }
     LOG_DEBUG(fmt::format("get_rx_data complete ({:d} samples)", data.size()));
     return n_received;
   }
 
-  size_t vxsdr::write_rx_data(std::ofstream &out_stream, size_t n_desired, size_t write_size_samples) {
+  size_t vxsdr::write_rx_data(std::ofstream &out_stream, const size_t n_desired, const double timeout_s,
+                              size_t write_size_samples) {
     LOG_DEBUG("write_rx_data entered");
     size_t n_received = 0, n_written = 0;
     data_queue_element q;
@@ -162,12 +168,12 @@
     LOG_INFO(fmt::format("receiving {:d} samples", n_desired));
 
     while(n_written < n_desired) {
-      unsigned wait_time_us = 0;
+      double wait_time_s = 0;
       // setting rx_data_queue_wait_us = 0 results in a busy wait with no timeout
-      while(rx_data_queue.read_available() == 0 and wait_time_us < rx_data_queue_timeout_us) {
+      while(rx_data_queue.read_available() == 0 and wait_time_s < timeout_s) {
         if(rx_data_queue_wait_us > 0) {
           std::this_thread::sleep_for(std::chrono::microseconds(rx_data_queue_wait_us));
-          wait_time_us += rx_data_queue_wait_us;
+          wait_time_s += 1e-6 * rx_data_queue_wait_us;
         }
       }
       if(rx_data_queue.pop(q)) {
@@ -216,13 +222,14 @@
 
       } else {
         LOG_ERROR(fmt::format("timeout popping from rx data queue ({:d} of {:d} samples)", n_written, n_desired));
+        return n_written;
       }
     }
     LOG_DEBUG(fmt::format("write_rx_data complete ({:d} samples)", n_written));
     return n_written;
   }
 
-  size_t vxsdr::check_rx_data_sequence_only(size_t n_desired) {
+  size_t vxsdr::check_rx_data_sequence_only(size_t n_desired, const double timeout_s) {
     // FIXME: diagnostic routine for data transfer only;
     // drops data after sequence check and byte/sample counts
     LOG_DEBUG("check_rx_data_sequence_only started");
@@ -232,12 +239,12 @@
     LOG_INFO(fmt::format("checking sequence for {:d} samples", n_desired));
 
     while(n_received < n_desired) {
-      unsigned wait_time_us = 0;
+      double wait_time_s = 0;
       // setting rx_data_queue_wait_us = 0 results in a busy wait with no timeout
-      while(rx_data_queue.read_available() == 0 and wait_time_us < rx_data_queue_timeout_us) {
+      while(rx_data_queue.read_available() == 0 and wait_time_s < timeout_s) {
         if(rx_data_queue_wait_us > 0) {
           std::this_thread::sleep_for(std::chrono::microseconds(rx_data_queue_wait_us));
-          wait_time_us += rx_data_queue_wait_us;
+          wait_time_s += 1e-6 * rx_data_queue_wait_us;
         }
       }
       if(rx_data_queue.pop(q)) {
@@ -254,13 +261,14 @@
         n_received += data_samples;
       } else {
         LOG_ERROR(fmt::format("timeout popping from rx data queue ({:d} of {:d} samples)", n_received, n_desired));
+        return n_received;
       }
     }
     LOG_DEBUG(fmt::format("check_rx_data_sequence_only complete ({:d} samples)", n_received));
     return n_received;
   }
 
-  size_t vxsdr::put_tx_data(std::vector<std::complex<int16_t> > data, const uint8_t subdev) {
+  size_t vxsdr::put_tx_data(std::vector<std::complex<int16_t> > data, const uint8_t subdev, const double timeout_s) {
     LOG_DEBUG("put_tx_data started");
     // puts plain data_packets (no time, no stream)
     size_t n_put = 0;
@@ -275,12 +283,12 @@
         p->data[j] = data[i + j];
       }
 
-      unsigned wait_time_us = 0;
+      double wait_time_s = 0;
       // setting tx_data_queue_wait_us = 0 results in a busy wait with no timeout
-      while(tx_data_queue.write_available() == 0 and wait_time_us < tx_data_queue_timeout_us) {
+      while(tx_data_queue.write_available() == 0 and wait_time_s < timeout_s) {
         if(tx_data_queue_wait_us > 0) {
           std::this_thread::sleep_for(std::chrono::microseconds(tx_data_queue_wait_us));
-          wait_time_us += tx_data_queue_wait_us;
+          wait_time_s += 1e-6 * tx_data_queue_wait_us;
         }
       }
 
@@ -288,7 +296,7 @@
         n_put += n_samples;
       } else {
         LOG_ERROR("timeout pushing to tx data queue");
-        break;
+        return n_put;
       }
     }
     LOG_DEBUG(fmt::format("put_tx_data complete ({:d} samples)", n_put));

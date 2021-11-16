@@ -155,7 +155,7 @@
           case PACKET_TYPE_RX_SIGNAL_DATA: {
               if(not vxsdr::rx_data_queue.push(recv_buffer)) {
                 unsigned wait_time_us = 0;
-                while(vxsdr::rx_data_queue.write_available() == 0 and wait_time_us < vxsdr::rx_data_queue_timeout_us) {
+                while(vxsdr::rx_data_queue.write_available() == 0 and wait_time_us < vxsdr::rx_data_queue_push_timeout_us) {
                   if(vxsdr::rx_data_queue_wait_us > 0) {
                     std::this_thread::sleep_for(std::chrono::microseconds(vxsdr::rx_data_queue_wait_us));
                     wait_time_us += vxsdr::rx_data_queue_wait_us;
