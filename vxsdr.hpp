@@ -888,8 +888,8 @@ class vxsdr {
 
   static void time_point_to_time_spec_t(const std::chrono::time_point<std::chrono::system_clock> &t, time_spec_t &ts);
   static std::string stream_state_to_string(const stream_state_t state);
-  bool device_get_buffer_info(const uint8_t subdev, const uint8_t flags = 0);
-  bool device_get_buffer_use(const uint8_t subdev, const uint8_t flags = 0);
+  std::optional<std::tuple<uint32_t, uint32_t>> device_get_buffer_info(const uint8_t subdev, const uint8_t flags = 0);
+  std::optional<std::tuple<uint32_t, uint32_t>> device_get_buffer_use(const uint8_t subdev, const uint8_t flags = 0);
   [[nodiscard]] bool cmd_queue_push_check(packet &p);
   void error_handler();
   void receiver();

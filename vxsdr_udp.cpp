@@ -188,7 +188,7 @@
           case PACKET_TYPE_DEVICE_CMD_RSP:
             switch(recv_buffer.hdr.command) {
               case DEVICE_CMD_GET_BUFFER_USE: {
-                  auto *r = reinterpret_cast<get_buffer_use_rsp_packet *>(&recv_buffer);
+                  auto *r = reinterpret_cast<buffer_use_rsp_packet *>(&recv_buffer);
                   vxsdr::tx_buffer_used_bytes = r->tx_buffer_used_bytes;
                   vxsdr::rx_buffer_used_bytes = r->rx_buffer_used_bytes;
                   vxsdr::tx_buffer_fill_percent = std::min(100U, (100U * vxsdr::tx_buffer_used_bytes) / vxsdr::tx_buffer_size_bytes);
@@ -196,7 +196,7 @@
                 }
                 break;
               case DEVICE_CMD_GET_BUFFER_INFO: {
-                  auto *r = reinterpret_cast<get_buffer_info_rsp_packet *>(&recv_buffer);
+                  auto *r = reinterpret_cast<buffer_info_rsp_packet *>(&recv_buffer);
                   vxsdr::tx_buffer_size_bytes = r->tx_buffer_size_bytes;
                   vxsdr::rx_buffer_size_bytes = r->rx_buffer_size_bytes;
                 }
@@ -321,9 +321,10 @@
     vxsdr::tx_stop_now(tx_subdev);
     vxsdr::rx_stop_now(rx_subdev);
     // get device buffer sizes
-    vxsdr::device_get_buffer_info(device_subdev);
-    // wait for the response come back and be processed
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    auto result = vxsdr::device_get_buffer_info(device_subdev);
+    if(not result.has_value()) {
+      LOG_ERROR("failed to get buffer info in initialize_sdr()");
+    }
     // clear the status registers
     vxsdr::device_clear_status(device_subdev);
     //device_get_status(device_subdev);

@@ -323,7 +323,7 @@ void log_packet_info(packet &packet, const int direction)
         case DEVICE_CMD_GET_BUFFER_INFO:
           {
             LOG_PACKET(fmt::format("DEVICE_CMD_RSP: GET_BUFFER_INFO"));
-            auto *br = reinterpret_cast<get_buffer_info_rsp_packet *>(&packet);
+            auto *br = reinterpret_cast<buffer_info_rsp_packet *>(&packet);
             LOG_PACKET(fmt::format("   rx_buffer_size_bytes      = {:d}", (uint32_t)br->rx_buffer_size_bytes));
             LOG_PACKET(fmt::format("   tx_buffer_size_bytes      = {:d}", (uint32_t)br->tx_buffer_size_bytes));
           }
@@ -331,7 +331,7 @@ void log_packet_info(packet &packet, const int direction)
         case DEVICE_CMD_GET_BUFFER_USE:
           {
             LOG_PACKET(fmt::format("DEVICE_CMD_RSP: GET_BUFFER_USE"));
-            auto *br = reinterpret_cast<get_buffer_use_rsp_packet *>(&packet);
+            auto *br = reinterpret_cast<buffer_use_rsp_packet *>(&packet);
             LOG_PACKET(fmt::format("   rx_buffer_used_bytes      = {:d}", (uint32_t)br->rx_buffer_used_bytes));
             LOG_PACKET(fmt::format("   tx_buffer_used_bytes      = {:d}", (uint32_t)br->tx_buffer_used_bytes));
           }

@@ -159,7 +159,7 @@ class udp_receiver {
             switch(recv_buffer.hdr.command) {
               case DEVICE_CMD_GET_BUFFER_USE:
                 {
-                  auto *r = reinterpret_cast<get_buffer_use_rsp_packet *>(&recv_buffer);
+                  auto *r = reinterpret_cast<buffer_use_rsp_packet *>(&recv_buffer);
                   tx_buffer_used = r->tx_buffer_used_bytes;
                   rx_buffer_used = r->rx_buffer_used_bytes;
                   tx_buffer_fill_percent = std::min(100., (100. * tx_buffer_used) / tx_buffer_size);
@@ -170,7 +170,7 @@ class udp_receiver {
                 break;
               case DEVICE_CMD_GET_BUFFER_INFO:
                 {
-                  auto *r = reinterpret_cast<get_buffer_info_rsp_packet *>(&recv_buffer);
+                  auto *r = reinterpret_cast<buffer_info_rsp_packet *>(&recv_buffer);
                   tx_buffer_size = r->tx_buffer_size_bytes;
                   rx_buffer_size = r->rx_buffer_size_bytes;
                   auto *p = reinterpret_cast<largest_cmd_or_rsp_packet *>(&recv_buffer);
