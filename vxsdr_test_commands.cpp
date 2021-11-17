@@ -29,7 +29,7 @@ void test_hello(std::unique_ptr<vxsdr> &radio) {
   {
     auto result = radio->device_hello();
 
-    if(result.has_value()) {
+    if(result) {
       LOG_INFO("      passed");
     } else {
       LOG_ERROR("     no value returned by device_hello()");
@@ -41,7 +41,7 @@ void test_hello(std::unique_ptr<vxsdr> &radio) {
   {
     auto result = radio->device_hello(0, FLAGS_REQUEST_ACK);
 
-    if(result.has_value()) {
+    if(result) {
       LOG_INFO("      passed");
     } else {
       LOG_ERROR("      no value returned by device_hello((0, FLAGS_REQUEST_ACK)");
@@ -53,7 +53,7 @@ void test_hello(std::unique_ptr<vxsdr> &radio) {
   {
     auto result = radio->device_hello(99);
 
-    if(result.has_value()) {
+    if(result) {
       LOG_ERROR("      value returned by device_hello(99)");
       total_errors++;
     } else {
@@ -71,7 +71,7 @@ void test_time(std::unique_ptr<vxsdr> &radio) {
   {
     auto result = radio->device_get_time_now();
 
-    if(result.has_value()) {
+    if(result) {
       LOG_INFO("      passed");
     } else {
       LOG_ERROR("     no value returned by device_get_time_now()");
@@ -92,7 +92,7 @@ void test_time(std::unique_ptr<vxsdr> &radio) {
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
     auto result = radio->device_get_time_now();
-    if(result.has_value()) {
+    if(result) {
       std::chrono::duration<double> diff = result.value() - tp_set;
       if(diff.count() > 0.99 and diff.count() <= 1.01) {
         LOG_INFO("      passed with time_point");
@@ -173,7 +173,7 @@ void test_time(std::unique_ptr<vxsdr> &radio) {
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
     auto result2 = radio->device_get_time_now();
-    if(result2.has_value()) {
+    if(result2) {
       double diff = std::chrono::duration<double>(result2.value().time_since_epoch()).count() - (ts_set.tv_sec + 1e-9 * ts_set.tv_nsec);
       if(diff > 0.99 and diff <= 1.01) {
         LOG_INFO("      passed set with s and ns read with time_point");
@@ -198,14 +198,14 @@ void test_rate(std::unique_ptr<vxsdr> &radio) {
     LOG_INFO("      getting rate range");
 
     auto rate = radio->get_tx_rate_range();
-    if(rate.has_value()) {
+    if(rate) {
       LOG_INFO("      passed");
     } else {
       LOG_ERROR("     no value returned by get_tx_rate_range()");
       total_errors++;
     }
 
-    if(rate.has_value()) {
+    if(rate) {
       double rmin = rate.value()[0], rmax = rate.value()[1];
 
       LOG_INFO("      setting maximum rate");
@@ -217,7 +217,7 @@ void test_rate(std::unique_ptr<vxsdr> &radio) {
       }
 
       auto rmx = radio->get_tx_rate();
-      if(rmx.has_value()) {
+      if(rmx) {
         double diff = rmx.value() - rmax;
         if(abs(diff) < 1e-3) {
           LOG_INFO("      passed");
@@ -239,7 +239,7 @@ void test_rate(std::unique_ptr<vxsdr> &radio) {
       }
 
       rmx = radio->get_tx_rate();
-      if(rmx.has_value()) {
+      if(rmx) {
         double diff = rmx.value() - rmin;
         if(abs(diff) < 1e-3) {
           LOG_INFO("      passed");
@@ -262,14 +262,14 @@ void test_rate(std::unique_ptr<vxsdr> &radio) {
     LOG_INFO("      getting rate range");
 
     auto rate = radio->get_rx_rate_range();
-    if(rate.has_value()) {
+    if(rate) {
       LOG_INFO("      passed");
     } else {
       LOG_ERROR("     no value returned by get_rx_rate_range()");
       total_errors++;
     }
 
-    if(rate.has_value()) {
+    if(rate) {
       double rmin = rate.value()[0], rmax = rate.value()[1];
 
       LOG_INFO("      setting maximum rate");
@@ -281,7 +281,7 @@ void test_rate(std::unique_ptr<vxsdr> &radio) {
       }
 
       auto rmx = radio->get_rx_rate();
-      if(rmx.has_value()) {
+      if(rmx) {
         double diff = rmx.value() - rmax;
         if(abs(diff) < 1e-3) {
           LOG_INFO("      passed");
@@ -303,7 +303,7 @@ void test_rate(std::unique_ptr<vxsdr> &radio) {
       }
 
       rmx = radio->get_rx_rate();
-      if(rmx.has_value()) {
+      if(rmx) {
         double diff = rmx.value() - rmin;
         if(abs(diff) < 1e-3) {
           LOG_INFO("      passed");
@@ -332,14 +332,14 @@ void test_gain(std::unique_ptr<vxsdr> &radio) {
     LOG_INFO("      getting gain range");
 
     auto gain = radio->get_tx_gain_range();
-    if(gain.has_value()) {
+    if(gain) {
       LOG_INFO("      passed");
     } else {
       LOG_ERROR("     no value returned by get_tx_gain_range()");
       total_errors++;
     }
 
-    if(gain.has_value()) {
+    if(gain) {
       double rmin = gain.value()[0], rmax = gain.value()[1];
 
       LOG_INFO("      setting maximum gain");
@@ -351,7 +351,7 @@ void test_gain(std::unique_ptr<vxsdr> &radio) {
       }
 
       auto rmx = radio->get_tx_gain();
-      if(rmx.has_value()) {
+      if(rmx) {
         double diff = rmx.value() - rmax;
         if(abs(diff) < 1e-3) {
           LOG_INFO("      passed");
@@ -373,7 +373,7 @@ void test_gain(std::unique_ptr<vxsdr> &radio) {
       }
 
       rmx = radio->get_tx_gain();
-      if(rmx.has_value()) {
+      if(rmx) {
         double diff = rmx.value() - rmin;
         if(abs(diff) < 1e-3) {
           LOG_INFO("      passed");
@@ -396,14 +396,14 @@ void test_gain(std::unique_ptr<vxsdr> &radio) {
     LOG_INFO("      getting gain range");
 
     auto gain = radio->get_rx_gain_range();
-    if(gain.has_value()) {
+    if(gain) {
       LOG_INFO("      passed");
     } else {
       LOG_ERROR("     no value returned by get_rx_gain_range()");
       total_errors++;
     }
 
-    if(gain.has_value()) {
+    if(gain) {
       double rmin = gain.value()[0], rmax = gain.value()[1];
 
       LOG_INFO("      setting maximum gain");
@@ -415,7 +415,7 @@ void test_gain(std::unique_ptr<vxsdr> &radio) {
       }
 
       auto rmx = radio->get_rx_gain();
-      if(rmx.has_value()) {
+      if(rmx) {
         double diff = rmx.value() - rmax;
         if(abs(diff) < 1e-3) {
           LOG_INFO("      passed");
@@ -437,7 +437,7 @@ void test_gain(std::unique_ptr<vxsdr> &radio) {
       }
 
       rmx = radio->get_rx_gain();
-      if(rmx.has_value()) {
+      if(rmx) {
         double diff = rmx.value() - rmin;
         if(abs(diff) < 1e-3) {
           LOG_INFO("      passed");
@@ -468,14 +468,14 @@ void test_freq(std::unique_ptr<vxsdr> &radio) {
     LOG_INFO("      getting freq range");
 
     auto freq = radio->get_tx_freq_range();
-    if(freq.has_value()) {
+    if(freq) {
       LOG_INFO("      passed");
     } else {
       LOG_ERROR("     no value returned by get_tx_freq_range()");
       total_errors++;
     }
 
-    if(freq.has_value()) {
+    if(freq) {
       double rmin = freq.value()[0], rmax = freq.value()[1];
 
       LOG_INFO("      setting maximum freq");
@@ -487,7 +487,7 @@ void test_freq(std::unique_ptr<vxsdr> &radio) {
       }
 
       auto rmx = radio->get_tx_freq();
-      if(rmx.has_value()) {
+      if(rmx) {
         double diff = rmx.value() - rmax;
         if(abs(diff) < 1e-3) {
           LOG_INFO("      passed");
@@ -509,7 +509,7 @@ void test_freq(std::unique_ptr<vxsdr> &radio) {
       }
 
       rmx = radio->get_tx_freq();
-      if(rmx.has_value()) {
+      if(rmx) {
         double diff = rmx.value() - rmin;
         if(abs(diff) < 1e-3) {
           LOG_INFO("      passed");
@@ -532,14 +532,14 @@ void test_freq(std::unique_ptr<vxsdr> &radio) {
     LOG_INFO("      getting freq range");
 
     auto freq = radio->get_rx_freq_range();
-    if(freq.has_value()) {
+    if(freq) {
       LOG_INFO("      passed");
     } else {
       LOG_ERROR("     no value returned by get_rx_freq_range()");
       total_errors++;
     }
 
-    if(freq.has_value()) {
+    if(freq) {
       double rmin = freq.value()[0], rmax = freq.value()[1];
 
       LOG_INFO("      setting maximum freq");
@@ -551,7 +551,7 @@ void test_freq(std::unique_ptr<vxsdr> &radio) {
       }
 
       auto rmx = radio->get_rx_freq();
-      if(rmx.has_value()) {
+      if(rmx) {
         double diff = rmx.value() - rmax;
         if(abs(diff) < 1e-3) {
           LOG_INFO("      passed");
@@ -573,7 +573,7 @@ void test_freq(std::unique_ptr<vxsdr> &radio) {
       }
 
       rmx = radio->get_rx_freq();
-      if(rmx.has_value()) {
+      if(rmx) {
         double diff = rmx.value() - rmin;
         if(abs(diff) < 1e-3) {
           LOG_INFO("      passed");
