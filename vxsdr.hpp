@@ -459,7 +459,7 @@ class vxsdr {
     @param subdev the subdevice number
     @param flags the packet flags
   */
-  bool tx_set_iq_bias(const double i_bias, const double q_bias, const uint8_t subdev = 0, const uint8_t flags = 0);
+  bool set_tx_iq_bias(const double i_bias, const double q_bias, const uint8_t subdev = 0, const uint8_t flags = 0);
 
   /*!
     @brief Sets the IQ DC bias for the receiver to control LO feedthrough.
@@ -472,7 +472,7 @@ class vxsdr {
     @param subdev the subdevice number
     @param flags the packet flags
   */
-  bool rx_set_iq_bias(const double i_bias, const double q_bias, const uint8_t subdev = 0, const uint8_t flags = 0);
+  bool set_rx_iq_bias(const double i_bias, const double q_bias, const uint8_t subdev = 0, const uint8_t flags = 0);
 
   /*!
     @brief Gets the IQ DC bias for the transmitter.
@@ -481,7 +481,7 @@ class vxsdr {
     @param subdev the subdevice number
     @param flags the packet flags
   */
-  std::optional<std::array<double, 2>> tx_get_iq_bias(const uint8_t subdev = 0, const uint8_t flags = 0);
+  std::optional<std::array<double, 2>> get_tx_iq_bias(const uint8_t subdev = 0, const uint8_t flags = 0);
 
   /*!
     @brief Gets the IQ DC bias for the receiver.
@@ -490,7 +490,7 @@ class vxsdr {
     @param subdev the subdevice number
     @param flags the packet flags
   */
-  std::optional<std::array<double, 2>> rx_get_iq_bias(const uint8_t subdev = 0, const uint8_t flags = 0);
+  std::optional<std::array<double, 2>> get_rx_iq_bias(const uint8_t subdev = 0, const uint8_t flags = 0);
 
   /*!
     @brief Sets the IQ correction for the transmitter to control image rejection.
@@ -505,7 +505,7 @@ class vxsdr {
     @param subdev the subdevice number
     @param flags the packet flags
   */
-  bool tx_set_iq_corr(const double ii_corr, const double iq_corr, const double qi_corr, const double qq_corr,
+  bool set_tx_iq_corr(const double ii_corr, const double iq_corr, const double qi_corr, const double qq_corr,
                       const uint8_t subdev = 0, const uint8_t flags = 0);
 
   /*!
@@ -521,7 +521,7 @@ class vxsdr {
     @param subdev the subdevice number
     @param flags the packet flags
   */
-  bool rx_set_iq_corr(const double ii_corr, const double iq_corr, const double qi_corr, const double qq_corr,
+  bool set_rx_iq_corr(const double ii_corr, const double iq_corr, const double qi_corr, const double qq_corr,
                       const uint8_t subdev = 0, const uint8_t flags = 0);
 
   /*!
@@ -530,7 +530,7 @@ class vxsdr {
     @param subdev the subdevice number
     @param flags the packet flags
   */
-  std::optional<std::array<double, 4>> tx_get_iq_corr(const uint8_t subdev = 0, const uint8_t flags = 0);
+  std::optional<std::array<double, 4>> get_tx_iq_corr(const uint8_t subdev = 0, const uint8_t flags = 0);
 
   /*!
     @brief Gets the IQ correction for the receiver.
@@ -538,7 +538,7 @@ class vxsdr {
     @param subdev the subdevice number
     @param flags the packet flags
   */
-  std::optional<std::array<double, 4>> rx_get_iq_corr(const uint8_t subdev = 0, const uint8_t flags = 0);
+  std::optional<std::array<double, 4>> get_rx_iq_corr(const uint8_t subdev = 0, const uint8_t flags = 0);
 
   /*!
     @brief Stops transmitting immediately.
@@ -736,7 +736,7 @@ class vxsdr {
     @param subdev the subdevice number
     @param flags the packet flags
   */
-  std::optional<unsigned> get_num_tx_ports(const uint8_t subdev = 0, const uint8_t flags = 0);
+  std::optional<unsigned> get_tx_num_ports(const uint8_t subdev = 0, const uint8_t flags = 0);
 
    /*!
     @brief Gets the number of receive input ports.
@@ -744,7 +744,7 @@ class vxsdr {
     @param subdev the subdevice number
     @param flags the packet flags
   */
-  std::optional<unsigned> get_num_rx_ports(const uint8_t subdev = 0, const uint8_t flags = 0);
+  std::optional<unsigned> get_rx_num_ports(const uint8_t subdev = 0, const uint8_t flags = 0);
 
   /*!
     @brief Gets the name of a transmit output port.
@@ -864,9 +864,11 @@ class vxsdr {
 
  private:
 
+  std::optional<response_queue_element> send_packet_and_check_response(packet &p, std::string cmd_name = "unknown");
   static void time_point_to_time_spec_t(const std::chrono::time_point<std::chrono::system_clock> &t, time_spec_t &ts);
   static std::string stream_state_to_string(const stream_state_t state);
   static std::string transport_state_to_string(const transport_state_t state);
+  static std::string error_to_string(const uint32_t reason);
   std::optional<std::tuple<uint32_t, uint32_t>> device_get_buffer_info(const uint8_t subdev, const uint8_t flags = 0);
   std::optional<std::tuple<uint32_t, uint32_t>> device_get_buffer_use(const uint8_t subdev, const uint8_t flags = 0);
   [[nodiscard]] bool cmd_queue_push_check(packet &p);

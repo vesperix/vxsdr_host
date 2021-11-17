@@ -343,26 +343,13 @@
   std::optional<std::array<uint32_t, 4>> vxsdr::device_hello(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p;
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_HELLO, subdev, flags, sizeof(p), 0 };
-    if(not vxsdr::cmd_queue_push_check(p)) {
-      return std::nullopt;
-    }
-    response_queue_element q;
-    bool got_response = false;
-    unsigned wait_time_ms = 0;
-    while(not (got_response = response_queue.pop(q)) and wait_time_ms < device_response_timeout_ms) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(device_response_wait_ms));
-      wait_time_ms += device_response_wait_ms;
-    }
-    if(got_response) {
+    auto res = vxsdr::send_packet_and_check_response(p, "device_hello()");
+    if(res) {
+      auto q = res.value();
       auto *r = reinterpret_cast<hello_rsp_packet *>(&q);
-      if(r->hdr.packet_type == PACKET_TYPE_DEVICE_CMD_RSP and r->hdr.command == p.hdr.command) {
-        std::array<uint32_t, 4> res = {r->board_id, r->fpga_fw_version, r->mcu_sw_version, r->serial_no};
-        return res;
-      }
-      LOG_ERROR("invalid response in device_hello()");
-      return std::nullopt;
+      std::array<uint32_t, 4> res = {r->board_id, r->fpga_fw_version, r->mcu_sw_version, r->serial_no};
+      return res;
     }
-    LOG_ERROR("timeout in device_hello()");
     return std::nullopt;
   }
 
@@ -381,27 +368,14 @@
   std::optional<std::array<uint32_t, 6>> vxsdr::device_get_status(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p;
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_GET_STATUS, subdev, flags, sizeof(p), 0 };
-    if(not vxsdr::cmd_queue_push_check(p)) {
-      return std::nullopt;
-    }
-    response_queue_element q;
-    bool got_response = false;
-    unsigned wait_time_ms = 0;
-    while(not (got_response = response_queue.pop(q)) and wait_time_ms < device_response_timeout_ms) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(device_response_wait_ms));
-      wait_time_ms += device_response_wait_ms;
-    }
-    if(got_response) {
+    auto res = vxsdr::send_packet_and_check_response(p, "device_get_status()");
+    if(res) {
+      auto q = res.value();
       auto *r = reinterpret_cast<status_rsp_packet *>(&q);
-      if(r->hdr.packet_type == PACKET_TYPE_DEVICE_CMD_RSP and r->hdr.command == p.hdr.command) {
-        std::array<uint32_t, 6> res = {r->fpga_temperature, r->dac_temperature, r->sequence_error_count,
-                                       r->data_flow_error_flags, r->ddr_arbiter_status, r->ethernet_status};
-        return res;
-      }
-      LOG_ERROR("invalid response in device_get_status()");
-      return std::nullopt;
+      std::array<uint32_t, 6> res = {r->fpga_temperature, r->dac_temperature, r->sequence_error_count,
+                                      r->data_flow_error_flags, r->ddr_arbiter_status, r->ethernet_status};
+      return res;
     }
-    LOG_ERROR("timeout in device_get_status()");
     return std::nullopt;
   }
 
@@ -446,75 +420,32 @@
   bool vxsdr::device_get_time_now(uint32_t &sec, uint32_t &nsec, const uint8_t subdev, const uint8_t flags) {
     header_only_packet p;
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_GET_TIME, subdev, flags, sizeof(p), 0 };
-    if(not vxsdr::cmd_queue_push_check(p)) {
-      return false;
-    }
-    response_queue_element q;
-    bool got_response = false;
-    unsigned wait_time_ms = 0;
-    while(not (got_response = response_queue.pop(q)) and wait_time_ms < device_response_timeout_ms) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(device_response_wait_ms));
-      wait_time_ms += device_response_wait_ms;
-    }
-    if(got_response) {
+    auto res = vxsdr::send_packet_and_check_response(p, "device_get_time_now()");
+    if(res) {
+      auto q = res.value();
       auto *r = reinterpret_cast<cmd_or_rsp_packet_time *>(&q);
-      if(r->hdr.packet_type == PACKET_TYPE_DEVICE_CMD_RSP and r->hdr.command == p.hdr.command and (r->hdr.flags & FLAGS_TIME_PRESENT) != 0) {
-        sec = r->time.seconds;
-        nsec = r->time.nanoseconds;
-        return true;
-      }
-      LOG_ERROR("invalid response in device_get_time_now()");
-      sec = 0;
-      nsec = 0;
-      return false;
+      sec = r->time.seconds;
+      nsec = r->time.nanoseconds;
+      return true;
     }
-    LOG_ERROR("response timeout in device_get_time_now()");
-    sec = 0;
-    nsec = 0;
     return false;
   }
 
   std::optional<std::chrono::time_point<std::chrono::system_clock>> vxsdr::device_get_time_now(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p;
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_GET_TIME, subdev, flags, sizeof(p), 0 };
-    if(not vxsdr::cmd_queue_push_check(p)) {
-      return std::nullopt;
-    }
-    response_queue_element q;
-    bool got_response = false;
-    unsigned wait_time_ms = 0;
-    while(not (got_response = response_queue.pop(q)) and wait_time_ms < device_response_timeout_ms) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(device_response_wait_ms));
-      wait_time_ms += device_response_wait_ms;
-    }
-    if(got_response) {
-      auto *r = reinterpret_cast<cmd_or_rsp_packet_time *>(&q);
-      if(r->hdr.packet_type == PACKET_TYPE_DEVICE_CMD_RSP and r->hdr.command == p.hdr.command and (r->hdr.flags & FLAGS_TIME_PRESENT) != 0) {
+    auto res = vxsdr::send_packet_and_check_response(p, "device_get_time_now()");
+    if(res) {
+      auto q = res.value();
+      if((q.hdr.flags & FLAGS_TIME_PRESENT) != 0) {
+        auto *r = reinterpret_cast<cmd_or_rsp_packet_time *>(&q);
         return std::chrono::time_point<std::chrono::system_clock>(std::chrono::seconds(r->time.seconds) +
                                                                   std::chrono::nanoseconds(r->time.nanoseconds));
+      } else {
+        return std::nullopt;
       }
-      LOG_ERROR("invalid response in device_get_time_now()");
-      return std::nullopt;
     }
-    LOG_ERROR("response timeout in device_get_time_now()");
     return std::nullopt;
-  }
-
-  bool vxsdr::tx_start_now_until_stop(const uint8_t subdev, const uint8_t flags) {
-    if(vxsdr::tx_stream_state != NO_STREAM) {
-      LOG_ERROR(fmt::format("tx stream state is {:s} in tx_start_now_until_stop()",
-                vxsdr::stream_state_to_string(vxsdr::tx_stream_state)));
-      return false;
-    } else {
-      header_only_packet p;
-      p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_START_NOW_UNTIL_STOP, subdev, flags, sizeof(p), 0 };
-      auto sent = vxsdr::cmd_queue_push_check(p);
-      if(sent) {
-        vxsdr::tx_stream_state = STREAMING;
-        return true;
-      }
-      return false;
-    }
   }
 
   bool vxsdr::rx_start_now_until_stop(const uint8_t subdev, const uint8_t flags) {
@@ -650,7 +581,7 @@
     }
   }
 
-  bool vxsdr::tx_set_iq_bias(const double i_bias, const double q_bias, const uint8_t subdev, const uint8_t flags) {
+  bool vxsdr::set_tx_iq_bias(const double i_bias, const double q_bias, const uint8_t subdev, const uint8_t flags) {
     radio_iq_bias_packet p;
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_SET_IQ_BIAS, subdev, flags, sizeof(p), 0 };
     p.i_bias = std::min(1.0, std::max(-1.0, i_bias));
@@ -658,7 +589,7 @@
     return vxsdr::cmd_queue_push_check(p);
   }
 
-  bool vxsdr::rx_set_iq_bias(const double i_bias, const double q_bias, const uint8_t subdev, const uint8_t flags) {
+  bool vxsdr::set_rx_iq_bias(const double i_bias, const double q_bias, const uint8_t subdev, const uint8_t flags) {
     radio_iq_bias_packet p;
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_SET_IQ_BIAS, subdev, flags, sizeof(p), 0 };
     p.i_bias = std::min(1.0, std::max(-1.0, i_bias));
@@ -666,59 +597,33 @@
     return vxsdr::cmd_queue_push_check(p);
   }
 
-  std::optional<std::array<double, 2>> vxsdr::tx_get_iq_bias(const uint8_t subdev, const uint8_t flags) {
+  std::optional<std::array<double, 2>> vxsdr::get_tx_iq_bias(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p;
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_GET_IQ_BIAS, subdev, flags, sizeof(p), 0 };
-    if(not vxsdr::cmd_queue_push_check(p)) {
-      return std::nullopt;
-    }
-    response_queue_element q;
-    bool got_response = false;
-    unsigned wait_time_ms = 0;
-    while(not (got_response = response_queue.pop(q)) and wait_time_ms < device_response_timeout_ms) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(device_response_wait_ms));
-      wait_time_ms += device_response_wait_ms;
-    }
-    if(got_response) {
+    auto res = vxsdr::send_packet_and_check_response(p, "get_tx_iq_bias()");
+    if(res) {
+      auto q = res.value();
       auto *r = reinterpret_cast<radio_iq_bias_packet *>(&q);
-      if(r->hdr.packet_type == PACKET_TYPE_DEVICE_CMD_RSP and r->hdr.command == p.hdr.command) {
-        std::array<double, 2> res = {r->i_bias, r->q_bias};
-        return res;
-       }
-      LOG_ERROR("invalid response in tx_get_iq_bias()");
-      return std::nullopt;
+      std::array<double, 2> res = {r->i_bias, r->q_bias};
+      return res;
     }
-    LOG_ERROR("timeout in tx_get_iq_bias()");
     return std::nullopt;
   }
 
-  std::optional<std::array<double, 2>> vxsdr::rx_get_iq_bias(const uint8_t subdev, const uint8_t flags) {
+  std::optional<std::array<double, 2>> vxsdr::get_rx_iq_bias(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p;
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_GET_IQ_BIAS, subdev, flags, sizeof(p), 0 };
-    if(not vxsdr::cmd_queue_push_check(p)) {
-      return std::nullopt;
-    }
-    response_queue_element q;
-    bool got_response = false;
-    unsigned wait_time_ms = 0;
-    while(not (got_response = response_queue.pop(q)) and wait_time_ms < device_response_timeout_ms) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(device_response_wait_ms));
-      wait_time_ms += device_response_wait_ms;
-    }
-    if(got_response) {
+    auto res = vxsdr::send_packet_and_check_response(p, "get_rx_iq_bias()");
+    if(res) {
+      auto q = res.value();
       auto *r = reinterpret_cast<radio_iq_bias_packet *>(&q);
-      if(r->hdr.packet_type == PACKET_TYPE_DEVICE_CMD_RSP and r->hdr.command == p.hdr.command) {
-        std::array<double, 2> res = {r->i_bias, r->q_bias};
-        return res;
-       }
-      LOG_ERROR("invalid response in rx_get_iq_bias()");
-      return std::nullopt;
+      std::array<double, 2> res = {r->i_bias, r->q_bias};
+      return res;
     }
-    LOG_ERROR("timeout in rx_get_iq_bias()");
     return std::nullopt;
   }
 
-  bool vxsdr::tx_set_iq_corr(const double ii_corr, const double iq_corr, const double qi_corr, const double qq_corr,
+  bool vxsdr::set_tx_iq_corr(const double ii_corr, const double iq_corr, const double qi_corr, const double qq_corr,
       const uint8_t subdev, const uint8_t flags) {
     radio_iq_corr_packet p;
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_SET_IQ_CORR, subdev, flags, sizeof(p), 0 };
@@ -729,7 +634,7 @@
     return vxsdr::cmd_queue_push_check(p);
   }
 
-  bool vxsdr::rx_set_iq_corr(const double ii_corr, const double iq_corr, const double qi_corr, const double qq_corr,
+  bool vxsdr::set_rx_iq_corr(const double ii_corr, const double iq_corr, const double qi_corr, const double qq_corr,
       const uint8_t subdev, const uint8_t flags) {
     radio_iq_corr_packet p;
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_SET_IQ_CORR, subdev, flags, sizeof(p), 0 };
@@ -740,55 +645,29 @@
     return vxsdr::cmd_queue_push_check(p);
   }
 
-  std::optional<std::array<double, 4>> vxsdr::tx_get_iq_corr(const uint8_t subdev, const uint8_t flags) {
+  std::optional<std::array<double, 4>> vxsdr::get_tx_iq_corr(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p;
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_GET_IQ_BIAS, subdev, flags, sizeof(p), 0 };
-    if(not vxsdr::cmd_queue_push_check(p)) {
-      return std::nullopt;
-    }
-    response_queue_element q;
-    bool got_response = false;
-    unsigned wait_time_ms = 0;
-    while(not (got_response = response_queue.pop(q)) and wait_time_ms < device_response_timeout_ms) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(device_response_wait_ms));
-      wait_time_ms += device_response_wait_ms;
-    }
-    if(got_response) {
+    auto res = vxsdr::send_packet_and_check_response(p, "get_tx_iq_corr()");
+    if(res) {
+      auto q = res.value();
       auto *r = reinterpret_cast<radio_iq_corr_packet *>(&q);
-      if(r->hdr.packet_type == PACKET_TYPE_DEVICE_CMD_RSP and r->hdr.command == p.hdr.command) {
-        std::array<double, 4> corr = {r->ii_corr, r->iq_corr, r->qi_corr, r->qq_corr};
-        return corr;
-       }
-      LOG_ERROR("invalid response in tx_get_iq_corr()");
-      return std::nullopt;
+      std::array<double, 4> corr = {r->ii_corr, r->iq_corr, r->qi_corr, r->qq_corr};
+      return corr;
     }
-    LOG_ERROR("timeout in tx_get_iq_corr()");
     return std::nullopt;
   }
 
-  std::optional<std::array<double, 4>> vxsdr::rx_get_iq_corr(const uint8_t subdev, const uint8_t flags) {
+  std::optional<std::array<double, 4>> vxsdr::get_rx_iq_corr(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p;
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_GET_IQ_BIAS, subdev, flags, sizeof(p), 0 };
-    if(not vxsdr::cmd_queue_push_check(p)) {
-      return std::nullopt;
-    }
-    response_queue_element q;
-    bool got_response = false;
-    unsigned wait_time_ms = 0;
-    while(not (got_response = response_queue.pop(q)) and wait_time_ms < device_response_timeout_ms) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(device_response_wait_ms));
-      wait_time_ms += device_response_wait_ms;
-    }
-    if(got_response) {
+    auto res = vxsdr::send_packet_and_check_response(p, "get_rx_iq_corr()");
+    if(res) {
+      auto q = res.value();
       auto *r = reinterpret_cast<radio_iq_corr_packet *>(&q);
-      if(r->hdr.packet_type == PACKET_TYPE_DEVICE_CMD_RSP and r->hdr.command == p.hdr.command) {
-        std::array<double, 4> corr = {r->ii_corr, r->iq_corr, r->qi_corr, r->qq_corr};
-        return corr;
-       }
-      LOG_ERROR("invalid response in rx_get_iq_corr()");
-      return std::nullopt;
+      std::array<double, 4> corr = {r->ii_corr, r->iq_corr, r->qi_corr, r->qq_corr};
+      return corr;
     }
-    LOG_ERROR("timeout in rx_get_iq_corr()");
     return std::nullopt;
   }
 
@@ -827,52 +706,26 @@
   std::optional<std::array<double, 2>> vxsdr::get_tx_freq_range(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p = {};
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_GET_RF_FREQ_RANGE, subdev, flags, sizeof(p), 0 };
-    if(not vxsdr::cmd_queue_push_check(p)) {
-      return std::nullopt;
-    }
-    response_queue_element q;
-    bool got_response = false;
-    unsigned wait_time_ms = 0;
-    while(not (got_response = response_queue.pop(q)) and wait_time_ms < device_response_timeout_ms) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(device_response_wait_ms));
-      wait_time_ms += device_response_wait_ms;
-    }
-    if(got_response) {
+    auto res = vxsdr::send_packet_and_check_response(p, "get_tx_freq_range()");
+    if(res) {
+      auto q = res.value();
       auto *r = reinterpret_cast<range_packet *>(&q);
-      if(r->hdr.packet_type == PACKET_TYPE_TX_RADIO_CMD_RSP and r->hdr.command == p.hdr.command) {
-        std::array<double, 2> res = {r->range_min, r->range_max};
-        return res;
-      }
-      LOG_ERROR("invalid response in get_tx_freq_range()");
-      return std::nullopt;
+      std::array<double, 2> res = {r->range_min, r->range_max};
+      return res;
     }
-    LOG_ERROR("response timeout in get_tx_freq_range()");
     return std::nullopt;
   }
 
   std::optional<std::array<double, 2>> vxsdr::get_rx_freq_range(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p = {};
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_GET_RF_FREQ_RANGE, subdev, flags, sizeof(p), 0 };
-    if(not vxsdr::cmd_queue_push_check(p)) {
-      return std::nullopt;
-    }
-    response_queue_element q;
-    bool got_response = false;
-    unsigned wait_time_ms = 0;
-    while(not (got_response = response_queue.pop(q)) and wait_time_ms < device_response_timeout_ms) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(device_response_wait_ms));
-      wait_time_ms += device_response_wait_ms;
-    }
-    if(got_response) {
+    auto res = vxsdr::send_packet_and_check_response(p, "get_rx_freq_range()");
+    if(res) {
+      auto q = res.value();
       auto *r = reinterpret_cast<range_packet *>(&q);
-      if(r->hdr.packet_type == PACKET_TYPE_RX_RADIO_CMD_RSP and r->hdr.command == p.hdr.command) {
-        std::array<double, 2> res = {r->range_min, r->range_max};
-        return res;
-      }
-      LOG_ERROR("invalid response in get_rx_freq_range()");
-      return std::nullopt;
+      std::array<double, 2> res = {r->range_min, r->range_max};
+      return res;
     }
-    LOG_ERROR("response timeout in get_rx_freq_range()");
     return std::nullopt;
   }
 
@@ -895,102 +748,50 @@
   std::optional<double> vxsdr::get_tx_freq(const uint8_t subdev, const uint8_t flags) {
     radio_rf_freq_packet p;
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_GET_RF_FREQ, subdev, flags, sizeof(p), 0 };
-    if(not vxsdr::cmd_queue_push_check(p)) {
-      return std::nullopt;
-    }
-    response_queue_element q;
-    bool got_response = false;
-    unsigned wait_time_ms = 0;
-    while(not (got_response = response_queue.pop(q)) and wait_time_ms < device_response_timeout_ms) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(device_response_wait_ms));
-      wait_time_ms += device_response_wait_ms;
-    }
-    if(got_response) {
+    auto res = vxsdr::send_packet_and_check_response(p, "get_tx_freq()");
+    if(res) {
+      auto q = res.value();
       auto *r = reinterpret_cast<radio_rf_freq_packet *>(&q);
-      if(r->hdr.packet_type == PACKET_TYPE_TX_RADIO_CMD_RSP and r->hdr.command == p.hdr.command) {
-        return r->freq;
-      }
-      LOG_ERROR("invalid response in get_tx_freq()");
-      return std::nullopt;
+      return r->freq;
     }
-    LOG_ERROR("timeout in get_tx_freq()");
     return std::nullopt;
   }
 
   std::optional<double> vxsdr::get_rx_freq(const uint8_t subdev, const uint8_t flags) {
     radio_rf_freq_packet p;
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_GET_RF_FREQ, subdev, flags, sizeof(p), 0 };
-    if(not vxsdr::cmd_queue_push_check(p)) {
-      return std::nullopt;
-    }
-    response_queue_element q;
-    bool got_response = false;
-    unsigned wait_time_ms = 0;
-    while(not (got_response = response_queue.pop(q)) and wait_time_ms < device_response_timeout_ms) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(device_response_wait_ms));
-      wait_time_ms += device_response_wait_ms;
-    }
-    if(got_response) {
+    auto res = vxsdr::send_packet_and_check_response(p, "get_rx_freq()");
+    if(res) {
+      auto q = res.value();
       auto *r = reinterpret_cast<radio_rf_freq_packet *>(&q);
-      if(r->hdr.packet_type == PACKET_TYPE_RX_RADIO_CMD_RSP and r->hdr.command == p.hdr.command) {
-        return r->freq;
-      }
-      LOG_ERROR("invalid response in get_rx_freq()");
-      return std::nullopt;
+      return r->freq;
     }
-    LOG_ERROR("timeout in get_rx_freq()");
     return std::nullopt;
   }
 
   std::optional<std::array<double, 2>> vxsdr::get_tx_gain_range(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p = {};
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_GET_GAIN_RANGE, subdev, flags, sizeof(p), 0 };
-    if(not vxsdr::cmd_queue_push_check(p)) {
-      return std::nullopt;
-    }
-    response_queue_element q;
-    bool got_response = false;
-    unsigned wait_time_ms = 0;
-    while(not (got_response = response_queue.pop(q)) and wait_time_ms < device_response_timeout_ms) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(device_response_wait_ms));
-      wait_time_ms += device_response_wait_ms;
-    }
-    if(got_response) {
+    auto res = vxsdr::send_packet_and_check_response(p, "get_tx_gain_range()");
+    if(res) {
+      auto q = res.value();
       auto *r = reinterpret_cast<range_packet *>(&q);
-      if(r->hdr.packet_type == PACKET_TYPE_TX_RADIO_CMD_RSP and r->hdr.command == p.hdr.command) {
-        std::array<double, 2> res = {r->range_min, r->range_max};
-        return res;
-      }
-      LOG_ERROR("invalid response in get_tx_gain_range()");
-      return std::nullopt;
+      std::array<double, 2> res = {r->range_min, r->range_max};
+      return res;
     }
-    LOG_ERROR("response timeout in get_tx_gain_range()");
     return std::nullopt;
   }
 
   std::optional<std::array<double, 2>> vxsdr::get_rx_gain_range(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p = {};
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_GET_GAIN_RANGE, subdev, flags, sizeof(p), 0 };
-    if(not vxsdr::cmd_queue_push_check(p)) {
-      return std::nullopt;
-    }
-    response_queue_element q;
-    bool got_response = false;
-    unsigned wait_time_ms = 0;
-    while(not (got_response = response_queue.pop(q)) and wait_time_ms < device_response_timeout_ms) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(device_response_wait_ms));
-      wait_time_ms += device_response_wait_ms;
-    }
-    if(got_response) {
+    auto res = vxsdr::send_packet_and_check_response(p, "get_rx_gain_range()");
+    if(res) {
+      auto q = res.value();
       auto *r = reinterpret_cast<range_packet *>(&q);
-      if(r->hdr.packet_type == PACKET_TYPE_RX_RADIO_CMD_RSP and r->hdr.command == p.hdr.command) {
-        std::array<double, 2> res = {r->range_min, r->range_max};
-        return res;
-      }
-      LOG_ERROR("invalid response in get_rx_gain_range()");
-      return std::nullopt;
+      std::array<double, 2> res = {r->range_min, r->range_max};
+      return res;
     }
-    LOG_ERROR("response timeout in get_rx_gain_range()");
     return std::nullopt;
   }
 
@@ -1011,102 +812,50 @@
   std::optional<double> vxsdr::get_tx_gain(const uint8_t subdev, const uint8_t flags) {
     radio_rf_gain_packet p;
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_GET_RF_GAIN, subdev, flags, sizeof(p), 0 };
-    if(not vxsdr::cmd_queue_push_check(p)) {
-      return std::nullopt;
-    }
-    response_queue_element q;
-    bool got_response = false;
-    unsigned wait_time_ms = 0;
-    while(not (got_response = response_queue.pop(q)) and wait_time_ms < device_response_timeout_ms) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(device_response_wait_ms));
-      wait_time_ms += device_response_wait_ms;
-    }
-    if(got_response) {
+    auto res = vxsdr::send_packet_and_check_response(p, "get_tx_gain()");
+    if(res) {
+      auto q = res.value();
       auto *r = reinterpret_cast<radio_rf_gain_packet *>(&q);
-      if(r->hdr.packet_type == PACKET_TYPE_TX_RADIO_CMD_RSP and r->hdr.command == p.hdr.command) {
-        return r->gain;
-      }
-      LOG_ERROR("invalid response in get_tx_gain()");
-      return std::nullopt;
+      return r->gain;
     }
-    LOG_ERROR("timeout in get_tx_gain()");
     return std::nullopt;
   }
 
   std::optional<double> vxsdr::get_rx_gain(const uint8_t subdev, const uint8_t flags) {
     radio_rf_gain_packet p;
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_GET_RF_GAIN, subdev, flags, sizeof(p), 0 };
-    if(not vxsdr::cmd_queue_push_check(p)) {
-      return std::nullopt;
-    }
-    response_queue_element q;
-    bool got_response = false;
-    unsigned wait_time_ms = 0;
-    while(not (got_response = response_queue.pop(q)) and wait_time_ms < device_response_timeout_ms) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(device_response_wait_ms));
-      wait_time_ms += device_response_wait_ms;
-    }
-    if(got_response) {
+    auto res = vxsdr::send_packet_and_check_response(p, "get_rx_gain()");
+    if(res) {
+      auto q = res.value();
       auto *r = reinterpret_cast<radio_rf_gain_packet *>(&q);
-      if(r->hdr.packet_type == PACKET_TYPE_RX_RADIO_CMD_RSP and r->hdr.command == p.hdr.command) {
-        return r->gain;
-      }
-      LOG_ERROR("invalid response in get_rx_gain()");
-      return std::nullopt;
+      return r->gain;
     }
-    LOG_ERROR("timeout in get_rx_gain()");
     return std::nullopt;
   }
 
   std::optional<std::array<double, 2>> vxsdr::get_tx_rate_range(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p = {};
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_GET_RATE_RANGE, subdev, flags, sizeof(p), 0 };
-    if(not vxsdr::cmd_queue_push_check(p)) {
-      return std::nullopt;
-    }
-    response_queue_element q;
-    bool got_response = false;
-    unsigned wait_time_ms = 0;
-    while(not (got_response = response_queue.pop(q)) and wait_time_ms < device_response_timeout_ms) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(device_response_wait_ms));
-      wait_time_ms += device_response_wait_ms;
-    }
-    if(got_response) {
+    auto res = vxsdr::send_packet_and_check_response(p, "tx_get_rate_range()");
+    if(res) {
+      auto q = res.value();
       auto *r = reinterpret_cast<range_packet *>(&q);
-      if(r->hdr.packet_type == PACKET_TYPE_TX_RADIO_CMD_RSP and r->hdr.command == p.hdr.command) {
-        std::array<double, 2> res = {r->range_min, r->range_max};
-        return res;
-      }
-      LOG_ERROR("invalid response in get_tx_rate_range()");
-      return std::nullopt;
+      std::array<double, 2> res = {r->range_min, r->range_max};
+      return res;
     }
-    LOG_ERROR("response timeout in get_tx_rate_range()");
     return std::nullopt;
   }
 
   std::optional<std::array<double, 2>> vxsdr::get_rx_rate_range(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p = {};
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_GET_RATE_RANGE, subdev, flags, sizeof(p), 0 };
-    if(not vxsdr::cmd_queue_push_check(p)) {
-      return std::nullopt;
-    }
-    response_queue_element q;
-    bool got_response = false;
-    unsigned wait_time_ms = 0;
-    while(not (got_response = response_queue.pop(q)) and wait_time_ms < device_response_timeout_ms) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(device_response_wait_ms));
-      wait_time_ms += device_response_wait_ms;
-    }
-    if(got_response) {
+    auto res = vxsdr::send_packet_and_check_response(p, "rx_get_rate_range()");
+    if(res) {
+      auto q = res.value();
       auto *r = reinterpret_cast<range_packet *>(&q);
-      if(r->hdr.packet_type == PACKET_TYPE_RX_RADIO_CMD_RSP and r->hdr.command == p.hdr.command) {
-        std::array<double, 2> res = {r->range_min, r->range_max};
-        return res;
-      }
-      LOG_ERROR("invalid response in get_rx_rate_range()");
-      return std::nullopt;
+      std::array<double, 2> res = {r->range_min, r->range_max};
+      return res;
     }
-    LOG_ERROR("response timeout in get_rx_rate_range()");
     return std::nullopt;
   }
 
@@ -1127,152 +876,72 @@
   std::optional<double> vxsdr::get_tx_rate(const uint8_t subdev, const uint8_t flags) {
     radio_sample_rate_packet p;
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_GET_SAMPLE_RATE, subdev, flags, sizeof(p), 0 };
-    if(not vxsdr::cmd_queue_push_check(p)) {
-      return std::nullopt;
-    }
-    response_queue_element q;
-    bool got_response = false;
-    unsigned wait_time_ms = 0;
-    while(not (got_response = response_queue.pop(q)) and wait_time_ms < device_response_timeout_ms) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(device_response_wait_ms));
-      wait_time_ms += device_response_wait_ms;
-    }
-    if(got_response) {
+    auto res = vxsdr::send_packet_and_check_response(p, "get_tx_rate()");
+    if(res) {
+      auto q = res.value();
       auto *r = reinterpret_cast<radio_sample_rate_packet *>(&q);
-      if(r->hdr.packet_type == PACKET_TYPE_TX_RADIO_CMD_RSP and r->hdr.command == p.hdr.command) {
-        return r->rate;
-      }
-      LOG_ERROR("invalid response in get_tx_rate()");
-      return std::nullopt;
+      return r->rate;
     }
-    LOG_ERROR("timeout in get_tx_rate()");
     return std::nullopt;
   }
 
   std::optional<double> vxsdr::get_rx_rate(const uint8_t subdev, const uint8_t flags) {
     radio_sample_rate_packet p;
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_GET_SAMPLE_RATE, subdev, flags, sizeof(p), 0 };
-    if(not vxsdr::cmd_queue_push_check(p)) {
-      return std::nullopt;
-    }
-    response_queue_element q;
-    bool got_response = false;
-    unsigned wait_time_ms = 0;
-    while(not (got_response = response_queue.pop(q)) and wait_time_ms < device_response_timeout_ms) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(device_response_wait_ms));
-      wait_time_ms += device_response_wait_ms;
-    }
-    if(got_response) {
+    auto res = vxsdr::send_packet_and_check_response(p, "get_rx_rate()");
+    if(res) {
+      auto q = res.value();
       auto *r = reinterpret_cast<radio_sample_rate_packet *>(&q);
-      if(r->hdr.packet_type == PACKET_TYPE_RX_RADIO_CMD_RSP and r->hdr.command == p.hdr.command) {
-        return r->rate;
-      }
-      LOG_ERROR("invalid response in get_rx_rate()");
-      return std::nullopt;
+      return r->rate;
     }
-    LOG_ERROR("timeout in get_rx_rate()");
     return std::nullopt;
   }
 
-  std::optional<unsigned> vxsdr::get_num_tx_ports(const uint8_t subdev, const uint8_t flags) {
+  std::optional<unsigned> vxsdr::get_tx_num_ports(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p = {};
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_GET_NUM_RF_PORTS, subdev, flags, sizeof(p), 0 };
-    if(not vxsdr::cmd_queue_push_check(p)) {
-      return std::nullopt;
-    }
-    response_queue_element q;
-    bool got_response = false;
-    unsigned wait_time_ms = 0;
-    while(not (got_response = response_queue.pop(q)) and wait_time_ms < device_response_timeout_ms) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(device_response_wait_ms));
-      wait_time_ms += device_response_wait_ms;
-    }
-    if(got_response) {
+    auto res = vxsdr::send_packet_and_check_response(p, "get_tx_num_ports()");
+    if(res) {
+      auto q = res.value();
       auto *r = reinterpret_cast<unsigned_packet *>(&q);
-      if(r->hdr.packet_type == PACKET_TYPE_TX_RADIO_CMD_RSP and r->hdr.command == p.hdr.command) {
-        return r->number;
-      }
-      LOG_ERROR("invalid response in get_num_tx_ports()");
-      return std::nullopt;
+      return r->number;
     }
-    LOG_ERROR("response timeout in get_num_tx_ports()");
     return std::nullopt;
   }
 
-  std::optional<unsigned> vxsdr::get_num_rx_ports(const uint8_t subdev, const uint8_t flags) {
+  std::optional<unsigned> vxsdr::get_rx_num_ports(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p = {};
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_GET_NUM_RF_PORTS, subdev, flags, sizeof(p), 0 };
-    if(not vxsdr::cmd_queue_push_check(p)) {
-      return std::nullopt;
-    }
-    response_queue_element q;
-    bool got_response = false;
-    unsigned wait_time_ms = 0;
-    while(not (got_response = response_queue.pop(q)) and wait_time_ms < device_response_timeout_ms) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(device_response_wait_ms));
-      wait_time_ms += device_response_wait_ms;
-    }
-    if(got_response) {
+    auto res = vxsdr::send_packet_and_check_response(p, "get_rx_num_ports()");
+    if(res) {
+      auto q = res.value();
       auto *r = reinterpret_cast<unsigned_packet *>(&q);
-      if(r->hdr.packet_type == PACKET_TYPE_RX_RADIO_CMD_RSP and r->hdr.command == p.hdr.command) {
-        return r->number;
-      }
-      LOG_ERROR("invalid response in get_num_rx_ports()");
-      return std::nullopt;
+      return r->number;
     }
-    LOG_ERROR("response timeout in get_num_rx_ports()");
     return std::nullopt;
   }
 
   std::optional<std::string> vxsdr::get_tx_port_name(const unsigned port_num, const uint8_t subdev, const uint8_t flags) {
     unsigned_packet p = {};
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_GET_RF_PORT_NAME, subdev, flags, sizeof(p), 0 };
-    p.number = port_num;
-    if(not vxsdr::cmd_queue_push_check(p)) {
-      return std::nullopt;
-    }
-    response_queue_element q;
-    bool got_response = false;
-    unsigned wait_time_ms = 0;
-    while(not (got_response = response_queue.pop(q)) and wait_time_ms < device_response_timeout_ms) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(device_response_wait_ms));
-      wait_time_ms += device_response_wait_ms;
-    }
-    if(got_response) {
+    auto res = vxsdr::send_packet_and_check_response(p, "get_tx_port_name()");
+    if(res) {
+      auto q = res.value();
       auto *r = reinterpret_cast<name_packet *>(&q);
-      if(r->hdr.packet_type == PACKET_TYPE_TX_RADIO_CMD_RSP and r->hdr.command == p.hdr.command) {
-        return std::string(r->name, MAX_PAYLOAD_LENGTH_BYTES - 1);
-      }
-      LOG_ERROR("invalid response in get_tx_port_name()");
-      return std::nullopt;
+      return std::string(r->name, MAX_PAYLOAD_LENGTH_BYTES - 1);
     }
-    LOG_ERROR("response timeout in get_tx_port_name()");
     return std::nullopt;
   }
 
   std::optional<std::string> vxsdr::get_rx_port_name(const unsigned port_num, const uint8_t subdev, const uint8_t flags) {
     unsigned_packet p = {};
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_GET_RF_PORT_NAME, subdev, flags, sizeof(p), 0 };
-    p.number = port_num;
-    if(not vxsdr::cmd_queue_push_check(p)) {
-      return std::nullopt;
-    }
-    response_queue_element q;
-    bool got_response = false;
-    unsigned wait_time_ms = 0;
-    while(not (got_response = response_queue.pop(q)) and wait_time_ms < device_response_timeout_ms) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(device_response_wait_ms));
-      wait_time_ms += device_response_wait_ms;
-    }
-    if(got_response) {
+    auto res = vxsdr::send_packet_and_check_response(p, "get_rx_port_name()");
+    if(res) {
+      auto q = res.value();
       auto *r = reinterpret_cast<name_packet *>(&q);
-      if(r->hdr.packet_type == PACKET_TYPE_RX_RADIO_CMD_RSP and r->hdr.command == p.hdr.command) {
-        return std::string(r->name, MAX_PAYLOAD_LENGTH_BYTES - 1);
-      }
-      LOG_ERROR("invalid response in get_rx_port_name()");
-      return std::nullopt;
+      return std::string(r->name, MAX_PAYLOAD_LENGTH_BYTES - 1);
     }
-    LOG_ERROR("response timeout in get_rx_port_name()");
     return std::nullopt;
   }
 
@@ -1321,50 +990,24 @@
   std::optional<unsigned> vxsdr::get_tx_port(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p = {};
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_GET_RF_PORT_NAME, subdev, flags, sizeof(p), 0 };
-    if(not vxsdr::cmd_queue_push_check(p)) {
-      return std::nullopt;
-    }
-    response_queue_element q;
-    bool got_response = false;
-    unsigned wait_time_ms = 0;
-    while(not (got_response = response_queue.pop(q)) and wait_time_ms < device_response_timeout_ms) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(device_response_wait_ms));
-      wait_time_ms += device_response_wait_ms;
-    }
-    if(got_response) {
+    auto res = vxsdr::send_packet_and_check_response(p, "get_tx_port()");
+    if(res) {
+      auto q = res.value();
       auto *r = reinterpret_cast<unsigned_packet *>(&q);
-      if(r->hdr.packet_type == PACKET_TYPE_RX_RADIO_CMD_RSP and r->hdr.command == p.hdr.command) {
-        return r->number;
-      }
-      LOG_ERROR("invalid response in get_tx_port()");
-      return std::nullopt;
+      return r->number;
     }
-    LOG_ERROR("response timeout in get_tx_port()");
     return std::nullopt;
   }
 
   std::optional<unsigned> vxsdr::get_rx_port(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p = {};
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_GET_RF_PORT_NAME, subdev, flags, sizeof(p), 0 };
-    if(not vxsdr::cmd_queue_push_check(p)) {
-      return std::nullopt;
-    }
-    response_queue_element q;
-    bool got_response = false;
-    unsigned wait_time_ms = 0;
-    while(not (got_response = response_queue.pop(q)) and wait_time_ms < device_response_timeout_ms) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(device_response_wait_ms));
-      wait_time_ms += device_response_wait_ms;
-    }
-    if(got_response) {
+    auto res = vxsdr::send_packet_and_check_response(p, "get_rx_port()");
+    if(res) {
+      auto q = res.value();
       auto *r = reinterpret_cast<unsigned_packet *>(&q);
-      if(r->hdr.packet_type == PACKET_TYPE_RX_RADIO_CMD_RSP and r->hdr.command == p.hdr.command) {
-        return r->number;
-      }
-      LOG_ERROR("invalid response in get_rx_port()");
-      return std::nullopt;
+      return r->number;
     }
-    LOG_ERROR("response timeout in get_rx_port()");
     return std::nullopt;
   }
 
@@ -1393,53 +1036,61 @@
   std::optional<capabilities_t> vxsdr::get_tx_capabilities(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p = {};
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_GET_CAPABILITIES, subdev, flags, sizeof(p), 0 };
-    if(not vxsdr::cmd_queue_push_check(p)) {
-      return std::nullopt;
-    }
-    response_queue_element q;
-    bool got_response = false;
-    unsigned wait_time_ms = 0;
-    while(not (got_response = response_queue.pop(q)) and wait_time_ms < device_response_timeout_ms) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(device_response_wait_ms));
-      wait_time_ms += device_response_wait_ms;
-    }
-    if(got_response) {
+    auto res = vxsdr::send_packet_and_check_response(p, "get_tx_capabilities()");
+    if(res) {
+      auto q = res.value();
       auto *r = reinterpret_cast<capabilities_packet *>(&q);
-      if(r->hdr.packet_type == PACKET_TYPE_TX_RADIO_CMD_RSP and r->hdr.command == p.hdr.command) {
-        return r->capabilities;
-      }
-      LOG_ERROR("invalid response in get_tx_capabilities()");
-      return std::nullopt;
+      return r->capabilities;
     }
-    LOG_ERROR("response timeout in get_tx_capabilities()");
     return std::nullopt;
   }
 
   std::optional<capabilities_t> vxsdr::get_rx_capabilities(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p = {};
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_GET_CAPABILITIES, subdev, flags, sizeof(p), 0 };
+    auto res = vxsdr::send_packet_and_check_response(p, "get_rx_capabilities()");
+    if(res) {
+      auto q = res.value();
+      auto *r = reinterpret_cast<capabilities_packet *>(&q);
+      return r->capabilities;
+    }
+    return std::nullopt;
+  }
+
+// private functions
+
+  std::optional<vxsdr::response_queue_element> vxsdr::send_packet_and_check_response(packet &p, std::string cmd_name) {
     if(not vxsdr::cmd_queue_push_check(p)) {
       return std::nullopt;
     }
     response_queue_element q;
     bool got_response = false;
     unsigned wait_time_ms = 0;
-    while(not (got_response = response_queue.pop(q)) and wait_time_ms < device_response_timeout_ms) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(device_response_wait_ms));
-      wait_time_ms += device_response_wait_ms;
+    while(not (got_response = response_queue.pop(q)) and wait_time_ms < vxsdr::device_response_timeout_ms) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(vxsdr::device_response_wait_ms));
+      wait_time_ms += vxsdr::device_response_wait_ms;
     }
     if(got_response) {
-      auto *r = reinterpret_cast<capabilities_packet *>(&q);
-      if(r->hdr.packet_type == PACKET_TYPE_RX_RADIO_CMD_RSP and r->hdr.command == p.hdr.command) {
-        return r->capabilities;
+      if(((p.hdr.packet_type == PACKET_TYPE_DEVICE_CMD   and q.hdr.packet_type == PACKET_TYPE_DEVICE_CMD_RSP) or
+          (p.hdr.packet_type == PACKET_TYPE_TX_RADIO_CMD and q.hdr.packet_type == PACKET_TYPE_TX_RADIO_CMD_RSP) or
+          (p.hdr.packet_type == PACKET_TYPE_RX_RADIO_CMD and q.hdr.packet_type == PACKET_TYPE_RX_RADIO_CMD_RSP))
+         and q.hdr.command == p.hdr.command) {
+        return q;
       }
-      LOG_ERROR("invalid response in get_rx_capabilities()");
+      if(((p.hdr.packet_type == PACKET_TYPE_DEVICE_CMD   and q.hdr.packet_type == PACKET_TYPE_DEVICE_CMD_ERR) or
+          (p.hdr.packet_type == PACKET_TYPE_TX_RADIO_CMD and q.hdr.packet_type == PACKET_TYPE_TX_RADIO_CMD_ERR) or
+          (p.hdr.packet_type == PACKET_TYPE_RX_RADIO_CMD and q.hdr.packet_type == PACKET_TYPE_RX_RADIO_CMD_ERR))
+         and q.hdr.command == p.hdr.command) {
+        auto *r = reinterpret_cast<error_packet *>(&q);
+        LOG_ERROR(fmt::format("command error in {:s}: {:s}", cmd_name, error_to_string(r->reason)));
+        return std::nullopt;
+      }
+      LOG_ERROR(fmt::format("invalid response in {:s}", cmd_name));
       return std::nullopt;
     }
-    LOG_ERROR("response timeout in get_rx_capabilities()");
+    LOG_ERROR(fmt::format("timeout in {:s}", cmd_name));
     return std::nullopt;
   }
-// private functions
 
   void vxsdr::time_point_to_time_spec_t(const std::chrono::time_point<std::chrono::system_clock> &t, time_spec_t &ts) {
     auto secs = std::chrono::time_point_cast<std::chrono::seconds>(t);
@@ -1479,6 +1130,27 @@
         return "TRANSPORT_ERROR";
       default:
         return "UNKNOWN";
+    }
+  }
+
+  std::string vxsdr::error_to_string(const uint32_t reason) {
+    switch(reason) {
+      case ERR_BAD_COMMAND:
+        return "BAD_COMMAND";
+      case ERR_BUSY:
+        return "BUSY";
+      case ERR_NO_SUCH_SUBDEVICE:
+        return "NO_SUCH_SUBDEVICE";
+      case ERR_TIMEOUT:
+        return "TIMEOUT";
+      case ERR_BAD_PARAMETER:
+        return "BAD_PARAMETER";
+      case ERR_NOT_SUPPORTED:
+        return "NOT_SUPPORTED";
+      case ERR_BAD_PKT_SIZE:
+        return "BAD_PKT_SIZE";
+      default:
+        return fmt::format("error {:d}", reason);
     }
   }
 
