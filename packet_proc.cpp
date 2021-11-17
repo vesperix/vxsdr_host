@@ -63,10 +63,6 @@ std::string device_cmd_to_name(const uint8_t cmd) {
       return "GET_BUFFER_INFO";
     case DEVICE_CMD_GET_BUFFER_USE:
       return "GET_BUFFER_USE";
-    case DEVICE_CMD_OPEN_SESSION:
-      return "OPEN_SESSION";
-    case DEVICE_CMD_CLOSE_SESSION:
-      return "CLOSE_SESSION";
     case DEVICE_CMD_GET_TRANSPORT_INFO:
       return "GET_TRANSPORT_INFO";
     case DEVICE_CMD_GET_TRANSPORT_ADDR:

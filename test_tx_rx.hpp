@@ -266,18 +266,6 @@ class udp_sender {
       send_packet(p);
     }
 
-    void send_device_open_session(const uint8_t subdev, const uint8_t flags = 0) {
-      header_only_packet  p;
-      p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_OPEN_SESSION, subdev, flags, sizeof(p), 0 };
-      send_packet(p);
-    }
-
-    void send_device_close_session(const uint8_t subdev, const uint8_t flags = 0) {
-      header_only_packet  p;
-      p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_CLOSE_SESSION, subdev, flags, sizeof(p), 0 };
-      send_packet(p);
-    }
-
     void send_device_get_buffer_info(const uint8_t subdev, const uint8_t flags = 0) {
       header_only_packet  p;
       p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_GET_BUFFER_INFO, subdev, flags, sizeof(p), 0 };
