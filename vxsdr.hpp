@@ -128,11 +128,11 @@ class vxsdr {
   boost::asio::ip::udp::endpoint destination_endpoint;
 
   // flags used to indicate the state of the data transport
-  enum transport_state_t { UNINITIALIZED, STARTING, WAITING, RUNNING, SHUTTING_DOWN, SHUTDOWN };
+  enum transport_state_t { UNINITIALIZED, STARTING, RUNNING, SHUTDOWN, TRANSPORT_ERROR };
   std::atomic<transport_state_t> udp_tx_state { UNINITIALIZED }, udp_rx_state { UNINITIALIZED };
 
   // flags used to indicate the data transfer stream state
-  enum stream_state_t { NO_STREAM, WAITING_FOR_START, STREAMING, CLOSING, ERROR };
+  enum stream_state_t { NO_STREAM, WAITING_FOR_START, STREAMING, CLOSING, STREAM_ERROR };
   std::atomic<stream_state_t> tx_stream_state { NO_STREAM }, rx_stream_state { NO_STREAM };
 
   // flags used for orderly shutdown
@@ -888,6 +888,7 @@ class vxsdr {
 
   static void time_point_to_time_spec_t(const std::chrono::time_point<std::chrono::system_clock> &t, time_spec_t &ts);
   static std::string stream_state_to_string(const stream_state_t state);
+  static std::string transport_state_to_string(const transport_state_t state);
   std::optional<std::tuple<uint32_t, uint32_t>> device_get_buffer_info(const uint8_t subdev, const uint8_t flags = 0);
   std::optional<std::tuple<uint32_t, uint32_t>> device_get_buffer_use(const uint8_t subdev, const uint8_t flags = 0);
   [[nodiscard]] bool cmd_queue_push_check(packet &p);
@@ -898,8 +899,8 @@ class vxsdr {
   void start_receive();
   void udp_sender();
   void send_packet(packet &packet);
-  void initialize_sdr(const uint8_t device_subdev, const uint8_t tx_subdev, const uint8_t rx_subdev);
-  void stop_sdr(const uint8_t device_subdev, const uint8_t tx_subdev, const uint8_t rx_subdev);
+  void initialize_sdr(const uint8_t device_subdev = 0, const uint8_t tx_subdev = 0, const uint8_t rx_subdev = 0);
+  void stop_sdr(const uint8_t device_subdev = 0, const uint8_t tx_subdev = 0, const uint8_t rx_subdev = 0);
   void start_send();
 
 };

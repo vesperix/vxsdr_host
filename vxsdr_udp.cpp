@@ -171,7 +171,7 @@
                 }
                 if(not vxsdr::rx_data_queue.push(recv_buffer)) {
                   LOG_ERROR(fmt::format("timeout pushing to rx data queue: {:d}", vxsdr::samples_received));
-                  vxsdr::rx_stream_state = ERROR;
+                  vxsdr::rx_stream_state = STREAM_ERROR;
                 }
               }
             }
@@ -184,7 +184,8 @@
               // DO NOT PUSH DATA ACKS TO COMMAND ACK QUEUE!!
             }
             break;
-          // the buffer info commands are special cased since they can also be used for TX throttling
+          // the buffer info commands are special cased so they automatically update the buffer sizes and use
+          // since they are not part of the public interface, they are not pushed into any queue
           case PACKET_TYPE_DEVICE_CMD_RSP:
             switch(recv_buffer.hdr.command) {
               case DEVICE_CMD_GET_BUFFER_USE: {
@@ -249,7 +250,7 @@
       }
     }
 
-    vxsdr::udp_rx_state = SHUTTING_DOWN;
+    vxsdr::udp_rx_state = SHUTDOWN;
 
     LOG_INFO("start_receive exiting:");
     LOG_INFO(fmt::format("   {:12d} packets received", vxsdr::packets_received));
@@ -317,17 +318,18 @@
   }
 
   void vxsdr::initialize_sdr(const uint8_t device_subdev, const uint8_t tx_subdev, const uint8_t rx_subdev) {
-    // FIXME: implement reset    device_reset();
-    vxsdr::tx_stop_now(tx_subdev);
-    vxsdr::rx_stop_now(rx_subdev);
-    // get device buffer sizes
-    auto result = vxsdr::device_get_buffer_info(device_subdev);
-    if(not result.has_value()) {
-      LOG_ERROR("failed to get buffer info in initialize_sdr()");
-    }
-    // clear the status registers
-    vxsdr::device_clear_status(device_subdev);
-    //device_get_status(device_subdev);
+    // NOTE: this is normally before the command queue loop is started,
+    // so packets are set up and sent directly to the socket
+    header_only_packet p;
+    p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_STOP_NOW, tx_subdev, 0, sizeof(p), 0 };
+    vxsdr::send_packet(p);
+    p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_STOP_NOW, rx_subdev, 0, sizeof(p), 0 };
+    vxsdr::send_packet(p);
+    p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_CLEAR_STATUS, device_subdev, 0, sizeof(p), 0 };    \
+    vxsdr::send_packet(p);
+    // get device buffer sizes before any data is sent since they're used in flow control
+    p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_GET_BUFFER_INFO, device_subdev, 0, sizeof(p), 0 };    \
+    vxsdr::send_packet(p);
   }
 
   void vxsdr::stop_sdr(const uint8_t device_subdev, const uint8_t tx_subdev, const uint8_t rx_subdev) {
@@ -355,15 +357,9 @@
 
     bool throttling = false;
 
-    const uint8_t device_subdev = 0, tx_subdev = 0, rx_subdev = 0;
-
-    vxsdr::initialize_sdr(device_subdev, tx_subdev, rx_subdev);
-
     constexpr uint64_t initial_check_interval_samples = 9999; // a value that's unlikely to be equal to the updated interval
     uint64_t last_check = 0;
     uint64_t buffer_check_interval_samples = initial_check_interval_samples;
-
-    vxsdr::udp_tx_state = WAITING;
 
     // wait for the rx to reach RUNNING
     unsigned total_wait_ms = 0;
@@ -379,8 +375,11 @@
       vxsdr::sender_thread_stop_flag = true;
     } else {
       LOG_INFO("udp rx in RUNNING state; udp tx starting");
-      vxsdr::udp_tx_state = RUNNING;
     }
+
+    initialize_sdr();
+
+    vxsdr::udp_tx_state = RUNNING;
 
     while(not vxsdr::sender_thread_stop_flag) {
       while(vxsdr::command_queue.pop(cmd_buffer)) {
@@ -417,8 +416,10 @@
         }
       }
     }
-    vxsdr::stop_sdr(device_subdev, tx_subdev, rx_subdev);
-    vxsdr::udp_tx_state = SHUTTING_DOWN;
+
+    vxsdr::udp_tx_state = SHUTDOWN;
+    vxsdr::stop_sdr();
+
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     LOG_INFO("start_send exiting:");
     LOG_INFO(fmt::format("   {:12d} packets sent", packets_sent));

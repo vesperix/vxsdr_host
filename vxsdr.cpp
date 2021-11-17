@@ -33,14 +33,19 @@
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
 #endif // VXSDR_ASYNC_RX
     error_handler_thread = std::thread([&] { error_handler(); });
-    std::this_thread::sleep_for(std::chrono::milliseconds(1));
     udp_rx_state = STARTING;
     receiver_thread = std::thread([&] { receiver(); });
-    std::this_thread::sleep_for(std::chrono::milliseconds(1));
     udp_tx_state = STARTING;
     sender_thread = std::thread([&] { sender(); });
+    unsigned total_wait_time_ms = 0;
     while(udp_tx_state != RUNNING or udp_rx_state != RUNNING) {
       std::this_thread::sleep_for(std::chrono::milliseconds(1));
+      total_wait_time_ms++;
+      if(total_wait_time_ms > 1000) {
+        LOG_ERROR(fmt::format("timeout waiting for UDP transport: tx = {:s} rx ={:s}",
+             vxsdr::transport_state_to_string(udp_tx_state), vxsdr::transport_state_to_string(udp_rx_state)));
+        throw std::runtime_error("timeout waiting for UDP transport in vxsdr constructor");
+      }
     }
     set_tx_enable(true);
     set_rx_enable(true);
@@ -151,7 +156,7 @@
         }
       } else {
         LOG_ERROR(fmt::format("timeout popping from rx data queue ({:d} of {:d} samples)", n_received, n_desired));
-        vxsdr::rx_stream_state = ERROR;
+        vxsdr::rx_stream_state = STREAM_ERROR;
         data.resize(n_received);
         return n_received;
       }
@@ -237,7 +242,7 @@
 
       } else {
         LOG_ERROR(fmt::format("timeout popping from rx data queue ({:d} of {:d} samples)", n_written, n_desired));
-        vxsdr::rx_stream_state = ERROR;
+        vxsdr::rx_stream_state = STREAM_ERROR;
         return n_written;
       }
     }
@@ -284,7 +289,7 @@
         n_received += data_samples;
       } else {
         LOG_ERROR(fmt::format("timeout popping from rx data queue ({:d} of {:d} samples)", n_received, n_desired));
-        vxsdr::rx_stream_state = ERROR;
+        vxsdr::rx_stream_state = STREAM_ERROR;
         return n_received;
       }
     }
@@ -327,7 +332,7 @@
         n_put += n_samples;
       } else {
         LOG_ERROR("timeout pushing to tx data queue");
-        vxsdr::tx_stream_state = ERROR;
+        vxsdr::tx_stream_state = STREAM_ERROR;
         return n_put;
       }
     }
@@ -1463,8 +1468,25 @@
         return "STREAMING";
       case CLOSING:
         return "CLOSING";
-      case ERROR:
-        return "ERROR";
+      case STREAM_ERROR:
+        return "STREAM_ERROR";
+      default:
+        return "UNKNOWN";
+    }
+  }
+
+  std::string vxsdr::transport_state_to_string(const transport_state_t state) {
+    switch(state) {
+      case UNINITIALIZED:
+        return "UNINITIALIZED";
+      case STARTING:
+        return "STARTING";
+      case RUNNING:
+        return "RUNNING";
+      case SHUTDOWN:
+        return "SHUTDOWN";
+      case TRANSPORT_ERROR:
+        return "TRANSPORT_ERROR";
       default:
         return "UNKNOWN";
     }
@@ -1472,7 +1494,7 @@
 
   void vxsdr::error_handler() {
     LOG_DEBUG("error_handler started");
-    while(not (udp_rx_state == SHUTDOWN) or (udp_rx_state == SHUTTING_DOWN)) {
+    while(udp_rx_state != SHUTDOWN) {
       error_queue_element e;
       async_msg_queue_element a;
       while(error_queue.pop(e)) {
