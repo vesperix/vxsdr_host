@@ -340,7 +340,7 @@
     return n_put;
   }
 
-  std::optional<std::tuple<uint32_t, uint32_t>> vxsdr::device_hello(const uint8_t subdev, const uint8_t flags) {
+  std::optional<std::array<uint32_t, 4>> vxsdr::device_hello(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p;
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_HELLO, subdev, flags, sizeof(p), 0 };
     if(not vxsdr::cmd_queue_push_check(p)) {
@@ -356,7 +356,8 @@
     if(got_response) {
       auto *r = reinterpret_cast<hello_rsp_packet *>(&q);
       if(r->hdr.packet_type == PACKET_TYPE_DEVICE_CMD_RSP and r->hdr.command == p.hdr.command) {
-        return std::tuple<uint32_t, uint32_t>(r->fpga_fw_version, r->mcu_sw_version);
+        std::array<uint32_t, 4> res = {r->board_id, r->fpga_fw_version, r->mcu_sw_version, r->serial_no};
+        return res;
       }
       LOG_ERROR("invalid response in device_hello()");
       return std::nullopt;
@@ -371,25 +372,13 @@
     return vxsdr::cmd_queue_push_check(p);
   }
 
-  bool vxsdr::device_open_session(const uint8_t subdev, const uint8_t flags) {
-    header_only_packet p;
-    p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_OPEN_SESSION, subdev, flags, sizeof(p), 0 };
-    return vxsdr::cmd_queue_push_check(p);
-  }
-
-  bool vxsdr::device_close_session(const uint8_t subdev, const uint8_t flags) {
-    header_only_packet p;
-    p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_CLOSE_SESSION, subdev, flags, sizeof(p), 0 };
-    return vxsdr::cmd_queue_push_check(p);
-  }
-
   bool vxsdr::device_clear_status(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p;
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_CLEAR_STATUS, subdev, flags, sizeof(p), 0 };
     return vxsdr::cmd_queue_push_check(p);
   }
 
-  std::optional<std::tuple<uint16_t, uint16_t, uint32_t, uint32_t, uint32_t, uint32_t>> vxsdr::device_get_status(const uint8_t subdev, const uint8_t flags) {
+  std::optional<std::array<uint32_t, 6>> vxsdr::device_get_status(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p;
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_GET_STATUS, subdev, flags, sizeof(p), 0 };
     if(not vxsdr::cmd_queue_push_check(p)) {
@@ -405,8 +394,9 @@
     if(got_response) {
       auto *r = reinterpret_cast<status_rsp_packet *>(&q);
       if(r->hdr.packet_type == PACKET_TYPE_DEVICE_CMD_RSP and r->hdr.command == p.hdr.command) {
-        return std::tuple<uint16_t, uint16_t, uint32_t, uint32_t, uint32_t, uint32_t>(r->fpga_temperature, r->dac_temperature,
-                                    r->sequence_error_count, r->data_flow_error_flags, r->ddr_arbiter_status, r->ethernet_status);
+        std::array<uint32_t, 6> res = {r->fpga_temperature, r->dac_temperature, r->sequence_error_count,
+                                       r->data_flow_error_flags, r->ddr_arbiter_status, r->ethernet_status};
+        return res;
       }
       LOG_ERROR("invalid response in device_get_status()");
       return std::nullopt;

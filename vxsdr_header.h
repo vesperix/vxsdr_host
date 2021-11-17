@@ -59,8 +59,6 @@ extern "C" {
 #define DEVICE_CMD_CLEAR_STATUS                (0x05)  // resets error flags and counters
 #define DEVICE_CMD_GET_BUFFER_INFO             (0x06)  // info on how many buffers and their purpose
 #define DEVICE_CMD_GET_BUFFER_USE              (0x07)  // asks for buffer info
-#define DEVICE_CMD_OPEN_SESSION                (0x08)  // unimplemented
-#define DEVICE_CMD_CLOSE_SESSION               (0x09)  // unimplemented
   // 0x0A-0x0F reserved
 #define DEVICE_CMD_GET_TRANSPORT_INFO          (0x10)  // unimplemented // how many interfaces, what kind
 #define DEVICE_CMD_GET_TRANSPORT_ADDR          (0x11)
@@ -332,15 +330,16 @@ class clear_data_buffer_packet : public packet {
 
 class hello_rsp_packet : public packet {
   public:
-    uint32_t               mcu_sw_version = 0;
+    uint32_t               board_id = 0;
     uint32_t               fpga_fw_version = 0;
+    uint32_t               mcu_sw_version = 0;
+    uint32_t               serial_no = 0;
 };
 
 class status_rsp_packet : public packet {
   public:
-    uint16_t               fpga_temperature = 0;
-    uint16_t               dac_temperature = 0;
-    uint32_t               reserved = 0;
+    uint32_t               fpga_temperature = 0;
+    uint32_t               dac_temperature = 0;
     uint32_t               sequence_error_count = 0;
     uint32_t               data_flow_error_flags = 0;
     uint32_t               ddr_arbiter_status = 0;

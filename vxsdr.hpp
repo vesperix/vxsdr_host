@@ -231,7 +231,7 @@ class vxsdr {
     @param subdev the subdevice number
     @param flags the packet flags
   */
-  std::optional<std::tuple<uint32_t, uint32_t>> device_hello(const uint8_t subdev = 0, const uint8_t flags = 0);
+  std::optional<std::array<uint32_t, 4>> device_hello(const uint8_t subdev = 0, const uint8_t flags = 0);
 
   /*!
     @brief Resets the device.
@@ -239,33 +239,11 @@ class vxsdr {
         @b false otherwise
     - if the FLAG_REQUEST_ACK bit in @p flags is set, returns @b true if the command is sent
         and an ACK is received, @b false otherwise
-    - returns FIXME
+    - returns an array containing board ID, FPGA version, MCU SW version, and serial number
     @param subdev the subdevice number
     @param flags the packet flags
   */
   bool device_reset(const uint8_t subdev = 0, const uint8_t flags = 0);
-
-  /*!
-    @brief Opens a session on the device.
-    - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if the command is sent,
-        @b false otherwise
-    - if the FLAG_REQUEST_ACK bit in @p flags is set, returns @b true if the command is sent
-        and an ACK is received, @b false otherwise
-    @param subdev the subdevice number
-    @param flags the packet flags
-  */
-  bool device_open_session(const uint8_t subdev = 0, const uint8_t flags = 0);
-
-  /*!
-    @brief Closes a session on the device.
-    - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if the command is sent,
-        @b false otherwise
-    - if the FLAG_REQUEST_ACK bit in @p flags is set, returns @b true if the command is sent
-        and an ACK is received, @b false otherwise
-    @param subdev the subdevice number
-    @param flags the packet flags
-  */
-  bool device_close_session(const uint8_t subdev = 0, const uint8_t flags = 0);
 
   /*!
     @brief Clears the device status.
@@ -280,11 +258,11 @@ class vxsdr {
 
   /*!
     @brief Gets the device status.
-    - returns a device-dependent status type
+    - returns an array containing device-dependent status information
     @param subdev the subdevice number
     @param flags the packet flags
   */
-  std::optional<std::tuple<uint16_t, uint16_t, uint32_t, uint32_t, uint32_t, uint32_t>> device_get_status(const uint8_t subdev = 0, const uint8_t flags = 0);
+  std::optional<std::array<uint32_t, 6>> device_get_status(const uint8_t subdev = 0, const uint8_t flags = 0);
 
   /*!
     @brief Sets the device time immediately.
