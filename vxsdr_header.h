@@ -310,13 +310,13 @@ class tx_signal_data_ack_packet : public packet {
     uint32_t               sequence_error_count = 0;
 };
 
-class get_buffer_use_rsp_packet : public packet {
+class buffer_use_rsp_packet : public packet {
   public:
     uint32_t               rx_buffer_used_bytes = 0;
     uint32_t               tx_buffer_used_bytes = 0;
 };
 
-class get_buffer_info_rsp_packet : public packet {
+class buffer_info_rsp_packet : public packet {
   public:
     uint32_t               rx_buffer_size_bytes = 0;
     uint32_t               tx_buffer_size_bytes = 0;
