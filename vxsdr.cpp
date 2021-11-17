@@ -39,7 +39,9 @@
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
     udp_tx_state = STARTING;
     sender_thread = std::thread([&] { sender(); });
-    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    while(udp_tx_state != RUNNING or udp_rx_state != RUNNING) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
     set_tx_enable(true);
     set_rx_enable(true);
     LOG_DEBUG("vxsdr constructor complete");
@@ -1484,16 +1486,54 @@
     LOG_DEBUG("error_handler finished");
   }
 
-  bool vxsdr::device_get_buffer_info(const uint8_t subdev, const uint8_t flags) {
+  std::optional<std::tuple<uint32_t, uint32_t>> vxsdr::device_get_buffer_info(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p;
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_GET_BUFFER_INFO, subdev, flags, sizeof(p), 0 };
-    return vxsdr::cmd_queue_push_check(p);
+    if(not vxsdr::cmd_queue_push_check(p)) {
+      return std::nullopt;
+    }
+    response_queue_element q;
+    bool got_response = false;
+    unsigned wait_time_ms = 0;
+    while(not (got_response = response_queue.pop(q)) and wait_time_ms < device_response_timeout_ms) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(device_response_wait_ms));
+      wait_time_ms += device_response_wait_ms;
+    }
+    if(got_response) {
+      auto *r = reinterpret_cast<buffer_info_rsp_packet *>(&q);
+      if(r->hdr.packet_type == PACKET_TYPE_DEVICE_CMD_RSP and r->hdr.command == p.hdr.command) {
+        return std::tuple<uint32_t, uint32_t>(r->rx_buffer_size_bytes, r->tx_buffer_size_bytes);
+      }
+      LOG_ERROR("invalid response in device_get_buffer_info()");
+      return std::nullopt;
+    }
+    LOG_ERROR("timeout in device_get_buffer_info()");
+    return std::nullopt;
   }
 
-  bool vxsdr::device_get_buffer_use(const uint8_t subdev, const uint8_t flags) {
+  std::optional<std::tuple<uint32_t, uint32_t>> vxsdr::device_get_buffer_use(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p;
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_GET_BUFFER_USE, subdev, flags, sizeof(p), 0 };
-    return vxsdr::cmd_queue_push_check(p);
+    if(not vxsdr::cmd_queue_push_check(p)) {
+      return std::nullopt;
+    }
+    response_queue_element q;
+    bool got_response = false;
+    unsigned wait_time_ms = 0;
+    while(not (got_response = response_queue.pop(q)) and wait_time_ms < device_response_timeout_ms) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(device_response_wait_ms));
+      wait_time_ms += device_response_wait_ms;
+    }
+    if(got_response) {
+      auto *r = reinterpret_cast<buffer_use_rsp_packet *>(&q);
+      if(r->hdr.packet_type == PACKET_TYPE_DEVICE_CMD_RSP and r->hdr.command == p.hdr.command) {
+        return std::tuple<uint32_t, uint32_t>(r->rx_buffer_used_bytes, r->tx_buffer_used_bytes);
+      }
+      LOG_ERROR("invalid response in device_get_buffer_info()");
+      return std::nullopt;
+    }
+    LOG_ERROR("timeout in device_get_buffer_info()");
+    return std::nullopt;
   }
 
   [[nodiscard]] bool vxsdr::cmd_queue_push_check(packet &p) {
