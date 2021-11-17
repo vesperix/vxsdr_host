@@ -343,7 +343,7 @@
   std::optional<std::array<uint32_t, 4>> vxsdr::device_hello(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p;
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_HELLO, subdev, flags, sizeof(p), 0 };
-    auto res = vxsdr::send_packet_and_check_response(p, "device_hello()");
+    auto res = vxsdr::send_packet_and_return_response(p, "device_hello()");
     if(res) {
       auto q = res.value();
       auto *r = reinterpret_cast<hello_rsp_packet *>(&q);
@@ -368,7 +368,7 @@
   std::optional<std::array<uint32_t, 6>> vxsdr::device_get_status(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p;
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_GET_STATUS, subdev, flags, sizeof(p), 0 };
-    auto res = vxsdr::send_packet_and_check_response(p, "device_get_status()");
+    auto res = vxsdr::send_packet_and_return_response(p, "device_get_status()");
     if(res) {
       auto q = res.value();
       auto *r = reinterpret_cast<status_rsp_packet *>(&q);
@@ -420,7 +420,7 @@
   bool vxsdr::device_get_time_now(uint32_t &sec, uint32_t &nsec, const uint8_t subdev, const uint8_t flags) {
     header_only_packet p;
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_GET_TIME, subdev, flags, sizeof(p), 0 };
-    auto res = vxsdr::send_packet_and_check_response(p, "device_get_time_now()");
+    auto res = vxsdr::send_packet_and_return_response(p, "device_get_time_now()");
     if(res) {
       auto q = res.value();
       auto *r = reinterpret_cast<cmd_or_rsp_packet_time *>(&q);
@@ -434,7 +434,7 @@
   std::optional<std::chrono::time_point<std::chrono::system_clock>> vxsdr::device_get_time_now(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p;
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_GET_TIME, subdev, flags, sizeof(p), 0 };
-    auto res = vxsdr::send_packet_and_check_response(p, "device_get_time_now()");
+    auto res = vxsdr::send_packet_and_return_response(p, "device_get_time_now()");
     if(res) {
       auto q = res.value();
       if((q.hdr.flags & FLAGS_TIME_PRESENT) != 0) {
@@ -600,7 +600,7 @@
   std::optional<std::array<double, 2>> vxsdr::get_tx_iq_bias(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p;
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_GET_IQ_BIAS, subdev, flags, sizeof(p), 0 };
-    auto res = vxsdr::send_packet_and_check_response(p, "get_tx_iq_bias()");
+    auto res = vxsdr::send_packet_and_return_response(p, "get_tx_iq_bias()");
     if(res) {
       auto q = res.value();
       auto *r = reinterpret_cast<radio_iq_bias_packet *>(&q);
@@ -613,7 +613,7 @@
   std::optional<std::array<double, 2>> vxsdr::get_rx_iq_bias(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p;
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_GET_IQ_BIAS, subdev, flags, sizeof(p), 0 };
-    auto res = vxsdr::send_packet_and_check_response(p, "get_rx_iq_bias()");
+    auto res = vxsdr::send_packet_and_return_response(p, "get_rx_iq_bias()");
     if(res) {
       auto q = res.value();
       auto *r = reinterpret_cast<radio_iq_bias_packet *>(&q);
@@ -648,7 +648,7 @@
   std::optional<std::array<double, 4>> vxsdr::get_tx_iq_corr(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p;
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_GET_IQ_BIAS, subdev, flags, sizeof(p), 0 };
-    auto res = vxsdr::send_packet_and_check_response(p, "get_tx_iq_corr()");
+    auto res = vxsdr::send_packet_and_return_response(p, "get_tx_iq_corr()");
     if(res) {
       auto q = res.value();
       auto *r = reinterpret_cast<radio_iq_corr_packet *>(&q);
@@ -661,7 +661,7 @@
   std::optional<std::array<double, 4>> vxsdr::get_rx_iq_corr(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p;
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_GET_IQ_BIAS, subdev, flags, sizeof(p), 0 };
-    auto res = vxsdr::send_packet_and_check_response(p, "get_rx_iq_corr()");
+    auto res = vxsdr::send_packet_and_return_response(p, "get_rx_iq_corr()");
     if(res) {
       auto q = res.value();
       auto *r = reinterpret_cast<radio_iq_corr_packet *>(&q);
@@ -706,7 +706,7 @@
   std::optional<std::array<double, 2>> vxsdr::get_tx_freq_range(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p = {};
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_GET_RF_FREQ_RANGE, subdev, flags, sizeof(p), 0 };
-    auto res = vxsdr::send_packet_and_check_response(p, "get_tx_freq_range()");
+    auto res = vxsdr::send_packet_and_return_response(p, "get_tx_freq_range()");
     if(res) {
       auto q = res.value();
       auto *r = reinterpret_cast<range_packet *>(&q);
@@ -719,7 +719,7 @@
   std::optional<std::array<double, 2>> vxsdr::get_rx_freq_range(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p = {};
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_GET_RF_FREQ_RANGE, subdev, flags, sizeof(p), 0 };
-    auto res = vxsdr::send_packet_and_check_response(p, "get_rx_freq_range()");
+    auto res = vxsdr::send_packet_and_return_response(p, "get_rx_freq_range()");
     if(res) {
       auto q = res.value();
       auto *r = reinterpret_cast<range_packet *>(&q);
@@ -748,7 +748,7 @@
   std::optional<double> vxsdr::get_tx_freq(const uint8_t subdev, const uint8_t flags) {
     radio_rf_freq_packet p;
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_GET_RF_FREQ, subdev, flags, sizeof(p), 0 };
-    auto res = vxsdr::send_packet_and_check_response(p, "get_tx_freq()");
+    auto res = vxsdr::send_packet_and_return_response(p, "get_tx_freq()");
     if(res) {
       auto q = res.value();
       auto *r = reinterpret_cast<radio_rf_freq_packet *>(&q);
@@ -760,7 +760,7 @@
   std::optional<double> vxsdr::get_rx_freq(const uint8_t subdev, const uint8_t flags) {
     radio_rf_freq_packet p;
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_GET_RF_FREQ, subdev, flags, sizeof(p), 0 };
-    auto res = vxsdr::send_packet_and_check_response(p, "get_rx_freq()");
+    auto res = vxsdr::send_packet_and_return_response(p, "get_rx_freq()");
     if(res) {
       auto q = res.value();
       auto *r = reinterpret_cast<radio_rf_freq_packet *>(&q);
@@ -772,7 +772,7 @@
   std::optional<std::array<double, 2>> vxsdr::get_tx_gain_range(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p = {};
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_GET_GAIN_RANGE, subdev, flags, sizeof(p), 0 };
-    auto res = vxsdr::send_packet_and_check_response(p, "get_tx_gain_range()");
+    auto res = vxsdr::send_packet_and_return_response(p, "get_tx_gain_range()");
     if(res) {
       auto q = res.value();
       auto *r = reinterpret_cast<range_packet *>(&q);
@@ -785,7 +785,7 @@
   std::optional<std::array<double, 2>> vxsdr::get_rx_gain_range(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p = {};
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_GET_GAIN_RANGE, subdev, flags, sizeof(p), 0 };
-    auto res = vxsdr::send_packet_and_check_response(p, "get_rx_gain_range()");
+    auto res = vxsdr::send_packet_and_return_response(p, "get_rx_gain_range()");
     if(res) {
       auto q = res.value();
       auto *r = reinterpret_cast<range_packet *>(&q);
@@ -812,7 +812,7 @@
   std::optional<double> vxsdr::get_tx_gain(const uint8_t subdev, const uint8_t flags) {
     radio_rf_gain_packet p;
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_GET_RF_GAIN, subdev, flags, sizeof(p), 0 };
-    auto res = vxsdr::send_packet_and_check_response(p, "get_tx_gain()");
+    auto res = vxsdr::send_packet_and_return_response(p, "get_tx_gain()");
     if(res) {
       auto q = res.value();
       auto *r = reinterpret_cast<radio_rf_gain_packet *>(&q);
@@ -824,7 +824,7 @@
   std::optional<double> vxsdr::get_rx_gain(const uint8_t subdev, const uint8_t flags) {
     radio_rf_gain_packet p;
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_GET_RF_GAIN, subdev, flags, sizeof(p), 0 };
-    auto res = vxsdr::send_packet_and_check_response(p, "get_rx_gain()");
+    auto res = vxsdr::send_packet_and_return_response(p, "get_rx_gain()");
     if(res) {
       auto q = res.value();
       auto *r = reinterpret_cast<radio_rf_gain_packet *>(&q);
@@ -836,7 +836,7 @@
   std::optional<std::array<double, 2>> vxsdr::get_tx_rate_range(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p = {};
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_GET_RATE_RANGE, subdev, flags, sizeof(p), 0 };
-    auto res = vxsdr::send_packet_and_check_response(p, "tx_get_rate_range()");
+    auto res = vxsdr::send_packet_and_return_response(p, "tx_get_rate_range()");
     if(res) {
       auto q = res.value();
       auto *r = reinterpret_cast<range_packet *>(&q);
@@ -849,7 +849,7 @@
   std::optional<std::array<double, 2>> vxsdr::get_rx_rate_range(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p = {};
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_GET_RATE_RANGE, subdev, flags, sizeof(p), 0 };
-    auto res = vxsdr::send_packet_and_check_response(p, "rx_get_rate_range()");
+    auto res = vxsdr::send_packet_and_return_response(p, "rx_get_rate_range()");
     if(res) {
       auto q = res.value();
       auto *r = reinterpret_cast<range_packet *>(&q);
@@ -876,7 +876,7 @@
   std::optional<double> vxsdr::get_tx_rate(const uint8_t subdev, const uint8_t flags) {
     radio_sample_rate_packet p;
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_GET_SAMPLE_RATE, subdev, flags, sizeof(p), 0 };
-    auto res = vxsdr::send_packet_and_check_response(p, "get_tx_rate()");
+    auto res = vxsdr::send_packet_and_return_response(p, "get_tx_rate()");
     if(res) {
       auto q = res.value();
       auto *r = reinterpret_cast<radio_sample_rate_packet *>(&q);
@@ -888,7 +888,7 @@
   std::optional<double> vxsdr::get_rx_rate(const uint8_t subdev, const uint8_t flags) {
     radio_sample_rate_packet p;
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_GET_SAMPLE_RATE, subdev, flags, sizeof(p), 0 };
-    auto res = vxsdr::send_packet_and_check_response(p, "get_rx_rate()");
+    auto res = vxsdr::send_packet_and_return_response(p, "get_rx_rate()");
     if(res) {
       auto q = res.value();
       auto *r = reinterpret_cast<radio_sample_rate_packet *>(&q);
@@ -900,7 +900,7 @@
   std::optional<unsigned> vxsdr::get_tx_num_ports(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p = {};
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_GET_NUM_RF_PORTS, subdev, flags, sizeof(p), 0 };
-    auto res = vxsdr::send_packet_and_check_response(p, "get_tx_num_ports()");
+    auto res = vxsdr::send_packet_and_return_response(p, "get_tx_num_ports()");
     if(res) {
       auto q = res.value();
       auto *r = reinterpret_cast<unsigned_packet *>(&q);
@@ -912,7 +912,7 @@
   std::optional<unsigned> vxsdr::get_rx_num_ports(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p = {};
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_GET_NUM_RF_PORTS, subdev, flags, sizeof(p), 0 };
-    auto res = vxsdr::send_packet_and_check_response(p, "get_rx_num_ports()");
+    auto res = vxsdr::send_packet_and_return_response(p, "get_rx_num_ports()");
     if(res) {
       auto q = res.value();
       auto *r = reinterpret_cast<unsigned_packet *>(&q);
@@ -924,7 +924,7 @@
   std::optional<std::string> vxsdr::get_tx_port_name(const unsigned port_num, const uint8_t subdev, const uint8_t flags) {
     unsigned_packet p = {};
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_GET_RF_PORT_NAME, subdev, flags, sizeof(p), 0 };
-    auto res = vxsdr::send_packet_and_check_response(p, "get_tx_port_name()");
+    auto res = vxsdr::send_packet_and_return_response(p, "get_tx_port_name()");
     if(res) {
       auto q = res.value();
       auto *r = reinterpret_cast<name_packet *>(&q);
@@ -936,7 +936,7 @@
   std::optional<std::string> vxsdr::get_rx_port_name(const unsigned port_num, const uint8_t subdev, const uint8_t flags) {
     unsigned_packet p = {};
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_GET_RF_PORT_NAME, subdev, flags, sizeof(p), 0 };
-    auto res = vxsdr::send_packet_and_check_response(p, "get_rx_port_name()");
+    auto res = vxsdr::send_packet_and_return_response(p, "get_rx_port_name()");
     if(res) {
       auto q = res.value();
       auto *r = reinterpret_cast<name_packet *>(&q);
@@ -990,7 +990,7 @@
   std::optional<unsigned> vxsdr::get_tx_port(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p = {};
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_GET_RF_PORT_NAME, subdev, flags, sizeof(p), 0 };
-    auto res = vxsdr::send_packet_and_check_response(p, "get_tx_port()");
+    auto res = vxsdr::send_packet_and_return_response(p, "get_tx_port()");
     if(res) {
       auto q = res.value();
       auto *r = reinterpret_cast<unsigned_packet *>(&q);
@@ -1002,7 +1002,7 @@
   std::optional<unsigned> vxsdr::get_rx_port(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p = {};
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_GET_RF_PORT_NAME, subdev, flags, sizeof(p), 0 };
-    auto res = vxsdr::send_packet_and_check_response(p, "get_rx_port()");
+    auto res = vxsdr::send_packet_and_return_response(p, "get_rx_port()");
     if(res) {
       auto q = res.value();
       auto *r = reinterpret_cast<unsigned_packet *>(&q);
@@ -1036,7 +1036,7 @@
   std::optional<capabilities_t> vxsdr::get_tx_capabilities(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p = {};
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_GET_CAPABILITIES, subdev, flags, sizeof(p), 0 };
-    auto res = vxsdr::send_packet_and_check_response(p, "get_tx_capabilities()");
+    auto res = vxsdr::send_packet_and_return_response(p, "get_tx_capabilities()");
     if(res) {
       auto q = res.value();
       auto *r = reinterpret_cast<capabilities_packet *>(&q);
@@ -1048,7 +1048,7 @@
   std::optional<capabilities_t> vxsdr::get_rx_capabilities(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p = {};
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_GET_CAPABILITIES, subdev, flags, sizeof(p), 0 };
-    auto res = vxsdr::send_packet_and_check_response(p, "get_rx_capabilities()");
+    auto res = vxsdr::send_packet_and_return_response(p, "get_rx_capabilities()");
     if(res) {
       auto q = res.value();
       auto *r = reinterpret_cast<capabilities_packet *>(&q);
@@ -1059,7 +1059,39 @@
 
 // private functions
 
-  std::optional<vxsdr::response_queue_element> vxsdr::send_packet_and_check_response(packet &p, std::string cmd_name) {
+  bool vxsdr::send_packet_and_check_response(packet &p, std::string cmd_name) {
+    if(not vxsdr::cmd_queue_push_check(p)) {
+      return false;
+    }
+    response_queue_element q;
+    bool got_response = false;
+    unsigned wait_time_ms = 0;
+    while(not (got_response = response_queue.pop(q)) and wait_time_ms < vxsdr::device_response_timeout_ms) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(vxsdr::device_response_wait_ms));
+      wait_time_ms += vxsdr::device_response_wait_ms;
+    }
+    if(got_response) {
+      if(((p.hdr.packet_type == PACKET_TYPE_DEVICE_CMD   and q.hdr.packet_type == PACKET_TYPE_DEVICE_CMD_RSP) or
+          (p.hdr.packet_type == PACKET_TYPE_TX_RADIO_CMD and q.hdr.packet_type == PACKET_TYPE_TX_RADIO_CMD_RSP) or
+          (p.hdr.packet_type == PACKET_TYPE_RX_RADIO_CMD and q.hdr.packet_type == PACKET_TYPE_RX_RADIO_CMD_RSP))
+         and q.hdr.command == p.hdr.command) {
+        return true;
+      }
+      if(((p.hdr.packet_type == PACKET_TYPE_DEVICE_CMD   and q.hdr.packet_type == PACKET_TYPE_DEVICE_CMD_ERR) or
+          (p.hdr.packet_type == PACKET_TYPE_TX_RADIO_CMD and q.hdr.packet_type == PACKET_TYPE_TX_RADIO_CMD_ERR) or
+          (p.hdr.packet_type == PACKET_TYPE_RX_RADIO_CMD and q.hdr.packet_type == PACKET_TYPE_RX_RADIO_CMD_ERR))
+         and q.hdr.command == p.hdr.command) {
+        LOG_ERROR(fmt::format("command error in {:s}: {:s}", cmd_name, error_to_string(reinterpret_cast<error_packet *>(&q)->reason)));
+        return false;
+      }
+      LOG_ERROR(fmt::format("invalid response in {:s}", cmd_name));
+      return false;
+    }
+    LOG_ERROR(fmt::format("timeout in {:s}", cmd_name));
+    return false;
+  }
+
+  std::optional<vxsdr::response_queue_element> vxsdr::send_packet_and_return_response(packet &p, std::string cmd_name) {
     if(not vxsdr::cmd_queue_push_check(p)) {
       return std::nullopt;
     }
@@ -1081,8 +1113,7 @@
           (p.hdr.packet_type == PACKET_TYPE_TX_RADIO_CMD and q.hdr.packet_type == PACKET_TYPE_TX_RADIO_CMD_ERR) or
           (p.hdr.packet_type == PACKET_TYPE_RX_RADIO_CMD and q.hdr.packet_type == PACKET_TYPE_RX_RADIO_CMD_ERR))
          and q.hdr.command == p.hdr.command) {
-        auto *r = reinterpret_cast<error_packet *>(&q);
-        LOG_ERROR(fmt::format("command error in {:s}: {:s}", cmd_name, error_to_string(r->reason)));
+        LOG_ERROR(fmt::format("command error in {:s}: {:s}", cmd_name, error_to_string(reinterpret_cast<error_packet *>(&q)->reason)));
         return std::nullopt;
       }
       LOG_ERROR(fmt::format("invalid response in {:s}", cmd_name));

@@ -864,7 +864,8 @@ class vxsdr {
 
  private:
 
-  std::optional<response_queue_element> send_packet_and_check_response(packet &p, std::string cmd_name = "unknown");
+  bool send_packet_and_check_response(packet &p, std::string cmd_name = "unknown");
+  std::optional<response_queue_element> send_packet_and_return_response(packet &p, std::string cmd_name = "unknown");
   static void time_point_to_time_spec_t(const std::chrono::time_point<std::chrono::system_clock> &t, time_spec_t &ts);
   static std::string stream_state_to_string(const stream_state_t state);
   static std::string transport_state_to_string(const transport_state_t state);
