@@ -88,14 +88,24 @@ extern "C" {
 #define DEVICE_CMD_STOP                        (0xFE)  // stop all streaming and return to wait state within session
 #define DEVICE_CMD_RESET                       (0xFF)  // do a power on reset (closing session and returning to idle)
 
+// Generic Errors used for Device Commands and Radio Commands
+#define ERR_NO_ERROR                           (0x00)  // no error
+#define ERR_BAD_COMMAND                        (0x01)  // generic bad stuff happened; can substitute for more detailed ones until they're implemented
+#define ERR_BUSY                               (0x02)  // can't accept that command because we're running
+#define ERR_NO_SUCH_SUBDEVICE                  (0x03)  // the specified subdevice doesn't exist
+#define ERR_TIMEOUT                            (0x04)  // tried to do command but something didn't answer
+#define ERR_BAD_PARAMETER                      (0x05)  // command parameter is out of allowed range
+#define ERR_NOT_SUPPORTED                      (0x06)  // this device can't do that command
+#define ERR_BAD_PKT_SIZE                       (0x07)
+
 // Device Command Errors
-#define DEVICE_CMD_ERR_BAD_CMD                 (0x01)  // generic bad stuff happened; can substitute for more detailed ones until they're implemented
-#define DEVICE_CMD_ERR_BUSY                    (0x02)  // can't accept that command because we're running
-#define DEVICE_CMD_ERR_NO_SUCH_SUBDEVICE       (0x03)  // the specified subdevice doesn't exist
-#define DEVICE_CMD_ERR_TIMEOUT                 (0x04)  // tried to do command but something didn't answer
-#define DEVICE_CMD_ERR_BAD_PARAMETER           (0x05)  // command parameter is out of allowed range
-#define DEVICE_CMD_ERR_NOT_SUPPORTED           (0x06)  // this device can't do that command
-#define DEVICE_CMD_ERR_BAD_PKT_SIZE            (0x07)  // packet size incorrect for this command
+#define DEVICE_CMD_ERR_BAD_CMD                 ERR_BAD_COMMAND
+#define DEVICE_CMD_ERR_BUSY                    ERR_BUSY
+#define DEVICE_CMD_ERR_NO_SUCH_SUBDEVICE       ERR_NO_SUCH_SUBDEVICE
+#define DEVICE_CMD_ERR_TIMEOUT                 ERR_TIMEOUT
+#define DEVICE_CMD_ERR_BAD_PARAMETER           ERR_BAD_PARAMETER
+#define DEVICE_CMD_ERR_NOT_SUPPORTED           ERR_NOT_SUPPORTED
+#define DEVICE_CMD_ERR_BAD_PKT_SIZE            ERR_BAD_PKT_SIZE
 
 // Radio Commands
 #define RADIO_CMD_START_NOW_UNTIL_STOP         (0x01)
@@ -137,13 +147,13 @@ extern "C" {
   // 0x53-0xFF reserved
 
 // Radio Command Errors
-#define RADIO_CMD_ERR_BAD_CMD                  (0x01)
-#define RADIO_CMD_ERR_BUSY                     (0x02)
-#define RADIO_CMD_ERR_NO_SUCH_SUBDEVICE        (0x03)
-#define RADIO_CMD_ERR_TIMEOUT                  (0x04)
-#define RADIO_CMD_ERR_BAD_PARAMETER            (0x05)
-#define RADIO_CMD_ERR_NOT_SUPPORTED            (0x06)
-#define RADIO_CMD_ERR_BAD_PKT_SIZE             (0x07)
+#define RADIO_CMD_ERR_BAD_CMD                  ERR_BAD_COMMAND
+#define RADIO_CMD_ERR_BUSY                     ERR_BUSY
+#define RADIO_CMD_ERR_NO_SUCH_SUBDEVICE        ERR_NO_SUCH_SUBDEVICE
+#define RADIO_CMD_ERR_TIMEOUT                  ERR_TIMEOUT
+#define RADIO_CMD_ERR_BAD_PARAMETER            ERR_BAD_PARAMETER
+#define RADIO_CMD_ERR_NOT_SUPPORTED            ERR_NOT_SUPPORTED
+#define RADIO_CMD_ERR_BAD_PKT_SIZE             ERR_BAD_PKT_SIZE
 
 // Async messages
 #define ASYNC_NO_ERROR                         (0x00)
