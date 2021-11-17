@@ -150,7 +150,7 @@ void test_time(std::unique_ptr<vxsdr> &radio) {
     uint32_t t_sec, t_ns;
     bool result = radio->device_get_time_now(t_sec, t_ns);
     if(result) {
-      double diff = std::chrono::duration<double>(tp_set.time_since_epoch()).count() - (t_sec + 1e-9 * t_ns);
+      double diff = (t_sec + 1e-9 * t_ns) - std::chrono::duration<double>(tp_set.time_since_epoch()).count();
       if(diff > 0.99 and diff <= 1.01) {
         LOG_INFO("      passed set with time_point read with s and ns");
       } else {
