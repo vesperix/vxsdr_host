@@ -924,8 +924,8 @@ class vxsdr {
 
   /*!
     @brief Gets the maximum payload size in bytes for transport to and from the device.
-    Note that the maximum packet size is the maximum payload size + sizeof(packet_header)
-    + sizeof(time_spec_t) + sizeof(stream_spec_t), or 24 bytes more than the maximum payload.
+    Note that the maximum packet size is the maximum payload size + sizeof(packet_header),
+    or 8 bytes more than the maximum payload.
     - returns the maximum payload in bytes
   */
   std::optional<unsigned> device_get_max_payload_bytes();
@@ -933,8 +933,8 @@ class vxsdr {
   /*!
     @brief Sets the maximum payload size in bytes for transport to and from the device.
     The payload size must be a multiple of 8 bytes and 1024 <= max_payload_bytes <= 8192.
-    Note that the maximum packet size is the maximum payload size + sizeof(packet_header)
-    + sizeof(time_spec_t) + sizeof(stream_spec_t), or 24 bytes more than the maximum payload.
+    Note that the maximum packet size is the maximum payload size + sizeof(packet_header),
+    or 8 bytes more than the maximum payload.
     - returns @p true if the size is set, @p false otherwise
   */
   bool device_set_max_payload_bytes(uint32_t max_payload_bytes);
