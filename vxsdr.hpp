@@ -82,7 +82,7 @@ class vxsdr {
   static constexpr size_t async_msg_queue_length          =        256;    // slots in async msg queue
 
   // timeouts and waits for responses from device
-  static constexpr unsigned device_response_timeout_ms    =        500;
+  unsigned                  device_response_timeout_ms    =        500;
   static constexpr unsigned device_response_wait_ms       =          1;
 
   // how often to check the error queue

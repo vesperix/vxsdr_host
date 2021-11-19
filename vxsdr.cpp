@@ -101,6 +101,15 @@
     size_t n_received = 0;
     data_queue_element q;
 
+    if(timeout_s <= 0.0) {
+      LOG_ERROR("timeout_s must be positive in get_rx_data()");
+      return 0;
+    } else if(timeout_s > 3600.0) {
+      LOG_ERROR("timeout_s must 3600 or less in get_rx_data()");
+      return 0;
+    }
+    uint32_t timeout_us = std::llround(1'000'000 * timeout_s);
+
     if(vxsdr::rx_stream_state != STREAMING and vxsdr::rx_stream_state != WAITING_FOR_START) {
       LOG_ERROR(fmt::format("rx stream state is {:s} in get_rx_data()",
                 vxsdr::stream_state_to_string(vxsdr::rx_stream_state)));
@@ -118,12 +127,12 @@
     LOG_INFO(fmt::format("receiving {:d} samples", n_desired));
 
     while(n_received < n_desired) {
-      double wait_time_s = 0;
+      uint32_t wait_time_us = 0;
       // setting rx_data_queue_wait_us = 0 results in a busy wait with no timeout
-      while(rx_data_queue.read_available() == 0 and wait_time_s < timeout_s) {
+      while(rx_data_queue.read_available() == 0 and wait_time_us < timeout_us) {
         if(rx_data_queue_wait_us > 0) {
           std::this_thread::sleep_for(std::chrono::microseconds(rx_data_queue_wait_us));
-          wait_time_s += 1e-6 * rx_data_queue_wait_us;
+          wait_time_us += rx_data_queue_wait_us;
         }
       }
       if(rx_data_queue.pop(q)) {
@@ -169,6 +178,15 @@
                               size_t write_size_samples) {
     LOG_DEBUG("write_rx_data entered");
 
+    if(timeout_s <= 0.0) {
+      LOG_ERROR("timeout_s must be positive in write_rx_data()");
+      return 0;
+    } else if(timeout_s > 3600.0) {
+      LOG_ERROR("timeout_s must 3600 or less in write_rx_data()");
+      return 0;
+    }
+    uint32_t timeout_us = std::llround(1'000'000 * timeout_s);
+
     if(vxsdr::rx_stream_state != STREAMING and vxsdr::rx_stream_state != WAITING_FOR_START) {
       LOG_ERROR(fmt::format("rx stream state is {:s} in write_rx_data()",
                 vxsdr::stream_state_to_string(vxsdr::rx_stream_state)));
@@ -188,12 +206,12 @@
     LOG_INFO(fmt::format("receiving {:d} samples", n_desired));
 
     while(n_written < n_desired) {
-      double wait_time_s = 0;
+      uint32_t wait_time_us = 0;
       // setting rx_data_queue_wait_us = 0 results in a busy wait with no timeout
-      while(rx_data_queue.read_available() == 0 and wait_time_s < timeout_s) {
+      while(rx_data_queue.read_available() == 0 and wait_time_us < timeout_us) {
         if(rx_data_queue_wait_us > 0) {
           std::this_thread::sleep_for(std::chrono::microseconds(rx_data_queue_wait_us));
-          wait_time_s += 1e-6 * rx_data_queue_wait_us;
+          wait_time_us += rx_data_queue_wait_us;
         }
       }
       if(rx_data_queue.pop(q)) {
@@ -255,6 +273,15 @@
     // drops data after sequence check and byte/sample counts
     LOG_DEBUG("check_rx_data_sequence_only started");
 
+    if(timeout_s <= 0.0) {
+      LOG_ERROR("timeout_s must be positive in check_rx_data_sequence_only()");
+      return 0;
+    } else if(timeout_s > 3600.0) {
+      LOG_ERROR("timeout_s must 3600 or less in check_rx_data_sequence_only()");
+      return 0;
+    }
+    uint32_t timeout_us = std::llround(1'000'000 * timeout_s);
+
     if(vxsdr::rx_stream_state != STREAMING and vxsdr::rx_stream_state != WAITING_FOR_START) {
       LOG_ERROR(fmt::format("rx stream state is {:s} in check_rx_data_sequence_only()",
                 vxsdr::stream_state_to_string(vxsdr::rx_stream_state)));
@@ -267,12 +294,12 @@
     LOG_INFO(fmt::format("checking sequence for {:d} samples", n_desired));
 
     while(n_received < n_desired) {
-      double wait_time_s = 0;
+      uint32_t wait_time_us = 0;
       // setting rx_data_queue_wait_us = 0 results in a busy wait with no timeout
-      while(rx_data_queue.read_available() == 0 and wait_time_s < timeout_s) {
+      while(rx_data_queue.read_available() == 0 and wait_time_us < timeout_us) {
         if(rx_data_queue_wait_us > 0) {
           std::this_thread::sleep_for(std::chrono::microseconds(rx_data_queue_wait_us));
-          wait_time_s += 1e-6 * rx_data_queue_wait_us;
+          wait_time_us += rx_data_queue_wait_us;
         }
       }
       if(rx_data_queue.pop(q)) {
@@ -300,6 +327,16 @@
   size_t vxsdr::put_tx_data(std::vector<std::complex<int16_t> > data, const uint8_t subdev, const double timeout_s) {
     LOG_DEBUG("put_tx_data started");
 
+   if(timeout_s <= 0.0) {
+      LOG_ERROR("timeout_s must be positive in check_rx_data_sequence_only()");
+      return 0;
+    } else if(timeout_s > 3600.0) {
+      LOG_ERROR("timeout_s must 3600 or less in check_rx_data_sequence_only()");
+      return 0;
+    }
+    uint32_t timeout_us = std::llround(1'000'000 * timeout_s);
+
+
     if(vxsdr::tx_stream_state != STREAMING and vxsdr::tx_stream_state != WAITING_FOR_START) {
       LOG_ERROR(fmt::format("tx stream state is {:s} in put_tx_data()",
                 vxsdr::stream_state_to_string(vxsdr::tx_stream_state)));
@@ -319,12 +356,12 @@
         p->data[j] = data[i + j];
       }
 
-      double wait_time_s = 0;
+      uint32_t wait_time_us = 0;
       // setting tx_data_queue_wait_us = 0 results in a busy wait with no timeout
-      while(tx_data_queue.write_available() == 0 and wait_time_s < timeout_s) {
+      while(tx_data_queue.write_available() == 0 and wait_time_us < timeout_us) {
         if(tx_data_queue_wait_us > 0) {
           std::this_thread::sleep_for(std::chrono::microseconds(tx_data_queue_wait_us));
-          wait_time_s += 1e-6 * tx_data_queue_wait_us;
+          wait_time_us += tx_data_queue_wait_us;
         }
       }
 
