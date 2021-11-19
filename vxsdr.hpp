@@ -862,6 +862,22 @@ class vxsdr {
   */
   std::optional<capabilities_t> get_rx_capabilities(const uint8_t subdev = 0, const uint8_t flags = 0);
 
+  /*!
+    @brief Gets the size of the device transmit and receive buffers.
+    - returns an array containing the receive and transmit buffer sizes in bytes, in that order
+    @param subdev the subdevice number
+    @param flags the packet flags
+  */
+  std::optional<std::array<uint32_t, 2>> device_get_buffer_info(const uint8_t subdev, const uint8_t flags = 0);
+
+  /*!
+    @brief Gets the current number of bytes used in the device transmit and receive buffers.
+    - returns an array containing the receive and transmit buffer usage in bytes, in that order
+    @param subdev the subdevice number
+    @param flags the packet flags
+  */
+  std::optional<std::array<uint32_t, 2>> device_get_buffer_use(const uint8_t subdev, const uint8_t flags = 0);
+
  private:
 
   bool send_packet_and_check_response(packet &p, std::string cmd_name = "unknown");
@@ -870,8 +886,7 @@ class vxsdr {
   static std::string stream_state_to_string(const stream_state_t state);
   static std::string transport_state_to_string(const transport_state_t state);
   static std::string error_to_string(const uint32_t reason);
-  std::optional<std::tuple<uint32_t, uint32_t>> device_get_buffer_info(const uint8_t subdev, const uint8_t flags = 0);
-  std::optional<std::tuple<uint32_t, uint32_t>> device_get_buffer_use(const uint8_t subdev, const uint8_t flags = 0);
+
   [[nodiscard]] bool cmd_queue_push_check(packet &p);
   void error_handler();
   void receiver();
