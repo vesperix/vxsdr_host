@@ -30,25 +30,33 @@ extern "C" {
 #define  PACKET_TYPE_ASYNC_MSG                 (0x05)
 
 // indicators are applied to each packet type to indicate responses, errors, and acks
-#define PACKET_ERR_INDICATOR                   (0x20)
-#define PACKET_RSP_INDICATOR                   (0x40)
+// they occupy the top 2 bits of the packet type
+#define PACKET_ERR_INDICATOR                   (0x40)
+#define PACKET_RSP_INDICATOR                   (0x60)
 #define PACKET_ACK_INDICATOR                   (0x80)
+#define PACKET_INDICATOR_MASK                  (0xC0)
+#define PACKET_TYPE_MASK                       (0x3F)
+
+// convenience macros to turn a command into an err, rsp, or ack
+#define PACKET_TYPE_MAKE_ERR(byte)             (((byte) & PACKET_TYPE_MASK) | PACKET_ERR_INDICATOR)
+#define PACKET_TYPE_MAKE_RSP(byte)             (((byte) & PACKET_TYPE_MASK) | PACKET_RSP_INDICATOR)
+#define PACKET_TYPE_MAKE_ACK(byte)             (((byte) & PACKET_TYPE_MASK) | PACKET_ACK_INDICATOR)
 
 //   Errors, responses, and acks are sent by a radio only,
 //   and only in response to a host packet
-#define PACKET_TYPE_DEVICE_CMD_ERR             (PACKET_TYPE_DEVICE_CMD     | PACKET_ERR_INDICATOR)
-#define PACKET_TYPE_TX_RADIO_CMD_ERR           (PACKET_TYPE_TX_RADIO_CMD   | PACKET_ERR_INDICATOR)
-#define PACKET_TYPE_RX_RADIO_CMD_ERR           (PACKET_TYPE_RX_RADIO_CMD   | PACKET_ERR_INDICATOR)
+#define PACKET_TYPE_DEVICE_CMD_ERR             PACKET_TYPE_MAKE_ERR(PACKET_TYPE_DEVICE_CMD)
+#define PACKET_TYPE_TX_RADIO_CMD_ERR           PACKET_TYPE_MAKE_ERR(PACKET_TYPE_TX_RADIO_CMD)
+#define PACKET_TYPE_RX_RADIO_CMD_ERR           PACKET_TYPE_MAKE_ERR(PACKET_TYPE_RX_RADIO_CMD)
 
-#define PACKET_TYPE_DEVICE_CMD_RSP             (PACKET_TYPE_DEVICE_CMD     | PACKET_RSP_INDICATOR)
-#define PACKET_TYPE_TX_RADIO_CMD_RSP           (PACKET_TYPE_TX_RADIO_CMD   | PACKET_RSP_INDICATOR)
-#define PACKET_TYPE_RX_RADIO_CMD_RSP           (PACKET_TYPE_RX_RADIO_CMD   | PACKET_RSP_INDICATOR)
+#define PACKET_TYPE_DEVICE_CMD_RSP             PACKET_TYPE_MAKE_RSP(PACKET_TYPE_DEVICE_CMD)
+#define PACKET_TYPE_TX_RADIO_CMD_RSP           PACKET_TYPE_MAKE_RSP(PACKET_TYPE_TX_RADIO_CMD)
+#define PACKET_TYPE_RX_RADIO_CMD_RSP           PACKET_TYPE_MAKE_RSP(PACKET_TYPE_RX_RADIO_CMD)
 
-#define PACKET_TYPE_TX_SIGNAL_DATA_ACK         (PACKET_TYPE_TX_SIGNAL_DATA | PACKET_ACK_INDICATOR)
-#define PACKET_TYPE_RX_SIGNAL_DATA_ACK         (PACKET_TYPE_RX_SIGNAL_DATA | PACKET_ACK_INDICATOR)
-#define PACKET_TYPE_DEVICE_CMD_ACK             (PACKET_TYPE_DEVICE_CMD     | PACKET_ACK_INDICATOR)
-#define PACKET_TYPE_TX_RADIO_CMD_ACK           (PACKET_TYPE_TX_RADIO_CMD   | PACKET_ACK_INDICATOR)
-#define PACKET_TYPE_RX_RADIO_CMD_ACK           (PACKET_TYPE_RX_RADIO_CMD   | PACKET_ACK_INDICATOR)
+#define PACKET_TYPE_TX_SIGNAL_DATA_ACK         PACKET_TYPE_MAKE_ACK(PACKET_TYPE_TX_SIGNAL_DATA)
+#define PACKET_TYPE_RX_SIGNAL_DATA_ACK         PACKET_TYPE_MAKE_ACK(PACKET_TYPE_RX_SIGNAL_DATA)
+#define PACKET_TYPE_DEVICE_CMD_ACK             PACKET_TYPE_MAKE_ACK(PACKET_TYPE_DEVICE_CMD)
+#define PACKET_TYPE_TX_RADIO_CMD_ACK           PACKET_TYPE_MAKE_ACK(PACKET_TYPE_TX_RADIO_CMD)
+#define PACKET_TYPE_RX_RADIO_CMD_ACK           PACKET_TYPE_MAKE_ACK(PACKET_TYPE_RX_RADIO_CMD)
 
 // nothing should ever send this
 #define PACKET_TYPE_INVALID_PACKET             (0xFF)
@@ -200,9 +208,9 @@ extern "C" {
 #define MAX_DATA_LENGTH_SAMPLES                (2048UL)
 #define MAX_PAYLOAD_LENGTH_BYTES               (32UL)  // maximum length of a CMD or RSP packet, excluding header
 
-#define MAKE_PACKED                            __attribute__((packed))
+#define PACKED_STRUCT                          struct __attribute__((packed))
 
-typedef struct MAKE_PACKED {
+typedef PACKED_STRUCT {
   uint8_t                  packet_type;
   uint8_t                  command;
   uint8_t                  target_subdevice;  // for cases where multiple devices exist (e.g. multiple network I/F or multichannel TX/RX)
@@ -211,7 +219,7 @@ typedef struct MAKE_PACKED {
   uint16_t                 sequence_counter;  // need to figure out when this resets (every new data stream, power up, ?)
 } packet_header;
 
-typedef struct MAKE_PACKED {
+typedef PACKED_STRUCT {
   uint32_t                 seconds;
   uint32_t                 nanoseconds;
 } time_spec_t;
