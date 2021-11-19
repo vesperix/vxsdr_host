@@ -76,12 +76,13 @@ extern "C" {
 #define DEVICE_CMD_CLEAR_STATUS                (0x05)  // resets error flags and counters
 #define DEVICE_CMD_GET_BUFFER_INFO             (0x06)  // info on how many buffers and their purpose
 #define DEVICE_CMD_GET_BUFFER_USE              (0x07)  // asks for buffer info
-  // 0x0A-0x0F reserved
+  // 0x08-0x0F reserved
 #define DEVICE_CMD_GET_TRANSPORT_INFO          (0x10)  // unimplemented // how many interfaces, what kind
 #define DEVICE_CMD_GET_TRANSPORT_ADDR          (0x11)
 #define DEVICE_CMD_GET_MAX_PAYLOAD             (0x12)
 #define DEVICE_CMD_CLEAR_DATA_BUFFER           (0x13)
   // 0x14-0x1F reserved for more get_transport stuff as needed
+#define DEVICE_CMD_DISCOVER                    (0x20)  //
 #define DEVICE_CMD_SET_TRANSPORT_ADDR          (0x21)
 #define DEVICE_CMD_SET_MAX_PAYLOAD             (0x22)
 #define DEVICE_CMD_SAVE_TRANSPORT_ADDR         (0x23)

@@ -775,6 +775,7 @@ class vxsdr {
     @param flags the packet flags
   */
   bool set_tx_port(const unsigned port_num, const uint8_t subdev = 0, const uint8_t flags = 0);
+
   /*!
     @brief Sets the transmit output port by name.
     - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
@@ -786,6 +787,7 @@ class vxsdr {
     @param flags the packet flags
   */
   bool set_tx_port(const std::string &port_name, const uint8_t subdev = 0, const uint8_t flags = 0);
+
   /*!
     @brief Sets the receive input port by number.
     - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
@@ -797,6 +799,7 @@ class vxsdr {
     @param flags the packet flags
   */
   bool set_rx_port(const unsigned port_num, const uint8_t subdev = 0, const uint8_t flags = 0);
+
   /*!
     @brief Sets the receive input port by name.
     - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
@@ -808,6 +811,7 @@ class vxsdr {
     @param flags the packet flags
   */
   bool set_rx_port(const std::string &port_name, const uint8_t subdev = 0, const uint8_t flags = 0);
+
   /*!
     @brief Gets the current transmit output port.
     - returns the port number
@@ -815,6 +819,7 @@ class vxsdr {
     @param flags the packet flags
   */
   std::optional<unsigned> get_tx_port(const uint8_t subdev = 0, const uint8_t flags = 0);
+
   /*!
     @brief Gets the current receive input port.
     - returns the port number
@@ -822,6 +827,7 @@ class vxsdr {
     @param flags the packet flags
   */
   std::optional<unsigned> get_rx_port(const uint8_t subdev = 0, const uint8_t flags = 0);
+
   /*!
     @brief Enables or disables the transmit RF section.
     - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
@@ -891,6 +897,47 @@ class vxsdr {
     - returns the timeout in seconds
   */
   double get_host_device_command_timeout();
+
+  /*!
+    @brief
+    Broadcasts a device discovery packet to the entire current IP subnet, and return the
+    IP addresses of the devices which responded.
+    - returns a vector containing the IPv4 addresses of discovered devices
+  */
+  std::optional<std::vector<uint32_t>> device_discover_ip_addressses();
+
+  /*!
+    @brief Sets the IPv4 address of the device.
+    That this will disconnect the device if the IP address is different from the current address.
+    The IP address is not saved to nonvolatile memory in the device.
+    - returns @p true if the address is set, @p false otherwise
+  */
+  bool device_set_ipv4_address(uint32_t ip_address);
+
+  /*!
+    @brief Saves the IPv4 address of the device to nonvolatile memory in the device.
+    The IP address provided must be the same as the current IP address. A special-purpose program
+    is required to change and save a device's IP address.
+    - returns @p true if the address is saved, @p false otherwise
+  */
+  bool device_save_ipv4_address(uint32_t ip_address);
+
+  /*!
+    @brief Gets the maximum payload size in bytes for transport to and from the device.
+    Note that the maximum packet size is the maximum payload size + sizeof(packet_header)
+    + sizeof(time_spec_t) + sizeof(stream_spec_t), or 24 bytes more than the maximum payload.
+    - returns the maximum payload in bytes
+  */
+  std::optional<unsigned> device_get_max_payload_bytes();
+
+  /*!
+    @brief Sets the maximum payload size in bytes for transport to and from the device.
+    The payload size must be a multiple of 8 bytes and 1024 <= max_payload_bytes <= 8192.
+    Note that the maximum packet size is the maximum payload size + sizeof(packet_header)
+    + sizeof(time_spec_t) + sizeof(stream_spec_t), or 24 bytes more than the maximum payload.
+    - returns @p true if the size is set, @p false otherwise
+  */
+  bool device_set_max_payload_bytes(uint32_t max_payload_bytes);
 
  private:
 

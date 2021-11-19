@@ -941,7 +941,7 @@
     if(res) {
       auto q = res.value();
       auto *r = reinterpret_cast<unsigned_packet *>(&q);
-      return r->number;
+      return (unsigned)r->number;
     }
     return std::nullopt;
   }
@@ -953,7 +953,7 @@
     if(res) {
       auto q = res.value();
       auto *r = reinterpret_cast<unsigned_packet *>(&q);
-      return r->number;
+      return (unsigned)r->number;
     }
     return std::nullopt;
   }
@@ -1031,7 +1031,7 @@
     if(res) {
       auto q = res.value();
       auto *r = reinterpret_cast<unsigned_packet *>(&q);
-      return r->number;
+      return (unsigned)r->number;
     }
     return std::nullopt;
   }
@@ -1043,7 +1043,7 @@
     if(res) {
       auto q = res.value();
       auto *r = reinterpret_cast<unsigned_packet *>(&q);
-      return r->number;
+      return (unsigned)r->number;
     }
     return std::nullopt;
   }
@@ -1104,6 +1104,53 @@
 
   double vxsdr::get_host_device_command_timeout() {
     return 1e-3 * device_response_timeout_ms;
+  }
+
+  std::optional<std::vector<uint32_t>> vxsdr::device_discover_ip_addressses() {
+    // FIXME: needs implementation
+    return std::nullopt;
+  }
+
+  bool vxsdr::device_set_ipv4_address(uint32_t ip_address) {
+    unsigned_packet p = {};
+    p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_SET_TRANSPORT_ADDR, 0, 0, sizeof(p), 0 };
+    p.number = ip_address;
+    if(not vxsdr::send_packet_and_check_response(p)) {
+      return false;
+    }
+    return true;
+  }
+
+  bool vxsdr::device_save_ipv4_address(uint32_t ip_address) {
+    unsigned_packet p = {};
+    p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_SET_TRANSPORT_ADDR, 0, 0, sizeof(p), 0 };
+    p.number = ip_address;
+    if(not vxsdr::send_packet_and_check_response(p)) {
+      return false;
+    }
+    return true;
+  }
+
+  std::optional<unsigned> vxsdr::device_get_max_payload_bytes() {
+    header_only_packet p = {};
+    p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_GET_MAX_PAYLOAD, 0, 0, sizeof(p), 0 };
+    auto res = vxsdr::send_packet_and_return_response(p, "device_get_max_payload_bytes()");
+    if(res) {
+      auto q = res.value();
+      auto *r = reinterpret_cast<unsigned_packet *>(&q);
+      return (unsigned)r->number;
+    }
+    return std::nullopt;
+  }
+
+  bool vxsdr::device_set_max_payload_bytes(uint32_t max_payload_bytes) {
+    unsigned_packet p = {};
+    p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_SET_RF_PORT, 0, 0, sizeof(p), 0 };
+    p.number = max_payload_bytes;
+    if(not vxsdr::send_packet_and_check_response(p)) {
+      return false;
+    }
+    return true;
   }
 
 // private functions
