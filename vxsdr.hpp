@@ -878,6 +878,20 @@ class vxsdr {
   */
   std::optional<std::array<uint32_t, 2>> device_get_buffer_use(const uint8_t subdev, const uint8_t flags = 0);
 
+  /*!
+    @brief Sets the timeout used by the host for commands sent to the device.
+    We do not recommend values less than 0.5 seconds
+    - returns @p true if the timeout is set, @p false if it is out of range
+    @param timeout_s the timeout in seconds (must be greater than 0 and less than or equal to 3600)
+  */
+  bool set_host_device_command_timeout(const double timeout_s);
+
+  /*!
+    @brief Gets the current timeout used by the host for commands sent to the device.
+    - returns the timeout in seconds
+  */
+  double get_host_device_command_timeout();
+
  private:
 
   bool send_packet_and_check_response(packet &p, std::string cmd_name = "unknown");

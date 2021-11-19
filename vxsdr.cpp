@@ -1094,6 +1094,18 @@
     return std::nullopt;
   }
 
+  bool vxsdr::set_host_device_command_timeout(const double timeout_s) {
+    if(timeout_s <= 0.0 or timeout_s > 3600.0) {
+      return false;
+    }
+    device_response_timeout_ms = std::llround(1e3 * timeout_s);
+    return true;
+  }
+
+  double vxsdr::get_host_device_command_timeout() {
+    return 1e-3 * device_response_timeout_ms;
+  }
+
 // private functions
 
   bool vxsdr::send_packet_and_check_response(packet &p, std::string cmd_name) {
