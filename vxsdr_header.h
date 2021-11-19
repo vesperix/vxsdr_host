@@ -28,26 +28,35 @@ extern "C" {
 //   Async messages are sent by a radio only, and are not
 //   responses to a host message
 #define  PACKET_TYPE_ASYNC_MSG                 (0x05)
+
+// indicators are applied to each packet type to indicate responses, errors, and acks
+#define PACKET_ERR_INDICATOR                   (0x20)
+#define PACKET_RSP_INDICATOR                   (0x40)
+#define PACKET_ACK_INDICATOR                   (0x80)
+
 //   Errors, responses, and acks are sent by a radio only,
 //   and only in response to a host packet
-#define PACKET_TYPE_DEVICE_CMD_ERR             (0x0A)
-#define PACKET_TYPE_TX_RADIO_CMD_ERR           (0x0B)
-#define PACKET_TYPE_RX_RADIO_CMD_ERR           (0x0C)
-#define PACKET_TYPE_DEVICE_CMD_RSP             (0x0D)
-#define PACKET_TYPE_TX_RADIO_CMD_RSP           (0x0E)
-#define PACKET_TYPE_RX_RADIO_CMD_RSP           (0x0F)
-#define PACKET_TYPE_TX_SIGNAL_DATA_ACK         (0x80)
-#define PACKET_TYPE_RX_SIGNAL_DATA_ACK         (0x81)
-#define PACKET_TYPE_DEVICE_CMD_ACK             (0x82)
-#define PACKET_TYPE_TX_RADIO_CMD_ACK           (0x83)
-#define PACKET_TYPE_RX_RADIO_CMD_ACK           (0x84)
+#define PACKET_TYPE_DEVICE_CMD_ERR             (PACKET_TYPE_DEVICE_CMD     | PACKET_ERR_INDICATOR)
+#define PACKET_TYPE_TX_RADIO_CMD_ERR           (PACKET_TYPE_TX_RADIO_CMD   | PACKET_ERR_INDICATOR)
+#define PACKET_TYPE_RX_RADIO_CMD_ERR           (PACKET_TYPE_RX_RADIO_CMD   | PACKET_ERR_INDICATOR)
+
+#define PACKET_TYPE_DEVICE_CMD_RSP             (PACKET_TYPE_DEVICE_CMD     | PACKET_RSP_INDICATOR)
+#define PACKET_TYPE_TX_RADIO_CMD_RSP           (PACKET_TYPE_TX_RADIO_CMD   | PACKET_RSP_INDICATOR)
+#define PACKET_TYPE_RX_RADIO_CMD_RSP           (PACKET_TYPE_RX_RADIO_CMD   | PACKET_RSP_INDICATOR)
+
+#define PACKET_TYPE_TX_SIGNAL_DATA_ACK         (PACKET_TYPE_TX_SIGNAL_DATA | PACKET_ACK_INDICATOR)
+#define PACKET_TYPE_RX_SIGNAL_DATA_ACK         (PACKET_TYPE_RX_SIGNAL_DATA | PACKET_ACK_INDICATOR)
+#define PACKET_TYPE_DEVICE_CMD_ACK             (PACKET_TYPE_DEVICE_CMD     | PACKET_ACK_INDICATOR)
+#define PACKET_TYPE_TX_RADIO_CMD_ACK           (PACKET_TYPE_TX_RADIO_CMD   | PACKET_ACK_INDICATOR)
+#define PACKET_TYPE_RX_RADIO_CMD_ACK           (PACKET_TYPE_RX_RADIO_CMD   | PACKET_ACK_INDICATOR)
+
 // nothing should ever send this
 #define PACKET_TYPE_INVALID_PACKET             (0xFF)
 
 // Flags
-#define FLAGS_REQUEST_ACK                      (0x80U)
-#define FLAGS_TIME_PRESENT                     (0x40U)
-#define FLAGS_STREAM_ID_PRESENT                (0x20U)
+#define FLAGS_REQUEST_ACK                      (0x80)
+#define FLAGS_TIME_PRESENT                     (0x40)
+#define FLAGS_STREAM_ID_PRESENT                (0x20)
 //     bits 3-7: reserved for additional settings
 
 // Device Commands
@@ -97,6 +106,7 @@ extern "C" {
 #define ERR_BAD_PARAMETER                      (0x05)  // command parameter is out of allowed range
 #define ERR_NOT_SUPPORTED                      (0x06)  // this device can't do that command
 #define ERR_BAD_PKT_SIZE                       (0x07)
+#define ERR_FAILED                             (0x08) // should have worked, but didn't
 
 // Device Command Errors
 #define DEVICE_CMD_ERR_BAD_CMD                 ERR_BAD_COMMAND
@@ -106,6 +116,7 @@ extern "C" {
 #define DEVICE_CMD_ERR_BAD_PARAMETER           ERR_BAD_PARAMETER
 #define DEVICE_CMD_ERR_NOT_SUPPORTED           ERR_NOT_SUPPORTED
 #define DEVICE_CMD_ERR_BAD_PKT_SIZE            ERR_BAD_PKT_SIZE
+#define DEVICE_CMD_ERR_FAILED                  ERR_FAILED
 
 // Radio Commands
 #define RADIO_CMD_START_NOW_UNTIL_STOP         (0x01)
@@ -154,6 +165,7 @@ extern "C" {
 #define RADIO_CMD_ERR_BAD_PARAMETER            ERR_BAD_PARAMETER
 #define RADIO_CMD_ERR_NOT_SUPPORTED            ERR_NOT_SUPPORTED
 #define RADIO_CMD_ERR_BAD_PKT_SIZE             ERR_BAD_PKT_SIZE
+#define RADIO_CMD_ERR_FAILED                   ERR_FAILED
 
 // Async messages
 #define ASYNC_NO_ERROR                         (0x00)
