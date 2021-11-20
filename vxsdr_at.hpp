@@ -5,8 +5,15 @@
 #include <fstream>
 
 #include <boost/lockfree/spsc_queue.hpp>
-#include <boost/asio/io_service.hpp>
-#include <boost/asio/ip/udp.hpp>
+
+#ifdef USE_NEWORK_TS
+#include <experimental/net>
+namespace net = std::experimental::net;
+#else
+#include <boost/asio/ts/net.hpp>
+namespace net = boost::asio;
+#endif
+
 #ifdef VXSDR_ASYNC_RX
 #include <boost/asio/use_future.hpp>
 #endif // VXSDR_ASYNC_RX
@@ -81,14 +88,14 @@ class vxsdr {
   boost::lockfree::spsc_queue<response_queue_element, boost::lockfree::capacity<response_queue_length> > response_queue;
 
   // Boost context
-  boost::asio::io_context context;
+  net::io_context context;
 
   // threads used for sending and receiving
   std::thread sender_thread;
   std::thread receiver_thread;
   std::thread context_thread;
 
-  boost::asio::ip::udp::endpoint destination_endpoint;
+  net::ip::udp::endpoint destination_endpoint;
 
   // flags used for orderly shutdown
   std::atomic<bool> sender_thread_stop_flag = false, receiver_thread_stop_flag = false;
@@ -111,9 +118,9 @@ class vxsdr {
 
  public:
   // constructor
-  vxsdr(const boost::asio::ip::udp::endpoint &local_send_endpoint,
-        const boost::asio::ip::udp::endpoint &local_receive_endpoint,
-        const boost::asio::ip::udp::endpoint &radio_endpoint) :
+  vxsdr(const net::ip::udp::endpoint &local_send_endpoint,
+        const net::ip::udp::endpoint &local_receive_endpoint,
+        const net::ip::udp::endpoint &radio_endpoint) :
     sender_socket(context, local_send_endpoint),
     receiver_socket(context, local_receive_endpoint) {
     LOG_DEBUG("vxsdr constructor entered");
@@ -123,9 +130,9 @@ class vxsdr {
     // We run the io_context off in its own thread so that it operates
     // completely asynchronously with respect to the rest of the program.
     //
-    // boost::asio::execution needs Boost 1.76 or higher; use make_work_guard for backwards compatibility
-    //auto work = boost::asio::require(context.get_executor(), boost::asio::execution::outstanding_work.tracked);
-    auto work = boost::asio::make_work_guard(context);
+    // net::execution needs Boost 1.76 or higher; use make_work_guard for backwards compatibility
+    //auto work = net::require(context.get_executor(), net::execution::outstanding_work.tracked);
+    auto work = net::make_work_guard(context);
     context_thread = std::thread([&] { context.run(); });
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
 #endif // VXSDR_ASYNC_RX
@@ -147,7 +154,7 @@ class vxsdr {
     boost::system::error_code err;
 #ifndef ASYNCH__RX
     // use shutdown() to terminate the blocking read
-    receiver_socket.shutdown(boost::asio::ip::udp::socket::shutdown_receive, err);
+    receiver_socket.shutdown(net::ip::udp::socket::shutdown_receive, err);
     if(err != boost::system::errc::success and err != boost::system::errc::not_connected) {
       // the not connected error is expected since it's a UDP socket
       LOG_ERROR(fmt::format("receiver socket shutdown: {:s}", err.message()));
@@ -607,8 +614,8 @@ class vxsdr {
   }
 
  private:
-  boost::asio::ip::udp::socket sender_socket;
-  boost::asio::ip::udp::socket receiver_socket;
+  net::ip::udp::socket sender_socket;
+  net::ip::udp::socket receiver_socket;
 
   void device_get_buffer_info(const uint8_t subdev, const uint8_t flags = 0) {
     header_only_packet p;
@@ -731,9 +738,9 @@ class vxsdr {
 
   void udp_receiver() {
 
-    receiver_socket.set_option(boost::asio::ip::udp::socket::reuse_address(true));
-    receiver_socket.set_option(boost::asio::socket_base::receive_buffer_size(network_receive_buffer_bytes));
-    boost::asio::socket_base::receive_buffer_size option;
+    receiver_socket.set_option(net::ip::udp::socket::reuse_address(true));
+    receiver_socket.set_option(net::socket_base::receive_buffer_size(network_receive_buffer_bytes));
+    net::socket_base::receive_buffer_size option;
     receiver_socket.get_option(option);
     unsigned network_buffer_size = option.value();
     if(network_buffer_size != network_receive_buffer_bytes) {
@@ -764,7 +771,7 @@ class vxsdr {
 
   void start_receive() {
     LOG_DEBUG("start_receive started");
-    boost::asio::ip::udp::endpoint remote_endpoint;
+    net::ip::udp::endpoint remote_endpoint;
     uint16_t last_seq = 0;
 
     bytes_received = 0;
@@ -776,7 +783,7 @@ class vxsdr {
       static data_queue_element recv_buffer;
       size_t bytes_in_packet = 0;
 #ifndef VXSDR_ASYNC_RX
-      bytes_in_packet = receiver_socket.receive_from(boost::asio::buffer(&recv_buffer, sizeof(recv_buffer)), remote_endpoint);
+      bytes_in_packet = receiver_socket.receive_from(net::buffer(&recv_buffer, sizeof(recv_buffer)), remote_endpoint);
 #else
       /*
           https://www.boost.org/doc/libs/1_77_0/doc/html/boost_asio/example/cpp11/futures/daytime_client.cpp
@@ -785,9 +792,9 @@ class vxsdr {
           udp::endpoint sender_endpoint;
           std::future<std::size_t> recv_length =
             socket.async_receive_from(
-                boost::asio::buffer(recv_buf),
+                net::buffer(recv_buf),
                 sender_endpoint,
-                boost::asio::use_future);
+                net::use_future);
 
           // Do other things here while the receive completes.
 
@@ -795,9 +802,9 @@ class vxsdr {
               recv_buf.data(),
               recv_length.get()); // Blocks until receive is complete.
       */
-      std::future<size_t> result = receiver_socket.async_receive_from(boost::asio::buffer(&recv_buffer,
+      std::future<size_t> result = receiver_socket.async_receive_from(net::buffer(&recv_buffer,
                                    sizeof(recv_buffer)), remote_endpoint,
-                                   boost::asio::use_future);
+                                   net::use_future);
       if(result.wait_for(std::chrono::milliseconds(receiver_socket_timeout_ms)) == std::future_status::timeout) {
         bytes_in_packet = 0;
         //LOG_DEBUG("timeout");
@@ -944,9 +951,9 @@ class vxsdr {
 
   void udp_sender() {
 
-    sender_socket.set_option(boost::asio::socket_base::send_buffer_size(network_send_buffer_bytes));
+    sender_socket.set_option(net::socket_base::send_buffer_size(network_send_buffer_bytes));
 
-    boost::asio::socket_base::send_buffer_size option;
+    net::socket_base::send_buffer_size option;
     sender_socket.get_option(option);
     int network_buffer_size = option.value();
 
@@ -963,7 +970,7 @@ class vxsdr {
   void send_packet(packet &packet) {
     packet_types_sent[packet.hdr.packet_type]++;
     packet.hdr.sequence_counter = (uint16_t)(packets_sent++ % (UINT16_MAX + 1));
-    size_t bytes = sender_socket.send_to(boost::asio::buffer(&packet, packet.hdr.packet_size), destination_endpoint);
+    size_t bytes = sender_socket.send_to(net::buffer(&packet, packet.hdr.packet_size), destination_endpoint);
     if(bytes != packet.hdr.packet_size) {
       send_errors++;
     }

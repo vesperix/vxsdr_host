@@ -15,7 +15,15 @@
 
 #include <boost/lockfree/spsc_queue.hpp>
 #include <boost/lockfree/queue.hpp>
+
+#ifdef USE_NEWORK_TS
+#include <experimental/net>
+namespace net = std::experimental::net;
+#else
 #include <boost/asio/ts/net.hpp>
+namespace net = boost::asio;
+#endif
+
 #ifdef VXSDR_ASYNC_RX
 #include <boost/asio/use_future.hpp>
 #endif // VXSDR_ASYNC_RX
@@ -114,10 +122,10 @@ class vxsdr {
   boost::lockfree::queue<cmd_ack_queue_element, boost::lockfree::capacity<cmd_ack_queue_length> > cmd_ack_queue;
   boost::lockfree::queue<async_msg_queue_element, boost::lockfree::capacity<async_msg_queue_length> > async_msg_queue;
 
-  // Boost context and sockets
-  boost::asio::io_context context;
-  boost::asio::ip::udp::socket sender_socket;
-  boost::asio::ip::udp::socket receiver_socket;
+  // net context and sockets
+  net::io_context context;
+  net::ip::udp::socket sender_socket;
+  net::ip::udp::socket receiver_socket;
 
   // threads used for sending and receiving
   std::thread sender_thread;
@@ -125,7 +133,7 @@ class vxsdr {
   std::thread context_thread;
   std::thread error_handler_thread;
 
-  boost::asio::ip::udp::endpoint destination_endpoint;
+  net::ip::udp::endpoint destination_endpoint;
 
   // flags used to indicate the state of the data transport
   enum transport_state_t { UNINITIALIZED, STARTING, RUNNING, SHUTDOWN, TRANSPORT_ERROR };
@@ -164,9 +172,9 @@ class vxsdr {
     @param set_priority controls whether threads set realtime priority
     @param base_priority the priority to use if realtime priority is set
   */
-  vxsdr(const boost::asio::ip::udp::endpoint &local_send_endpoint,
-        const boost::asio::ip::udp::endpoint &local_receive_endpoint,
-        const boost::asio::ip::udp::endpoint &device_endpoint,
+  vxsdr(const net::ip::udp::endpoint &local_send_endpoint,
+        const net::ip::udp::endpoint &local_receive_endpoint,
+        const net::ip::udp::endpoint &device_endpoint,
         const bool nondata_packet_logging = false,
         const bool set_affinity = true, const unsigned base_cpu_number = 0,
         const bool set_priority = true, const unsigned base_priority = 5);
@@ -905,7 +913,7 @@ class vxsdr {
     - returns a vector containing the IPv4 addresses of discovered devices
     @param broadcast_address the broadcast address
   */
-  std::optional<std::vector<boost::asio::ip::address_v4>> device_discover_ipv4_addresses(const boost::asio::ip::address_v4 broadcast_addr);
+  std::optional<std::vector<net::ip::address_v4>> device_discover_ipv4_addresses(const net::ip::address_v4 broadcast_addr);
 
   /*!
     @brief Sets the IPv4 address of the device.
@@ -914,7 +922,7 @@ class vxsdr {
     - returns @p true if the address is set, @p false otherwise
     @param device_address the device address to set
   */
-  bool device_set_ipv4_address(const boost::asio::ip::address_v4 device_address);
+  bool device_set_ipv4_address(const net::ip::address_v4 device_address);
 
   /*!
     @brief Saves the IPv4 address of the device to nonvolatile memory in the device.
@@ -923,7 +931,7 @@ class vxsdr {
     - returns @p true if the address is saved, @p false otherwise
     @param device_address the device address to save
   */
-  bool device_save_ipv4_address(const boost::asio::ip::address_v4 device_address);
+  bool device_save_ipv4_address(const net::ip::address_v4 device_address);
 
   //FIXME: check the packet size computations below!!!
 

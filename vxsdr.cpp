@@ -4,9 +4,9 @@
     @brief Function definitions for the @p vxsdr class.
 */
 
-  vxsdr::vxsdr(const boost::asio::ip::udp::endpoint &local_send_endpoint,
-        const boost::asio::ip::udp::endpoint &local_receive_endpoint,
-        const boost::asio::ip::udp::endpoint &device_endpoint,
+  vxsdr::vxsdr(const net::ip::udp::endpoint &local_send_endpoint,
+        const net::ip::udp::endpoint &local_receive_endpoint,
+        const net::ip::udp::endpoint &device_endpoint,
         const bool nondata_packet_logging,
         const bool set_affinity, const unsigned base_cpu_number,
         const bool set_priority, const unsigned base_priority) :
@@ -26,9 +26,9 @@
     // We run the io_context off in its own thread so that it operates
     // completely asynchronously with respect to the rest of the program.
     //
-    // boost::asio::execution needs Boost 1.76 or higher; use make_work_guard for backwards compatibility
-    //auto work = boost::asio::require(context.get_executor(), boost::asio::execution::outstanding_work.tracked);
-    auto work = boost::asio::make_work_guard(context);
+    // net::execution needs Boost 1.76 or higher; use make_work_guard for backwards compatibility
+    //auto work = net::require(context.get_executor(), net::execution::outstanding_work.tracked);
+    auto work = net::make_work_guard(context);
     context_thread = std::thread([&] { context.run(); });
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
 #endif // VXSDR_ASYNC_RX
@@ -61,7 +61,7 @@
     boost::system::error_code err;
 #ifndef VXSDR_ASYNCH__RX
     // use shutdown() to terminate the blocking read
-    receiver_socket.shutdown(boost::asio::ip::udp::socket::shutdown_receive, err);
+    receiver_socket.shutdown(net::ip::udp::socket::shutdown_receive, err);
     if(err != boost::system::errc::success and err != boost::system::errc::not_connected) {
       // the not connected error is expected since it's a UDP socket
       LOG_ERROR(fmt::format("receiver socket shutdown: {:s}", err.message()));
@@ -1106,26 +1106,26 @@
     return 1e-3 * device_response_timeout_ms;
   }
 
-  std::optional<std::vector<boost::asio::ip::address_v4>> vxsdr::device_discover_ipv4_addresses(const boost::asio::ip::address_v4 broadcast_addr)
+  std::optional<std::vector<net::ip::address_v4>> vxsdr::device_discover_ipv4_addresses(const net::ip::address_v4 broadcast_addr)
   {
     // FIXME: needs implementation
     return std::nullopt;
   }
 
-  bool vxsdr::device_set_ipv4_address(boost::asio::ip::address_v4 ip_address) {
+  bool vxsdr::device_set_ipv4_address(const net::ip::address_v4 device_address) {
     unsigned_packet p = {};
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_SET_TRANSPORT_ADDR, 0, 0, sizeof(p), 0 };
-    p.number = ip_address.to_uint();
+    p.number = device_address.to_uint();
     if(not vxsdr::send_packet_and_check_response(p)) {
       return false;
     }
     return true;
   }
 
-  bool vxsdr::device_save_ipv4_address(boost::asio::ip::address_v4 ip_address) {
+  bool vxsdr::device_save_ipv4_address(const net::ip::address_v4 device_address) {
     unsigned_packet p = {};
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_SET_TRANSPORT_ADDR, 0, 0, sizeof(p), 0 };
-    p.number = ip_address.to_uint();
+    p.number = device_address.to_uint();
     if(not vxsdr::send_packet_and_check_response(p)) {
       return false;
     }
@@ -1144,7 +1144,7 @@
     return std::nullopt;
   }
 
-  bool vxsdr::device_set_max_payload_bytes(uint32_t max_payload_bytes) {
+  bool vxsdr::device_set_max_payload_bytes(const unsigned max_payload_bytes) {
     unsigned_packet p = {};
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_SET_RF_PORT, 0, 0, sizeof(p), 0 };
     p.number = max_payload_bytes;
@@ -1156,7 +1156,7 @@
 
 // private functions
 
-  bool vxsdr::send_packet_and_check_response(packet &p, std::string cmd_name) {
+  bool vxsdr::send_packet_and_check_response(packet &p, const std::string cmd_name) {
     if(not vxsdr::cmd_queue_push_check(p)) {
       return false;
     }
@@ -1188,7 +1188,7 @@
     return false;
   }
 
-  std::optional<vxsdr::response_queue_element> vxsdr::send_packet_and_return_response(packet &p, std::string cmd_name) {
+  std::optional<vxsdr::response_queue_element> vxsdr::send_packet_and_return_response(packet &p, const std::string cmd_name) {
     if(not vxsdr::cmd_queue_push_check(p)) {
       return std::nullopt;
     }
