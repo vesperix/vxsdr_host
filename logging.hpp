@@ -18,17 +18,17 @@
 
 #define LOG_INIT(x)             log_init(x)
 
-#define LOG_TRACE(x)            SPDLOG_LOGGER_TRACE(spdlog::get("multi"), x)
-#define LOG_DEBUG(x)            SPDLOG_LOGGER_DEBUG(spdlog::get("multi"), x)
-#define LOG_INFO(x)             SPDLOG_LOGGER_INFO(spdlog::get("multi"), x)
-#define LOG_WARN(x)             SPDLOG_LOGGER_WARN(spdlog::get("multi"), x)
-#define LOG_ERROR(x)            SPDLOG_LOGGER_ERROR(spdlog::get("multi"), x)
-#define LOG_FATAL(x)            SPDLOG_LOGGER_CRITICAL(spdlog::get("multi"), x)
+#define LOG_TRACE(...)          SPDLOG_LOGGER_TRACE(spdlog::get("multi"),) __VA_ARGS__)
+#define LOG_DEBUG(...)          SPDLOG_LOGGER_DEBUG(spdlog::get("multi"), __VA_ARGS__)
+#define LOG_INFO(...)           SPDLOG_LOGGER_INFO(spdlog::get("multi"), __VA_ARGS__)
+#define LOG_WARN(...)           SPDLOG_LOGGER_WARN(spdlog::get("multi"), __VA_ARGS__)
+#define LOG_ERROR(...)          SPDLOG_LOGGER_ERROR(spdlog::get("multi"), __VA_ARGS__)
+#define LOG_FATAL(...)          SPDLOG_LOGGER_CRITICAL(spdlog::get("multi"), __VA_ARGS__)
 
 #define LOG_CLOSE()             log_close();
 
 // what level to use for packet logs
-#define LOG_PACKET(x)           SPDLOG_LOGGER_INFO(spdlog::get("multi"), x)
+#define LOG_PACKET(...)         SPDLOG_LOGGER_INFO(spdlog::get("multi"), __VA_ARGS__)
 
 void log_init(const std::string &logfilename);
 void log_close();
