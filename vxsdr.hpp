@@ -900,27 +900,30 @@ class vxsdr {
 
   /*!
     @brief
-    Broadcasts a device discovery packet to the entire current IP subnet, and return the
-    IP addresses of the devices which responded.
+    Broadcasts a device discovery packet to the given IPv4 broadcast address, and returns the
+    IPv4 addresses of the devices which respond.
     - returns a vector containing the IPv4 addresses of discovered devices
+    @param broadcast_address the broadcast address
   */
-  std::optional<std::vector<uint32_t>> device_discover_ip_addressses();
+  std::optional<std::vector<boost::asio::ip::address_v4>> device_discover_ipv4_addresses(const boost::asio::ip::address_v4 broadcast_addr);
 
   /*!
     @brief Sets the IPv4 address of the device.
-    That this will disconnect the device if the IP address is different from the current address.
-    The IP address is not saved to nonvolatile memory in the device.
+    This will disconnect the device if the given address is different from its current address.
+    The IP address is not saved to nonvolatile memory in the device by this command.
     - returns @p true if the address is set, @p false otherwise
+    @param device_address the device address to set
   */
-  bool device_set_ipv4_address(uint32_t ip_address);
+  bool device_set_ipv4_address(const boost::asio::ip::address_v4 device_address);
 
   /*!
     @brief Saves the IPv4 address of the device to nonvolatile memory in the device.
-    The IP address provided must be the same as the current IP address. A special-purpose program
+    The IP address provided must be the same as the device's current IP address. A special-purpose program
     is required to change and save a device's IP address.
     - returns @p true if the address is saved, @p false otherwise
+    @param device_address the device address to save
   */
-  bool device_save_ipv4_address(uint32_t ip_address);
+  bool device_save_ipv4_address(const boost::asio::ip::address_v4 device_address);
 
   //FIXME: check the packet size computations below!!!
 
@@ -938,13 +941,14 @@ class vxsdr {
     Note that the maximum packet size is the maximum payload size + sizeof(packet_header)
     + sizeof(IPv4 header), or maximum_payload_bytes + 24.
     - returns @p true if the size is set, @p false otherwise
+    @param max_payload_bytes the maximum payload size in bytes
   */
-  bool device_set_max_payload_bytes(uint32_t max_payload_bytes);
+  bool device_set_max_payload_bytes(const unsigned max_payload_bytes);
 
  private:
 
-  bool send_packet_and_check_response(packet &p, std::string cmd_name = "unknown");
-  std::optional<response_queue_element> send_packet_and_return_response(packet &p, std::string cmd_name = "unknown");
+  bool send_packet_and_check_response(packet &p, const std::string cmd_name = "unknown");
+  std::optional<response_queue_element> send_packet_and_return_response(packet &p, const std::string cmd_name = "unknown");
   static void time_point_to_time_spec_t(const std::chrono::time_point<std::chrono::system_clock> &t, time_spec_t &ts);
   static std::string stream_state_to_string(const stream_state_t state);
   static std::string transport_state_to_string(const transport_state_t state);

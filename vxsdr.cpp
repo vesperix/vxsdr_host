@@ -1106,25 +1106,26 @@
     return 1e-3 * device_response_timeout_ms;
   }
 
-  std::optional<std::vector<uint32_t>> vxsdr::device_discover_ip_addressses() {
+  std::optional<std::vector<boost::asio::ip::address_v4>> vxsdr::device_discover_ipv4_addresses(const boost::asio::ip::address_v4 broadcast_addr)
+  {
     // FIXME: needs implementation
     return std::nullopt;
   }
 
-  bool vxsdr::device_set_ipv4_address(uint32_t ip_address) {
+  bool vxsdr::device_set_ipv4_address(boost::asio::ip::address_v4 ip_address) {
     unsigned_packet p = {};
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_SET_TRANSPORT_ADDR, 0, 0, sizeof(p), 0 };
-    p.number = ip_address;
+    p.number = ip_address.to_uint();
     if(not vxsdr::send_packet_and_check_response(p)) {
       return false;
     }
     return true;
   }
 
-  bool vxsdr::device_save_ipv4_address(uint32_t ip_address) {
+  bool vxsdr::device_save_ipv4_address(boost::asio::ip::address_v4 ip_address) {
     unsigned_packet p = {};
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_SET_TRANSPORT_ADDR, 0, 0, sizeof(p), 0 };
-    p.number = ip_address;
+    p.number = ip_address.to_uint();
     if(not vxsdr::send_packet_and_check_response(p)) {
       return false;
     }
