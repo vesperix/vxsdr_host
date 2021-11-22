@@ -86,15 +86,14 @@ class vxsdr {
   static constexpr size_t command_queue_length            =         32;    // slots in command msg queue
   static constexpr size_t response_queue_length           =         32;    // slots in response msg queue
   static constexpr size_t cmd_ack_queue_length            =         32;    // slots in command ack queue
-  static constexpr size_t error_queue_length              =        256;    // slots in error queue
   static constexpr size_t async_msg_queue_length          =        256;    // slots in async msg queue
 
   // timeouts and waits for responses from device
   unsigned                  device_response_timeout_ms    =        500;
   static constexpr unsigned device_response_wait_ms       =          1;
 
-  // how often to check the error queue
-  static constexpr unsigned error_queue_check_ms          =          1;
+  // how often to check the async queue
+  static constexpr unsigned async_queue_check_ms          =         10;
 
   // the UDP tx waits for the rx to reach RUNNING state before entering RUNNING itself
   static constexpr unsigned udp_tx_ready_timeout_ms       =      1'000;
@@ -108,7 +107,6 @@ class vxsdr {
   using data_queue_element = largest_data_packet;
   using command_queue_element = largest_cmd_or_rsp_packet;
   using response_queue_element = largest_cmd_or_rsp_packet;
-  using error_queue_element = largest_cmd_or_rsp_packet;
   using cmd_ack_queue_element = largest_cmd_or_rsp_packet;
   using async_msg_queue_element = largest_cmd_or_rsp_packet;
 
@@ -118,7 +116,6 @@ class vxsdr {
   // other queues are MPMC
   boost::lockfree::queue<command_queue_element, boost::lockfree::capacity<command_queue_length> > command_queue;
   boost::lockfree::queue<response_queue_element, boost::lockfree::capacity<response_queue_length> > response_queue;
-  boost::lockfree::queue<error_queue_element, boost::lockfree::capacity<error_queue_length> > error_queue;
   boost::lockfree::queue<cmd_ack_queue_element, boost::lockfree::capacity<cmd_ack_queue_length> > cmd_ack_queue;
   boost::lockfree::queue<async_msg_queue_element, boost::lockfree::capacity<async_msg_queue_length> > async_msg_queue;
 
@@ -131,7 +128,7 @@ class vxsdr {
   std::thread sender_thread;
   std::thread receiver_thread;
   std::thread context_thread;
-  std::thread error_handler_thread;
+  std::thread async_handler_thread;
 
   net::ip::udp::endpoint destination_endpoint;
 
@@ -882,7 +879,7 @@ class vxsdr {
     @param subdev the subdevice number
     @param flags the packet flags
   */
-  std::optional<std::array<uint32_t, 2>> device_get_buffer_info(const uint8_t subdev, const uint8_t flags = 0);
+  std::optional<std::array<uint32_t, 2>> device_get_buffer_info(const uint8_t subdev = 0, const uint8_t flags = 0);
 
   /*!
     @brief Gets the current number of bytes used in the device transmit and receive buffers.
@@ -890,7 +887,7 @@ class vxsdr {
     @param subdev the subdevice number
     @param flags the packet flags
   */
-  std::optional<std::array<uint32_t, 2>> device_get_buffer_use(const uint8_t subdev, const uint8_t flags = 0);
+  std::optional<std::array<uint32_t, 2>> device_get_buffer_use(const uint8_t subdev = 0, const uint8_t flags = 0);
 
   /*!
     @brief Gets the status of the device timing references.
@@ -900,7 +897,7 @@ class vxsdr {
     @param subdev the subdevice number
     @param flags the packet flags
   */
-  std::optional<std::array<bool, 3>> device_get_timing_status(const uint8_t subdev, const uint8_t flags = 0);
+  std::optional<std::array<bool, 3>> device_get_timing_status(const uint8_t subdev = 0, const uint8_t flags = 0);
 
   /*!
     @brief Sets the timeout used by the host for commands sent to the device.
@@ -973,13 +970,13 @@ class vxsdr {
   static std::string error_to_string(const uint32_t reason);
 
   [[nodiscard]] bool cmd_queue_push_check(packet &p);
-  void error_handler();
+  void async_handler();
   void receiver();
   void sender();
   void udp_receiver();
   void start_receive();
   void udp_sender();
-  void send_packet(packet &packet);
+  bool send_packet(packet &packet);
   void initialize_sdr(const uint8_t device_subdev = 0, const uint8_t tx_subdev = 0, const uint8_t rx_subdev = 0);
   void stop_sdr(const uint8_t device_subdev = 0, const uint8_t tx_subdev = 0, const uint8_t rx_subdev = 0);
   void start_send();

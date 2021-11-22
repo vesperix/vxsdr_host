@@ -32,7 +32,7 @@
     context_thread = std::thread([&] { context.run(); });
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
 #endif // VXSDR_ASYNC_RX
-    error_handler_thread = std::thread([&] { error_handler(); });
+    async_handler_thread = std::thread([&] { async_handler(); });
     udp_rx_state = STARTING;
     receiver_thread = std::thread([&] { receiver(); });
     udp_tx_state = STARTING;
@@ -47,8 +47,14 @@
         throw std::runtime_error("timeout waiting for UDP transport in vxsdr constructor");
       }
     }
-    set_tx_enable(true);
-    set_rx_enable(true);
+    if(not tx_stop_now() or
+       not rx_stop_now() or
+       not device_get_buffer_info() or
+       not set_tx_enable(true) or
+       not set_rx_enable(true)) {
+      LOG_ERROR("error initializing sdr");
+      throw std::runtime_error("error initializing sdr in vxsdr constructor");
+    }
     LOG_DEBUG("vxsdr constructor complete");
   }
 
@@ -90,8 +96,8 @@
     context_thread.join();
 #endif // VXSDR_ASYNC_RX
     LOG_DEBUG("joining error_handler thread");
-    if(error_handler_thread.joinable()) {
-      error_handler_thread.join();
+    if(async_handler_thread.joinable()) {
+      async_handler_thread.join();
     }
     LOG_DEBUG("vxsdr destructor complete");
   }
@@ -1301,20 +1307,16 @@
     }
   }
 
-  void vxsdr::error_handler() {
-    LOG_DEBUG("error_handler started");
+  void vxsdr::async_handler() {
+    LOG_DEBUG("async_handler started");
     while(udp_rx_state != SHUTDOWN) {
-      error_queue_element e;
       async_msg_queue_element a;
-      while(error_queue.pop(e)) {
-        log_packet_info(e);
-      }
       while(async_msg_queue.pop(a)) {
         log_packet_info(a);
       }
-      std::this_thread::sleep_for(std::chrono::milliseconds(error_queue_check_ms));
+      std::this_thread::sleep_for(std::chrono::milliseconds(async_queue_check_ms));
     }
-    LOG_DEBUG("error_handler finished");
+    LOG_DEBUG("async_handler finished");
   }
 
   std::optional<std::array<uint32_t, 2>> vxsdr::device_get_buffer_info(const uint8_t subdev, const uint8_t flags) {

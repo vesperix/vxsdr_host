@@ -184,31 +184,43 @@
               // DO NOT PUSH DATA ACKS TO COMMAND ACK QUEUE!!
             }
             break;
-          // the buffer info commands are special cased so they automatically update the buffer sizes and use
-          // since they are not part of the public interface, they are not pushed into any queue
-          case PACKET_TYPE_DEVICE_CMD_RSP:
-            switch(recv_buffer.hdr.command) {
-              case DEVICE_CMD_GET_BUFFER_USE: {
-                  auto *r = reinterpret_cast<buffer_use_rsp_packet *>(&recv_buffer);
-                  vxsdr::tx_buffer_used_bytes = r->tx_buffer_used_bytes;
-                  vxsdr::rx_buffer_used_bytes = r->rx_buffer_used_bytes;
-                  vxsdr::tx_buffer_fill_percent = std::min(100U, (100U * vxsdr::tx_buffer_used_bytes) / vxsdr::tx_buffer_size_bytes);
-                  vxsdr::rx_buffer_fill_percent = std::min(100U, (100U * vxsdr::rx_buffer_used_bytes) / vxsdr::rx_buffer_size_bytes);
-                }
-                break;
-              case DEVICE_CMD_GET_BUFFER_INFO: {
-                  auto *r = reinterpret_cast<buffer_info_rsp_packet *>(&recv_buffer);
-                  vxsdr::tx_buffer_size_bytes = r->tx_buffer_size_bytes;
-                  vxsdr::rx_buffer_size_bytes = r->rx_buffer_size_bytes;
-                }
-                break;
-              default: {
-                  auto *p = reinterpret_cast<response_queue_element *>(&recv_buffer);
-                  vxsdr::response_queue.bounded_push(*p);
-                }
-                break;
+
+          case PACKET_TYPE_RX_RADIO_CMD_RSP:
+          case PACKET_TYPE_TX_RADIO_CMD_RSP:
+          case PACKET_TYPE_DEVICE_CMD_ERR:
+          case PACKET_TYPE_TX_RADIO_CMD_ERR:
+          case PACKET_TYPE_RX_RADIO_CMD_ERR: {
+              auto *p = reinterpret_cast<response_queue_element *>(&recv_buffer);
+              vxsdr::response_queue.bounded_push(*p);
             }
             break;
+
+          // the buffer info commands are special cased so they automatically update the buffer sizes and use
+          // since they are not part of the public interface, they are not pushed into any queue
+          case PACKET_TYPE_DEVICE_CMD_RSP: {
+              switch(recv_buffer.hdr.command) {
+                case DEVICE_CMD_GET_BUFFER_USE: {
+                    auto *r = reinterpret_cast<buffer_use_rsp_packet *>(&recv_buffer);
+                    vxsdr::tx_buffer_used_bytes = r->tx_buffer_used_bytes;
+                    vxsdr::rx_buffer_used_bytes = r->rx_buffer_used_bytes;
+                    vxsdr::tx_buffer_fill_percent = std::min(100U, (100U * vxsdr::tx_buffer_used_bytes) / vxsdr::tx_buffer_size_bytes);
+                    vxsdr::rx_buffer_fill_percent = std::min(100U, (100U * vxsdr::rx_buffer_used_bytes) / vxsdr::rx_buffer_size_bytes);
+                  }
+                  break;
+                case DEVICE_CMD_GET_BUFFER_INFO: {
+                    auto *r = reinterpret_cast<buffer_info_rsp_packet *>(&recv_buffer);
+                    vxsdr::tx_buffer_size_bytes = r->tx_buffer_size_bytes;
+                    vxsdr::rx_buffer_size_bytes = r->rx_buffer_size_bytes;
+                  }
+                  break;
+                default:
+                  break;
+              }
+              auto *p = reinterpret_cast<response_queue_element *>(&recv_buffer);
+              vxsdr::response_queue.bounded_push(*p);
+            }
+            break;
+
           case PACKET_TYPE_DEVICE_CMD_ACK:
           case PACKET_TYPE_RX_RADIO_CMD_ACK:
           case PACKET_TYPE_TX_RADIO_CMD_ACK: {
@@ -216,6 +228,7 @@
               vxsdr::cmd_ack_queue.bounded_push(*p);
             }
             break;
+
           // DEVICE_CMD_RSP handled above
           case PACKET_TYPE_ASYNC_MSG: {
               // FIXME: do whatever is needed to notify or shut down!!!
@@ -223,29 +236,14 @@
               vxsdr::async_msg_queue.bounded_push(*p);
             }
             break;
-          case PACKET_TYPE_RX_RADIO_CMD_RSP:
-          case PACKET_TYPE_TX_RADIO_CMD_RSP: {
-              auto *p = reinterpret_cast<response_queue_element *>(&recv_buffer);
-              vxsdr::response_queue.bounded_push(*p);
-            }
-            break;
-          case PACKET_TYPE_DEVICE_CMD_ERR:
-          case PACKET_TYPE_TX_RADIO_CMD_ERR:
-          case PACKET_TYPE_RX_RADIO_CMD_ERR: {
-              auto *p = reinterpret_cast<error_queue_element *>(&recv_buffer);
-              vxsdr::error_queue.bounded_push(*p);
-            }
-            break;
-          // packet types that should never show up at the host are sent to the error queue
+
+          // packet types that should never show up at the host are ignored
           case PACKET_TYPE_TX_SIGNAL_DATA:
           case PACKET_TYPE_DEVICE_CMD:
           case PACKET_TYPE_RX_RADIO_CMD:
           case PACKET_TYPE_TX_RADIO_CMD:
-          default: { // unrecognized packet types
-              auto *p = reinterpret_cast<error_queue_element *>(&recv_buffer);
-              vxsdr::error_queue.bounded_push(*p);
-            }
-            break;
+          default: // unrecognized packet types
+             break;
         }
       }
     }
@@ -288,7 +286,8 @@
     vxsdr::start_send();
   }
 
-  void vxsdr::send_packet(packet &packet) {
+  bool vxsdr::send_packet(packet &packet) {
+    bool retval = true;
     vxsdr::packet_types_sent[packet.hdr.packet_type]++;
     packet.hdr.sequence_counter = (uint16_t)(vxsdr::packets_sent++ % (UINT16_MAX + 1));
 
@@ -303,6 +302,7 @@
     size_t bytes = vxsdr::sender_socket.send_to(boost::asio::buffer(&packet, packet.hdr.packet_size), vxsdr::destination_endpoint);
     if(bytes != packet.hdr.packet_size) {
       vxsdr::send_errors++;
+      retval = false;
     }
     if(packet.hdr.packet_type == PACKET_TYPE_TX_SIGNAL_DATA) {
       uint16_t header_size = sizeof(packet_header);
@@ -315,21 +315,7 @@
       vxsdr::samples_sent += (packet.hdr.packet_size - header_size) / sizeof(std::complex<int16_t>);
     }
     vxsdr::bytes_sent += bytes;
-  }
-
-  void vxsdr::initialize_sdr(const uint8_t device_subdev, const uint8_t tx_subdev, const uint8_t rx_subdev) {
-    // NOTE: this is normally before the command queue loop is started,
-    // so packets are set up and sent directly to the socket
-    header_only_packet p;
-    p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_STOP_NOW, tx_subdev, 0, sizeof(p), 0 };
-    vxsdr::send_packet(p);
-    p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_STOP_NOW, rx_subdev, 0, sizeof(p), 0 };
-    vxsdr::send_packet(p);
-    p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_CLEAR_STATUS, device_subdev, 0, sizeof(p), 0 };    \
-    vxsdr::send_packet(p);
-    // get device buffer sizes before any data is sent since they're used in flow control
-    p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_GET_BUFFER_INFO, device_subdev, 0, sizeof(p), 0 };    \
-    vxsdr::send_packet(p);
+    return retval;
   }
 
   void vxsdr::stop_sdr(const uint8_t device_subdev, const uint8_t tx_subdev, const uint8_t rx_subdev) {
@@ -376,8 +362,6 @@
     } else {
       LOG_INFO("udp rx in RUNNING state; udp tx starting");
     }
-
-    initialize_sdr();
 
     vxsdr::udp_tx_state = RUNNING;
 
