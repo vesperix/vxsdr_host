@@ -1094,6 +1094,25 @@
     return std::nullopt;
   }
 
+  std::optional<std::array<bool, 3>> vxsdr::device_get_timing_status(const uint8_t subdev, const uint8_t flags) {
+    // FIXME: these need to be defined as part of a generic API when stable
+    constexpr uint32_t TIMING_STATUS_EXT_PPS_LOCK   = 0x00000001;
+    constexpr uint32_t TIMING_STATUS_EXT_10MHZ_LOCK = 0x00000002;
+    constexpr uint32_t TIMING_STATUS_REF_OSC_LOCK   = 0x00000004;
+    header_only_packet p = {};
+    p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_GET_TIMING_STATUS, subdev, flags, sizeof(p), 0 };
+    auto res = vxsdr::send_packet_and_return_response(p, "device_get_timing_status()");
+    if(res) {
+      auto q = res.value();
+      auto *r = reinterpret_cast<unsigned_packet *>(&q);
+      std::array<bool, 3> ret = { (bool)(r->number & TIMING_STATUS_EXT_PPS_LOCK),
+                                  (bool)(r->number & TIMING_STATUS_EXT_10MHZ_LOCK),
+                                  (bool)(r->number & TIMING_STATUS_REF_OSC_LOCK) };
+      return ret;
+    }
+    return std::nullopt;
+  }
+
   bool vxsdr::set_host_device_command_timeout(const double timeout_s) {
     if(timeout_s <= 0.0 or timeout_s > 3600.0) {
       return false;

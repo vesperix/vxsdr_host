@@ -893,6 +893,16 @@ class vxsdr {
   std::optional<std::array<uint32_t, 2>> device_get_buffer_use(const uint8_t subdev, const uint8_t flags = 0);
 
   /*!
+    @brief Gets the status of the device timing references.
+    - returns an array containing the external PPS lock status, external 10 MHz lock status, and
+      internal reference oscillator lock status, in that order. Note that the first two will be false
+      if no external PPS and 10 MHz are connected.
+    @param subdev the subdevice number
+    @param flags the packet flags
+  */
+  std::optional<std::array<bool, 3>> device_get_timing_status(const uint8_t subdev, const uint8_t flags = 0);
+
+  /*!
     @brief Sets the timeout used by the host for commands sent to the device.
     We do not recommend values less than 0.5 seconds
     - returns @p true if the timeout is set, @p false if it is out of range
