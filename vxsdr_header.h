@@ -86,7 +86,7 @@ extern "C" {
 #define DEVICE_CMD_SET_TRANSPORT_ADDR          (0x21)
 #define DEVICE_CMD_SET_MAX_PAYLOAD             (0x22)
 #define DEVICE_CMD_SAVE_TRANSPORT_ADDR         (0x23)
-  // 0x22-0x2F reserved for more set_transport stuff as needed
+  // 0x24-0x2F reserved for more set_transport stuff as needed
 #define DEVICE_CMD_GET_CHANNEL_INFO            (0x30)  // unimplemented // how many, are they TX/RX, etc
   // 0x31-0x4F reserved for channel parameter get and set
 #define DEVICE_CMD_GET_TIMING_INFO             (0x50)  // unimplemented // what timing inputs are available
@@ -133,8 +133,7 @@ extern "C" {
 #define RADIO_CMD_STOP_NOW                     (0x03)  // stops anything going on
 #define RADIO_CMD_START_NOW_FOR_N_SAMPLES      (0x04)
 #define RADIO_CMD_START_AT_TIME_FOR_N_SAMPLES  (0x05)  // error if TIME_PRESENT is 0
-  // 0x06-0x0F reserved
-//#define RADIO_CMD_GET_RF_INFO                  (0x10)  // unimplemented // available frequency, gain, sample rate, and bandwidth ranges, number of selectable I/Os
+// 0x06 - 0x10 reserved
 #define RADIO_CMD_GET_RF_FREQ                  (0x11)
 #define RADIO_CMD_GET_RF_GAIN                  (0x12)
 #define RADIO_CMD_GET_SAMPLE_RATE              (0x13)
@@ -144,6 +143,8 @@ extern "C" {
 #define RADIO_CMD_GET_NUM_RF_PORTS             (0x17)
 #define RADIO_CMD_GET_RF_PORT_NAME             (0x18)
 #define RADIO_CMD_GET_LO_INPUT                 (0x19)  // unimplemented
+#define RADIO_CMD_GET_LOCK_STATUS              (0x1A)
+// 0x1B - 0x1F reserved
 #define RADIO_CMD_GET_MASTER_CLK               (0x20)  // unimplemented
 #define RADIO_CMD_SET_RF_FREQ                  (0x21)
 #define RADIO_CMD_SET_RF_GAIN                  (0x22)
@@ -152,19 +153,21 @@ extern "C" {
 #define RADIO_CMD_SET_RF_ENABLED               (0x25)
 #define RADIO_CMD_SET_RF_PORT                  (0x26)
 #define RADIO_CMD_SET_LO_INPUT                 (0x29)  // unimplemented
+// 0x2A - 0x2F reserved
 #define RADIO_CMD_SET_MASTER_CLK               (0x30)  // unimplemented
 #define RADIO_CMD_GET_NUM_SUBDEVS              (0x31)
 #define RADIO_CMD_GET_CAPABILITIES             (0x32)
 #define RADIO_CMD_GET_RF_FREQ_RANGE            (0x33)
 #define RADIO_CMD_GET_GAIN_RANGE               (0x34)
 #define RADIO_CMD_GET_RATE_RANGE               (0x35)
-  // 0x32-0x40 reserved
+// 0x36 - 0x3F reserved
+#define RADIO_CMD_SET_ADC_TEST_PATTERN         (0x40)
 #define RADIO_CMD_GET_IQ_BIAS                  (0x41)
 #define RADIO_CMD_GET_IQ_CORR                  (0x42)
-  // 0x43-0x50 reserved
+// 0x43 - 0x50 reserved
 #define RADIO_CMD_SET_IQ_BIAS                  (0x51)
 #define RADIO_CMD_SET_IQ_CORR                  (0x52)
-  // 0x53-0xFF reserved
+// 0x53 - 0xFF reserved
 
 // Radio Command Errors
 #define RADIO_CMD_ERR_BAD_CMD                  ERR_BAD_COMMAND
