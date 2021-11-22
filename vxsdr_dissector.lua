@@ -10,12 +10,12 @@ local packet_types = {
     [0x03] = "TX_RADIO_CMD",
     [0x04] = "RX_RADIO_CMD",
     [0x05] = "ASYNC_MSG",
-    [0x0A] = "DEVICE_CMD_ERR",
-    [0x0B] = "TX_RADIO_CMD_ERR",
-    [0x0C] = "RX_RADIO_CMD_ERR",
-    [0x0D] = "DEVICE_CMD_RSP",
-    [0x0E] = "TX_RADIO_CMD_RSP",
-    [0x0F] = "RX_RADIO_CMD_RSP",
+    [0x42] = "DEVICE_CMD_ERR",
+    [0x43] = "TX_RADIO_CMD_ERR",
+    [0x44] = "RX_RADIO_CMD_ERR",
+    [0x62] = "DEVICE_CMD_RSP",
+    [0x63] = "TX_RADIO_CMD_RSP",
+    [0x64] = "RX_RADIO_CMD_RSP",
     [0x80] = "TX_SIGNAL_DATA_ACK",
     [0x81] = "RX_SIGNAL_DATA_ACK",
     [0x82] = "DEVICE_CMD_ACK",
@@ -33,14 +33,13 @@ local device_cmds = {
     [0x05] = "CLEAR_STATUS",
     [0x06] = "GET_BUFFER_INFO",
     [0x07] = "GET_BUFFER_USE",
-    [0x08] = "OPEN_SESSION",  -- unimplemented
-    [0x09] = "CLOSE_SESSION", --unimplemented
     -- 0x0A-0x0F reserved
     [0x10] = "GET_TRANSPORT_INFO", -- unimplemented
     [0x11] = "GET_TRANSPORT_ADDR",
     [0x12] = "GET_MAX_PAYLOAD",
     [0x13] = "CLEAR_DATA_BUFFER",
     -- 0x14-0x1F reserved
+    [0x20] = "DISCOVER",
     [0x21] = "SET_TRANSPORT_ADDR",
     [0x22] = "SET_MAX_PAYLOAD",
     [0x23] = "SAVE_TRANSPORT_ADDR",
@@ -113,24 +112,34 @@ local radio_cmds = {
     [0x04] = "START_NOW_FOR_N_SAMPLES",
     [0x05] = "START_AT_TIME_FOR_N_SAMPLES",
     -- 0x06-0x0F reserved
-    [0x10] = "GET_RF_INFO",  -- unimplemented
-    [0x11] = "GET_RF_FREQ",  -- unimplemented
-    [0x12] = "GET_RF_GAIN",  -- unimplemented
+    [0x11] = "GET_RF_FREQ",
+    [0x12] = "GET_RF_GAIN",
     [0x13] = "GET_SAMPLE_RATE",
     [0x14] = "GET_RF_BW",  -- unimplemented
-    [0x15] = "GET_RF_ENABLED",  -- unimplemented
-    [0x16] = "GET_RF_PORT",  -- unimplemented
-    -- 0x17-0x20 reserved
+    [0x15] = "GET_RF_ENABLED",
+    [0x16] = "GET_RF_PORT",
+    [0x17] = "GET_NUM_RF_PORTS",
+    [0x18] = "GET_RF_PORT_NAME",
+    [0x19] = "GET_LO_INPUT", --unimplemented
+    [0x1A] = "GET_LOCK_STATUS",
+    -- 0x1B-0x1F reserved
+    [0x20] = "GET_MASTER_CLK",
     [0x21] = "SET_RF_FREQ",
     [0x22] = "SET_RF_GAIN",
     [0x23] = "SET_SAMPLE_RATE",
     [0x24] = "SET_RF_BW",  -- unimplemented
     [0x25] = "SET_RF_ENABLED",
     [0x26] = "SET_RF_PORT",
-    -- 0x27-0x30 reserved
+    [0x29] = "SET_LO_INPUT", -- unimplemented
+    -- 0x2A-0x2F reserved
+    [0x30] = "SET_MASTER_CLK", --unimplemented
     [0x31] = "GET_NUM_SUBDEVS",
     [0x32] = "GET_CAPABILITIES",
-    -- 0x33-0x40 reserved
+    [0x33] = "GET_RF_FREQ_RANGE",
+    [0x34] = "GET_GAIN_RANGE",
+    [0x35] = "GET_RATE_RANGE",
+    -- 0x36-0x3F reserved
+    [0x40] = "SET_ADC_TEST_PATTERN",
     [0x41] = "GET_IQ_BIAS",
     [0x42] = "GET_IQ_CORR",
     -- 0x43 - 0x50 reserved
@@ -140,15 +149,23 @@ local radio_cmds = {
 }
 
 local radio_cmd_rsps = {
-    [0x10] = "GET_RF_INFO",  -- unimplemented
     [0x11] = "GET_RF_FREQ",
     [0x12] = "GET_RF_GAIN",
     [0x13] = "GET_SAMPLE_RATE",
     [0x14] = "GET_RF_BW",  -- unimplemented
-    [0x15] = "GET_RF_ENABLED",  -- unimplemented
-    [0x16] = "GET_RF_PORT",  -- unimplemented
+    [0x15] = "GET_RF_ENABLED",
+    [0x16] = "GET_RF_PORT",
+    [0x17] = "GET_NUM_RF_PORTS",
+    [0x18] = "GET_RF_PORT_NAME",
+    [0x19] = "GET_LO_INPUT", -- unimplemented
+    [0x1A] = "GET_LOCK_STATUS", -- unimplemented
+    -- 0x1B-0x1F reserved
+    [0x20] = "GET_MASTER_CLK",
     [0x31] = "GET_NUM_SUBDEVS",
     [0x32] = "GET_CAPABILITIES",
+    [0x33] = "GET_RF_FREQ_RANGE",
+    [0x34] = "GET_GAIN_RANGE",
+    [0x35] = "GET_RATE_RANGE",
     [0x41] = "GET_IQ_BIAS",
     [0x42] = "GET_IQ_CORR"
 }
@@ -172,10 +189,10 @@ local pf_sequence_counter  = ProtoField.uint16("vxsdr.sequence_counter", "Sequen
 
 local pf_device_command     = ProtoField.uint8("vxsdr.device_command", "Device Command", base.HEX, device_cmds)
 local pf_device_command_err = ProtoField.uint8("vxsdr.device_command_err", "Device Command Error", base.HEX, device_cmds)
-local pf_device_command_rsp = ProtoField.uint8("vxsdr.device_command_rsp", "Device Command Response", base.HEX, device_cmd_rsps)
+local pf_device_command_rsp = ProtoField.uint8("vxsdr.device_command_rsp", "Device Command Response", base.HEX, device_cmds)
 local pf_radio_command      = ProtoField.uint8("vxsdr.radio_command", "Radio Command", base.HEX, radio_cmds)
 local pf_radio_command_err  = ProtoField.uint8("vxsdr.radio_command_err", "Radio Command Error", base.HEX, radio_cmds)
-local pf_radio_command_rsp  = ProtoField.uint8("vxsdr.device_command", "Radio Command Response", base.HEX, radio_cmd_rsps)
+local pf_radio_command_rsp  = ProtoField.uint8("vxsdr.radio_command_rsp", "Radio Command Response", base.HEX, radio_cmds)
 local pf_device_error       = ProtoField.uint32("vxsdr.device_error", "Device Error Reason", base.HEX, device_cmd_errs)
 local pf_radio_error        = ProtoField.uint32("vxsdr.radio_error", "Radio Error Reason", base.HEX, radio_cmd_errs)
 local pf_async_msg          = ProtoField.uint8("vxsdr.async_msg", "Async Mesaage", base.HEX, async_msgs)
@@ -207,16 +224,16 @@ function vxsdr.dissector(tvbuf, pktinfo, root)
     tree:add(   pf_packet_type,      tvbuf:range(0, 1))
     if pkt_type == 0x02 then -- device command
         tree:add(   pf_device_command,         tvbuf:range(1, 1))
-    elseif pkt_type == 0x0D then -- device command responses
+    elseif pkt_type == 0x62 then -- device command responses
         tree:add(   pf_device_command_rsp,     tvbuf:range(1, 1))
-    elseif pkt_type == 0x0A then  -- device command errors
-        tree:add(   pf_device_command,         tvbuf:range(1, 1))
+    elseif pkt_type == 0x42 then  -- device command errors
+        tree:add(   pf_device_command_err,         tvbuf:range(1, 1))
     elseif pkt_type == 0x03 or pkt_type == 0x04 then -- tx and rx radio commands
         tree:add(   pf_radio_command,          tvbuf:range(1, 1))
-    elseif pkt_type == 0x0E or pkt_type == 0x0F then -- tx and rx radio command responses
+    elseif pkt_type == 0x63 or pkt_type == 0x64 then -- tx and rx radio command responses
         tree:add(   pf_radio_command_rsp,      tvbuf:range(1, 1))
-    elseif pkt_type == 0x0B or pkt_type == 0x0C then -- tx and rx radio command errors
-        tree:add(   pf_radio_command,          tvbuf:range(1, 1))
+    elseif pkt_type == 0x43 or pkt_type == 0x44 then -- tx and rx radio command errors
+        tree:add(   pf_radio_command_err,          tvbuf:range(1, 1))
     elseif pkt_type == 0x05 then -- async messages
         tree:add(   pf_async_msg,              tvbuf:range(1, 1))
     else
@@ -235,7 +252,7 @@ function vxsdr.dissector(tvbuf, pktinfo, root)
                 tree:add_le(pf_uint32_data, tvbuf:range(12, 4))
             end
         -- device command responses
-        elseif pkt_type == 0x0D then
+        elseif pkt_type == 0x62 then
             if pkt_cmd == 0x00 or pkt_cmd == 0x03 or pkt_cmd == 0x06 or pkt_cmd == 0x07 then
                 -- hello, get_time, buffer info, buffer use response
                 tree:add_le(pf_uint32_data, tvbuf:range( 8, 4))
@@ -251,7 +268,7 @@ function vxsdr.dissector(tvbuf, pktinfo, root)
                 tree:add_le(pf_uint32_data, tvbuf:range(28, 4))
             end
         -- device command errors
-        elseif pkt_type == 0x0A then
+        elseif pkt_type == 0x42 then
             tree:add_le(pf_device_error, tvbuf:range( 8, 4))
             tree:add_le(pf_uint32_data,  tvbuf:range(12, 4))
         -- radio commands
@@ -281,7 +298,7 @@ function vxsdr.dissector(tvbuf, pktinfo, root)
             tree:add_le(pf_uint32_data, tvbuf:range(16, 4))
             tree:add_le(pf_uint32_data, tvbuf:range(20, 4))
         -- radio command responses
-        elseif (pkt_type == 0x0E or pkt_type == 0x0F) then
+        elseif (pkt_type == 0x63 or pkt_type == 0x64) then
             -- get rf_enabled
             if pkt_cmd == 0x15 then
                 tree:add_le(pf_uint32_data, tvbuf:range(8, 4))
@@ -290,7 +307,7 @@ function vxsdr.dissector(tvbuf, pktinfo, root)
                 tree:add_le(pf_double_data, tvbuf:range(8, 8))
             end
         -- radio command errors
-        elseif pkt_type == 0x0B or pkt_type == 0x0C then
+        elseif pkt_type == 0x43 or pkt_type == 0x44 then
             tree:add_le(pf_radio_error, tvbuf:range( 8, 4))
             tree:add_le(pf_uint32_data, tvbuf:range(12, 4))
         elseif pkt_type == 0x80 then
