@@ -320,7 +320,6 @@
         if((bool)(p->flags & FLAGS_STREAM_ID_PRESENT)) {
           data_bytes -= sizeof(stream_spec_t);
         }
-
         size_t data_samples = data_bytes / sizeof(std::complex<int16_t>);
         n_received += data_samples;
       } else {
@@ -501,8 +500,8 @@
     }
     header_only_packet p;
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_START_NOW_UNTIL_STOP, subdev, flags, sizeof(p), 0 };
-    auto sent = vxsdr::send_packet_and_check_response(p);
-    if(sent) {
+    auto resp_ok = vxsdr::send_packet_and_check_response(p);
+    if(resp_ok) {
       vxsdr::rx_stream_state = STREAMING;
       return true;
     }
@@ -518,8 +517,8 @@
     cmd_or_rsp_packet_samples p;
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_START_NOW_FOR_N_SAMPLES, subdev, flags, sizeof(p), 0 };
     p.n_samples = n;
-    auto sent = vxsdr::send_packet_and_check_response(p);
-    if(sent) {
+    auto resp_ok = vxsdr::send_packet_and_check_response(p);
+    if(resp_ok) {
       vxsdr::tx_stream_state = STREAMING;
       return true;
     }
@@ -535,8 +534,8 @@
     cmd_or_rsp_packet_samples p;
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_START_NOW_FOR_N_SAMPLES, subdev, flags, sizeof(p), 0 };
     p.n_samples = n;
-    auto sent = vxsdr::send_packet_and_check_response(p);
-    if(sent) {
+    auto resp_ok = vxsdr::send_packet_and_check_response(p);
+    if(resp_ok) {
       vxsdr::rx_stream_state = STREAMING;
       return true;
     }
@@ -555,8 +554,8 @@
               static_cast<uint8_t>(flags | FLAGS_TIME_PRESENT), sizeof(p), 0 };
     vxsdr::time_point_to_time_spec_t(t, p.time);
     p.n_samples = n;
-    auto sent = vxsdr::send_packet_and_check_response(p);
-    if(sent) {
+    auto resp_ok = vxsdr::send_packet_and_check_response(p);
+    if(resp_ok) {
       vxsdr::tx_stream_state = WAITING_FOR_START;
       return true;
     }
@@ -575,8 +574,8 @@
               static_cast<uint8_t>(flags | FLAGS_TIME_PRESENT), sizeof(p), 0 };
     vxsdr::time_point_to_time_spec_t(t, p.time);
     p.n_samples = n;
-    auto sent = vxsdr::send_packet_and_check_response(p);
-    if(sent) {
+    auto resp_ok = vxsdr::send_packet_and_check_response(p);
+    if(resp_ok) {
       vxsdr::rx_stream_state = WAITING_FOR_START;
       return true;
     }
@@ -593,8 +592,8 @@
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_START_AT_TIME_UNTIL_STOP, subdev,
               static_cast<uint8_t>(flags | FLAGS_TIME_PRESENT), sizeof(p), 0 };
     vxsdr::time_point_to_time_spec_t(t, p.time);
-    auto sent = vxsdr::send_packet_and_check_response(p);
-    if(sent) {
+    auto resp_ok = vxsdr::send_packet_and_check_response(p);
+    if(resp_ok) {
       vxsdr::tx_stream_state = WAITING_FOR_START;
       return true;
     }
@@ -611,8 +610,8 @@
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_START_AT_TIME_UNTIL_STOP, subdev,
               static_cast<uint8_t>(flags | FLAGS_TIME_PRESENT), sizeof(p), 0 };
     vxsdr::time_point_to_time_spec_t(t, p.time);
-    auto sent = vxsdr::send_packet_and_check_response(p);
-    if(sent) {
+    auto resp_ok = vxsdr::send_packet_and_check_response(p);
+    if(resp_ok) {
       vxsdr::rx_stream_state = WAITING_FOR_START;
       return true;
     }
@@ -717,8 +716,8 @@
     // send a stop anyway, even if we think the state is wrong
     header_only_packet p;
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_STOP_NOW, subdev, flags, sizeof(p), 0 };
-    auto sent = vxsdr::send_packet_and_check_response(p);
-    if(sent) {
+    auto resp_ok = vxsdr::send_packet_and_check_response(p);
+    if(resp_ok) {
       vxsdr::tx_stream_state = NO_STREAM;
       return true;
     }
@@ -733,8 +732,8 @@
     // send a stop anyway, even if we think the state is wrong
     header_only_packet p;
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_STOP_NOW, subdev, flags, sizeof(p), 0 };
-    auto sent = vxsdr::send_packet_and_check_response(p);
-    if(sent) {
+    auto resp_ok = vxsdr::send_packet_and_check_response(p);
+    if(resp_ok) {
       vxsdr::rx_stream_state = NO_STREAM;
       return true;
     }
