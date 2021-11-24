@@ -212,9 +212,9 @@ extern "C" {
 #define MAX_DATA_LENGTH_SAMPLES                (2048UL)
 #define MAX_PAYLOAD_LENGTH_BYTES               (32UL)  // maximum length of a CMD or RSP packet, excluding header
 
-#define PACKED_STRUCT                          struct __attribute__((packed))
+#define PACKED                                 __attribute__((packed))
 
-typedef PACKED_STRUCT {
+typedef struct PACKED {
   uint8_t                  packet_type;
   uint8_t                  command;
   uint8_t                  target_subdevice;  // for cases where multiple devices exist (e.g. multiple network I/F or multichannel TX/RX)
@@ -223,7 +223,7 @@ typedef PACKED_STRUCT {
   uint16_t                 sequence_counter;  // need to figure out when this resets (every new data stream, power up, ?)
 } packet_header;
 
-typedef PACKED_STRUCT {
+typedef struct PACKED {
   uint32_t                 seconds;
   uint32_t                 nanoseconds;
 } time_spec_t;
@@ -237,94 +237,92 @@ typedef uint64_t           capabilities_t;
 
 // The remainder is entirely C++ class definitions
 
-class packet {
+class PACKED packet {
   public:
     packet_header          hdr;
 };
 
-class header_only_packet : public packet {};
+class PACKED header_only_packet : public packet {};
 
 class one_uint32_packet : public packet {
   public:
-    uint32_t                value1 = 0;
-    uint32_t                reserved = 0;
+    uint32_t               value1 = 0;
+    uint32_t               reserved = 0;
 };
 
-typedef one_uint32_packet error_packet;
+typedef one_uint32_packet  error_packet;
 
-class two_uint32_packet : public packet {
+class PACKED two_uint32_packet : public packet {
   public:
-    uint32_t                value1 = 0;
-    uint32_t                value2 = 0;
+    uint32_t               value1 = 0;
+    uint32_t               value2 = 0;
 };
 
-class four_uint32_packet : public packet {
+class PACKED four_uint32_packet : public packet {
   public:
-    uint32_t                value1 = 0;
-    uint32_t                value2 = 0;
-    uint32_t                value3 = 0;
-    uint32_t                value4 = 0;
+    uint32_t               value1 = 0;
+    uint32_t               value2 = 0;
+    uint32_t               value3 = 0;
+    uint32_t               value4 = 0;
 };
 
-class six_uint32_packet : public packet {
+class PACKED six_uint32_packet : public packet {
   public:
-    uint32_t                value1 = 0;
-    uint32_t                value2 = 0;
-    uint32_t                value3 = 0;
-    uint32_t                value4 = 0;
-    uint32_t                value5 = 0;
-    uint32_t                value6 = 0;
+    uint32_t               value1 = 0;
+    uint32_t               value2 = 0;
+    uint32_t               value3 = 0;
+    uint32_t               value4 = 0;
+    uint32_t               value5 = 0;
+    uint32_t               value6 = 0;
 };
 
-class one_double_packet : public packet {
+class PACKED one_double_packet : public packet {
   public:
-    double                  value1 = 0.0;
+    double                 value1 = 0.0;
 };
 
-class two_double_packet : public packet {
+class PACKED two_double_packet : public packet {
   public:
-    double                  value1 = 0.0;
-    double                  value2 = 0.0;
+    double                 value1 = 0.0;
+    double                 value2 = 0.0;
 };
 
-class four_double_packet : public packet {
+class PACKED four_double_packet : public packet {
   public:
-    double                  value1 = 0.0;
-    double                  value2 = 0.0;
-    double                  value3 = 0.0;
-    double                  value4 = 0.0;
+    double                 value1 = 0.0;
+    double                 value2 = 0.0;
+    double                 value3 = 0.0;
+    double                 value4 = 0.0;
 };
 
-class one_uint64_packet : public packet {
+class PACKED one_uint64_packet : public packet {
   public:
-    uint64_t                value1 = 0;
+    uint64_t               value1 = 0;
 };
 
-class name_packet : public packet {
+class PACKED name_packet : public packet {
   public:
     char                   name[MAX_PAYLOAD_LENGTH_BYTES] = { 0 };
 };
 
-//FIXME: Need to add number of samples so that we don't always use MAX_DATA_LENGTH_SAMPLES!
-
-class data_packet : public packet {
+class PACKED data_packet : public packet {
   public:
     std::complex<int16_t>  data[MAX_DATA_LENGTH_SAMPLES];
 };
 
-class data_packet_time : public packet {
+class PACKED data_packet_time : public packet {
   public:
     time_spec_t            time;
     std::complex<int16_t>  data[MAX_DATA_LENGTH_SAMPLES];
 };
 
-class data_packet_stream : public packet {
+class PACKED data_packet_stream : public packet {
   public:
     stream_spec_t          stream_id;
     std::complex<int16_t>  data[MAX_DATA_LENGTH_SAMPLES];
 };
 
-class data_packet_time_stream : public packet {
+class PACKED data_packet_time_stream : public packet {
   public:
     time_spec_t            time;
     stream_spec_t          stream_id;
@@ -333,7 +331,7 @@ class data_packet_time_stream : public packet {
 
 class largest_data_packet : public data_packet_time_stream {};
 
-class async_msg_packet : public packet {
+class PACKED async_msg_packet : public packet {
   public:
     uint8_t                severity = 0;
     uint8_t                device_subdev = 0;
@@ -341,37 +339,39 @@ class async_msg_packet : public packet {
     uint8_t                rx_subdev = 0;
 };
 
-class cmd_or_rsp_packet_time : public packet {
+class PACKED cmd_or_rsp_packet_time : public packet {
   public:
     time_spec_t            time;
 };
 
-class cmd_or_rsp_packet_time_stream : public packet {
+class PACKED cmd_or_rsp_packet_time_stream : public packet {
   public:
     time_spec_t            time;
     stream_spec_t          stream_id;
 };
 
-class cmd_or_rsp_packet_samples : public packet {
+class PACKED cmd_or_rsp_packet_samples : public packet {
   public:
     uint64_t               n_samples = 0;
 };
 
-class cmd_or_rsp_packet_time_samples : public packet {
+class PACKED cmd_or_rsp_packet_time_samples : public packet {
   public:
     time_spec_t            time;
     uint64_t               n_samples = 0;
 };
 
-class largest_cmd_or_rsp_packet : public cmd_or_rsp_packet_time_stream {
+class PACKED largest_cmd_or_rsp_packet : public cmd_or_rsp_packet_time_stream {
     [[maybe_unused]]
      uint8_t               payload[MAX_PAYLOAD_LENGTH_BYTES] = { 0 };
 };
 
-// FIXME: this needs redfinition to include tx buffer size
-class tx_signal_data_ack_packet : public packet {
+// FIXME: this needs redefinition to include tx buffer size
+class PACKED tx_signal_data_ack_packet : public packet {
   public:
     uint64_t               requester_seq_num = 0;
+//    uint32_t               requester_seq_num = 0;
+//    uint32_t               tx_buffer_size_bytes = 0;
     uint32_t               tx_buffer_used_bytes = 0;
     uint32_t               sequence_error_count = 0;
 };
