@@ -12,7 +12,7 @@ extern "C" {
 #include <pthread.h>
 #endif
 
-inline int set_current_thread_affinity(const int cpunum)
+inline int set_current_thread_affinity(const unsigned cpunum)
 {
 #ifdef HAVE_PTHREADS
   pthread_t current_thread = pthread_self();

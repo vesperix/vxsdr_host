@@ -9,7 +9,7 @@
         const net::ip::udp::endpoint &device_endpoint,
         const bool nondata_packet_logging,
         const bool set_affinity, const unsigned base_cpu_number,
-        const bool set_priority, const unsigned base_priority) :
+        const bool set_priority, const int base_priority) :
     sender_socket(context, local_send_endpoint),
     receiver_socket(context, local_receive_endpoint) {
     LOG_DEBUG("vxsdr constructor entered");
@@ -188,7 +188,8 @@
     if(timeout_s <= 0.0) {
       LOG_ERROR("timeout_s must be positive in write_rx_data()");
       return 0;
-    } else if(timeout_s > 3600.0) {
+    }
+    if(timeout_s > 3600.0) {
       LOG_ERROR("timeout_s must 3600 or less in write_rx_data()");
       return 0;
     }
@@ -966,7 +967,7 @@
     if(res) {
       auto q = res.value();
       auto *r = reinterpret_cast<name_packet *>(&q);
-      return std::string(r->name, MAX_PAYLOAD_LENGTH_BYTES - 1);
+      return std::string((char *)r->name, MAX_PAYLOAD_LENGTH_BYTES - 1);
     }
     return std::nullopt;
   }
@@ -979,7 +980,7 @@
     if(res) {
       auto q = res.value();
       auto *r = reinterpret_cast<name_packet *>(&q);
-      return std::string(r->name, MAX_PAYLOAD_LENGTH_BYTES - 1);
+      return std::string((char *)r->name, MAX_PAYLOAD_LENGTH_BYTES - 1);
     }
     return std::nullopt;
   }
@@ -1106,10 +1107,10 @@
     auto res = vxsdr::send_packet_and_return_response(p, "device_get_timing_status()");
     if(res) {
       auto q = res.value();
-      auto *r = reinterpret_cast<unsigned_packet *>(&q);
-      std::array<bool, 3> ret = { (bool)(r->number & TIMING_STATUS_EXT_PPS_LOCK),
-                                  (bool)(r->number & TIMING_STATUS_EXT_10MHZ_LOCK),
-                                  (bool)(r->number & TIMING_STATUS_REF_OSC_LOCK) };
+      auto *r = reinterpret_cast<one_uint32_packet *>(&q);
+      std::array<bool, 3> ret = { (bool)(r->value1 & TIMING_STATUS_EXT_PPS_LOCK),
+                                  (bool)(r->value1 & TIMING_STATUS_EXT_10MHZ_LOCK),
+                                  (bool)(r->value1 & TIMING_STATUS_REF_OSC_LOCK) };
       return ret;
     }
     return std::nullopt;
@@ -1134,9 +1135,9 @@
   }
 
   bool vxsdr::device_set_ipv4_address(const net::ip::address_v4 device_address) {
-    unsigned_packet p = {};
+    one_uint32_packet p = {};
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_SET_TRANSPORT_ADDR, 0, 0, sizeof(p), 0 };
-    p.number = device_address.to_uint();
+    p.value1 = device_address.to_uint();
     if(not vxsdr::send_packet_and_check_response(p)) {
       return false;
     }
@@ -1144,9 +1145,9 @@
   }
 
   bool vxsdr::device_save_ipv4_address(const net::ip::address_v4 device_address) {
-    unsigned_packet p = {};
+    one_uint32_packet p = {};
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_SET_TRANSPORT_ADDR, 0, 0, sizeof(p), 0 };
-    p.number = device_address.to_uint();
+    p.value1 = device_address.to_uint();
     if(not vxsdr::send_packet_and_check_response(p)) {
       return false;
     }
@@ -1159,16 +1160,16 @@
     auto res = vxsdr::send_packet_and_return_response(p, "device_get_max_payload_bytes()");
     if(res) {
       auto q = res.value();
-      auto *r = reinterpret_cast<unsigned_packet *>(&q);
-      return (unsigned)r->number;
+      auto *r = reinterpret_cast<one_uint32_packet *>(&q);
+      return (unsigned)r->value1;
     }
     return std::nullopt;
   }
 
   bool vxsdr::device_set_max_payload_bytes(const unsigned max_payload_bytes) {
-    unsigned_packet p = {};
+    one_uint32_packet p = {};
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_SET_RF_PORT, 0, 0, sizeof(p), 0 };
-    p.number = max_payload_bytes;
+    p.value1 = max_payload_bytes;
     if(not vxsdr::send_packet_and_check_response(p)) {
       return false;
     }
@@ -1199,7 +1200,7 @@
           (p.hdr.packet_type == PACKET_TYPE_TX_RADIO_CMD and q.hdr.packet_type == PACKET_TYPE_TX_RADIO_CMD_ERR) or
           (p.hdr.packet_type == PACKET_TYPE_RX_RADIO_CMD and q.hdr.packet_type == PACKET_TYPE_RX_RADIO_CMD_ERR))
          and q.hdr.command == p.hdr.command) {
-        LOG_ERROR(fmt::format("command error in {:s}: {:s}", cmd_name, error_to_string(reinterpret_cast<error_packet *>(&q)->reason)));
+        LOG_ERROR(fmt::format("command error in {:s}: {:s}", cmd_name, error_to_string(reinterpret_cast<error_packet *>(&q)->value1)));
         return false;
       }
       LOG_ERROR(fmt::format("invalid response in {:s}", cmd_name));
@@ -1231,7 +1232,7 @@
           (p.hdr.packet_type == PACKET_TYPE_TX_RADIO_CMD and q.hdr.packet_type == PACKET_TYPE_TX_RADIO_CMD_ERR) or
           (p.hdr.packet_type == PACKET_TYPE_RX_RADIO_CMD and q.hdr.packet_type == PACKET_TYPE_RX_RADIO_CMD_ERR))
          and q.hdr.command == p.hdr.command) {
-        LOG_ERROR(fmt::format("command error in {:s}: {:s}", cmd_name, error_to_string(reinterpret_cast<error_packet *>(&q)->reason)));
+        LOG_ERROR(fmt::format("command error in {:s}: {:s}", cmd_name, error_to_string(reinterpret_cast<error_packet *>(&q)->value1)));
         return std::nullopt;
       }
       LOG_ERROR(fmt::format("invalid response in {:s}", cmd_name));

@@ -250,6 +250,8 @@ class one_uint32_packet : public packet {
     uint32_t                reserved = 0;
 };
 
+typedef one_uint32_packet error_packet;
+
 class two_uint32_packet : public packet {
   public:
     uint32_t                value1 = 0;
@@ -298,32 +300,9 @@ class one_uint64_packet : public packet {
     uint64_t                value1 = 0;
 };
 
-class unsigned_packet : public packet {
-  public:
-    uint32_t                number = 0;
-    uint32_t                reserved = 0;
-};
-
 class name_packet : public packet {
   public:
     char                   name[MAX_PAYLOAD_LENGTH_BYTES] = { 0 };
-};
-/*
-class capabilities_packet : public packet {
-  public:
-    capabilities_t         capabilities = 0;
-};
-
-class range_packet : public packet {
-  public:
-    double                 range_min =  0;
-    double                 range_max = 0;
-};
-*/
-class error_packet : public packet {
-  public:
-    uint32_t               reason;
-    uint32_t               reserved;
 };
 
 //FIXME: Need to add number of samples so that we don't always use MAX_DATA_LENGTH_SAMPLES!
@@ -389,112 +368,13 @@ class largest_cmd_or_rsp_packet : public cmd_or_rsp_packet_time_stream {
      uint8_t               payload[MAX_PAYLOAD_LENGTH_BYTES] = { 0 };
 };
 
+// FIXME: this needs redfinition to include tx buffer size
 class tx_signal_data_ack_packet : public packet {
   public:
     uint64_t               requester_seq_num = 0;
     uint32_t               tx_buffer_used_bytes = 0;
     uint32_t               sequence_error_count = 0;
 };
-/*
-class buffer_use_rsp_packet : public packet {
-  public:
-    uint32_t               rx_buffer_used_bytes = 0;
-    uint32_t               tx_buffer_used_bytes = 0;
-};
-
-class buffer_info_rsp_packet : public packet {
-  public:
-    uint32_t               rx_buffer_size_bytes = 0;
-    uint32_t               tx_buffer_size_bytes = 0;
-};
-
-class clear_data_buffer_packet : public packet {
-  public:
-    uint8_t                clear_all = 0;
-    uint8_t                device_subdev = 0;
-    uint8_t                tx_subdev = 0;
-    uint8_t                rx_subdev = 0;
-};
-
-class hello_rsp_packet : public packet {
-  public:
-    uint32_t               board_id = 0;
-    uint32_t               fpga_fw_version = 0;
-    uint32_t               mcu_sw_version = 0;
-    uint32_t               serial_no = 0;
-};
-
-class status_rsp_packet : public packet {
-  public:
-    uint32_t               fpga_temperature = 0;
-    uint32_t               dac_temperature = 0;
-    uint32_t               sequence_error_count = 0;
-    uint32_t               data_flow_error_flags = 0;
-    uint32_t               ddr_arbiter_status = 0;
-    uint32_t               ethernet_status = 0;
-};
-
-class dev_read_write_reg_packet : public packet {
-  public:
-    uint32_t               register_number = 0;
-    uint32_t               value = 0;
-};
-
-class transport_addr_packet : public packet {
-  public:
-    uint32_t               ip_addr = 0;
-    uint32_t               reserved = 0;
-};
-
-class transport_pktsiz_packet : public packet {
-  public:
-    uint32_t               packet_size_bytes = 0;  // must be multiple of 8 bytes, min = 1024, max = 8216
-    uint32_t               reserved = 0;
-};
-
-class dataflow_status_packet : public packet {
-  public:
-    uint16_t               tx_radio_status = 0;
-    uint16_t               rx_radio_status = 0;
-    uint32_t               device_status = 0;
-};
-
-class radio_rf_freq_packet : public packet {
-  public:
-    double                 freq = 0.0;
-    double                 rtol = 0.0;
-};
-
-class radio_rf_gain_packet : public packet {
-  public:
-    double                 gain = 0.0;
-};
-
-class radio_sample_rate_packet : public packet {
-  public:
-    double                 rate = 0;
-};
-
-class radio_rf_enable_packet : public packet {
-  public:
-    uint32_t               enabled = 0; //TX/RX path enable (1 = on, 0 = off)
-    uint32_t               reserved = 0;
-};
-
-class radio_iq_bias_packet : public packet {
-  public:
-    double                 i_bias = 0; // range = +/- 1 covering min to max
-    double                 q_bias = 0;
-};
-
-class radio_iq_corr_packet : public packet {
-  public:
-    double                 ii_corr = 1;
-    double                 iq_corr = 0;
-    double                 qi_corr = 0;
-    double                 qq_corr = 1;
-};
-*/
 
 #endif // __cplusplus
 

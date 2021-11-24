@@ -291,7 +291,7 @@ void log_packet_info(packet &packet, const int direction)
     case PACKET_TYPE_DEVICE_CMD_ERR: {
           LOG_PACKET(fmt::format("DEVICE_CMD_ERR: {:s}", device_cmd_to_name(packet.hdr.command)));
           auto *er = reinterpret_cast<error_packet *>(&packet);
-          LOG_PACKET(fmt::format("   reason                      = {:s}", device_cmd_error_to_name(er->reason)));
+          LOG_PACKET(fmt::format("   reason                      = {:s}", device_cmd_error_to_name(er->value1)));
         }
         break;
     case PACKET_TYPE_DEVICE_CMD_RSP:
@@ -399,7 +399,7 @@ void log_packet_info(packet &packet, const int direction)
       {
         LOG_PACKET(fmt::format("RX_RADIO_CMD_ERR: {:s}", radio_cmd_to_name(packet.hdr.command)));
         auto *er = reinterpret_cast<error_packet *>(&packet);
-        LOG_PACKET(fmt::format("   reason                      = {:s}", radio_cmd_error_to_name(er->reason)));
+        LOG_PACKET(fmt::format("   reason                      = {:s}", radio_cmd_error_to_name(er->value1)));
       }
       break;
     case PACKET_TYPE_RX_RADIO_CMD_ACK:
@@ -458,7 +458,7 @@ void log_packet_info(packet &packet, const int direction)
         default: {
           LOG_PACKET(fmt::format("TX_RADIO_CMD_ERR: {:s}", radio_cmd_to_name(packet.hdr.command)));
           auto *er = reinterpret_cast<error_packet *>(&packet);
-          LOG_PACKET(fmt::format("   reason                      = {:s}", radio_cmd_error_to_name(er->reason)));
+          LOG_PACKET(fmt::format("   reason                      = {:s}", radio_cmd_error_to_name(er->value1)));
         }
         break;
       }

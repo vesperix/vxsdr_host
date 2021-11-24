@@ -112,8 +112,8 @@
         vxsdr::packets_received++;
         vxsdr::packet_types_received[recv_buffer.hdr.packet_type]++;
         vxsdr::bytes_received += bytes_in_packet;
-        bool has_time = recv_buffer.hdr.flags & (uint8_t)FLAGS_TIME_PRESENT;
-        bool has_stream = recv_buffer.hdr.flags & (uint8_t)FLAGS_STREAM_ID_PRESENT;
+        bool has_time = (recv_buffer.hdr.flags & (uint8_t)FLAGS_TIME_PRESENT) != 0;
+        bool has_stream = (recv_buffer.hdr.flags & (uint8_t)FLAGS_STREAM_ID_PRESENT) != 0;
         if(recv_buffer.hdr.packet_size != bytes_in_packet) {
           LOG_ERROR(fmt::format("packet_size in {:s} header incorrect ({:d}, {:d})",
                 packet_type_to_name(recv_buffer.hdr.packet_type), recv_buffer.hdr.packet_size, bytes_in_packet));

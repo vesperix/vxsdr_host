@@ -52,8 +52,8 @@ class vxsdr {
 
   // thread realtime priority settings
   bool thread_set_priority;
-  unsigned send_thread_priority;
-  unsigned receive_thread_priority;
+  int send_thread_priority;
+  int receive_thread_priority;
 
   // thread cpu affinity settings
   bool thread_set_affinity;
@@ -174,7 +174,7 @@ class vxsdr {
         const net::ip::udp::endpoint &device_endpoint,
         const bool nondata_packet_logging = false,
         const bool set_affinity = true, const unsigned base_cpu_number = 0,
-        const bool set_priority = true, const unsigned base_priority = 5);
+        const bool set_priority = true, const int base_priority = 5);
 
   //! Destructor for the vxsdr host interface class.
   ~vxsdr();
