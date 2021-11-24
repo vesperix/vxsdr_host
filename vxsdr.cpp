@@ -642,7 +642,7 @@
     if(res) {
       auto q = res.value();
       auto *r = reinterpret_cast<two_double_packet *>(&q);
-      std::array<double, 2> res = {r->value1, r->value2};
+      std::array<double, 2> res = { r->value1, r->value2 };
       return res;
     }
     return std::nullopt;
@@ -655,7 +655,7 @@
     if(res) {
       auto q = res.value();
       auto *r = reinterpret_cast<two_double_packet *>(&q);
-      std::array<double, 2> res = {r->value1, r->value2};
+      std::array<double, 2> res = { r->value1, r->value2 };
       return res;
     }
     return std::nullopt;
@@ -690,7 +690,7 @@
     if(res) {
       auto q = res.value();
       auto *r = reinterpret_cast<four_double_packet *>(&q);
-      std::array<double, 4> corr = {r->value1, r->value2, r->value3, r->value4};
+      std::array<double, 4> corr = { r->value1, r->value2, r->value3, r->value4 };
       return corr;
     }
     return std::nullopt;
@@ -703,7 +703,7 @@
     if(res) {
       auto q = res.value();
       auto *r = reinterpret_cast<four_double_packet *>(&q);
-      std::array<double, 4> corr = {r->value1, r->value2, r->value3, r->value4};
+      std::array<double, 4> corr = { r->value1, r->value2, r->value3, r->value4 };
       return corr;
     }
     return std::nullopt;
@@ -748,7 +748,7 @@
     if(res) {
       auto q = res.value();
       auto *r = reinterpret_cast<two_double_packet *>(&q);
-      std::array<double, 2> res = {r->value1, r->value2};
+      std::array<double, 2> res = { r->value1, r->value2 };
       return res;
     }
     return std::nullopt;
@@ -761,7 +761,7 @@
     if(res) {
       auto q = res.value();
       auto *r = reinterpret_cast<two_double_packet *>(&q);
-      std::array<double, 2> res = {r->value1, r->value2};
+      std::array<double, 2> res = { r->value1, r->value2 };
       return res;
     }
     return std::nullopt;
@@ -814,7 +814,7 @@
     if(res) {
       auto q = res.value();
       auto *r = reinterpret_cast<two_double_packet *>(&q);
-      std::array<double, 2> res = {r->value1, r->value2};
+      std::array<double, 2> res = { r->value1, r->value2 };
       return res;
     }
     return std::nullopt;
@@ -827,7 +827,7 @@
     if(res) {
       auto q = res.value();
       auto *r = reinterpret_cast<two_double_packet *>(&q);
-      std::array<double, 2> res = {r->value1, r->value2};
+      std::array<double, 2> res = { r->value1, r->value2 };
       return res;
     }
     return std::nullopt;
@@ -878,7 +878,7 @@
     if(res) {
       auto q = res.value();
       auto *r = reinterpret_cast<two_double_packet *>(&q);
-      std::array<double, 2> res = {r->value1, r->value2};
+      std::array<double, 2> res = { r->value1, r->value2 };
       return res;
     }
     return std::nullopt;
@@ -891,7 +891,7 @@
     if(res) {
       auto q = res.value();
       auto *r = reinterpret_cast<two_double_packet *>(&q);
-      std::array<double, 2> res = {r->value1, r->value2};
+      std::array<double, 2> res = { r->value1, r->value2 };
       return res;
     }
     return std::nullopt;
