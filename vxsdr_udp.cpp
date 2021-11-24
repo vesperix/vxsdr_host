@@ -200,17 +200,17 @@
           case PACKET_TYPE_DEVICE_CMD_RSP: {
               switch(recv_buffer.hdr.command) {
                 case DEVICE_CMD_GET_BUFFER_USE: {
-                    auto *r = reinterpret_cast<buffer_use_rsp_packet *>(&recv_buffer);
-                    vxsdr::tx_buffer_used_bytes = r->tx_buffer_used_bytes;
-                    vxsdr::rx_buffer_used_bytes = r->rx_buffer_used_bytes;
+                    auto *r = reinterpret_cast<two_uint32_packet *>(&recv_buffer);
+                    vxsdr::tx_buffer_used_bytes = r->value1;
+                    vxsdr::rx_buffer_used_bytes = r->value2;
                     vxsdr::tx_buffer_fill_percent = std::min(100U, (100U * vxsdr::tx_buffer_used_bytes) / vxsdr::tx_buffer_size_bytes);
                     vxsdr::rx_buffer_fill_percent = std::min(100U, (100U * vxsdr::rx_buffer_used_bytes) / vxsdr::rx_buffer_size_bytes);
                   }
                   break;
                 case DEVICE_CMD_GET_BUFFER_INFO: {
-                    auto *r = reinterpret_cast<buffer_info_rsp_packet *>(&recv_buffer);
-                    vxsdr::tx_buffer_size_bytes = r->tx_buffer_size_bytes;
-                    vxsdr::rx_buffer_size_bytes = r->rx_buffer_size_bytes;
+                    auto *r = reinterpret_cast<two_uint32_packet *>(&recv_buffer);
+                    vxsdr::tx_buffer_size_bytes = r->value1;
+                    vxsdr::rx_buffer_size_bytes = r->value2;
                   }
                   break;
                 default:

@@ -17,25 +17,25 @@ extern "C" {
 
 // Packet Types
 //   TX data is sent only from a host to a radio
-#define PACKET_TYPE_TX_SIGNAL_DATA             (0x00)
+#define PACKET_TYPE_TX_SIGNAL_DATA             (0x00U)
 //   RX data is sent only from a radio to a host
-#define PACKET_TYPE_RX_SIGNAL_DATA             (0x01)
+#define PACKET_TYPE_RX_SIGNAL_DATA             (0x01U)
 //   Commands are sent only from a host to a radio, and may
 //   have responses or acks, depending on the command
-#define PACKET_TYPE_DEVICE_CMD                 (0x02)
-#define PACKET_TYPE_TX_RADIO_CMD               (0x03)
-#define PACKET_TYPE_RX_RADIO_CMD               (0x04)
+#define PACKET_TYPE_DEVICE_CMD                 (0x02U)
+#define PACKET_TYPE_TX_RADIO_CMD               (0x03U)
+#define PACKET_TYPE_RX_RADIO_CMD               (0x04U)
 //   Async messages are sent by a radio only, and are not
 //   responses to a host message
-#define  PACKET_TYPE_ASYNC_MSG                 (0x05)
+#define  PACKET_TYPE_ASYNC_MSG                 (0x05U)
 
 // indicators are applied to each packet type to indicate responses, errors, and acks
 // they occupy the top 2 bits of the packet type
-#define PACKET_ERR_INDICATOR                   (0x40)
-#define PACKET_RSP_INDICATOR                   (0x60)
-#define PACKET_ACK_INDICATOR                   (0x80)
-#define PACKET_INDICATOR_MASK                  (0xC0)
-#define PACKET_TYPE_MASK                       (0x3F)
+#define PACKET_ERR_INDICATOR                   (0x40U)
+#define PACKET_RSP_INDICATOR                   (0x60U)
+#define PACKET_ACK_INDICATOR                   (0x80U)
+#define PACKET_INDICATOR_MASK                  (0xC0U)
+#define PACKET_TYPE_MASK                       (0x3FU)
 
 // convenience macros to turn a command into an err, rsp, or ack
 #define PACKET_TYPE_MAKE_ERR(byte)             (((byte) & PACKET_TYPE_MASK) | PACKET_ERR_INDICATOR)
@@ -59,12 +59,12 @@ extern "C" {
 #define PACKET_TYPE_RX_RADIO_CMD_ACK           PACKET_TYPE_MAKE_ACK(PACKET_TYPE_RX_RADIO_CMD)
 
 // nothing should ever send this
-#define PACKET_TYPE_INVALID_PACKET             (0xFF)
+#define PACKET_TYPE_INVALID_PACKET             (0xFFU)
 
 // Flags
-#define FLAGS_REQUEST_ACK                      (0x80)
-#define FLAGS_TIME_PRESENT                     (0x40)
-#define FLAGS_STREAM_ID_PRESENT                (0x20)
+#define FLAGS_REQUEST_ACK                      (0x80U)
+#define FLAGS_TIME_PRESENT                     (0x40U)
+#define FLAGS_STREAM_ID_PRESENT                (0x20U)
 //     bits 3-7: reserved for additional settings
 
 // Device Commands
@@ -308,7 +308,7 @@ class name_packet : public packet {
   public:
     char                   name[MAX_PAYLOAD_LENGTH_BYTES] = { 0 };
 };
-
+/*
 class capabilities_packet : public packet {
   public:
     capabilities_t         capabilities = 0;
@@ -319,7 +319,7 @@ class range_packet : public packet {
     double                 range_min =  0;
     double                 range_max = 0;
 };
-
+*/
 class error_packet : public packet {
   public:
     uint32_t               reason;
@@ -395,7 +395,7 @@ class tx_signal_data_ack_packet : public packet {
     uint32_t               tx_buffer_used_bytes = 0;
     uint32_t               sequence_error_count = 0;
 };
-
+/*
 class buffer_use_rsp_packet : public packet {
   public:
     uint32_t               rx_buffer_used_bytes = 0;
@@ -494,11 +494,7 @@ class radio_iq_corr_packet : public packet {
     double                 qi_corr = 0;
     double                 qq_corr = 1;
 };
-
-class device_timing_status_packet : public packet {
-  public:
-  //FIXME: need to define this!!!
-};
+*/
 
 #endif // __cplusplus
 

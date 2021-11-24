@@ -299,37 +299,39 @@ void log_packet_info(packet &packet, const int direction)
         case DEVICE_CMD_HELLO:
           {
             LOG_PACKET(fmt::format("DEVICE_CMD_RSP: HELLO"));
-            auto *hr = reinterpret_cast<hello_rsp_packet *>(&packet);
-            LOG_PACKET(fmt::format("   mcu_sw_version            = {:d}", (uint32_t)hr->mcu_sw_version));
-            LOG_PACKET(fmt::format("   fpga_fw_version           = {:d}", (uint32_t)hr->fpga_fw_version));
+            auto *hr = reinterpret_cast<four_uint32_packet *>(&packet);
+            LOG_PACKET(fmt::format("   board id                  = {:d}", (uint32_t)hr->value1));
+            LOG_PACKET(fmt::format("   fpga fw version           = {:d}", (uint32_t)hr->value2));
+            LOG_PACKET(fmt::format("   mcu sw version            = {:d}", (uint32_t)hr->value3));
+            LOG_PACKET(fmt::format("   serial number             = {:d}", (uint32_t)hr->value4));
           }
           break;
         case DEVICE_CMD_GET_STATUS:
           {
             LOG_PACKET(fmt::format("DEVICE_CMD_RSP: GET_STATUS"));
-            auto *sr = reinterpret_cast<status_rsp_packet *>(&packet);
-            LOG_PACKET(fmt::format("   fpga_temperature          = {:d}", sr->fpga_temperature));
-            LOG_PACKET(fmt::format("   dac_temperature           = {:d}", sr->dac_temperature));
-            LOG_PACKET(fmt::format("   sequence_error_count      = {:d}", sr->sequence_error_count));
-            LOG_PACKET(fmt::format("   data_flow_error_flags     = {:s}", std::bitset<8>((sr->data_flow_error_flags) % 256).to_string()));
-            LOG_PACKET(fmt::format("   ddr_arbiter_status        = {:d}", sr->ddr_arbiter_status));
-            LOG_PACKET(fmt::format("   ethernet_status           = {:s}", std::bitset<8>((sr->ethernet_status) % 256).to_string()));
+            auto *sr = reinterpret_cast<six_uint32_packet *>(&packet);
+            LOG_PACKET(fmt::format("   fpga_temperature          = {:d}", sr->value1));
+            LOG_PACKET(fmt::format("   dac_temperature           = {:d}", sr->value2));
+            LOG_PACKET(fmt::format("   sequence_error_count      = {:d}", sr->value3));
+            LOG_PACKET(fmt::format("   data_flow_error_flags     = {:s}", std::bitset<8>((sr->value4) % 256).to_string()));
+            LOG_PACKET(fmt::format("   ddr_arbiter_status        = {:d}", sr->value5));
+            LOG_PACKET(fmt::format("   ethernet_status           = {:s}", std::bitset<8>((sr->value6) % 256).to_string()));
           }
           break;
         case DEVICE_CMD_GET_BUFFER_INFO:
           {
             LOG_PACKET(fmt::format("DEVICE_CMD_RSP: GET_BUFFER_INFO"));
-            auto *br = reinterpret_cast<buffer_info_rsp_packet *>(&packet);
-            LOG_PACKET(fmt::format("   rx_buffer_size_bytes      = {:d}", (uint32_t)br->rx_buffer_size_bytes));
-            LOG_PACKET(fmt::format("   tx_buffer_size_bytes      = {:d}", (uint32_t)br->tx_buffer_size_bytes));
+            auto *br = reinterpret_cast<two_uint32_packet *>(&packet);
+            LOG_PACKET(fmt::format("   rx_buffer_size_bytes      = {:d}", (uint32_t)br->value1));
+            LOG_PACKET(fmt::format("   tx_buffer_size_bytes      = {:d}", (uint32_t)br->value2));
           }
           break;
         case DEVICE_CMD_GET_BUFFER_USE:
           {
             LOG_PACKET(fmt::format("DEVICE_CMD_RSP: GET_BUFFER_USE"));
-            auto *br = reinterpret_cast<buffer_use_rsp_packet *>(&packet);
-            LOG_PACKET(fmt::format("   rx_buffer_used_bytes      = {:d}", (uint32_t)br->rx_buffer_used_bytes));
-            LOG_PACKET(fmt::format("   tx_buffer_used_bytes      = {:d}", (uint32_t)br->tx_buffer_used_bytes));
+            auto *br = reinterpret_cast<two_uint32_packet *>(&packet);
+            LOG_PACKET(fmt::format("   rx_buffer_used_bytes      = {:d}", (uint32_t)br->value1));
+            LOG_PACKET(fmt::format("   tx_buffer_used_bytes      = {:d}", (uint32_t)br->value2));
           }
           break;
         case DEVICE_CMD_GET_TIME:
@@ -353,39 +355,39 @@ void log_packet_info(packet &packet, const int direction)
         case RADIO_CMD_GET_RF_FREQ:
           {
             LOG_PACKET(fmt::format("RX_RADIO_CMD_RSP: GET_RF_FREQ"));
-            auto *fr = reinterpret_cast<radio_rf_freq_packet *>(&packet);
-            LOG_PACKET(fmt::format("   freq                      = {:.5e}", fr->freq));
+            auto *fr = reinterpret_cast<one_double_packet *>(&packet);
+            LOG_PACKET(fmt::format("   freq                      = {:.5e}", fr->value1));
           }
           break;
         case RADIO_CMD_GET_RF_GAIN:
           {
             LOG_PACKET(fmt::format("RX_RADIO_CMD_RSP: GET_RF_GAIN"));
-            auto *gr = reinterpret_cast<radio_rf_gain_packet *>(&packet);
-            LOG_PACKET(fmt::format("   gain                      = {:.2f}", gr->gain));
+            auto *gr = reinterpret_cast<one_double_packet *>(&packet);
+            LOG_PACKET(fmt::format("   gain                      = {:.2f}", gr->value1));
           }
           break;
         case RADIO_CMD_GET_SAMPLE_RATE:
           {
             LOG_PACKET(fmt::format("RX_RADIO_CMD_RSP: GET_SAMPLE_RATE"));
-            auto *sr = reinterpret_cast<radio_sample_rate_packet *>(&packet);
-            LOG_PACKET(fmt::format("   rate                      = {:.5e}", sr->rate));
+            auto *sr = reinterpret_cast<one_double_packet *>(&packet);
+            LOG_PACKET(fmt::format("   rate                      = {:.5e}", sr->value1));
           }
           break;
         case RADIO_CMD_GET_RATE_RANGE:
         case RADIO_CMD_GET_RF_FREQ_RANGE:
           {
             LOG_PACKET(fmt::format("RX_RADIO_CMD_RSP: {:s}", radio_cmd_to_name(packet.hdr.command)));
-            auto *r = reinterpret_cast<range_packet *>(&packet);
-            LOG_PACKET(fmt::format("   min                       = {:.5e}", r->range_min));
-            LOG_PACKET(fmt::format("   max                       = {:.5e}", r->range_max));
+            auto *r = reinterpret_cast<two_double_packet *>(&packet);
+            LOG_PACKET(fmt::format("   min                       = {:.5e}", r->value1));
+            LOG_PACKET(fmt::format("   max                       = {:.5e}", r->value2));
           }
           break;
         case RADIO_CMD_GET_GAIN_RANGE:
           {
             LOG_PACKET(fmt::format("RX_RADIO_CMD_RSP: {:s}", radio_cmd_to_name(packet.hdr.command)));
-            auto *r = reinterpret_cast<range_packet *>(&packet);
-            LOG_PACKET(fmt::format("   min                       = {:.1f}", r->range_min));
-            LOG_PACKET(fmt::format("   max                       = {:.1f}", r->range_max));
+            auto *r = reinterpret_cast<two_double_packet *>(&packet);
+            LOG_PACKET(fmt::format("   min                       = {:.1f}", r->value1));
+            LOG_PACKET(fmt::format("   max                       = {:.1f}", r->value2));
           }
           break;
         default:
@@ -411,39 +413,39 @@ void log_packet_info(packet &packet, const int direction)
         case RADIO_CMD_GET_RF_FREQ:
           {
             LOG_PACKET(fmt::format("TX_RADIO_CMD_RSP: GET_RF_FREQ"));
-            auto *fr = reinterpret_cast<radio_rf_freq_packet *>(&packet);
-            LOG_PACKET(fmt::format("   freq                      = {:.5e}", fr->freq));
+            auto *fr = reinterpret_cast<one_double_packet *>(&packet);
+            LOG_PACKET(fmt::format("   freq                      = {:.5e}", fr->value1));
           }
           break;
         case RADIO_CMD_GET_RF_GAIN:
           {
             LOG_PACKET(fmt::format("TX_RADIO_CMD_RSP: GET_RF_GAIN"));
-            auto *gr = reinterpret_cast<radio_rf_gain_packet *>(&packet);
-            LOG_PACKET(fmt::format("   gain                      = {:.2f}", gr->gain));
+            auto *gr = reinterpret_cast<one_double_packet *>(&packet);
+            LOG_PACKET(fmt::format("   gain                      = {:.2f}", gr->value1));
           }
           break;
         case RADIO_CMD_GET_SAMPLE_RATE:
           {
             LOG_PACKET(fmt::format("TX_RADIO_CMD_RSP: GET_SAMPLE_RATE"));
-            auto *sr = reinterpret_cast<radio_sample_rate_packet *>(&packet);
-            LOG_PACKET(fmt::format("   rate                      = {:.5e}", sr->rate));
+            auto *sr = reinterpret_cast<one_double_packet *>(&packet);
+            LOG_PACKET(fmt::format("   rate                      = {:.5e}", sr->value1));
           }
           break;
         case RADIO_CMD_GET_RATE_RANGE:
         case RADIO_CMD_GET_RF_FREQ_RANGE:
           {
             LOG_PACKET(fmt::format("TX_RADIO_CMD_RSP: {:s}", radio_cmd_to_name(packet.hdr.command)));
-            auto *r = reinterpret_cast<range_packet *>(&packet);
-            LOG_PACKET(fmt::format("   min                       = {:.5e}", r->range_min));
-            LOG_PACKET(fmt::format("   max                       = {:.5e}", r->range_max));
+            auto *r = reinterpret_cast<two_double_packet *>(&packet);
+            LOG_PACKET(fmt::format("   min                       = {:.1f}", r->value1));
+            LOG_PACKET(fmt::format("   max                       = {:.1f}", r->value2));
           }
           break;
         case RADIO_CMD_GET_GAIN_RANGE:
           {
             LOG_PACKET(fmt::format("TX_RADIO_CMD_RSP: {:s}", radio_cmd_to_name(packet.hdr.command)));
-            auto *r = reinterpret_cast<range_packet *>(&packet);
-            LOG_PACKET(fmt::format("   min                       = {:.1f}", r->range_min));
-            LOG_PACKET(fmt::format("   max                       = {:.1f}", r->range_max));
+            auto *r = reinterpret_cast<two_double_packet *>(&packet);
+            LOG_PACKET(fmt::format("   min                       = {:.1f}", r->value1));
+            LOG_PACKET(fmt::format("   max                       = {:.1f}", r->value2));
           }
           break;
         default:
