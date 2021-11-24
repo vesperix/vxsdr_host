@@ -220,6 +220,60 @@ class packet {
 
 class header_only_packet : public packet {};
 
+class one_uint32_packet : public packet {
+  public:
+    uint32_t                value1 = 0;
+    uint32_t                reserved = 0;
+};
+
+class two_uint32_packet : public packet {
+  public:
+    uint32_t                value1 = 0;
+    uint32_t                value2 = 0;
+};
+
+class four_uint32_packet : public packet {
+  public:
+    uint32_t                value1 = 0;
+    uint32_t                value2 = 0;
+    uint32_t                value3 = 0;
+    uint32_t                value4 = 0;
+};
+
+class six_uint32_packet : public packet {
+  public:
+    uint32_t                value1 = 0;
+    uint32_t                value2 = 0;
+    uint32_t                value3 = 0;
+    uint32_t                value4 = 0;
+    uint32_t                value5 = 0;
+    uint32_t                value6 = 0;
+};
+
+class one_double_packet : public packet {
+  public:
+    double                  value1 = 0.0;
+};
+
+class two_double_packet : public packet {
+  public:
+    double                  value1 = 0.0;
+    double                  value2 = 0.0;
+};
+
+class four_double_packet : public packet {
+  public:
+    double                  value1 = 0.0;
+    double                  value2 = 0.0;
+    double                  value3 = 0.0;
+    double                  value4 = 0.0;
+};
+
+class one_uint64_packet : public packet {
+  public:
+    uint64_t                value1 = 0;
+};
+
 class unsigned_packet : public packet {
   public:
     uint32_t                number = 0;

@@ -44,13 +44,13 @@ class vxsdr {
 
   // thread realtime priority settings
   bool thread_set_priority;
-  int send_thread_priority;
-  int receive_thread_priority;
+  unsigned send_thread_priority;
+  unsigned receive_thread_priority;
 
   // thread cpu affinity settings
   bool thread_set_affinity;
-  int send_thread_cpu;
-  int receive_thread_cpu;
+  unsigned send_thread_cpu;
+  unsigned receive_thread_cpu;
 
   // parameters of the internal SPSC queues used for data
   static constexpr size_t rx_data_queue_length            =    65'536;    // slots in rx data queue; 65536 * 2048 / 160e6 = 840 ms at 160 MSPS
