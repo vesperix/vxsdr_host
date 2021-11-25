@@ -64,7 +64,7 @@ void test_hello(std::unique_ptr<vxsdr> &radio) {
   LOG_INFO("completed hello tests");
 }
 
-void test_time(std::unique_ptr<vxsdr> &radio) {
+void test_time(std::unique_ptr<vxsdr> &radio, const double time_tol_sec = 0.01) {
   LOG_INFO("starting time tests");
 
   LOG_INFO("   testing get_time_now() with default arguments");
@@ -94,11 +94,11 @@ void test_time(std::unique_ptr<vxsdr> &radio) {
     auto result = radio->device_get_time_now();
     if(result) {
       std::chrono::duration<double> diff = result.value() - tp_set;
-      if(diff.count() > 0.99 and diff.count() <= 1.01) {
+      if(fabs(1.0 - diff.count()) < time_tol_sec) {
         LOG_INFO("      passed with time_point");
       } else {
-      LOG_ERROR(fmt::format("     time difference is too large: {:e}", diff.count()));
-      total_errors++;
+        LOG_ERROR(fmt::format("     time difference is too large: {:e}", diff.count()));
+        total_errors++;
       }
     } else {
       LOG_ERROR("     no value returned by device_get_time_now()");
@@ -123,11 +123,11 @@ void test_time(std::unique_ptr<vxsdr> &radio) {
     bool result = radio->device_get_time_now(t_sec, t_ns);
     if(result) {
       double diff = t_sec - ts_set.tv_sec + 1e-9 * (t_ns - ts_set.tv_nsec);
-      if(diff > 0.99 and diff <= 1.01) {
+      if(fabs(1.0 - diff) < time_tol_sec) {
         LOG_INFO("      passed with s and ns");
       } else {
-      LOG_ERROR(fmt::format("     time difference is too large: {:e}", diff));
-      total_errors++;
+        LOG_ERROR(fmt::format("     time difference is too large: {:e}", diff));
+        total_errors++;
       }
     } else {
       LOG_ERROR("     no value returned by device_get_time_now()");
@@ -151,11 +151,11 @@ void test_time(std::unique_ptr<vxsdr> &radio) {
     bool result = radio->device_get_time_now(t_sec, t_ns);
     if(result) {
       double diff = (t_sec + 1e-9 * t_ns) - std::chrono::duration<double>(tp_set.time_since_epoch()).count();
-      if(diff > 0.99 and diff <= 1.01) {
+      if(fabs(1.0 - diff) < time_tol_sec) {
         LOG_INFO("      passed set with time_point read with s and ns");
       } else {
-      LOG_ERROR(fmt::format("     time difference is too large: {:e}", diff));
-      total_errors++;
+        LOG_ERROR(fmt::format("     time difference is too large: {:e}", diff));
+        total_errors++;
       }
     } else {
       LOG_ERROR("     no value returned by device_get_time_now()");
@@ -175,11 +175,11 @@ void test_time(std::unique_ptr<vxsdr> &radio) {
     auto result2 = radio->device_get_time_now();
     if(result2) {
       double diff = std::chrono::duration<double>(result2.value().time_since_epoch()).count() - (ts_set.tv_sec + 1e-9 * ts_set.tv_nsec);
-      if(diff > 0.99 and diff <= 1.01) {
+      if(fabs(1.0 - diff) < time_tol_sec) {
         LOG_INFO("      passed set with s and ns read with time_point");
       } else {
-      LOG_ERROR(fmt::format("     time difference is too large: {:e}", diff));
-      total_errors++;
+        LOG_ERROR(fmt::format("     time difference is too large: {:e}", diff));
+        total_errors++;
       }
     } else {
       LOG_ERROR("     no value returned by device_get_time_now()");
@@ -190,7 +190,7 @@ void test_time(std::unique_ptr<vxsdr> &radio) {
   LOG_INFO("completed time tests");
 }
 
-void test_rate(std::unique_ptr<vxsdr> &radio) {
+void test_rate(std::unique_ptr<vxsdr> &radio, const double rate_tol_hz = 1.0) {
   LOG_INFO("starting rate tests");
 
   LOG_INFO("   testing tx");
@@ -219,7 +219,7 @@ void test_rate(std::unique_ptr<vxsdr> &radio) {
       auto rmx = radio->get_tx_rate();
       if(rmx) {
         double diff = rmx.value() - rmax;
-        if(abs(diff) < 1e-3) {
+        if(abs(diff) < rate_tol_hz) {
           LOG_INFO("      passed");
         } else {
           LOG_ERROR("      incorrect value returned by get_tx_rate()");
@@ -241,7 +241,7 @@ void test_rate(std::unique_ptr<vxsdr> &radio) {
       rmx = radio->get_tx_rate();
       if(rmx) {
         double diff = rmx.value() - rmin;
-        if(abs(diff) < 1e-3) {
+        if(abs(diff) < rate_tol_hz) {
           LOG_INFO("      passed");
         } else {
           LOG_ERROR("      incorrect value returned by get_tx_rate()");
@@ -283,7 +283,7 @@ void test_rate(std::unique_ptr<vxsdr> &radio) {
       auto rmx = radio->get_rx_rate();
       if(rmx) {
         double diff = rmx.value() - rmax;
-        if(abs(diff) < 1e-3) {
+        if(abs(diff) < rate_tol_hz) {
           LOG_INFO("      passed");
         } else {
           LOG_ERROR("      incorrect value returned by get_rx_rate()");
@@ -305,7 +305,7 @@ void test_rate(std::unique_ptr<vxsdr> &radio) {
       rmx = radio->get_rx_rate();
       if(rmx) {
         double diff = rmx.value() - rmin;
-        if(abs(diff) < 1e-3) {
+        if(abs(diff) < rate_tol_hz) {
           LOG_INFO("      passed");
         } else {
           LOG_ERROR("      incorrect value returned by get_rx_rate()");
@@ -324,7 +324,7 @@ void test_rate(std::unique_ptr<vxsdr> &radio) {
   LOG_INFO("completed rate tests");
 }
 
-void test_gain(std::unique_ptr<vxsdr> &radio) {
+void test_gain(std::unique_ptr<vxsdr> &radio, const double gain_tol_db = 0.1) {
   LOG_INFO("starting gain tests");
 
   LOG_INFO("   testing tx");
@@ -353,7 +353,7 @@ void test_gain(std::unique_ptr<vxsdr> &radio) {
       auto rmx = radio->get_tx_gain();
       if(rmx) {
         double diff = rmx.value() - rmax;
-        if(abs(diff) < 1e-3) {
+        if(abs(diff) < gain_tol_db) {
           LOG_INFO("      passed");
         } else {
           LOG_ERROR("      incorrect value returned by get_tx_gain()");
@@ -375,7 +375,7 @@ void test_gain(std::unique_ptr<vxsdr> &radio) {
       rmx = radio->get_tx_gain();
       if(rmx) {
         double diff = rmx.value() - rmin;
-        if(abs(diff) < 1e-3) {
+        if(abs(diff) < gain_tol_db) {
           LOG_INFO("      passed");
         } else {
           LOG_ERROR("      incorrect value returned by get_tx_gain()");
@@ -417,7 +417,7 @@ void test_gain(std::unique_ptr<vxsdr> &radio) {
       auto rmx = radio->get_rx_gain();
       if(rmx) {
         double diff = rmx.value() - rmax;
-        if(abs(diff) < 1e-3) {
+        if(abs(diff) < gain_tol_db) {
           LOG_INFO("      passed");
         } else {
           LOG_ERROR("      incorrect value returned by get_rx_gain()");
@@ -439,7 +439,7 @@ void test_gain(std::unique_ptr<vxsdr> &radio) {
       rmx = radio->get_rx_gain();
       if(rmx) {
         double diff = rmx.value() - rmin;
-        if(abs(diff) < 1e-3) {
+        if(abs(diff) < gain_tol_db) {
           LOG_INFO("      passed");
         } else {
           LOG_ERROR("      incorrect value returned by get_rx_gain()");
@@ -459,7 +459,7 @@ void test_gain(std::unique_ptr<vxsdr> &radio) {
   LOG_INFO("completed gain tests");
 }
 
-void test_freq(std::unique_ptr<vxsdr> &radio) {
+void test_freq(std::unique_ptr<vxsdr> &radio, const double freq_tol_hz = 1.0) {
 
   LOG_INFO("starting freq tests");
 
@@ -489,7 +489,7 @@ void test_freq(std::unique_ptr<vxsdr> &radio) {
       auto rmx = radio->get_tx_freq();
       if(rmx) {
         double diff = rmx.value() - rmax;
-        if(abs(diff) < 1e-3) {
+        if(abs(diff) < freq_tol_hz) {
           LOG_INFO("      passed");
         } else {
           LOG_ERROR("      incorrect value returned by get_tx_freq()");
@@ -511,7 +511,7 @@ void test_freq(std::unique_ptr<vxsdr> &radio) {
       rmx = radio->get_tx_freq();
       if(rmx) {
         double diff = rmx.value() - rmin;
-        if(abs(diff) < 1e-3) {
+        if(abs(diff) < freq_tol_hz) {
           LOG_INFO("      passed");
         } else {
           LOG_ERROR("      incorrect value returned by get_tx_freq()");
@@ -553,7 +553,7 @@ void test_freq(std::unique_ptr<vxsdr> &radio) {
       auto rmx = radio->get_rx_freq();
       if(rmx) {
         double diff = rmx.value() - rmax;
-        if(abs(diff) < 1e-3) {
+        if(abs(diff) < freq_tol_hz) {
           LOG_INFO("      passed");
         } else {
           LOG_ERROR("      incorrect value returned by get_rx_freq()");
@@ -575,7 +575,7 @@ void test_freq(std::unique_ptr<vxsdr> &radio) {
       rmx = radio->get_rx_freq();
       if(rmx) {
         double diff = rmx.value() - rmin;
-        if(abs(diff) < 1e-3) {
+        if(abs(diff) < freq_tol_hz) {
           LOG_INFO("      passed");
         } else {
           LOG_ERROR("      incorrect value returned by get_rx_freq()");
