@@ -71,7 +71,7 @@
     vxsdr::packets_received = 0;
     vxsdr::sequence_errors = 0;
 
-    vxsdr::udp_rx_state = RUNNING;
+    vxsdr::udp_rx_state = TRANSPORT_RUNNING;
 
     while(not vxsdr::receiver_thread_stop_flag) {
       static data_queue_element recv_buffer;
@@ -129,9 +129,9 @@
         }
 
         if(recv_buffer.hdr.packet_type == PACKET_TYPE_RX_SIGNAL_DATA and
-           (vxsdr::rx_stream_state == WAITING_FOR_START or vxsdr::rx_stream_state == STREAMING)) {
-          if(vxsdr::rx_stream_state == WAITING_FOR_START) {
-            vxsdr::rx_stream_state = STREAMING;
+           (vxsdr::rx_stream_state == STREAM_WAITING_FOR_START or vxsdr::rx_stream_state == STREAM_RUNNING)) {
+          if(vxsdr::rx_stream_state == STREAM_WAITING_FOR_START) {
+            vxsdr::rx_stream_state = STREAM_RUNNING;
           }
           uint16_t header_size = sizeof(packet_header);
           if(has_time) {
@@ -157,7 +157,7 @@
         switch(recv_buffer.hdr.packet_type) {
           // receive buffers go into the rx data queue
           case PACKET_TYPE_RX_SIGNAL_DATA:
-            if(vxsdr::rx_stream_state == STREAMING) {
+            if(vxsdr::rx_stream_state == STREAM_RUNNING) {
               if(not vxsdr::rx_data_queue.push(recv_buffer)) {
                 unsigned wait_time_us = 0;
                 while(vxsdr::rx_data_queue.write_available() == 0 and wait_time_us < vxsdr::rx_data_queue_push_timeout_us) {
@@ -248,7 +248,7 @@
       }
     }
 
-    vxsdr::udp_rx_state = SHUTDOWN;
+    vxsdr::udp_rx_state = TRANSPORT_SHUTDOWN;
 
     LOG_INFO("start_receive exiting:");
     LOG_INFO(fmt::format("   {:12d} packets received", vxsdr::packets_received));
@@ -350,7 +350,7 @@
     // wait for the rx to reach RUNNING
     unsigned total_wait_ms = 0;
     LOG_INFO("waiting for udp rx to reach RUNNING state");
-    while(vxsdr::udp_rx_state != RUNNING and total_wait_ms < vxsdr::udp_tx_ready_timeout_ms) {
+    while(vxsdr::udp_rx_state != TRANSPORT_RUNNING and total_wait_ms < vxsdr::udp_tx_ready_timeout_ms) {
       std::this_thread::sleep_for(std::chrono::milliseconds(vxsdr::udp_tx_ready_wait_ms));
       total_wait_ms += vxsdr::udp_tx_ready_wait_ms;
     }
@@ -363,7 +363,7 @@
       LOG_INFO("udp rx in RUNNING state; udp tx starting");
     }
 
-    vxsdr::udp_tx_state = RUNNING;
+    vxsdr::udp_tx_state = TRANSPORT_RUNNING;
 
     while(not vxsdr::sender_thread_stop_flag) {
       while(vxsdr::command_queue.pop(cmd_buffer)) {
@@ -373,7 +373,8 @@
         // once tx_buffer_size_bytes has been set, update buffer_check_interval_samples
         buffer_check_interval_samples = vxsdr::tx_buffer_size_bytes / sizeof(std::complex<int16_t>) / 32; // check every 1/32 of a buffer
       }
-      else if(vxsdr::tx_data_queue.read_available() > 0) {
+      else if((vxsdr::tx_stream_state == STREAM_WAITING_FOR_START or vxsdr::tx_stream_state == STREAM_RUNNING) and
+              vxsdr::tx_data_queue.read_available() > 0) {
         size_t n_popped = vxsdr::tx_data_queue.pop(&data_buffer.front(), data_buffer.size());
         for(size_t i = 0; i < n_popped; i++) {
           if(vxsdr::samples_sent - last_check >= buffer_check_interval_samples) {
@@ -401,7 +402,7 @@
       }
     }
 
-    vxsdr::udp_tx_state = SHUTDOWN;
+    vxsdr::udp_tx_state = TRANSPORT_SHUTDOWN;
     vxsdr::stop_sdr();
 
     std::this_thread::sleep_for(std::chrono::milliseconds(100));

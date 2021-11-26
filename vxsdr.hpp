@@ -133,12 +133,12 @@ class vxsdr {
   net::ip::udp::endpoint destination_endpoint;
 
   // flags used to indicate the state of the data transport
-  enum transport_state_t { UNINITIALIZED, STARTING, RUNNING, SHUTDOWN, TRANSPORT_ERROR };
-  std::atomic<transport_state_t> udp_tx_state { UNINITIALIZED }, udp_rx_state { UNINITIALIZED };
+  enum transport_state_t { TRANSPORT_UNINITIALIZED, TRANSPORT_STARTING, TRANSPORT_RUNNING, TRANSPORT_SHUTDOWN, TRANSPORT_ERROR };
+  std::atomic<transport_state_t> udp_tx_state { TRANSPORT_UNINITIALIZED }, udp_rx_state { TRANSPORT_UNINITIALIZED };
 
   // flags used to indicate the data transfer stream state
-  enum stream_state_t { NO_STREAM, WAITING_FOR_START, STREAMING, CLOSING, STREAM_ERROR };
-  std::atomic<stream_state_t> tx_stream_state { NO_STREAM }, rx_stream_state { NO_STREAM };
+  enum stream_state_t { STREAM_UNINITIALIZED, STREAM_WAITING_FOR_START, STREAM_RUNNING, STREAM_STOPPED, STREAM_ERROR };
+  std::atomic<stream_state_t> tx_stream_state { STREAM_UNINITIALIZED }, rx_stream_state { STREAM_UNINITIALIZED };
 
   // flags used for orderly shutdown
   std::atomic<bool> sender_thread_stop_flag = false, receiver_thread_stop_flag = false;

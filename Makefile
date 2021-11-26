@@ -39,6 +39,9 @@ vxsdr_test_commands: vxsdr_test_commands.cpp host_radio_options.cpp $(COMMON_INC
 libvxsdr.so: vxsdr.hpp $(LIB_SRC) $(COMMON_INCLUDES) $(COMMON_SRC)
 	$(CXX) $(CXX_FLAGS) -o $@ -fPIC -shared $(LIB_SRC) $(COMMON_SRC) $(LIB_LDFLAGS)
 
+docs: Doxyfile
+	doxygen Doxyfile
+
 clean:
 	rm -f $(PROGS) $(LIBS) *.o *~
 

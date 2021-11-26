@@ -33,12 +33,12 @@
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
 #endif // VXSDR_ASYNC_RX
     async_handler_thread = std::thread([&] { async_handler(); });
-    udp_rx_state = STARTING;
+    udp_rx_state = TRANSPORT_STARTING;
     receiver_thread = std::thread([&] { receiver(); });
-    udp_tx_state = STARTING;
+    udp_tx_state = TRANSPORT_STARTING;
     sender_thread = std::thread([&] { sender(); });
     unsigned total_wait_time_ms = 0;
-    while(udp_tx_state != RUNNING or udp_rx_state != RUNNING) {
+    while(udp_tx_state != TRANSPORT_RUNNING or udp_rx_state != TRANSPORT_RUNNING) {
       std::this_thread::sleep_for(std::chrono::milliseconds(1));
       total_wait_time_ms++;
       if(total_wait_time_ms > 1000) {
@@ -76,7 +76,7 @@
     if(receiver_thread.joinable()) {
       receiver_thread.join();
     }
-    udp_rx_state = SHUTDOWN;
+    udp_rx_state = TRANSPORT_SHUTDOWN;
     receiver_socket.close(err);
     if(err != boost::system::errc::success) {
       LOG_ERROR(fmt::format("receiver socket close: {:s}", err.message()));
@@ -86,7 +86,7 @@
     if(sender_thread.joinable()) {
       sender_thread.join();
     }
-    udp_tx_state = SHUTDOWN;
+    udp_tx_state = TRANSPORT_SHUTDOWN;
     sender_socket.close(err);
     if(err != boost::system::errc::success) {
       LOG_ERROR(fmt::format("sender socket close: {:s}", err.message()));
@@ -117,7 +117,7 @@
     }
     uint32_t timeout_us = std::llround(1'000'000 * timeout_s);
 
-    if(vxsdr::rx_stream_state != STREAMING and vxsdr::rx_stream_state != WAITING_FOR_START) {
+    if(vxsdr::rx_stream_state != STREAM_RUNNING and vxsdr::rx_stream_state != STREAM_WAITING_FOR_START) {
       LOG_ERROR(fmt::format("rx stream state is {:s} in get_rx_data()",
                 vxsdr::stream_state_to_string(vxsdr::rx_stream_state)));
       return 0;
@@ -195,7 +195,7 @@
     }
     uint32_t timeout_us = std::llround(1'000'000 * timeout_s);
 
-    if(vxsdr::rx_stream_state != STREAMING and vxsdr::rx_stream_state != WAITING_FOR_START) {
+    if(vxsdr::rx_stream_state != STREAM_RUNNING and vxsdr::rx_stream_state != STREAM_WAITING_FOR_START) {
       LOG_ERROR(fmt::format("rx stream state is {:s} in write_rx_data()",
                 vxsdr::stream_state_to_string(vxsdr::rx_stream_state)));
       return 0;
@@ -291,7 +291,7 @@
     }
     uint32_t timeout_us = std::llround(1'000'000 * timeout_s);
 
-    if(vxsdr::rx_stream_state != STREAMING and vxsdr::rx_stream_state != WAITING_FOR_START) {
+    if(vxsdr::rx_stream_state != STREAM_RUNNING and vxsdr::rx_stream_state != STREAM_WAITING_FOR_START) {
       LOG_ERROR(fmt::format("rx stream state is {:s} in check_rx_data_sequence_only()",
                 vxsdr::stream_state_to_string(vxsdr::rx_stream_state)));
       return 0;
@@ -346,7 +346,7 @@
     uint32_t timeout_us = std::llround(1'000'000 * timeout_s);
 
 
-    if(vxsdr::tx_stream_state != STREAMING and vxsdr::tx_stream_state != WAITING_FOR_START) {
+    if(vxsdr::tx_stream_state != STREAM_RUNNING and vxsdr::tx_stream_state != STREAM_WAITING_FOR_START) {
       LOG_ERROR(fmt::format("tx stream state is {:s} in put_tx_data()",
                 vxsdr::stream_state_to_string(vxsdr::tx_stream_state)));
       return 0;
@@ -493,7 +493,7 @@
   }
 
   bool vxsdr::rx_start_now_until_stop(const uint8_t subdev, const uint8_t flags) {
-    if(vxsdr::rx_stream_state != NO_STREAM) {
+    if(vxsdr::rx_stream_state != STREAM_UNINITIALIZED) {
       LOG_ERROR(fmt::format("rx stream state is {:s} in rx_start_now_until_stop()",
                 vxsdr::stream_state_to_string(vxsdr::rx_stream_state)));
       return false;
@@ -502,14 +502,14 @@
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_START_NOW_UNTIL_STOP, subdev, flags, sizeof(p), 0 };
     auto resp_ok = vxsdr::send_packet_and_check_response(p);
     if(resp_ok) {
-      vxsdr::rx_stream_state = STREAMING;
+      vxsdr::rx_stream_state = STREAM_RUNNING;
       return true;
     }
     return false;
   }
 
   bool vxsdr::tx_start_now_for_n_samples(const uint64_t n, const uint8_t subdev, const uint8_t flags) {
-    if(vxsdr::tx_stream_state != NO_STREAM) {
+    if(vxsdr::tx_stream_state != STREAM_UNINITIALIZED) {
       LOG_ERROR(fmt::format("tx stream state is {:s} in tx_start_now_for_n_samples()",
                 vxsdr::stream_state_to_string(vxsdr::tx_stream_state)));
       return false;
@@ -519,14 +519,14 @@
     p.n_samples = n;
     auto resp_ok = vxsdr::send_packet_and_check_response(p);
     if(resp_ok) {
-      vxsdr::tx_stream_state = STREAMING;
+      vxsdr::tx_stream_state = STREAM_RUNNING;
       return true;
     }
     return false;
   }
 
   bool vxsdr::rx_start_now_for_n_samples(const uint64_t n, const uint8_t subdev, const uint8_t flags) {
-    if(vxsdr::rx_stream_state != NO_STREAM) {
+    if(vxsdr::rx_stream_state != STREAM_UNINITIALIZED) {
       LOG_ERROR(fmt::format("rx stream state is {:s} in rx_start_now_for_n_samples()",
                 vxsdr::stream_state_to_string(vxsdr::rx_stream_state)));
       return false;
@@ -536,7 +536,7 @@
     p.n_samples = n;
     auto resp_ok = vxsdr::send_packet_and_check_response(p);
     if(resp_ok) {
-      vxsdr::rx_stream_state = STREAMING;
+      vxsdr::rx_stream_state = STREAM_RUNNING;
       return true;
     }
     return false;
@@ -544,7 +544,7 @@
 
   bool vxsdr::tx_start_at_time_for_n_samples(const std::chrono::time_point<std::chrono::system_clock> &t, const uint64_t n,
                                              const uint8_t subdev, const uint8_t flags) {
-    if(vxsdr::tx_stream_state != NO_STREAM) {
+    if(vxsdr::tx_stream_state != STREAM_UNINITIALIZED) {
       LOG_ERROR(fmt::format("tx stream state is {:s} in tx_start_at_time_for_n_samples()",
                 vxsdr::stream_state_to_string(vxsdr::tx_stream_state)));
       return false;
@@ -556,7 +556,7 @@
     p.n_samples = n;
     auto resp_ok = vxsdr::send_packet_and_check_response(p);
     if(resp_ok) {
-      vxsdr::tx_stream_state = WAITING_FOR_START;
+      vxsdr::tx_stream_state = STREAM_WAITING_FOR_START;
       return true;
     }
     return false;
@@ -564,7 +564,7 @@
 
   bool vxsdr::rx_start_at_time_for_n_samples(const std::chrono::time_point<std::chrono::system_clock> &t,const uint64_t n,
                                              const uint8_t subdev, const uint8_t flags) {
-    if(vxsdr::rx_stream_state != NO_STREAM) {
+    if(vxsdr::rx_stream_state != STREAM_UNINITIALIZED) {
       LOG_ERROR(fmt::format("rx stream state is {:s} in rx_start_at_time_for_n_samples()",
                 vxsdr::stream_state_to_string(vxsdr::rx_stream_state)));
       return false;
@@ -576,14 +576,14 @@
     p.n_samples = n;
     auto resp_ok = vxsdr::send_packet_and_check_response(p);
     if(resp_ok) {
-      vxsdr::rx_stream_state = WAITING_FOR_START;
+      vxsdr::rx_stream_state = STREAM_WAITING_FOR_START;
       return true;
     }
     return false;
   }
 
   bool vxsdr::tx_start_at_time_until_stop(const std::chrono::time_point<std::chrono::system_clock> &t, const uint8_t subdev, const uint8_t flags) {
-    if(vxsdr::tx_stream_state != NO_STREAM) {
+    if(vxsdr::tx_stream_state != STREAM_UNINITIALIZED) {
       LOG_ERROR(fmt::format("tx stream state is {:s} in tx_start_at_time_until_stop()",
                 vxsdr::stream_state_to_string(vxsdr::tx_stream_state)));
       return false;
@@ -594,14 +594,14 @@
     vxsdr::time_point_to_time_spec_t(t, p.time);
     auto resp_ok = vxsdr::send_packet_and_check_response(p);
     if(resp_ok) {
-      vxsdr::tx_stream_state = WAITING_FOR_START;
+      vxsdr::tx_stream_state = STREAM_WAITING_FOR_START;
       return true;
     }
     return false;
   }
 
   bool vxsdr::rx_start_at_time_until_stop(const std::chrono::time_point<std::chrono::system_clock> &t, const uint8_t subdev, const uint8_t flags) {
-    if(vxsdr::rx_stream_state != NO_STREAM) {
+    if(vxsdr::rx_stream_state != STREAM_UNINITIALIZED) {
       LOG_ERROR(fmt::format("rx stream state is {:s} in rx_start_at_time_until_stop()",
                 vxsdr::stream_state_to_string(vxsdr::rx_stream_state)));
       return false;
@@ -612,7 +612,7 @@
     vxsdr::time_point_to_time_spec_t(t, p.time);
     auto resp_ok = vxsdr::send_packet_and_check_response(p);
     if(resp_ok) {
-      vxsdr::rx_stream_state = WAITING_FOR_START;
+      vxsdr::rx_stream_state = STREAM_WAITING_FOR_START;
       return true;
     }
     return false;
@@ -709,7 +709,7 @@
   }
 
   bool vxsdr::tx_stop_now(const uint8_t subdev, const uint8_t flags) {
-    if(vxsdr::tx_stream_state != STREAMING) {
+    if(vxsdr::tx_stream_state != STREAM_RUNNING and vxsdr::tx_stream_state != STREAM_WAITING_FOR_START) {
       LOG_WARN(fmt::format("tx stream state is {:s} in tx_stop_now()",
                 vxsdr::stream_state_to_string(vxsdr::tx_stream_state)));
     }
@@ -718,14 +718,14 @@
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_STOP_NOW, subdev, flags, sizeof(p), 0 };
     auto resp_ok = vxsdr::send_packet_and_check_response(p);
     if(resp_ok) {
-      vxsdr::tx_stream_state = NO_STREAM;
+      vxsdr::tx_stream_state = STREAM_STOPPED;
       return true;
     }
     return false;
   }
 
   bool vxsdr::rx_stop_now(const uint8_t subdev, const uint8_t flags) {
-    if(vxsdr::rx_stream_state != STREAMING) {
+    if(vxsdr::rx_stream_state != STREAM_RUNNING and vxsdr::rx_stream_state != STREAM_WAITING_FOR_START) {
       LOG_WARN(fmt::format("rx stream state is {:s} in rx_stop_now()",
                 vxsdr::stream_state_to_string(vxsdr::rx_stream_state)));
     }
@@ -734,7 +734,7 @@
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_STOP_NOW, subdev, flags, sizeof(p), 0 };
     auto resp_ok = vxsdr::send_packet_and_check_response(p);
     if(resp_ok) {
-      vxsdr::rx_stream_state = NO_STREAM;
+      vxsdr::rx_stream_state = STREAM_STOPPED;
       return true;
     }
     return false;
@@ -1250,16 +1250,16 @@
 
   std::string vxsdr::stream_state_to_string(const stream_state_t state) {
     switch(state) {
-      case NO_STREAM:
-        return "NO_STREAM";
-      case WAITING_FOR_START:
+      case STREAM_UNINITIALIZED:
+        return "UNINITIALIZED";
+      case STREAM_WAITING_FOR_START:
         return "WAITING_FOR_START";
-      case STREAMING:
-        return "STREAMING";
-      case CLOSING:
-        return "CLOSING";
+      case STREAM_RUNNING:
+        return "RUNNING";
+      case STREAM_STOPPED:
+        return "STOPPED";
       case STREAM_ERROR:
-        return "STREAM_ERROR";
+        return "ERROR";
       default:
         return "UNKNOWN";
     }
@@ -1267,16 +1267,16 @@
 
   std::string vxsdr::transport_state_to_string(const transport_state_t state) {
     switch(state) {
-      case UNINITIALIZED:
+      case TRANSPORT_UNINITIALIZED:
         return "UNINITIALIZED";
-      case STARTING:
+      case TRANSPORT_STARTING:
         return "STARTING";
-      case RUNNING:
+      case TRANSPORT_RUNNING:
         return "RUNNING";
-      case SHUTDOWN:
+      case TRANSPORT_SHUTDOWN:
         return "SHUTDOWN";
       case TRANSPORT_ERROR:
-        return "TRANSPORT_ERROR";
+        return "ERROR";
       default:
         return "UNKNOWN";
     }
@@ -1305,7 +1305,7 @@
 
   void vxsdr::async_handler() {
     LOG_DEBUG("async_handler started");
-    while(udp_rx_state != SHUTDOWN) {
+    while(udp_rx_state != TRANSPORT_SHUTDOWN) {
       async_msg_queue_element a;
       while(async_msg_queue.pop(a)) {
         log_packet_info(a);
