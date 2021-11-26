@@ -193,7 +193,7 @@ class vxsdr {
 
   /*!
     @brief Receives data from the device and returns it in a vector.
-    - returns the number of samples received
+    @returns the number of samples received before a sequence error, or @p n_desired if no sequence errors occur
     @param data the vector for the received data
     @param n_desired the number of samples to be received
     @param timeout_s timeout in seconds
@@ -202,8 +202,8 @@ class vxsdr {
                      const double timeout_s = rx_data_queue_pop_timeout_s);
 
   /*!
-    @brief Receives data from the device and writes to an open file.
-    - returns the number of samples written
+    @brief Receives data from the device and writes to an open file stream.
+    @returns the number of samples written before any error, or @p n_desired if no errors occur
     @param out_stream the file to write the data to
     @param n_desired the number of samples to be received
     @param write_size_samples the block size for file writes
@@ -213,8 +213,8 @@ class vxsdr {
                        const double timeout_s = rx_data_queue_pop_timeout_s, size_t write_size_samples = 65536);
 
   /*!
-    @brief Receives data from the device and checks packet sequence, discarding the data.
-    - returns the number of samples received
+    @brief Receives data from the device and only checks packet sequence, discarding the data.
+    @returns the number of samples received before a sequence error, or @p n_desired if no sequence errors occur
     @param n_desired the number of samples to be received
     @param timeout_s timeout in seconds
   */
@@ -222,7 +222,7 @@ class vxsdr {
 
   /*!
     @brief Sends transmit data to the device.
-    - returns the number of samples placed in the queue for transmission
+    @returns the number of samples placed in the queue for transmission
     @param data the complex @p itn16_t samples to be sent
     @param subdev the subdevice number
     @param timeout_s timeout in seconds
@@ -232,7 +232,11 @@ class vxsdr {
 
   /*!
     @brief Requests basic information from the device.
-    - returns a tuple containing the FPGA and MCU code version numbers
+    @returns a std::optional with a std::array containing the
+        - device identifier
+        - FPGA code version
+        - MCU code version,
+        - device serial number
     @param subdev the subdevice number
     @param flags the packet flags
   */
@@ -240,11 +244,7 @@ class vxsdr {
 
   /*!
     @brief Resets the device.
-    - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if the command is sent,
-        @b false otherwise
-    - if the FLAG_REQUEST_ACK bit in @p flags is set, returns @b true if the command is sent
-        and an ACK is received, @b false otherwise
-    - returns an array containing board ID, FPGA version, MCU SW version, and serial number
+    @returns @b true if the device responds to the command, @b false otherwise
     @param subdev the subdevice number
     @param flags the packet flags
   */
@@ -252,10 +252,7 @@ class vxsdr {
 
   /*!
     @brief Clears the device status.
-    - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if the command is sent,
-        @b false otherwise
-    - if the FLAG_REQUEST_ACK bit in @p flags is set, returns @b true if the command is sent
-        and an ACK is received, @b false otherwise
+    @returns @b true if the device responds to the command, @b false otherwise
     @param subdev the subdevice number
     @param flags the packet flags
   */
@@ -263,7 +260,7 @@ class vxsdr {
 
   /*!
     @brief Gets the device status.
-    - returns an array containing device-dependent status information
+    @returns a std::optional with a std::array containing device-dependent status information
     @param subdev the subdevice number
     @param flags the packet flags
   */
@@ -271,10 +268,7 @@ class vxsdr {
 
   /*!
     @brief Sets the device time immediately.
-    - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if the command is sent,
-        @b false otherwise
-    - if the FLAG_REQUEST_ACK bit in @p flags is set, returns @b true if the command is sent
-        and an ACK is received, @b false otherwise
+    @returns @b true if the device responds to the command, @b false otherwise
     @param t the time to set
     @param subdev the subdevice number
     @param flags the packet flags (FLAGS_TIME_PRESENT is added automatically)
@@ -283,10 +277,8 @@ class vxsdr {
 
   /*!
     @brief Sets the device time when the next PPS is recieved by the device.
-    - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if the command is sent,
-        @b false otherwise
-    - if the FLAG_REQUEST_ACK bit in @p flags is set, returns @b true if the command is sent
-        and an ACK is received, @b false otherwise
+    @returns @b true if the device responds to the command, @b false otherwise; note that the
+    device waits for the next PPS to respond
     @param t the time to set
     @param subdev the subdevice number
     @param flags the packet flags (FLAGS_TIME_PRESENT is added automatically)
@@ -295,12 +287,8 @@ class vxsdr {
 
   /*!
     @brief Sets the device time immediately.
-    - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
-        the input parameters @p sec and @p nsec are in range and the command is sent,
-        @b false otherwise
-    - if the FLAG_REQUEST_ACK bit in @p flags is set, returns @b true if
-        the input parameters @p sec and @p nsec are in range, the command is sent
-        and an ACK is received, @b false otherwise
+    @returns @b true if the input parameters @p sec and @p nsec are in range and the
+    device responds to the command, @b false otherwise
 
   The @p sec and @p nsec input types are chosen to be compatible with Posix
   <tt>struct timespec</tt> on 64-bit systems, but the ranges are checked for
@@ -316,12 +304,9 @@ class vxsdr {
 
   /*!
     @brief Sets the device time when the next PPS is recieved by the device.
-    - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
-        the input parameters @p sec and @p nsec are in range and the command is sent,
-        @b false otherwise
-    - if the FLAG_REQUEST_ACK bit in @p flags is set, returns @b true if
-        the input parameters @p seconds and @p nanoseconds in range, the command is sent
-        and an ACK is received, @b false otherwise
+    @returns @b true if the input parameters @p sec and @p nsec are in range and the
+    device responds to the command, @b false otherwise; note that the
+    device waits for the next PPS to respond
 
   The @p sec and @p nsec input types are chosen to be compatible with Posix
   <tt>struct timespec</tt> on 64-bit systems, but the ranges are checked for
@@ -337,11 +322,7 @@ class vxsdr {
 
   /*!
     @brief Gets the device time immediately.
-    - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
-        a reponse is received,  @b false otherwise
-    - if the FLAG_REQUEST_ACK bit in @p flags is set, returns @b true if
-        an ACK and a reponse are received,  @b false otherwise
-
+    @returns @b true if the device responds to the command, @b false otherwise
     @param sec device time seconds  (UINT32_MAX >= @p sec >= 0)
     @param nsec device time nanoseconds (1,000,000,000 > @p nsec >= 0)
     @param subdev the subdevice number
@@ -351,7 +332,7 @@ class vxsdr {
 
   /*!
     @brief Gets the device time immediately.
-    - returns a @p time_point containing the device time
+    @returns a std::optional with a std::chrono::time_point containing the device time
     @param subdev the subdevice number
     @param flags the packet flags
   */
@@ -359,10 +340,7 @@ class vxsdr {
 
   /*!
     @brief Starts transmitting immediately until a stop command is sent.
-    - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
-        the command is sent, @b false otherwise
-    - if the FLAG_REQUEST_ACK bit in @p flags is set, returns @b true if
-         the command is sent and an ACK is received, @b false otherwise
+    @returns @b true if the device responds to the command, @b false otherwise
     @param subdev the subdevice number
     @param flags the packet flags
   */
@@ -370,10 +348,7 @@ class vxsdr {
 
   /*!
     @brief Starts receiving immediately until a stop command is sent.
-    - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
-        the command is sent, @b false otherwise
-    - if the FLAG_REQUEST_ACK bit in @p flags is set, returns @b true if
-         the command is sent and an ACK is received, @b false otherwise
+    @returns @b true if the device responds to the command, @b false otherwise
     @param subdev the subdevice number
     @param flags the packet flags
   */
@@ -381,10 +356,7 @@ class vxsdr {
 
   /*!
     @brief Starts transmitting immediately until @p n samples are sent.
-    - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
-        the command is sent, @b false otherwise
-    - if the FLAG_REQUEST_ACK bit in @p flags is set, returns @b true if
-         the command is sent and an ACK is received, @b false otherwise
+    @returns @b true if the device responds to the command, @b false otherwise
     @param n the number of samples to send
     @param subdev the subdevice number
     @param flags the packet flags
@@ -393,10 +365,7 @@ class vxsdr {
 
   /*!
     @brief Starts receiving immediately until @p n samples are received.
-    - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
-        the command is sent, @b false otherwise
-    - if the FLAG_REQUEST_ACK bit in @p flags is set, returns @b true if
-         the command is sent and an ACK is received, @b false otherwise
+    @returns @b true if the device responds to the command, @b false otherwise
     @param n the number of samples to send
     @param subdev the subdevice number
     @param flags the packet flags
@@ -405,10 +374,7 @@ class vxsdr {
 
   /*!
     @brief Starts transmitting at time @p t until @p n samples are sent.
-    - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
-        the command is sent, @b false otherwise
-    - if the FLAG_REQUEST_ACK bit in @p flags is set, returns @b true if
-         the command is sent and an ACK is received, @b false otherwise
+    @returns @b true if the device responds to the command, @b false otherwise
     @param t the start time
     @param n the number of samples to send
     @param subdev the subdevice number
@@ -418,10 +384,7 @@ class vxsdr {
 
   /*!
     @brief Starts receiving at time @p t until @p n samples are received.
-    - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
-        the command is sent, @b false otherwise
-    - if the FLAG_REQUEST_ACK bit in @p flags is set, returns @b true if
-         the command is sent and an ACK is received, @b false otherwise
+    @returns @b true if the device responds to the command, @b false otherwise
     @param t the start time
     @param n the number of samples to receive
     @param subdev the subdevice number
@@ -431,10 +394,7 @@ class vxsdr {
 
   /*!
     @brief Starts transmitting at time @p t until a stop command is sent.
-    - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
-        the command is sent, @b false otherwise
-    - if the FLAG_REQUEST_ACK bit in @p flags is set, returns @b true if
-         the command is sent and an ACK is received, @b false otherwise
+    @returns @b true if the device responds to the command, @b false otherwise
     @param t the start time
     @param subdev the subdevice number
     @param flags the packet flags
@@ -443,10 +403,7 @@ class vxsdr {
 
   /*!
     @brief Starts receiving at time @p t until a stop command is sent.
-    - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
-        the command is sent, @b false otherwise
-    - if the FLAG_REQUEST_ACK bit in @p flags is set, returns @b true if
-         the command is sent and an ACK is received, @b false otherwise
+    @returns @b true if the device responds to the command, @b false otherwise
     @param t the start time
     @param subdev the subdevice number
     @param flags the packet flags
@@ -455,10 +412,7 @@ class vxsdr {
 
   /*!
     @brief Sets the IQ DC bias for the transmitter to control LO feedthrough.
-    - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
-        the command is sent, @b false otherwise
-    - if the FLAG_REQUEST_ACK bit in @p flags is set, returns @b true if
-         the command is sent and an ACK is received, @b false otherwise
+    @returns @b true if the device responds to the command, @b false otherwise
     @param i_bias the I channel bias (-1 >= @p i_bias >= 1)
     @param q_bias the Q channel bias (-1 >= @p q_bias >= 1)
     @param subdev the subdevice number
@@ -468,10 +422,7 @@ class vxsdr {
 
   /*!
     @brief Sets the IQ DC bias for the receiver to control LO feedthrough.
-    - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
-        the command is sent, @b false otherwise
-    - if the FLAG_REQUEST_ACK bit in @p flags is set, returns @b true if
-         the command is sent and an ACK is received, @b false otherwise
+    @returns @b true if the device responds to the command, @b false otherwise
     @param i_bias the I channel bias (-1 >= @p i_bias >= 1)
     @param q_bias the Q channel bias (-1 >= @p q_bias >= 1)
     @param subdev the subdevice number
@@ -481,7 +432,7 @@ class vxsdr {
 
   /*!
     @brief Gets the IQ DC bias for the transmitter.
-    - returns an array of doubles containing (i_bias, q_bias) with
+    @returns a std::optional with a std::array containing (i_bias, q_bias) with
         (-1 >= @p i_bias >= 1) and (-1 >= @p q_bias >= 1)
     @param subdev the subdevice number
     @param flags the packet flags
@@ -490,7 +441,7 @@ class vxsdr {
 
   /*!
     @brief Gets the IQ DC bias for the receiver.
-    - returns an array of doubles containing (i_bias, q_bias) with
+    @returns a std::optional with a std::array containing (i_bias, q_bias) with
         (-1 >= @p i_bias >= 1) and (-1 >= @p q_bias >= 1)
     @param subdev the subdevice number
     @param flags the packet flags
@@ -499,10 +450,7 @@ class vxsdr {
 
   /*!
     @brief Sets the IQ correction for the transmitter to control image rejection.
-    - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
-        the command is sent, @b false otherwise
-    - if the FLAG_REQUEST_ACK bit in @p flags is set, returns @b true if
-         the command is sent and an ACK is received, @b false otherwise
+    @returns @b true if the device responds to the command, @b false otherwise
     @param ii_corr I-I channel correction
     @param iq_corr I-Q channel correction
     @param qi_corr Q-I channel correction
@@ -515,10 +463,7 @@ class vxsdr {
 
   /*!
     @brief Sets the IQ correction for the receiver to control image rejection.
-    - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
-        the command is sent, @b false otherwise
-    - if the FLAG_REQUEST_ACK bit in @p flags is set, returns @b true if
-         the command is sent and an ACK is received, @b false otherwise
+    @returns @b true if the device responds to the command, @b false otherwise
     @param ii_corr I-I channel correction
     @param iq_corr I-Q channel correction
     @param qi_corr Q-I channel correction
@@ -531,7 +476,11 @@ class vxsdr {
 
   /*!
     @brief Gets the IQ correction for the transmitter.
-    - returns an array of 4 doubles containing (ii_corr, iq_corr, qi_corr, qq_corr)
+    @returns a std::optional with a std::array containing
+        - ii_corr
+        - iq_corr
+        - qi_corr
+        - qq_corr
     @param subdev the subdevice number
     @param flags the packet flags
   */
@@ -539,7 +488,11 @@ class vxsdr {
 
   /*!
     @brief Gets the IQ correction for the receiver.
-    - returns an array of 4 doubles containing (ii_corr, iq_corr, qi_corr, qq_corr)
+    @returns a std::optional with a std::array containing
+        - ii_corr
+        - iq_corr
+        - qi_corr
+        - qq_corr
     @param subdev the subdevice number
     @param flags the packet flags
   */
@@ -547,10 +500,7 @@ class vxsdr {
 
   /*!
     @brief Stops transmitting immediately.
-    - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
-        the command is sent, @b false otherwise
-    - if the FLAG_REQUEST_ACK bit in @p flags is set, returns @b true if
-         the command is sent and an ACK is received, @b false otherwise
+    @returns @b true if the device responds to the command, @b false otherwise
     @param subdev the subdevice number
     @param flags the packet flags
   */
@@ -558,10 +508,7 @@ class vxsdr {
 
   /*!
     @brief Stops receiving immediately.
-    - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
-        the command is sent, @b false otherwise
-    - if the FLAG_REQUEST_ACK bit in @p flags is set, returns @b true if
-         the command is sent and an ACK is received, @b false otherwise
+    @returns @b true if the device responds to the command, @b false otherwise
     @param subdev the subdevice number
     @param flags the packet flags
   */
@@ -569,7 +516,7 @@ class vxsdr {
 
   /*!
     @brief Gets the transmit center frequency range.
-    - returns an array containing the minimum and maximum frequencies in Hz
+    @returns a std::optional with a  std::array containing the minimum and maximum frequencies in Hz
     @param subdev the subdevice number
     @param flags the packet flags
   */
@@ -577,7 +524,7 @@ class vxsdr {
 
   /*!
     @brief Gets the receive center frequency range.
-    - returns an array containing the minimum and maximum frequencies in Hz
+    @returns a std::optional with a  std::array containing the minimum and maximum frequencies in Hz
     @param subdev the subdevice number
     @param flags the packet flags
   */
@@ -585,10 +532,7 @@ class vxsdr {
 
   /*!
     @brief Sets the transmit center frequency.
-    - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
-        the command is sent, @b false otherwise
-    - if the FLAG_REQUEST_ACK bit in @p flags is set, returns @b true if
-         the command is sent and an ACK is received, @b false otherwise
+    @returns @b true if the device responds to the command, @b false otherwise
     @param freq_hz the desired frequency in Hz
     @param subdev the subdevice number
     @param flags the packet flags
@@ -597,10 +541,7 @@ class vxsdr {
 
   /*!
     @brief Sets the receive center frequency.
-    - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
-        the command is sent, @b false otherwise
-    - if the FLAG_REQUEST_ACK bit in @p flags is set, returns @b true if
-         the command is sent and an ACK is received, @b false otherwise
+    @returns @b true if the device responds to the command, @b false otherwise
     @param freq_hz the desired frequency in Hz
     @param subdev the subdevice number
     @param flags the packet flags
@@ -609,7 +550,7 @@ class vxsdr {
 
   /*!
     @brief Gets the current transmit center frequency.
-    - returns the center frequency in Hz
+    @returns a std::optional with the center frequency in Hz
     @param subdev the subdevice number
     @param flags the packet flags
   */
@@ -617,7 +558,7 @@ class vxsdr {
 
   /*!
     @brief Gets the current receive center frequency.
-    - returns the center frequency in Hz
+    @returns a std::optional with the center frequency in Hz
     @param subdev the subdevice number
     @param flags the packet flags
   */
@@ -625,7 +566,7 @@ class vxsdr {
 
   /*!
     @brief Gets the transmit gain range.
-    - returns an array containing the minimum and maximum gains in dB
+    @returns a std::optional with a std::array containing the minimum and maximum gains in dB
     @param subdev the subdevice number
     @param flags the packet flags
   */
@@ -633,7 +574,7 @@ class vxsdr {
 
   /*!
     @brief Gets the receive gain range.
-    - returns an array containing the minimum and maximum gains in dB
+    @returns a std::optional with a std::array containing the minimum and maximum gains in dB
     @param subdev the subdevice number
     @param flags the packet flags
   */
@@ -641,10 +582,7 @@ class vxsdr {
 
   /*!
     @brief Sets the transmit gain.
-    - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
-        the command is sent, @b false otherwise
-    - if the FLAG_REQUEST_ACK bit in @p flags is set, returns @b true if
-         the command is sent and an ACK is received, @b false otherwise
+    @returns @b true if the device responds to the command, @b false otherwise
     @param gain_db the desired gain in dB
     @param subdev the subdevice number
     @param flags the packet flags
@@ -653,10 +591,7 @@ class vxsdr {
 
   /*!
     @brief Sets the receive gain.
-    - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
-        the command is sent, @b false otherwise
-    - if the FLAG_REQUEST_ACK bit in @p flags is set, returns @b true if
-         the command is sent and an ACK is received, @b false otherwise
+    @returns @b true if the device responds to the command, @b false otherwise
     @param gain_db the desired gain in dB
     @param subdev the subdevice number
     @param flags the packet flags
@@ -665,7 +600,7 @@ class vxsdr {
 
   /*!
     @brief Gets the current transmit gain.
-    - returns the gain in dB
+    @returns a std::optional with the gain in dB
     @param subdev the subdevice number
     @param flags the packet flags
   */
@@ -673,7 +608,7 @@ class vxsdr {
 
   /*!
     @brief Gets the current receive gain.
-    - returns the gain in dB
+    @returns a std::optional with the gain in dB
     @param subdev the subdevice number
     @param flags the packet flags
   */
@@ -681,7 +616,7 @@ class vxsdr {
 
   /*!
     @brief Gets the transmit sample rate range.
-    - returns an array containing the minimum and maximum sample rates in samples/s
+    @returns a std::optional with a std::array containing the minimum and maximum sample rates in samples/s
     @param subdev the subdevice number
     @param flags the packet flags
   */
@@ -689,7 +624,7 @@ class vxsdr {
 
   /*!
     @brief Gets the receive sample rate range.
-    - returns an array containing the minimum and maximum sample rates in samples/s
+    @returns a std::optional with a std::array containing the minimum and maximum sample rates in samples/s
     @param subdev the subdevice number
     @param flags the packet flags
   */
@@ -697,10 +632,7 @@ class vxsdr {
 
   /*!
     @brief Sets the transmit sample rate.
-    - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
-        the command is sent, @b false otherwise
-    - if the FLAG_REQUEST_ACK bit in @p flags is set, returns @b true if
-         the command is sent and an ACK is received, @b false otherwise
+    @returns @b true if the device responds to the command, @b false otherwise
     @param rate_samples_sec the desired rate in samples/s
     @param subdev the subdevice number
     @param flags the packet flags
@@ -709,10 +641,7 @@ class vxsdr {
 
   /*!
     @brief Sets the receive sample rate.
-    - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
-        the command is sent, @b false otherwise
-    - if the FLAG_REQUEST_ACK bit in @p flags is set, returns @b true if
-         the command is sent and an ACK is received, @b false otherwise
+    @returns @b true if the device responds to the command, @b false otherwise
     @param rate_samples_sec the desired rate in samples/s
     @param subdev the subdevice number
     @param flags the packet flags
@@ -721,7 +650,7 @@ class vxsdr {
 
   /*!
     @brief Gets the current transmit sample rate.
-    - returns the rate in samples/s
+    @returns a std::optional with the rate in samples/s
     @param subdev the subdevice number
     @param flags the packet flags
   */
@@ -729,7 +658,7 @@ class vxsdr {
 
   /*!
     @brief Gets the current receive sample rate.
-    - returns the rate in samples/s
+    @returns a std::optional with the rate in samples/s
     @param subdev the subdevice number
     @param flags the packet flags
   */
@@ -737,7 +666,7 @@ class vxsdr {
 
   /*!
     @brief Gets the number of transmit output ports.
-    - returns the number of output ports
+    @returns a std::optional with the number of output ports
     @param subdev the subdevice number
     @param flags the packet flags
   */
@@ -745,7 +674,7 @@ class vxsdr {
 
    /*!
     @brief Gets the number of receive input ports.
-    - returns the number of input ports
+    @returns a std::optional with the number of input ports
     @param subdev the subdevice number
     @param flags the packet flags
   */
@@ -753,7 +682,7 @@ class vxsdr {
 
   /*!
     @brief Gets the name of a transmit output port.
-    - returns the name of the specified output port
+    @returns a std::optional with the name of the specified output port
     @param port_num the port number
     @param subdev the subdevice number
     @param flags the packet flags
@@ -762,7 +691,7 @@ class vxsdr {
 
   /*!
     @brief Gets the name of a receive input port.
-    - returns the name of the specified input port
+    @returns a std::optional with the name of the specified input port
     @param port_num the port number
     @param subdev the subdevice number
     @param flags the packet flags
@@ -771,10 +700,7 @@ class vxsdr {
 
   /*!
     @brief Sets the transmit output port by number.
-    - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
-        the command is sent, @b false otherwise
-    - if the FLAG_REQUEST_ACK bit in @p flags is set, returns @b true if
-         the command is sent and an ACK is received, @b false otherwise
+    @returns @b true if the device responds to the command, @b false otherwise
     @param port_num the desired output port number
     @param subdev the subdevice number
     @param flags the packet flags
@@ -783,10 +709,7 @@ class vxsdr {
 
   /*!
     @brief Sets the transmit output port by name.
-    - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
-        the command is sent, @b false otherwise
-    - if the FLAG_REQUEST_ACK bit in @p flags is set, returns @b true if
-         the command is sent and an ACK is received, @b false otherwise
+    @returns @b true if the device responds to the command, @b false otherwise
     @param port_name the desired output port name
     @param subdev the subdevice number
     @param flags the packet flags
@@ -795,10 +718,7 @@ class vxsdr {
 
   /*!
     @brief Sets the receive input port by number.
-    - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
-        the command is sent, @b false otherwise
-    - if the FLAG_REQUEST_ACK bit in @p flags is set, returns @b true if
-         the command is sent and an ACK is received, @b false otherwise
+    @returns @b true if the device responds to the command, @b false otherwise
     @param port_num the desired input port number
     @param subdev the subdevice number
     @param flags the packet flags
@@ -807,10 +727,7 @@ class vxsdr {
 
   /*!
     @brief Sets the receive input port by name.
-    - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
-        the command is sent, @b false otherwise
-    - if the FLAG_REQUEST_ACK bit in @p flags is set, returns @b true if
-         the command is sent and an ACK is received, @b false otherwise
+    @returns @b true if the device responds to the command, @b false otherwise
     @param port_name the desired input port name
     @param subdev the subdevice number
     @param flags the packet flags
@@ -819,7 +736,7 @@ class vxsdr {
 
   /*!
     @brief Gets the current transmit output port.
-    - returns the port number
+    @returns a std::optional with the port number
     @param subdev the subdevice number
     @param flags the packet flags
   */
@@ -827,7 +744,7 @@ class vxsdr {
 
   /*!
     @brief Gets the current receive input port.
-    - returns the port number
+    @returns a std::optional with the port number
     @param subdev the subdevice number
     @param flags the packet flags
   */
@@ -835,10 +752,7 @@ class vxsdr {
 
   /*!
     @brief Enables or disables the transmit RF section.
-    - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
-        the command is sent, @b false otherwise
-    - if the FLAG_REQUEST_ACK bit in @p flags is set, returns @b true if
-         the command is sent and an ACK is received, @b false otherwise
+    @returns @b true if the device responds to the command, @b false otherwise
     @param enabled the desired state
     @param subdev the subdevice number
     @param flags the packet flags
@@ -847,10 +761,7 @@ class vxsdr {
 
   /*!
     @brief Enables or disables the receive RF section.
-    - if the FLAG_REQUEST_ACK bit in @p flags is not set, returns @b true if
-        the command is sent, @b false otherwise
-    - if the FLAG_REQUEST_ACK bit in @p flags is set, returns @b true if
-         the command is sent and an ACK is received, @b false otherwise
+    @returns @b true if the device responds to the command, @b false otherwise
     @param enabled the desired state
     @param subdev the subdevice number
     @param flags the packet flags
@@ -859,7 +770,7 @@ class vxsdr {
 
   /*!
     @brief Gets the transmit capabilites.
-    - returns a @p capabilities_t indicating the transmit capabilities
+    @returns a std::optional with a @p capabilities_t indicating the transmit capabilities
     @param subdev the subdevice number
     @param flags the packet flags
   */
@@ -867,7 +778,7 @@ class vxsdr {
 
   /*!
     @brief Gets the receive capabilites.
-    - returns a @p capabilities_t indicating the receive capabilities
+    @returns a std::optional with a @p capabilities_t indicating the receive capabilities
     @param subdev the subdevice number
     @param flags the packet flags
   */
@@ -875,7 +786,7 @@ class vxsdr {
 
   /*!
     @brief Gets the size of the device transmit and receive buffers.
-    - returns an array containing the receive and transmit buffer sizes in bytes, in that order
+    @returns a std::optional with a std::array containing the receive and transmit buffer sizes in bytes, in that order
     @param subdev the subdevice number
     @param flags the packet flags
   */
@@ -883,7 +794,7 @@ class vxsdr {
 
   /*!
     @brief Gets the current number of bytes used in the device transmit and receive buffers.
-    - returns an array containing the receive and transmit buffer usage in bytes, in that order
+    @returns a std::optional with a std::array containing the receive and transmit buffer usage in bytes, in that order
     @param subdev the subdevice number
     @param flags the packet flags
   */
@@ -891,9 +802,12 @@ class vxsdr {
 
   /*!
     @brief Gets the status of the device timing references.
-    - returns an array containing the external PPS lock status, external 10 MHz lock status, and
-      internal reference oscillator lock status, in that order. Note that the first two will be false
-      if no external PPS and 10 MHz are connected.
+    @returns a std::optional with a std::array containing
+        - the external PPS lock status
+        - external 10 MHz lock status
+        - internal reference oscillator lock status
+
+      Note that the first two will be false if no external PPS and 10 MHz are connected.
     @param subdev the subdevice number
     @param flags the packet flags
   */
@@ -902,14 +816,14 @@ class vxsdr {
   /*!
     @brief Sets the timeout used by the host for commands sent to the device.
     We do not recommend values less than 0.5 seconds
-    - returns @p true if the timeout is set, @p false if it is out of range
+    @returns @p true if the timeout is set, @p false if it is out of range
     @param timeout_s the timeout in seconds (must be greater than 0 and less than or equal to 3600)
   */
   bool set_host_device_command_timeout(const double timeout_s);
 
   /*!
     @brief Gets the current timeout used by the host for commands sent to the device.
-    - returns the timeout in seconds
+    @returns the timeout in seconds
   */
   double get_host_device_command_timeout();
 
@@ -917,7 +831,7 @@ class vxsdr {
     @brief
     Broadcasts a device discovery packet to the given IPv4 broadcast address, and returns the
     IPv4 addresses of the devices which respond.
-    - returns a vector containing the IPv4 addresses of discovered devices
+    @returns a std::optional with a std::vector containing the IPv4 addresses of discovered devices
     @param broadcast_address the broadcast address
   */
   std::optional<std::vector<net::ip::address_v4>> device_discover_ipv4_addresses(const net::ip::address_v4 broadcast_addr);
@@ -926,7 +840,7 @@ class vxsdr {
     @brief Sets the IPv4 address of the device.
     This will disconnect the device if the given address is different from its current address.
     The IP address is not saved to nonvolatile memory in the device by this command.
-    - returns @p true if the address is set, @p false otherwise
+    @returns @p true if the address is set, @p false otherwise
     @param device_address the device address to set
   */
   bool device_set_ipv4_address(const net::ip::address_v4 device_address);
@@ -935,7 +849,7 @@ class vxsdr {
     @brief Saves the IPv4 address of the device to nonvolatile memory in the device.
     The IP address provided must be the same as the device's current IP address. A special-purpose program
     is required to change and save a device's IP address.
-    - returns @p true if the address is saved, @p false otherwise
+    @returns @p true if the address is saved, @p false otherwise
     @param device_address the device address to save
   */
   bool device_save_ipv4_address(const net::ip::address_v4 device_address);
@@ -943,19 +857,19 @@ class vxsdr {
   //FIXME: check the packet size computations below!!!
 
   /*!
-    @brief Gets the maximum payload size in bytes for transport to and from the device.
-    Note that the maximum packet size is the maximum payload size + sizeof(packet_header)
-    + sizeof(IPv4 header), or maximum_payload_bytes + 24.
-    - returns the maximum payload in bytes
+    @brief Gets the maximum payload size in bytes for transport to and from the device. Note
+    that the maximum packet size (corresponding the the minimum MTU) is the maximum payload size
+    plus sizeof(packet_header) plus sizeof(IPv4 header), or maximum_payload_bytes + 24.
+    @returns a std::optional with the maximum payload in bytes
   */
   std::optional<unsigned> device_get_max_payload_bytes();
 
   /*!
     @brief Sets the maximum payload size in bytes for transport to and from the device.
-    The payload size must be a multiple of 8 bytes and 1024 <= max_payload_bytes <= 8192.
-    Note that the maximum packet size is the maximum payload size + sizeof(packet_header)
-    + sizeof(IPv4 header), or maximum_payload_bytes + 24.
-    - returns @p true if the size is set, @p false otherwise
+    The payload size must be a multiple of 8 bytes and 1024 <= max_payload_bytes <= 8192. Note
+    that the maximum packet size (corresponding the the minimum MTU) is the maximum payload size
+    plus sizeof(packet_header) plus sizeof(IPv4 header), or maximum_payload_bytes + 24.
+    @returns @p true if the size is set, @p false otherwise
     @param max_payload_bytes the maximum payload size in bytes
   */
   bool device_set_max_payload_bytes(const unsigned max_payload_bytes);
