@@ -48,7 +48,9 @@ int main(int argc, char *argv[])
     net::ip::udp::endpoint destination_endpoint(destination_ip, vm["destination_port"].as<unsigned>());
     LOG_INFO(fmt::format("using destination IP {:s} and port {:d}", destination_endpoint.address().to_string(), destination_endpoint.port()));
 
-    auto radio = std::make_unique<vxsdr>(local_send_endpoint, local_receive_endpoint, destination_endpoint, vm["log_packets"].as<bool>());
+    auto radio = std::make_unique<vxsdr>(local_send_endpoint, local_receive_endpoint, destination_endpoint, vm["log_packets"].as<bool>(),
+                                         vm["set_affinity"].as<bool>(), vm["affinity_base_cpu"].as<unsigned>(),
+                                         vm["set_priority"].as<bool>(), vm["thread_priority"].as<int>());
     // let radio complete initialization
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
     set_common_options(vm, radio);

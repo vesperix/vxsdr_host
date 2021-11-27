@@ -45,6 +45,10 @@ void add_common_options(boost::program_options::options_description &desc)
     ("verbose_level", boost::program_options::value<int>(), "log level (6 = trace, 5 = debug, 4 = info, 3 = warning, 2 = error, 1 = fatal, 0 = none)")
     ("quit_on_error", boost::program_options::value<bool>()->default_value(true), "quit on errors")
     ("log_packets", boost::program_options::value<bool>()->default_value(false), "log nondata packets sent and received")
+    ("set_affinity", boost::program_options::value<bool>()->default_value(true), "set CPU affinity for UDP handler threads")
+    ("affinity_base_cpu", boost::program_options::value<unsigned>()->default_value(0), "lowest CPU number to use for UDP handler threads when affinity is used")
+    ("set_priority", boost::program_options::value<bool>()->default_value(true), "set realtime prioriy for UDP handler threads")
+    ("thread_priority", boost::program_options::value<int>()->default_value(5), "priority to use for UDP handler threads when affinity is used")
   ;
 }
 
