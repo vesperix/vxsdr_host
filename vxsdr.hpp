@@ -92,6 +92,9 @@ class vxsdr {
   unsigned                  device_response_timeout_ms    =        500;
   static constexpr unsigned device_response_wait_ms       =          1;
 
+  // discovery is a special case because each device waits a random time before responding
+  static constexpr double discover_wait_s                 =        2.0;
+
   // how often to check the async queue
   static constexpr unsigned async_queue_check_ms          =         10;
 
@@ -825,16 +828,16 @@ class vxsdr {
     @brief Gets the current timeout used by the host for commands sent to the device.
     @returns the timeout in seconds
   */
-  double get_host_device_command_timeout();
+  double get_host_device_command_timeout() const;
 
   /*!
     @brief
     Broadcasts a device discovery packet to the given IPv4 broadcast address, and returns the
     IPv4 addresses of the devices which respond.
-    @returns a std::optional with a std::vector containing the IPv4 addresses of discovered devices
+    @returns a std::vector containing the IPv4 addresses of discovered devices (which may have zero length if no devices are found)
     @param broadcast_address the broadcast address
   */
-  std::optional<std::vector<net::ip::address_v4>> device_discover_ipv4_addresses(const net::ip::address_v4 broadcast_addr);
+  std::vector<net::ip::address_v4> device_discover_ipv4_addresses(const net::ip::address_v4 &broadcast_addr);
 
   /*!
     @brief Sets the IPv4 address of the device.
@@ -843,7 +846,7 @@ class vxsdr {
     @returns @p true if the address is set, @p false otherwise
     @param device_address the device address to set
   */
-  bool device_set_ipv4_address(const net::ip::address_v4 device_address);
+  bool device_set_ipv4_address(const net::ip::address_v4 &device_address);
 
   /*!
     @brief Saves the IPv4 address of the device to nonvolatile memory in the device.
@@ -852,7 +855,7 @@ class vxsdr {
     @returns @p true if the address is saved, @p false otherwise
     @param device_address the device address to save
   */
-  bool device_save_ipv4_address(const net::ip::address_v4 device_address);
+  bool device_save_ipv4_address(const net::ip::address_v4 &device_address);
 
   //FIXME: check the packet size computations below!!!
 

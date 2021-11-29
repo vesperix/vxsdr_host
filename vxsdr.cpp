@@ -988,42 +988,30 @@
     one_uint32_packet p = {};
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_SET_RF_PORT, subdev, flags, sizeof(p), 0 };
     p.value1 = port_num;
-    if(not vxsdr::send_packet_and_check_response(p)) {
-      return false;
-    }
-    return true;
+    return vxsdr::send_packet_and_check_response(p);
   }
 
   bool vxsdr::set_tx_port(const std::string &port_name, const uint8_t subdev, const uint8_t flags) {
-    one_uint32_packet p = {};
+    name_packet p = {};
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_SET_RF_PORT, subdev, flags, sizeof(p), 0 };
-    //FIXME needs implementation and checking!!!
-    p.value1 = 0;
-    if(not vxsdr::send_packet_and_check_response(p)) {
-      return false;
-    }
-    return true;
+    strncpy((char *)p.name, port_name.c_str(), MAX_PAYLOAD_LENGTH_BYTES - 1);
+    p.name[MAX_PAYLOAD_LENGTH_BYTES - 1] = 0;
+    return vxsdr::send_packet_and_check_response(p);
   }
 
   bool vxsdr::set_rx_port(const unsigned port_num, const uint8_t subdev, const uint8_t flags) {
     one_uint32_packet p = {};
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_SET_RF_PORT, subdev, flags, sizeof(p), 0 };
     p.value1 = port_num;
-    if(not vxsdr::send_packet_and_check_response(p)) {
-      return false;
-    }
-    return true;
+    return vxsdr::send_packet_and_check_response(p);
   }
 
   bool vxsdr::set_rx_port(const std::string &port_name, const uint8_t subdev, const uint8_t flags) {
-    one_uint32_packet p = {};
+    name_packet p = {};
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_SET_RF_PORT, subdev, flags, sizeof(p), 0 };
-    //FIXME needs implementation and checking!!!
-    p.value1 = 0;
-    if(not vxsdr::send_packet_and_check_response(p)) {
-      return false;
-    }
-    return true;
+    strncpy((char *)p.name, port_name.c_str(), MAX_PAYLOAD_LENGTH_BYTES - 1);
+    p.name[MAX_PAYLOAD_LENGTH_BYTES - 1] = 0;
+    return vxsdr::send_packet_and_check_response(p);
   }
 
   std::optional<unsigned> vxsdr::get_tx_port(const uint8_t subdev, const uint8_t flags) {
@@ -1123,34 +1111,48 @@
     return true;
   }
 
-  double vxsdr::get_host_device_command_timeout() {
+  double vxsdr::get_host_device_command_timeout() const {
     return 1e-3 * device_response_timeout_ms;
   }
 
-  std::optional<std::vector<net::ip::address_v4>> vxsdr::device_discover_ipv4_addresses(const net::ip::address_v4 broadcast_addr)
+  std::vector<net::ip::address_v4> vxsdr::device_discover_ipv4_addresses(const net::ip::address_v4 &broadcast_addr)
   {
-    // FIXME: needs implementation
-    return std::nullopt;
+    header_only_packet p = {};
+    std::vector<net::ip::address_v4> ret;
+    p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_DISCOVER, 0, 0, sizeof(p), 0 };
+    // FIXME: must send p to  broadcast_addr
+
+    auto t_start = std::chrono::system_clock::now();
+    std::chrono::duration<double> t = {};
+    do {
+      response_queue_element q;
+      if(response_queue.pop(q)) {
+        if(q.hdr.packet_type == PACKET_TYPE_DEVICE_CMD_RSP and q.hdr.command == p.hdr.command) {
+          auto *r = reinterpret_cast<one_uint32_packet *>(&q);
+          ret.emplace_back(net::ip::address_v4(r->value1));
+        } else {
+          LOG_WARN("extraneous response received during device discovery");
+        }
+      } else {
+        std::this_thread::sleep_for(std::chrono::milliseconds(vxsdr::device_response_wait_ms));
+      }
+      t = t_start - std::chrono::system_clock::now();
+    } while(t.count() <= vxsdr::discover_wait_s);
+    return ret;
   }
 
-  bool vxsdr::device_set_ipv4_address(const net::ip::address_v4 device_address) {
+  bool vxsdr::device_set_ipv4_address(const net::ip::address_v4 &device_address) {
     one_uint32_packet p = {};
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_SET_TRANSPORT_ADDR, 0, 0, sizeof(p), 0 };
     p.value1 = device_address.to_uint();
-    if(not vxsdr::send_packet_and_check_response(p)) {
-      return false;
-    }
-    return true;
+    return vxsdr::send_packet_and_check_response(p);
   }
 
-  bool vxsdr::device_save_ipv4_address(const net::ip::address_v4 device_address) {
+  bool vxsdr::device_save_ipv4_address(const net::ip::address_v4 &device_address) {
     one_uint32_packet p = {};
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_SET_TRANSPORT_ADDR, 0, 0, sizeof(p), 0 };
     p.value1 = device_address.to_uint();
-    if(not vxsdr::send_packet_and_check_response(p)) {
-      return false;
-    }
-    return true;
+    return vxsdr::send_packet_and_check_response(p);
   }
 
   std::optional<unsigned> vxsdr::device_get_max_payload_bytes() {
@@ -1169,10 +1171,7 @@
     one_uint32_packet p = {};
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_SET_RF_PORT, 0, 0, sizeof(p), 0 };
     p.value1 = max_payload_bytes;
-    if(not vxsdr::send_packet_and_check_response(p)) {
-      return false;
-    }
-    return true;
+    return vxsdr::send_packet_and_check_response(p);
   }
 
 // private functions
