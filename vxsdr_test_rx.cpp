@@ -92,7 +92,9 @@ int main(int argc, char *argv[])
     }
 
     LOG_DEBUG("setting time to system clock");
-    radio->device_set_time_now(std::chrono::system_clock::now());
+    if(not radio->device_set_time_now(std::chrono::system_clock::now())) {
+      LOG_ERROR("device_set_time_now() failed");
+    }
     LOG_DEBUG("getting time again");
     auto t3 = radio->device_get_time_now();
     if(t3.has_value()) {
@@ -106,9 +108,13 @@ int main(int argc, char *argv[])
     LOG_INFO(fmt::format("using rx_gain   {:.1f}", radio->get_rx_gain().value_or(-1)));
 
     //radio->rx_start_now_for_n_samples(n_samp);
-    radio->rx_start_now_until_stop();
+    if(not radio->rx_start_now_until_stop()) {
+      LOG_ERROR("rx_start_now_until_stop() failed");
+    }
     size_t n_written = radio->check_rx_data_sequence_only(n_samp);
-    radio->rx_stop_now();
+    if(not radio->rx_stop_now()) {
+      LOG_ERROR("rx_stop_now() failed");
+    }
 
     LOG_INFO("receive complete");
     //outfile.close();

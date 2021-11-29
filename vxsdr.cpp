@@ -402,13 +402,13 @@
   bool vxsdr::device_reset(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p;
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_RESET, subdev, flags, sizeof(p), 0 };
-    return vxsdr::send_packet_and_check_response(p);
+    return vxsdr::send_packet_and_check_response(p, "device_reset()");
   }
 
   bool vxsdr::device_clear_status(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p;
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_CLEAR_STATUS, subdev, flags, sizeof(p), 0 };
-    return vxsdr::send_packet_and_check_response(p);
+    return vxsdr::send_packet_and_check_response(p, "device_clear_status()");
   }
 
   std::optional<std::array<uint32_t, 6>> vxsdr::device_get_status(const uint8_t subdev, const uint8_t flags) {
@@ -428,14 +428,14 @@
     cmd_or_rsp_packet_time p = {};
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_SET_TIME_NOW, subdev, static_cast<uint8_t>(flags | FLAGS_TIME_PRESENT), sizeof(p), 0 };
     vxsdr::time_point_to_time_spec_t(t, p.time);
-    return vxsdr::send_packet_and_check_response(p);
+    return vxsdr::send_packet_and_check_response(p, "device_set_time_now()");
   }
 
   bool vxsdr::device_set_time_next_pps(const std::chrono::time_point<std::chrono::system_clock> &t, const uint8_t subdev, const uint8_t flags) {
     cmd_or_rsp_packet_time p = {};
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_SET_TIME_NEXT_PPS, subdev, static_cast<uint8_t>(flags | FLAGS_TIME_PRESENT), sizeof(p), 0 };
     vxsdr::time_point_to_time_spec_t(t, p.time);
-    return vxsdr::send_packet_and_check_response(p);
+    return vxsdr::send_packet_and_check_response(p, "device_set_time_next_pps()");
   }
 
   bool vxsdr::device_set_time_now(const int64_t sec, const int32_t nsec, const uint8_t subdev, const uint8_t flags) {
@@ -444,7 +444,7 @@
     if(sec >= 0 and sec <= UINT32_MAX and nsec >= 0 and nsec < 1'000'000'000) {
       p.time.seconds = sec;
       p.time.nanoseconds = nsec;
-      return vxsdr::send_packet_and_check_response(p);
+      return vxsdr::send_packet_and_check_response(p, "device_set_time_now()");
     }
     LOG_ERROR("time out of range in device_set_time_now()");
     return false;
@@ -456,7 +456,7 @@
     if(sec >= 0 and sec <= UINT32_MAX and nsec >= 0 and nsec < 1'000'000'000) {
       p.time.seconds = sec;
       p.time.nanoseconds = nsec;
-      return vxsdr::send_packet_and_check_response(p);
+      return vxsdr::send_packet_and_check_response(p, "device_set_time_next_pps()");
     }
     LOG_ERROR("time out of range in device_set_time_next_pps()");
     return false;
@@ -492,15 +492,31 @@
     return std::nullopt;
   }
 
+  bool vxsdr::tx_start_now_until_stop(const uint8_t subdev, const uint8_t flags) {
+    if(vxsdr::tx_stream_state != STREAM_UNINITIALIZED and vxsdr::tx_stream_state != STREAM_STOPPED) {
+      LOG_ERROR(fmt::format("tx stream state is {:s} in tx_start_now_until_stop()",
+                vxsdr::stream_state_to_string(vxsdr::tx_stream_state)));
+      return false;
+    }
+    header_only_packet p;
+    p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_START_NOW_UNTIL_STOP, subdev, flags, sizeof(p), 0 };
+    auto resp_ok = vxsdr::send_packet_and_check_response(p, "tx_start_now_until_stop()");
+    if(resp_ok) {
+      vxsdr::tx_stream_state = STREAM_RUNNING;
+      return true;
+    }
+    return false;
+  }
+
   bool vxsdr::rx_start_now_until_stop(const uint8_t subdev, const uint8_t flags) {
-    if(vxsdr::rx_stream_state != STREAM_UNINITIALIZED) {
+    if(vxsdr::rx_stream_state != STREAM_UNINITIALIZED and vxsdr::rx_stream_state != STREAM_STOPPED) {
       LOG_ERROR(fmt::format("rx stream state is {:s} in rx_start_now_until_stop()",
                 vxsdr::stream_state_to_string(vxsdr::rx_stream_state)));
       return false;
     }
     header_only_packet p;
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_START_NOW_UNTIL_STOP, subdev, flags, sizeof(p), 0 };
-    auto resp_ok = vxsdr::send_packet_and_check_response(p);
+    auto resp_ok = vxsdr::send_packet_and_check_response(p, "rx_start_now_until_stop()");
     if(resp_ok) {
       vxsdr::rx_stream_state = STREAM_RUNNING;
       return true;
@@ -509,7 +525,7 @@
   }
 
   bool vxsdr::tx_start_now_for_n_samples(const uint64_t n, const uint8_t subdev, const uint8_t flags) {
-    if(vxsdr::tx_stream_state != STREAM_UNINITIALIZED) {
+    if(vxsdr::tx_stream_state != STREAM_UNINITIALIZED and vxsdr::tx_stream_state != STREAM_STOPPED) {
       LOG_ERROR(fmt::format("tx stream state is {:s} in tx_start_now_for_n_samples()",
                 vxsdr::stream_state_to_string(vxsdr::tx_stream_state)));
       return false;
@@ -517,7 +533,7 @@
     cmd_or_rsp_packet_samples p;
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_START_NOW_FOR_N_SAMPLES, subdev, flags, sizeof(p), 0 };
     p.n_samples = n;
-    auto resp_ok = vxsdr::send_packet_and_check_response(p);
+    auto resp_ok = vxsdr::send_packet_and_check_response(p, "tx_start_now_for_n_samples()");
     if(resp_ok) {
       vxsdr::tx_stream_state = STREAM_RUNNING;
       return true;
@@ -526,7 +542,7 @@
   }
 
   bool vxsdr::rx_start_now_for_n_samples(const uint64_t n, const uint8_t subdev, const uint8_t flags) {
-    if(vxsdr::rx_stream_state != STREAM_UNINITIALIZED) {
+    if(vxsdr::rx_stream_state != STREAM_UNINITIALIZED and vxsdr::rx_stream_state != STREAM_STOPPED) {
       LOG_ERROR(fmt::format("rx stream state is {:s} in rx_start_now_for_n_samples()",
                 vxsdr::stream_state_to_string(vxsdr::rx_stream_state)));
       return false;
@@ -534,7 +550,7 @@
     cmd_or_rsp_packet_samples p;
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_START_NOW_FOR_N_SAMPLES, subdev, flags, sizeof(p), 0 };
     p.n_samples = n;
-    auto resp_ok = vxsdr::send_packet_and_check_response(p);
+    auto resp_ok = vxsdr::send_packet_and_check_response(p, "rx_start_now_for_n_samples()");
     if(resp_ok) {
       vxsdr::rx_stream_state = STREAM_RUNNING;
       return true;
@@ -544,7 +560,7 @@
 
   bool vxsdr::tx_start_at_time_for_n_samples(const std::chrono::time_point<std::chrono::system_clock> &t, const uint64_t n,
                                              const uint8_t subdev, const uint8_t flags) {
-    if(vxsdr::tx_stream_state != STREAM_UNINITIALIZED) {
+    if(vxsdr::tx_stream_state != STREAM_UNINITIALIZED and vxsdr::tx_stream_state != STREAM_STOPPED) {
       LOG_ERROR(fmt::format("tx stream state is {:s} in tx_start_at_time_for_n_samples()",
                 vxsdr::stream_state_to_string(vxsdr::tx_stream_state)));
       return false;
@@ -554,7 +570,7 @@
               static_cast<uint8_t>(flags | FLAGS_TIME_PRESENT), sizeof(p), 0 };
     vxsdr::time_point_to_time_spec_t(t, p.time);
     p.n_samples = n;
-    auto resp_ok = vxsdr::send_packet_and_check_response(p);
+    auto resp_ok = vxsdr::send_packet_and_check_response(p, "tx_start_at_time_for_n_samples()");
     if(resp_ok) {
       vxsdr::tx_stream_state = STREAM_WAITING_FOR_START;
       return true;
@@ -564,7 +580,7 @@
 
   bool vxsdr::rx_start_at_time_for_n_samples(const std::chrono::time_point<std::chrono::system_clock> &t,const uint64_t n,
                                              const uint8_t subdev, const uint8_t flags) {
-    if(vxsdr::rx_stream_state != STREAM_UNINITIALIZED) {
+    if(vxsdr::rx_stream_state != STREAM_UNINITIALIZED and vxsdr::rx_stream_state != STREAM_STOPPED) {
       LOG_ERROR(fmt::format("rx stream state is {:s} in rx_start_at_time_for_n_samples()",
                 vxsdr::stream_state_to_string(vxsdr::rx_stream_state)));
       return false;
@@ -574,7 +590,7 @@
               static_cast<uint8_t>(flags | FLAGS_TIME_PRESENT), sizeof(p), 0 };
     vxsdr::time_point_to_time_spec_t(t, p.time);
     p.n_samples = n;
-    auto resp_ok = vxsdr::send_packet_and_check_response(p);
+    auto resp_ok = vxsdr::send_packet_and_check_response(p, "rx_start_at_time_for_n_samples()");
     if(resp_ok) {
       vxsdr::rx_stream_state = STREAM_WAITING_FOR_START;
       return true;
@@ -583,7 +599,7 @@
   }
 
   bool vxsdr::tx_start_at_time_until_stop(const std::chrono::time_point<std::chrono::system_clock> &t, const uint8_t subdev, const uint8_t flags) {
-    if(vxsdr::tx_stream_state != STREAM_UNINITIALIZED) {
+    if(vxsdr::tx_stream_state != STREAM_UNINITIALIZED and vxsdr::tx_stream_state != STREAM_STOPPED) {
       LOG_ERROR(fmt::format("tx stream state is {:s} in tx_start_at_time_until_stop()",
                 vxsdr::stream_state_to_string(vxsdr::tx_stream_state)));
       return false;
@@ -592,7 +608,7 @@
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_START_AT_TIME_UNTIL_STOP, subdev,
               static_cast<uint8_t>(flags | FLAGS_TIME_PRESENT), sizeof(p), 0 };
     vxsdr::time_point_to_time_spec_t(t, p.time);
-    auto resp_ok = vxsdr::send_packet_and_check_response(p);
+    auto resp_ok = vxsdr::send_packet_and_check_response(p, "tx_start_at_time_until_stop()");
     if(resp_ok) {
       vxsdr::tx_stream_state = STREAM_WAITING_FOR_START;
       return true;
@@ -601,7 +617,7 @@
   }
 
   bool vxsdr::rx_start_at_time_until_stop(const std::chrono::time_point<std::chrono::system_clock> &t, const uint8_t subdev, const uint8_t flags) {
-    if(vxsdr::rx_stream_state != STREAM_UNINITIALIZED) {
+    if(vxsdr::rx_stream_state != STREAM_UNINITIALIZED and vxsdr::rx_stream_state != STREAM_STOPPED) {
       LOG_ERROR(fmt::format("rx stream state is {:s} in rx_start_at_time_until_stop()",
                 vxsdr::stream_state_to_string(vxsdr::rx_stream_state)));
       return false;
@@ -610,7 +626,7 @@
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_START_AT_TIME_UNTIL_STOP, subdev,
               static_cast<uint8_t>(flags | FLAGS_TIME_PRESENT), sizeof(p), 0 };
     vxsdr::time_point_to_time_spec_t(t, p.time);
-    auto resp_ok = vxsdr::send_packet_and_check_response(p);
+    auto resp_ok = vxsdr::send_packet_and_check_response(p, "rx_start_at_time_until_stop()");
     if(resp_ok) {
       vxsdr::rx_stream_state = STREAM_WAITING_FOR_START;
       return true;
@@ -623,7 +639,7 @@
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_SET_IQ_BIAS, subdev, flags, sizeof(p), 0 };
     p.value1 = std::min(1.0, std::max(-1.0, i_bias));
     p.value2 = std::min(1.0, std::max(-1.0, q_bias));
-    return vxsdr::send_packet_and_check_response(p);
+    return vxsdr::send_packet_and_check_response(p, "set_tx_iq_bias()");
   }
 
   bool vxsdr::set_rx_iq_bias(const double i_bias, const double q_bias, const uint8_t subdev, const uint8_t flags) {
@@ -631,7 +647,7 @@
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_SET_IQ_BIAS, subdev, flags, sizeof(p), 0 };
     p.value1 = std::min(1.0, std::max(-1.0, i_bias));
     p.value2 = std::min(1.0, std::max(-1.0, q_bias));
-    return vxsdr::send_packet_and_check_response(p);
+    return vxsdr::send_packet_and_check_response(p, "set_rx_iq_bias()");
   }
 
   std::optional<std::array<double, 2>> vxsdr::get_tx_iq_bias(const uint8_t subdev, const uint8_t flags) {
@@ -668,7 +684,7 @@
     p.value2 = iq_corr;
     p.value3 = qi_corr;
     p.value4 = qq_corr;
-    return vxsdr::send_packet_and_check_response(p);
+    return vxsdr::send_packet_and_check_response(p, "set_tx_iq_corr()");
   }
 
   bool vxsdr::set_rx_iq_corr(const double ii_corr, const double iq_corr, const double qi_corr, const double qq_corr,
@@ -679,7 +695,7 @@
     p.value2 = iq_corr;
     p.value3 = qi_corr;
     p.value4 = qq_corr;
-    return vxsdr::send_packet_and_check_response(p);
+    return vxsdr::send_packet_and_check_response(p, "set_rx_iq_corr()");
   }
 
   std::optional<std::array<double, 4>> vxsdr::get_tx_iq_corr(const uint8_t subdev, const uint8_t flags) {
@@ -716,7 +732,7 @@
     // send a stop anyway, even if we think the state is wrong
     header_only_packet p;
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_STOP_NOW, subdev, flags, sizeof(p), 0 };
-    auto resp_ok = vxsdr::send_packet_and_check_response(p);
+    auto resp_ok = vxsdr::send_packet_and_check_response(p, "tx_stop_now()");
     if(resp_ok) {
       vxsdr::tx_stream_state = STREAM_STOPPED;
       return true;
@@ -732,7 +748,7 @@
     // send a stop anyway, even if we think the state is wrong
     header_only_packet p;
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_STOP_NOW, subdev, flags, sizeof(p), 0 };
-    auto resp_ok = vxsdr::send_packet_and_check_response(p);
+    auto resp_ok = vxsdr::send_packet_and_check_response(p, "rx_stop_now()");
     if(resp_ok) {
       vxsdr::rx_stream_state = STREAM_STOPPED;
       return true;
@@ -771,7 +787,7 @@
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_SET_RF_FREQ, subdev, flags, sizeof(p), 0 };
     p.value1 = freq_hz;
     p.value2 = 1e-9;
-    return vxsdr::send_packet_and_check_response(p);
+    return vxsdr::send_packet_and_check_response(p, "set_tx_freq()");
   }
 
   bool vxsdr::set_rx_freq(const double freq_hz, const uint8_t subdev, const uint8_t flags) {
@@ -779,7 +795,7 @@
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_SET_RF_FREQ, subdev, flags, sizeof(p), 0 };
     p.value1 = freq_hz;
     p.value2 = 1e-9;
-    return vxsdr::send_packet_and_check_response(p);
+    return vxsdr::send_packet_and_check_response(p, "set_rx_freq()");
   }
 
   std::optional<double> vxsdr::get_tx_freq(const uint8_t subdev, const uint8_t flags) {
@@ -836,14 +852,14 @@
     one_double_packet p;
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_SET_RF_GAIN, subdev, flags, sizeof(p), 0 };
     p.value1 = gain_db;
-    return vxsdr::send_packet_and_check_response(p);
+    return vxsdr::send_packet_and_check_response(p, "set_tx_gain()");
   }
 
   bool vxsdr::set_rx_gain(const double gain_db, const uint8_t subdev, const uint8_t flags) {
     one_double_packet p;
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_SET_RF_GAIN, subdev, flags, sizeof(p), 0 };
     p.value1 = gain_db;
-    return vxsdr::send_packet_and_check_response(p);
+    return vxsdr::send_packet_and_check_response(p, "set_rx_gain()");
   }
 
   std::optional<double> vxsdr::get_tx_gain(const uint8_t subdev, const uint8_t flags) {
@@ -873,7 +889,7 @@
   std::optional<std::array<double, 2>> vxsdr::get_tx_rate_range(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p = {};
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_GET_RATE_RANGE, subdev, flags, sizeof(p), 0 };
-    auto res = vxsdr::send_packet_and_return_response(p, "tx_get_rate_range()");
+    auto res = vxsdr::send_packet_and_return_response(p, "get_tx_rate_range()");
     if(res) {
       auto q = res.value();
       auto *r = reinterpret_cast<two_double_packet *>(&q);
@@ -886,7 +902,7 @@
   std::optional<std::array<double, 2>> vxsdr::get_rx_rate_range(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p = {};
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_GET_RATE_RANGE, subdev, flags, sizeof(p), 0 };
-    auto res = vxsdr::send_packet_and_return_response(p, "rx_get_rate_range()");
+    auto res = vxsdr::send_packet_and_return_response(p, "get_rx_rate_range()");
     if(res) {
       auto q = res.value();
       auto *r = reinterpret_cast<two_double_packet *>(&q);
@@ -900,14 +916,14 @@
     one_double_packet p;
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_SET_SAMPLE_RATE, subdev, flags, sizeof(p), 0 };
     p.value1 = rate_samples_sec;
-    return vxsdr::send_packet_and_check_response(p);
+    return vxsdr::send_packet_and_check_response(p, "set_tx_rate()");
   }
 
   bool vxsdr::set_rx_rate(const double rate_samples_sec, const uint8_t subdev, const uint8_t flags) {
     one_double_packet p;
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_SET_SAMPLE_RATE, subdev, flags, sizeof(p), 0 };
     p.value1 = rate_samples_sec;
-    return vxsdr::send_packet_and_check_response(p);
+    return vxsdr::send_packet_and_check_response(p, "set_rx_rate()");
   }
 
   std::optional<double> vxsdr::get_tx_rate(const uint8_t subdev, const uint8_t flags) {
@@ -988,7 +1004,7 @@
     one_uint32_packet p = {};
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_SET_RF_PORT, subdev, flags, sizeof(p), 0 };
     p.value1 = port_num;
-    return vxsdr::send_packet_and_check_response(p);
+    return vxsdr::send_packet_and_check_response(p, "set_tx_port() [by number]");
   }
 
   bool vxsdr::set_tx_port(const std::string &port_name, const uint8_t subdev, const uint8_t flags) {
@@ -996,14 +1012,14 @@
     p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_SET_RF_PORT, subdev, flags, sizeof(p), 0 };
     strncpy((char *)p.name, port_name.c_str(), MAX_PAYLOAD_LENGTH_BYTES - 1);
     p.name[MAX_PAYLOAD_LENGTH_BYTES - 1] = 0;
-    return vxsdr::send_packet_and_check_response(p);
+    return vxsdr::send_packet_and_check_response(p, "set_tx_port() [by name]");
   }
 
   bool vxsdr::set_rx_port(const unsigned port_num, const uint8_t subdev, const uint8_t flags) {
     one_uint32_packet p = {};
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_SET_RF_PORT, subdev, flags, sizeof(p), 0 };
     p.value1 = port_num;
-    return vxsdr::send_packet_and_check_response(p);
+    return vxsdr::send_packet_and_check_response(p, "set_rx_port() [by number]");
   }
 
   bool vxsdr::set_rx_port(const std::string &port_name, const uint8_t subdev, const uint8_t flags) {
@@ -1011,7 +1027,7 @@
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_SET_RF_PORT, subdev, flags, sizeof(p), 0 };
     strncpy((char *)p.name, port_name.c_str(), MAX_PAYLOAD_LENGTH_BYTES - 1);
     p.name[MAX_PAYLOAD_LENGTH_BYTES - 1] = 0;
-    return vxsdr::send_packet_and_check_response(p);
+    return vxsdr::send_packet_and_check_response(p, "set_rx_port() [by name]");
   }
 
   std::optional<unsigned> vxsdr::get_tx_port(const uint8_t subdev, const uint8_t flags) {
@@ -1046,7 +1062,7 @@
     } else {
       p.value1 = 0;
     }
-    return vxsdr::send_packet_and_check_response(p);
+    return vxsdr::send_packet_and_check_response(p, "set_tx_enable()");
   }
 
   bool vxsdr::set_rx_enable(const bool enabled, const uint8_t subdev, const uint8_t flags) {
@@ -1057,7 +1073,7 @@
     } else {
       p.value1 = 0;
     }
-    return vxsdr::send_packet_and_check_response(p);
+    return vxsdr::send_packet_and_check_response(p, "set_rx_enable()");
   }
 
   std::optional<capabilities_t> vxsdr::get_tx_capabilities(const uint8_t subdev, const uint8_t flags) {
@@ -1145,14 +1161,14 @@
     one_uint32_packet p = {};
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_SET_TRANSPORT_ADDR, 0, 0, sizeof(p), 0 };
     p.value1 = device_address.to_uint();
-    return vxsdr::send_packet_and_check_response(p);
+    return vxsdr::send_packet_and_check_response(p, "device_set_ipv4_address()");
   }
 
   bool vxsdr::device_save_ipv4_address(const net::ip::address_v4 &device_address) {
     one_uint32_packet p = {};
     p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_SET_TRANSPORT_ADDR, 0, 0, sizeof(p), 0 };
     p.value1 = device_address.to_uint();
-    return vxsdr::send_packet_and_check_response(p);
+    return vxsdr::send_packet_and_check_response(p, "device_save_ipv4_address()");
   }
 
   std::optional<unsigned> vxsdr::device_get_max_payload_bytes() {
@@ -1171,7 +1187,7 @@
     one_uint32_packet p = {};
     p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_SET_RF_PORT, 0, 0, sizeof(p), 0 };
     p.value1 = max_payload_bytes;
-    return vxsdr::send_packet_and_check_response(p);
+    return vxsdr::send_packet_and_check_response(p, "device_set_max_payload_bytes()");
   }
 
 // private functions
