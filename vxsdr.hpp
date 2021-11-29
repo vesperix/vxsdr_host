@@ -92,9 +92,6 @@ class vxsdr {
   unsigned                  device_response_timeout_ms    =        500;
   static constexpr unsigned device_response_wait_ms       =          1;
 
-  // discovery is a special case because each device waits a random time before responding
-  static constexpr double discover_wait_s                 =        2.0;
-
   // how often to check the async queue
   static constexpr unsigned async_queue_check_ms          =         10;
 
@@ -837,7 +834,8 @@ class vxsdr {
     @returns a std::vector containing the IPv4 addresses of discovered devices (which may have zero length if no devices are found)
     @param broadcast_address the broadcast address
   */
-  std::vector<net::ip::address_v4> device_discover_ipv4_addresses(const net::ip::address_v4 &broadcast_addr);
+  std::vector<net::ip::address_v4> device_discover_ipv4_addresses(const net::ip::address_v4 &local_addr,
+        const net::ip::address_v4 &broadcast_addr, const unsigned destination_port, const double timeout_s = 10);
 
   /*!
     @brief Sets the IPv4 address of the device.

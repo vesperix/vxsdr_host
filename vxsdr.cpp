@@ -1131,29 +1131,66 @@
     return 1e-3 * device_response_timeout_ms;
   }
 
-  std::vector<net::ip::address_v4> vxsdr::device_discover_ipv4_addresses(const net::ip::address_v4 &broadcast_addr)
+  std::vector<net::ip::address_v4> device_discover_ipv4_addresses(const net::ip::address_v4 &local_addr,
+        const net::ip::address_v4 &broadcast_addr, const unsigned destination_port, const double timeout_s)
   {
-    header_only_packet p = {};
     std::vector<net::ip::address_v4> ret;
-    p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_DISCOVER, 0, 0, sizeof(p), 0 };
-    // FIXME: must send p to  broadcast_addr
 
-    auto t_start = std::chrono::system_clock::now();
-    std::chrono::duration<double> t = {};
-    do {
-      response_queue_element q;
-      if(response_queue.pop(q)) {
-        if(q.hdr.packet_type == PACKET_TYPE_DEVICE_CMD_RSP and q.hdr.command == p.hdr.command) {
-          auto *r = reinterpret_cast<one_uint32_packet *>(&q);
-          ret.emplace_back(net::ip::address_v4(r->value1));
-        } else {
-          LOG_WARN("extraneous response received during device discovery");
+    // wait 1 / 1000 of the timeout specified each rx
+    unsigned discover_wait_ms = llround(timeout_s);
+
+    boost::system::error_code error;
+    net::io_context discover_context;
+
+    auto work = net::make_work_guard(discover_context);
+    auto context_thread = std::thread([&] { discover_context.run(); });
+
+    net::ip::udp::endpoint local_endpoint(local_addr, destination_port);
+    net::ip::udp::endpoint destination_endpoint(broadcast_addr, destination_port);
+
+    net::ip::udp::socket discover_socket(discover_context, local_endpoint);
+
+    discover_socket.open(net::ip::udp::v4(), error);
+
+    if(not error) {
+
+      discover_socket.set_option(net::ip::udp::socket::reuse_address(true));
+      discover_socket.set_option(net::socket_base::broadcast(true));
+
+      header_only_packet p = {};
+      p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_DISCOVER, 0, 0, sizeof(p), 0 };
+
+      discover_socket.send_to(net::buffer(&p, sizeof(p)), destination_endpoint);
+
+      auto t_start = std::chrono::system_clock::now();
+      std::chrono::duration<double> t = {};
+
+      do {
+        one_uint32_packet q = {};
+        net::ip::udp::endpoint remote_endpoint;
+
+        std::future<size_t> result = discover_socket.async_receive_from(net::buffer(&q, sizeof(q)), remote_endpoint, net::use_future);
+
+        if(result.wait_for(std::chrono::milliseconds(discover_wait_ms)) == std::future_status::ready) {
+          if(result.get() == sizeof(one_uint32_packet) and q.hdr.packet_type == PACKET_TYPE_DEVICE_CMD_RSP and q.hdr.command == p.hdr.command) {
+              auto *r = reinterpret_cast<one_uint32_packet *>(&q);
+              ret.emplace_back(net::ip::address_v4(r->value1));
+          } else {
+            LOG_WARN("extraneous response received during device discovery");
+          }
         }
-      } else {
-        std::this_thread::sleep_for(std::chrono::milliseconds(vxsdr::device_response_wait_ms));
+        t = t_start - std::chrono::system_clock::now();
+      } while(t.count() <= timeout_s);
+
+      discover_socket.close();
+
+      if(context_thread.joinable()) {
+        context_thread.join();
       }
-      t = t_start - std::chrono::system_clock::now();
-    } while(t.count() <= vxsdr::discover_wait_s);
+    } else {
+      LOG_ERROR("unable to open socket in device_discover_ipv4_addresses()");
+    }
+
     return ret;
   }
 
