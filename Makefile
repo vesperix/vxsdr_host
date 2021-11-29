@@ -25,9 +25,11 @@ LIBS = libvxsdr.so
 
 DOCS = docs/html/index.html
 
-all: $(PROGS) $(LIBS) $(DOCS) Makefile
+all: $(PROGS) $(LIBS) Makefile
 
-.PHONY: all
+docs: $(DOCS)
+
+.PHONY: all docs
 
 vxsdr_test: vxsdr_test.cpp host_radio_options.cpp $(COMMON_INCLUDES) $(COMMON_SRC) #libvxsdr.so
 	$(CXX) $(CXX_FLAGS) -o $@ $< host_radio_options.cpp $(COMMON_SRC) $(LIB_SRC) $(CXX_LDFLAGS) #-L. -lvxsdr
