@@ -45,9 +45,9 @@ void add_common_options(boost::program_options::options_description &desc)
     ("verbose_level", boost::program_options::value<int>(), "log level (6 = trace, 5 = debug, 4 = info, 3 = warning, 2 = error, 1 = fatal, 0 = none)")
     ("quit_on_error", boost::program_options::value<bool>()->default_value(true), "quit on errors")
     ("log_packets", boost::program_options::value<bool>()->default_value(false), "log nondata packets sent and received")
-    ("set_affinity", boost::program_options::value<bool>()->default_value(true), "set CPU affinity for UDP handler threads")
+    ("set_affinity", boost::program_options::value<bool>()->default_value(false), "set CPU affinity for UDP handler threads")
     ("affinity_base_cpu", boost::program_options::value<unsigned>()->default_value(0), "lowest CPU number to use for UDP handler threads when affinity is used")
-    ("set_priority", boost::program_options::value<bool>()->default_value(true), "set realtime prioriy for UDP handler threads")
+    ("set_priority", boost::program_options::value<bool>()->default_value(true), "set realtime priority for UDP handler threads")
     ("thread_priority", boost::program_options::value<int>()->default_value(5), "priority to use for UDP handler threads when affinity is used")
   ;
 }
@@ -247,44 +247,5 @@ int set_tx_1ch_options(boost::program_options::variables_map &vm, std::unique_pt
     }
   }
 
-  return 0;
-}
-
-int set_time_options(boost::program_options::variables_map &vm, std::unique_ptr<vxsdr> &radio)
-{
-  /*
-  if(vm.count("time_source") > 0) {
-    radio->set_time_source(vm["clock_source"].as<string>());
-  }
-  else if(vm.count("no_ext_time") > 0) {
-    radio->set_no_time_ref();
-  }
-  else {
-    radio->set_external_time_ref();
-  }
-
-  if(vm.count("clock_source") > 0) {
-    radio->set_clock_source(vm["clock_source"].as<string>());
-    if(vm.count("no_ext_ref") > 0)
-      LOG_WARN(<< "Both clock_source and no_ext_ref specified; clock_source takes precedence");
-  }
-  else if(vm.count("no_ext_ref") > 0) {
-    radio->set_internal_freq_ref();
-  }
-  else {
-    radio->set_external_freq_ref();
-  }
-
-  radio->check_reference_lock();
-
-  radio->check_lo_lock();
-
-  if(vm.count("no_time_synch") == 0 and vm.count("no_ext_time") == 0) {
-    radio->synch_external_time_ref(0, true);
-  }
-  else {
-    radio->synch_system_time();
-  }
-  */
   return 0;
 }
