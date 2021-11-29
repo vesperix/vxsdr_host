@@ -1192,7 +1192,7 @@
 
 // private functions
 
-  bool vxsdr::send_packet_and_check_response(packet &p, const std::string &cmd_name) {
+  [[nodiscard]] bool vxsdr::send_packet_and_check_response(packet &p, const std::string &cmd_name) {
     if(not vxsdr::cmd_queue_push_check(p)) {
       return false;
     }
@@ -1217,14 +1217,14 @@
         LOG_ERROR(fmt::format("command error in {:s}: {:s}", cmd_name, error_to_string(reinterpret_cast<error_packet *>(&q)->value1)));
         return false;
       }
-      LOG_ERROR(fmt::format("invalid response in {:s}", cmd_name));
+      LOG_ERROR(fmt::format("invalid response received in {:s}", cmd_name));
       return false;
     }
-    LOG_ERROR(fmt::format("timeout in {:s}", cmd_name));
+    LOG_ERROR(fmt::format("timeout waiting for response in {:s}", cmd_name));
     return false;
   }
 
-  std::optional<vxsdr::response_queue_element> vxsdr::send_packet_and_return_response(packet &p, const std::string &cmd_name) {
+  [[nodiscard]] std::optional<vxsdr::response_queue_element> vxsdr::send_packet_and_return_response(packet &p, const std::string &cmd_name) {
     if(not vxsdr::cmd_queue_push_check(p)) {
       return std::nullopt;
     }
@@ -1249,11 +1249,48 @@
         LOG_ERROR(fmt::format("command error in {:s}: {:s}", cmd_name, error_to_string(reinterpret_cast<error_packet *>(&q)->value1)));
         return std::nullopt;
       }
-      LOG_ERROR(fmt::format("invalid response in {:s}", cmd_name));
+      LOG_ERROR(fmt::format("invalid response received in {:s}", cmd_name));
       return std::nullopt;
     }
-    LOG_ERROR(fmt::format("timeout in {:s}", cmd_name));
+    LOG_ERROR(fmt::format("timeout waiting for response in {:s}", cmd_name));
     return std::nullopt;
+  }
+
+  [[nodiscard]] bool vxsdr::cmd_queue_push_check(packet &p, const std::string &cmd_name) {
+    command_queue_element q;
+    std::memcpy(&q, &p, std::min((size_t)p.hdr.packet_size, sizeof(q)));
+     if(not command_queue.bounded_push(q)) {
+      LOG_ERROR(fmt::format("error pushing to command queue in {:s}", cmd_name));
+      log_packet_info(p);
+      return false;
+    }
+    if((q.hdr.flags & FLAGS_REQUEST_ACK) != 0) {
+      cmd_ack_queue_element a;
+      bool got_response = false;
+      unsigned wait_time_ms = 0;
+      while(not (got_response = vxsdr::cmd_ack_queue.pop(a)) and wait_time_ms < device_response_timeout_ms) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(device_response_wait_ms));
+        wait_time_ms += device_response_wait_ms;
+      }
+      if(got_response) {
+        auto *r = reinterpret_cast<header_only_packet *>(&a);
+        bool packet_types_match = false;
+        if((q.hdr.packet_type == PACKET_TYPE_DEVICE_CMD   and r->hdr.packet_type == PACKET_TYPE_DEVICE_CMD_ACK)   or
+           (q.hdr.packet_type == PACKET_TYPE_RX_RADIO_CMD and r->hdr.packet_type == PACKET_TYPE_RX_RADIO_CMD_ACK) or
+           (q.hdr.packet_type == PACKET_TYPE_TX_RADIO_CMD and r->hdr.packet_type == PACKET_TYPE_TX_RADIO_CMD_ACK)) {
+          packet_types_match = true;
+        }
+        // for an ack to match, packet types, commands, and subdevices must all match
+        if(packet_types_match and r->hdr.command == q.hdr.command and r->hdr.target_subdevice == q.hdr.target_subdevice) {
+          return true;
+        }
+        LOG_ERROR(fmt::format("invalid ack received in {:s}", cmd_name));
+        return false;
+      }
+      LOG_ERROR(fmt::format("timeout waiting for ack in {:s}", cmd_name));
+      return false;
+    }
+    return true;
   }
 
   void vxsdr::time_point_to_time_spec_t(const std::chrono::time_point<std::chrono::system_clock> &t, time_spec_t &ts) {
@@ -1354,41 +1391,4 @@
       return ret;
     }
     return std::nullopt;
-  }
-
-  [[nodiscard]] bool vxsdr::cmd_queue_push_check(packet &p) {
-    command_queue_element q;
-    std::memcpy(&q, &p, std::min((size_t)p.hdr.packet_size, sizeof(q)));
-     if(not command_queue.bounded_push(q)) {
-      LOG_ERROR("out of space pushing to command queue");
-      log_packet_info(p);
-      return false;
-    }
-    if((q.hdr.flags & FLAGS_REQUEST_ACK) != 0) {
-      cmd_ack_queue_element a;
-      bool got_response = false;
-      unsigned wait_time_ms = 0;
-      while(not (got_response = vxsdr::cmd_ack_queue.pop(a)) and wait_time_ms < device_response_timeout_ms) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(device_response_wait_ms));
-        wait_time_ms += device_response_wait_ms;
-      }
-      if(got_response) {
-        auto *r = reinterpret_cast<header_only_packet *>(&a);
-        bool packet_types_match = false;
-        if((q.hdr.packet_type == PACKET_TYPE_DEVICE_CMD   and r->hdr.packet_type == PACKET_TYPE_DEVICE_CMD_ACK)   or
-           (q.hdr.packet_type == PACKET_TYPE_RX_RADIO_CMD and r->hdr.packet_type == PACKET_TYPE_RX_RADIO_CMD_ACK) or
-           (q.hdr.packet_type == PACKET_TYPE_TX_RADIO_CMD and r->hdr.packet_type == PACKET_TYPE_TX_RADIO_CMD_ACK)) {
-          packet_types_match = true;
-        }
-        // for an ack to match, packet types, commands, and subdevices must all match
-        if(packet_types_match and r->hdr.command == q.hdr.command and r->hdr.target_subdevice == q.hdr.target_subdevice) {
-          return true;
-        }
-        LOG_ERROR("invalid ack received");
-        return false;
-      }
-      LOG_ERROR("timeout waiting for ack");
-      return false;
-    }
-    return true;
   }

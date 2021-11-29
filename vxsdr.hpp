@@ -886,7 +886,7 @@ class vxsdr {
   static std::string transport_state_to_string(const transport_state_t state);
   static std::string error_to_string(const uint32_t reason);
 
-  [[nodiscard]] bool cmd_queue_push_check(packet &p);
+  [[nodiscard]] bool cmd_queue_push_check(packet &p, const std::string &cmd_name = "unknown");
   void async_handler();
   void receiver();
   void sender();
