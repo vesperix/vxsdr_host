@@ -1151,44 +1151,69 @@
     net::ip::udp::socket discover_socket(discover_context, local_endpoint);
 
     discover_socket.open(net::ip::udp::v4(), error);
-
-    if(not error) {
-
-      discover_socket.set_option(net::ip::udp::socket::reuse_address(true));
-      discover_socket.set_option(net::socket_base::broadcast(true));
-
-      header_only_packet p = {};
-      p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_DISCOVER, 0, 0, sizeof(p), 0 };
-
-      discover_socket.send_to(net::buffer(&p, sizeof(p)), destination_endpoint);
-
-      auto t_start = std::chrono::system_clock::now();
-      std::chrono::duration<double> t = {};
-
-      do {
-        one_uint32_packet q = {};
-        net::ip::udp::endpoint remote_endpoint;
-
-        std::future<size_t> result = discover_socket.async_receive_from(net::buffer(&q, sizeof(q)), remote_endpoint, net::use_future);
-
-        if(result.wait_for(std::chrono::milliseconds(discover_wait_ms)) == std::future_status::ready) {
-          if(result.get() == sizeof(one_uint32_packet) and q.hdr.packet_type == PACKET_TYPE_DEVICE_CMD_RSP and q.hdr.command == p.hdr.command) {
-              auto *r = reinterpret_cast<one_uint32_packet *>(&q);
-              ret.emplace_back(net::ip::address_v4(r->value1));
-          } else {
-            LOG_WARN("extraneous response received during device discovery");
-          }
-        }
-        t = t_start - std::chrono::system_clock::now();
-      } while(t.count() <= timeout_s);
-
-      discover_socket.close();
-
+    if(error) {
+      LOG_ERROR("unable to open socket in device_discover_ipv4_addresses()");
       if(context_thread.joinable()) {
         context_thread.join();
       }
-    } else {
-      LOG_ERROR("unable to open socket in device_discover_ipv4_addresses()");
+      return ret;
+    }
+
+    discover_socket.set_option(net::ip::udp::socket::reuse_address(true), error);
+    if(error) {
+      LOG_ERROR("unable to set reuse_address option in device_discover_ipv4_addresses()");
+      if(context_thread.joinable()) {
+        context_thread.join();
+      }
+      return ret;
+    }
+    discover_socket.set_option(net::socket_base::broadcast(true), error);
+    if(error) {
+      LOG_ERROR("unable to set broadcast option in device_discover_ipv4_addresses()");
+      if(context_thread.joinable()) {
+        context_thread.join();
+      }
+      return ret;
+    }
+
+    header_only_packet p = {};
+    p.hdr = { PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_DISCOVER, 0, 0, sizeof(p), 0 };
+
+    auto bytes_sent = discover_socket.send_to(net::buffer(&p, sizeof(p)), destination_endpoint);
+    if(bytes_sent != sizeof(p)) {
+      LOG_ERROR("error sending discover packet in device_discover_ipv4_addresses()");
+      if(context_thread.joinable()) {
+        context_thread.join();
+      }
+      return ret;
+    }
+
+    auto t_start = std::chrono::system_clock::now();
+    std::chrono::duration<double> t = {};
+
+    do {
+      one_uint32_packet q = {};
+      net::ip::udp::endpoint remote_endpoint;
+
+      std::future<size_t> result = discover_socket.async_receive_from(net::buffer(&q, sizeof(q)), remote_endpoint, net::use_future);
+
+      if(result.wait_for(std::chrono::milliseconds(discover_wait_ms)) == std::future_status::ready) {
+        if(result.get() == sizeof(one_uint32_packet) and q.hdr.packet_type == PACKET_TYPE_DEVICE_CMD_RSP and q.hdr.command == p.hdr.command) {
+            auto *r = reinterpret_cast<one_uint32_packet *>(&q);
+            ret.emplace_back(net::ip::address_v4(r->value1));
+        } else {
+          LOG_WARN("extraneous response received in device_discover_ipv4_addresses()");
+        }
+      }
+      t = t_start - std::chrono::system_clock::now();
+    } while(t.count() <= timeout_s);
+
+    discover_socket.close(error);
+    if(error) {
+      LOG_ERROR("error closing socket in device_discover_ipv4_addresses()");
+    }
+    if(context_thread.joinable()) {
+      context_thread.join();
     }
 
     return ret;
