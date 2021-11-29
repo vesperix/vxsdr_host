@@ -24,6 +24,11 @@ local packet_types = {
     [0xFF] = "INVALID_PACKET"
 }
 
+local packet_types_index = {}
+for k, v in pairs(packet_types) do
+    packet_types_index[v] = k
+end
+
 local device_cmds = {
     [0x00] = "HELLO",
     [0x01] = "SET_TIME_NOW",
@@ -62,6 +67,11 @@ local device_cmds = {
     [0xFF] = "RESET"  -- unimplemented
 }
 
+local device_cmds_index = {}
+for k, v in pairs(device_cmds) do
+    device_cmds_index[v] = k
+end
+
 local device_cmd_rsps = {
     [0x00] = "HELLO",
     [0x03] = "GET_TIME",
@@ -82,6 +92,11 @@ local device_cmd_rsps = {
     [0x60] = "READ_DAC_REG",
     [0x62] = "READ_ADC_REG"
 }
+
+local device_cmd_rsps_index = {}
+for k, v in pairs(device_cmd_rsps) do
+    device_cmd_rsps_index[v] = k
+end
 
 local device_cmd_errs = {
     [0x01] = "BAD_CMD",
@@ -148,6 +163,11 @@ local radio_cmds = {
     -- 0x53 - 0xFF reserved
 }
 
+local radio_cmds_index = {}
+for k, v in pairs(radio_cmds) do
+    radio_cmds_index[v] = k
+end
+
 local radio_cmd_rsps = {
     [0x11] = "GET_RF_FREQ",
     [0x12] = "GET_RF_GAIN",
@@ -169,6 +189,11 @@ local radio_cmd_rsps = {
     [0x41] = "GET_IQ_BIAS",
     [0x42] = "GET_IQ_CORR"
 }
+
+local radio_cmd_rsps_index = {}
+for k, v in pairs(radio_cmd_rsps) do
+    radio_cmd_rsps_index[v] = k
+end
 
 local radio_cmd_errs = {
     [0x01] = "BAD_CMD",
@@ -222,19 +247,19 @@ function vxsdr.dissector(tvbuf, pktinfo, root)
     end
 
     tree:add(   pf_packet_type,      tvbuf:range(0, 1))
-    if pkt_type == 0x02 then -- device command
+    if pkt_type == packet_types_index["DEVICE_CMD"] then
         tree:add(   pf_device_command,         tvbuf:range(1, 1))
-    elseif pkt_type == 0x62 then -- device command responses
+    elseif pkt_type == packet_types_index["DEVICE_CMD_RSP"] then
         tree:add(   pf_device_command_rsp,     tvbuf:range(1, 1))
-    elseif pkt_type == 0x42 then  -- device command errors
+    elseif pkt_type == packet_types_index["DEVICE_CMD_ERR"] then
         tree:add(   pf_device_command_err,         tvbuf:range(1, 1))
-    elseif pkt_type == 0x03 or pkt_type == 0x04 then -- tx and rx radio commands
+    elseif pkt_type == packet_types_index["TX_RADIO_CMD"] or pkt_type ==packet_types_index["RX_RADIO_CMD"] then
         tree:add(   pf_radio_command,          tvbuf:range(1, 1))
-    elseif pkt_type == 0x63 or pkt_type == 0x64 then -- tx and rx radio command responses
+    elseif pkt_type == packet_types_index["TX_RADIO_CMD_RSP"] or pkt_type ==packet_types_index["RX_RADIO_CMD_RSP"] then
         tree:add(   pf_radio_command_rsp,      tvbuf:range(1, 1))
-    elseif pkt_type == 0x43 or pkt_type == 0x44 then -- tx and rx radio command errors
+    elseif ppkt_type == packet_types_index["TX_RADIO_CMD_ERR"] or pkt_type ==packet_types_index["RX_RADIO_CMD_ERR"] then
         tree:add(   pf_radio_command_err,          tvbuf:range(1, 1))
-    elseif pkt_type == 0x05 then -- async messages
+    elseif pkt_type == packet_types_index["ASYNC_MSG"] then
         tree:add(   pf_async_msg,              tvbuf:range(1, 1))
     else
         tree:add(   pf_command,                tvbuf:range(1, 1))
@@ -245,19 +270,20 @@ function vxsdr.dissector(tvbuf, pktinfo, root)
     tree:add_le(pf_sequence_counter, tvbuf:range(6, 2))
     if pkt_size > 8 then
         -- device commands
-        if pkt_type == 0x02 then
+        if pkt_type == packet_types_index["DEVICE_CMD"] then
             -- set time now or next pps
-            if pkt_cmd == 0x01 or pkt_cmd == 0x02 then
+            if pkt_cmd == device_cmds_index["SET_TIME_NOW"] or pkt_cmd == device_cmds_index["SET_TIME_NEXT_PPS"] then
                 tree:add_le(pf_uint32_data, tvbuf:range( 8, 4))
                 tree:add_le(pf_uint32_data, tvbuf:range(12, 4))
             end
         -- device command responses
-        elseif pkt_type == 0x62 then
-            if pkt_cmd == 0x00 or pkt_cmd == 0x03 or pkt_cmd == 0x06 or pkt_cmd == 0x07 then
+        elseif pkt_type == packet_types_index["DEVICE_CMD_RSP"] then
+            if pkt_cmd == device_cmd_rsps_index["HELLO"] or pkt_cmd == device_cmd_rsps_index["GET_TIME"] or
+               pkt_cmd == device_cmd_rsps_index["GET_BUFFER_INFO"] or pkt_cmd == device_cmd_rsps_index["GET_BUFFER_USE"] then
                 -- hello, get_time, buffer info, buffer use response
                 tree:add_le(pf_uint32_data, tvbuf:range( 8, 4))
                 tree:add_le(pf_uint32_data, tvbuf:range(12, 4))
-            elseif pkt_cmd == 0x04 then
+            elseif pkt_cmd == device_cmd_rsps_index["GET_STATUS"] then
                 -- status response
                 tree:add_le(pf_uint16_data, tvbuf:range( 8, 2))
                 tree:add_le(pf_uint16_data, tvbuf:range(10, 2))
@@ -268,50 +294,47 @@ function vxsdr.dissector(tvbuf, pktinfo, root)
                 tree:add_le(pf_uint32_data, tvbuf:range(28, 4))
             end
         -- device command errors
-        elseif pkt_type == 0x42 then
+        elseif pkt_type == packet_types_index["DEVICE_CMD_ERR"] then
             tree:add_le(pf_device_error, tvbuf:range( 8, 4))
             tree:add_le(pf_uint32_data,  tvbuf:range(12, 4))
         -- radio commands
-        elseif (pkt_type == 0x03 or pkt_type == 0x04) then
+        elseif pkt_type == packet_types_index["TX_RADIO_CMD"] or pkt_type == packet_types_index["RX_RADIO_CMD"] then
             -- set rf_enabled
-            if pkt_cmd == 0x25 then
+            if pkt_cmd == radio_cmds_index["SET_RF_ENABLED"] then
                 tree:add_le(pf_uint32_data, tvbuf:range(8, 4))
             -- set freq, gain, or rate
-            elseif pkt_cmd == 0x21 or pkt_cmd == 0x22 or pkt_cmd == 0x23  then
+            elseif pkt_cmd == radio_cmds_index["SET_FREQ"] or pkt_cmd == radio_cmds_index["SET_GAIN"] or
+                   pkt_cmd == radio_cmds_index["SET_RATE"]  then
                 tree:add_le(pf_double_data, tvbuf:range(8, 8))
             -- start at time
-            elseif pkt_cmd == 0x02  then
+            elseif pkt_cmd == radio_cmds_index["START_AT_TIME_UNTIL_STOP"]  then
                 tree:add_le(pf_uint32_data, tvbuf:range( 8, 4))
                 tree:add_le(pf_uint32_data, tvbuf:range(12, 4))
             -- start now for n samples
-            elseif pkt_cmd == 0x04  then
+            elseif pkt_cmd == pkt_cmd == radio_cmds_index["START_NOW_FOR_N_SAMPLES"]  then
                 tree:add_le(pf_uint64_data, tvbuf:range( 8, 8))
             -- start at time for n samples
-            elseif pkt_cmd == 0x05  then
+            elseif pkt_cmd == pkt_cmd == radio_cmds_index["START_AT_TIME_FOR_N_SAMPLES"]  then
                 tree:add_le(pf_uint32_data, tvbuf:range( 8, 4))
                 tree:add_le(pf_uint32_data, tvbuf:range(12, 4))
                 tree:add_le(pf_uint64_data, tvbuf:range(16, 8))
             end
-        elseif pkt_type == 0x80 then
-            -- tx signal data ack
-            tree:add_le(pf_uint64_data, tvbuf:range( 8, 8))
-            tree:add_le(pf_uint32_data, tvbuf:range(16, 4))
-            tree:add_le(pf_uint32_data, tvbuf:range(20, 4))
         -- radio command responses
-        elseif (pkt_type == 0x63 or pkt_type == 0x64) then
+        elseif pkt_type == packet_types_index["TX_RADIO_CMD_RSP"] or pkt_type == packet_types_index["RX_RADIO_CMD_RSP"] then
             -- get rf_enabled
-            if pkt_cmd == 0x15 then
+            if pkt_cmd == radio_cmd_rsps_index["GET_RF_ENABLED"] then
                 tree:add_le(pf_uint32_data, tvbuf:range(8, 4))
             -- get freq, gain, or rate
-            elseif pkt_cmd == 0x11 or pkt_cmd == 0x12 or pkt_cmd == 0x13  then
+            elseif pkt_cmd == radio_cmd_rsps_index["GET_FREQ"] or pkt_cmd == radio_cmd_rsps_index["GET_GAIN"] or
+               pkt_cmd == radio_cmd_rsps_index["GET_RATE"]  then
                 tree:add_le(pf_double_data, tvbuf:range(8, 8))
             end
         -- radio command errors
-        elseif pkt_type == 0x43 or pkt_type == 0x44 then
+        elseif pkt_type == packet_types_index["TX_RADIO_CMD_ERR"] or pkt_type == packet_types_index["RX_RADIO_CMD_ERR"] then
             tree:add_le(pf_radio_error, tvbuf:range( 8, 4))
             tree:add_le(pf_uint32_data, tvbuf:range(12, 4))
-        elseif pkt_type == 0x80 then
-            -- tx signal data ack
+        -- tx data acks
+        elseif pkt_type == packet_types_index["TX_SIGNAL_DATA_ACK"] then
             tree:add_le(pf_uint64_data, tvbuf:range( 8, 8))
             tree:add_le(pf_uint32_data, tvbuf:range(16, 4))
             tree:add_le(pf_uint32_data, tvbuf:range(20, 4))
