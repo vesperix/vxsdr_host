@@ -23,7 +23,9 @@ PROGS = vxsdr_test vxsdr_test_rx vxsdr_test_commands
 
 LIBS = libvxsdr.so
 
-all: $(PROGS) $(LIBS) Makefile
+DOCS = docs/html/index.html
+
+all: $(PROGS) $(LIBS) $(DOCS) Makefile
 
 .PHONY: all
 
@@ -39,10 +41,10 @@ vxsdr_test_commands: vxsdr_test_commands.cpp host_radio_options.cpp $(COMMON_INC
 libvxsdr.so: vxsdr.hpp $(LIB_SRC) $(COMMON_INCLUDES) $(COMMON_SRC)
 	$(CXX) $(CXX_FLAGS) -o $@ -fPIC -shared $(LIB_SRC) $(COMMON_SRC) $(LIB_LDFLAGS)
 
-docs: Doxyfile
+docs/html/index.html: Doxyfile vxsdr.hpp
 	doxygen Doxyfile
 
 clean:
-	rm -f $(PROGS) $(LIBS) *.o *~
+	rm -f $(PROGS) $(LIBS) $(DOCS) *.o *~
 
 .PHONY: clean
