@@ -60,6 +60,8 @@
 
   vxsdr::~vxsdr() {
     LOG_DEBUG("vxsdr destructor entered");
+    tx_stop_now();
+    rx_stop_now();
     set_tx_enable(false);
     set_rx_enable(false);
     LOG_DEBUG("joining receiver_thread");
