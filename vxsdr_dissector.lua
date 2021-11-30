@@ -151,8 +151,8 @@ local radio_cmds = {
     [0x31] = "GET_NUM_SUBDEVS",
     [0x32] = "GET_CAPABILITIES",
     [0x33] = "GET_RF_FREQ_RANGE",
-    [0x34] = "GET_GAIN_RANGE",
-    [0x35] = "GET_RATE_RANGE",
+    [0x34] = "GET_RF_GAIN_RANGE",
+    [0x35] = "GET_SAMPLE_RATE_RANGE",
     -- 0x36-0x3F reserved
     [0x40] = "SET_ADC_TEST_PATTERN",
     [0x41] = "GET_IQ_BIAS",
@@ -278,15 +278,19 @@ function vxsdr.dissector(tvbuf, pktinfo, root)
             end
         -- device command responses
         elseif pkt_type == packet_types_index["DEVICE_CMD_RSP"] then
-            if pkt_cmd == device_cmd_rsps_index["HELLO"] or pkt_cmd == device_cmd_rsps_index["GET_TIME"] or
+            if pkt_cmd == device_cmd_rsps_index["HELLO"] then
+                tree:add_le(pf_uint32_data, tvbuf:range( 8, 4))
+                tree:add_le(pf_uint32_data, tvbuf:range(12, 4))
+                tree:add_le(pf_uint32_data, tvbuf:range(16, 4))
+                tree:add_le(pf_uint32_data, tvbuf:range(20, 4))
+            elseif pkt_cmd == device_cmd_rsps_index["GET_TIME"] or
                pkt_cmd == device_cmd_rsps_index["GET_BUFFER_INFO"] or pkt_cmd == device_cmd_rsps_index["GET_BUFFER_USE"] then
-                -- hello, get_time, buffer info, buffer use response
+                -- get_time, buffer info, buffer use response
                 tree:add_le(pf_uint32_data, tvbuf:range( 8, 4))
                 tree:add_le(pf_uint32_data, tvbuf:range(12, 4))
             elseif pkt_cmd == device_cmd_rsps_index["GET_STATUS"] then
                 -- status response
-                tree:add_le(pf_uint16_data, tvbuf:range( 8, 2))
-                tree:add_le(pf_uint16_data, tvbuf:range(10, 2))
+                tree:add_le(pf_uint32_data, tvbuf:range( 8, 4))
                 tree:add_le(pf_uint32_data, tvbuf:range(12, 4))
                 tree:add_le(pf_uint32_data, tvbuf:range(16, 4))
                 tree:add_le(pf_uint32_data, tvbuf:range(20, 4))
@@ -303,8 +307,8 @@ function vxsdr.dissector(tvbuf, pktinfo, root)
             if pkt_cmd == radio_cmds_index["SET_RF_ENABLED"] then
                 tree:add_le(pf_uint32_data, tvbuf:range(8, 4))
             -- set freq, gain, or rate
-            elseif pkt_cmd == radio_cmds_index["SET_FREQ"] or pkt_cmd == radio_cmds_index["SET_GAIN"] or
-                   pkt_cmd == radio_cmds_index["SET_RATE"]  then
+            elseif pkt_cmd == radio_cmds_index["SET_RF_FREQ"] or pkt_cmd == radio_cmds_index["SET_RF_GAIN"] or
+                   pkt_cmd == radio_cmds_index["SET_SAMPLE_RATE"]  then
                 tree:add_le(pf_double_data, tvbuf:range(8, 8))
             -- start at time
             elseif pkt_cmd == radio_cmds_index["START_AT_TIME_UNTIL_STOP"]  then
@@ -325,9 +329,13 @@ function vxsdr.dissector(tvbuf, pktinfo, root)
             if pkt_cmd == radio_cmd_rsps_index["GET_RF_ENABLED"] then
                 tree:add_le(pf_uint32_data, tvbuf:range(8, 4))
             -- get freq, gain, or rate
-            elseif pkt_cmd == radio_cmd_rsps_index["GET_FREQ"] or pkt_cmd == radio_cmd_rsps_index["GET_GAIN"] or
-               pkt_cmd == radio_cmd_rsps_index["GET_RATE"]  then
+            elseif pkt_cmd == radio_cmd_rsps_index["GET_RF_FREQ"] or pkt_cmd == radio_cmd_rsps_index["GET_RF_GAIN"] or
+                   pkt_cmd == radio_cmd_rsps_index["GET_SAMPLE_RATE"]  then
                 tree:add_le(pf_double_data, tvbuf:range(8, 8))
+            elseif pkt_cmd == radio_cmd_rsps_index["GET_RF_FREQ_RANGE"] or pkt_cmd == radio_cmd_rsps_index["GET_RF_GAIN_RANGE"] or
+                   pkt_cmd == radio_cmd_rsps_index["GET_RATE_RANGE"]  then
+                tree:add_le(pf_double_data, tvbuf:range(8, 8))
+                tree:add_le(pf_double_data, tvbuf:range(16, 8))
             end
         -- radio command errors
         elseif pkt_type == packet_types_index["TX_RADIO_CMD_ERR"] or pkt_type == packet_types_index["RX_RADIO_CMD_ERR"] then
