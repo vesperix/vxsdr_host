@@ -244,6 +244,8 @@ class PACKED packet {
 
 class PACKED header_only_packet : public packet {};
 
+class PACKED async_msg_packet : public packet {};
+
 class one_uint32_packet : public packet {
   public:
     uint32_t               value1 = 0;
@@ -330,14 +332,6 @@ class PACKED data_packet_time_stream : public packet {
 };
 
 class largest_data_packet : public data_packet_time_stream {};
-
-class PACKED async_msg_packet : public packet {
-  public:
-    uint8_t                severity = 0;
-    uint8_t                device_subdev = 0;
-    uint8_t                tx_subdev = 0;
-    uint8_t                rx_subdev = 0;
-};
 
 class PACKED cmd_or_rsp_packet_time : public packet {
   public:

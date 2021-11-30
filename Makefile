@@ -14,7 +14,7 @@ else
 endif
 
 COMMON_INCLUDES = packet_proc.hpp vxsdr_header.h host_radio_options.hpp utility.hpp logging.hpp
-COMMON_SRC = packet_proc.cpp utility.cpp logging.cpp
+COMMON_SRC = packet_proc.cpp utility.cpp logging.cpp compile_checks.cpp
 
 LIB_SRC = vxsdr.cpp vxsdr_udp.cpp
 LIB_LDFLAGS = -lpthread
