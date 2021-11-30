@@ -824,7 +824,7 @@
 
   std::optional<std::array<double, 2>> vxsdr::get_tx_gain_range(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p = {};
-    p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_GET_GAIN_RANGE, subdev, flags, sizeof(p), 0 };
+    p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_GET_RF_GAIN_RANGE, subdev, flags, sizeof(p), 0 };
     auto res = vxsdr::send_packet_and_return_response(p, "get_tx_gain_range()");
     if(res) {
       auto q = res.value();
@@ -837,7 +837,7 @@
 
   std::optional<std::array<double, 2>> vxsdr::get_rx_gain_range(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p = {};
-    p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_GET_GAIN_RANGE, subdev, flags, sizeof(p), 0 };
+    p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_GET_RF_GAIN_RANGE, subdev, flags, sizeof(p), 0 };
     auto res = vxsdr::send_packet_and_return_response(p, "get_rx_gain_range()");
     if(res) {
       auto q = res.value();
@@ -888,7 +888,7 @@
 
   std::optional<std::array<double, 2>> vxsdr::get_tx_rate_range(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p = {};
-    p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_GET_RATE_RANGE, subdev, flags, sizeof(p), 0 };
+    p.hdr = { PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_GET_SAMPLE_RATE_RANGE, subdev, flags, sizeof(p), 0 };
     auto res = vxsdr::send_packet_and_return_response(p, "get_tx_rate_range()");
     if(res) {
       auto q = res.value();
@@ -901,7 +901,7 @@
 
   std::optional<std::array<double, 2>> vxsdr::get_rx_rate_range(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p = {};
-    p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_GET_RATE_RANGE, subdev, flags, sizeof(p), 0 };
+    p.hdr = { PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_GET_SAMPLE_RATE_RANGE, subdev, flags, sizeof(p), 0 };
     auto res = vxsdr::send_packet_and_return_response(p, "get_rx_rate_range()");
     if(res) {
       auto q = res.value();

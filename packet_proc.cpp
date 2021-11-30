@@ -186,9 +186,9 @@ std::string radio_cmd_to_name(const uint8_t cmd) {
       return "GET_CAPABILITIES";
     case RADIO_CMD_GET_RF_FREQ_RANGE:
       return "GET_RF_FREQ_RANGE";
-    case RADIO_CMD_GET_GAIN_RANGE:
+    case RADIO_CMD_GET_RF_GAIN_RANGE:
       return "GET_GAIN_RANGE";
-    case RADIO_CMD_GET_RATE_RANGE:
+    case RADIO_CMD_GET_SAMPLE_RATE_RANGE:
       return "GET_RATE_RANGE";
     case RADIO_CMD_GET_IQ_BIAS:
       return "GET_IQ_BIAS";
@@ -373,7 +373,7 @@ void log_packet_info(packet &packet, const int direction)
             LOG_PACKET(fmt::format("   rate                      = {:.5e}", sr->value1));
           }
           break;
-        case RADIO_CMD_GET_RATE_RANGE:
+        case RADIO_CMD_GET_SAMPLE_RATE_RANGE:
         case RADIO_CMD_GET_RF_FREQ_RANGE:
           {
             LOG_PACKET(fmt::format("RX_RADIO_CMD_RSP: {:s}", radio_cmd_to_name(packet.hdr.command)));
@@ -382,7 +382,7 @@ void log_packet_info(packet &packet, const int direction)
             LOG_PACKET(fmt::format("   max                       = {:.5e}", r->value2));
           }
           break;
-        case RADIO_CMD_GET_GAIN_RANGE:
+        case RADIO_CMD_GET_RF_GAIN_RANGE:
           {
             LOG_PACKET(fmt::format("RX_RADIO_CMD_RSP: {:s}", radio_cmd_to_name(packet.hdr.command)));
             auto *r = reinterpret_cast<two_double_packet *>(&packet);
@@ -431,7 +431,7 @@ void log_packet_info(packet &packet, const int direction)
             LOG_PACKET(fmt::format("   rate                      = {:.5e}", sr->value1));
           }
           break;
-        case RADIO_CMD_GET_RATE_RANGE:
+        case RADIO_CMD_GET_SAMPLE_RATE_RANGE:
         case RADIO_CMD_GET_RF_FREQ_RANGE:
           {
             LOG_PACKET(fmt::format("TX_RADIO_CMD_RSP: {:s}", radio_cmd_to_name(packet.hdr.command)));
@@ -440,7 +440,7 @@ void log_packet_info(packet &packet, const int direction)
             LOG_PACKET(fmt::format("   max                       = {:.1f}", r->value2));
           }
           break;
-        case RADIO_CMD_GET_GAIN_RANGE:
+        case RADIO_CMD_GET_RF_GAIN_RANGE:
           {
             LOG_PACKET(fmt::format("TX_RADIO_CMD_RSP: {:s}", radio_cmd_to_name(packet.hdr.command)));
             auto *r = reinterpret_cast<two_double_packet *>(&packet);
