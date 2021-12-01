@@ -18,7 +18,7 @@
 
 #define LOG_INIT(x)             log_init(x)
 
-#define LOG_TRACE(...)          SPDLOG_LOGGER_TRACE(spdlog::get("multi"),) __VA_ARGS__)
+#define LOG_TRACE(...)          SPDLOG_LOGGER_TRACE(spdlog::get("multi"), __VA_ARGS__)
 #define LOG_DEBUG(...)          SPDLOG_LOGGER_DEBUG(spdlog::get("multi"), __VA_ARGS__)
 #define LOG_INFO(...)           SPDLOG_LOGGER_INFO(spdlog::get("multi"), __VA_ARGS__)
 #define LOG_WARN(...)           SPDLOG_LOGGER_WARN(spdlog::get("multi"), __VA_ARGS__)
