@@ -61,9 +61,6 @@ int main(int argc, char *argv[])
       return EXIT_CMD_LINE_ERROR;
     }
 
-    // let radio complete initialization
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
-
     set_common_options(vm, radio);
     set_rx_1ch_options(vm, radio);
     set_tx_1ch_options(vm, radio);
@@ -90,7 +87,7 @@ int main(int argc, char *argv[])
     } else {
       LOG_ERROR("failed to set FPGA time");
     }
-/*
+
     size_t n_samp = std::llround(vm["duration"].as<double>() * vm["rate"].as<double>());
 
     LOG_INFO(fmt::format("preparing {:.3f} seconds ({:d} samples) of data", vm["duration"].as<double>(), n_samp));
@@ -101,10 +98,17 @@ int main(int argc, char *argv[])
       data[i] = std::complex<int16_t>(10000,0);
     }
 
+    LOG_INFO("getting status...");
+    auto status = radio->device_get_status();
+    LOG_INFO("clearing status...");
+    radio->device_clear_status();
+
     LOG_INFO("sending data...");
 
-    if(not radio->tx_start_now_for_n_samples(n_samp)) {
-      LOG_ERROR("error in tx_start_now_for_n_samples");
+    auto t_start = std::chrono::system_clock::now() + std::chrono::duration(std::chrono::milliseconds(10));
+
+    if(not radio->tx_start_at_time_for_n_samples(t_start, n_samp)) {
+      LOG_ERROR("error in tx_start_at_time_for_n_samples");
     }
     size_t n_sent = radio->put_tx_data(data, n_samp);
     if(n_sent != n_samp) {
@@ -115,6 +119,11 @@ int main(int argc, char *argv[])
     }
 
     LOG_INFO("send complete");
+
+    LOG_INFO("getting status...");
+    status = radio->device_get_status();
+    LOG_INFO("clearing status...");
+    radio->device_clear_status();
 
     std::string filename = vm["prefix"].as<std::string>();
     if(vm.count("no_filename_time") > 0) {
@@ -127,8 +136,10 @@ int main(int argc, char *argv[])
 
     LOG_INFO(fmt::format("receiving data to file {:s}", filename));
 
-    if(not radio->rx_start_now_for_n_samples(n_samp)) {
-      LOG_ERROR("error in rx_start_now_for_n_samples");
+    t_start = std::chrono::system_clock::now() + std::chrono::duration(std::chrono::milliseconds(10));
+
+    if(not radio->rx_start_at_time_for_n_samples(t_start, n_samp)) {
+      LOG_ERROR("error in rx_start_at_time_for_n_samples");
     }
     size_t n_rec = radio->get_rx_data(data, n_samp);
     if(n_rec != n_samp) {
@@ -142,7 +153,12 @@ int main(int argc, char *argv[])
 
     size_t n_written = write_cplx_16(filename, data);
     LOG_INFO(fmt::format("{:d} samples written", n_written));
-*/
+
+    LOG_INFO("getting status...");
+    status = radio->device_get_status();
+    LOG_INFO("clearing status...");
+    radio->device_clear_status();
+
   }
   catch (std::exception& e) {
     LOG_FATAL(fmt::format("exception caught: {:s}", e.what()));
