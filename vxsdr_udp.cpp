@@ -46,9 +46,9 @@
 
   void vxsdr::udp_receiver() {
 
-    vxsdr::receiver_socket.set_option(boost::asio::ip::udp::socket::reuse_address(true));
-    vxsdr::receiver_socket.set_option(boost::asio::socket_base::receive_buffer_size(vxsdr::network_receive_buffer_bytes));
-    boost::asio::socket_base::receive_buffer_size option;
+    vxsdr::receiver_socket.set_option(net::ip::udp::socket::reuse_address(true));
+    vxsdr::receiver_socket.set_option(net::socket_base::receive_buffer_size(vxsdr::network_receive_buffer_bytes));
+    net::socket_base::receive_buffer_size option;
     vxsdr::receiver_socket.get_option(option);
     unsigned network_buffer_size = option.value();
     if(network_buffer_size != vxsdr::network_receive_buffer_bytes) {
@@ -63,7 +63,7 @@
 
   void vxsdr::start_receive() {
     LOG_DEBUG("start_receive started");
-    boost::asio::ip::udp::endpoint remote_endpoint;
+    net::ip::udp::endpoint remote_endpoint;
     uint16_t last_seq = 0;
 
     vxsdr::bytes_received = 0;
@@ -77,7 +77,7 @@
       static data_queue_element recv_buffer;
       size_t bytes_in_packet = 0, n_samps = 0;
 #ifndef VXSDR_ASYNC_RX
-      bytes_in_packet = vxsdr::receiver_socket.receive_from(boost::asio::buffer(&recv_buffer, sizeof(recv_buffer)), remote_endpoint);
+      bytes_in_packet = vxsdr::receiver_socket.receive_from(net::buffer(&recv_buffer, sizeof(recv_buffer)), remote_endpoint);
 #else
       /*
           https://www.boost.org/doc/libs/1_77_0/doc/html/boost_asio/example/cpp11/futures/daytime_client.cpp
@@ -86,9 +86,9 @@
           udp::endpoint sender_endpoint;
           std::future<std::size_t> recv_length =
             socket.async_receive_from(
-                boost::asio::buffer(recv_buf),
+                net::buffer(recv_buf),
                 sender_endpoint,
-                boost::asio::use_future);
+                net::use_future);
 
           // Do other things here while the receive completes.
 
@@ -96,9 +96,9 @@
               recv_buf.data(),
               recv_length.get()); // Blocks until receive is complete.
       */
-      std::future<size_t> result = vxsdr::receiver_socket.async_receive_from(boost::asio::buffer(&recv_buffer,
+      std::future<size_t> result = vxsdr::receiver_socket.async_receive_from(net::buffer(&recv_buffer,
                                    sizeof(recv_buffer)), remote_endpoint,
-                                   boost::asio::use_future);
+                                   net::use_future);
       if(result.wait_for(std::chrono::milliseconds(vxsdr::receiver_socket_timeout_ms)) == std::future_status::timeout) {
         bytes_in_packet = 0;
         //LOG_DEBUG("timeout");
@@ -270,9 +270,9 @@
 
   void vxsdr::udp_sender() {
 
-    vxsdr::sender_socket.set_option(boost::asio::socket_base::send_buffer_size(network_send_buffer_bytes));
+    vxsdr::sender_socket.set_option(net::socket_base::send_buffer_size(network_send_buffer_bytes));
 
-    boost::asio::socket_base::send_buffer_size option;
+    net::socket_base::send_buffer_size option;
     vxsdr::sender_socket.get_option(option);
     int network_buffer_size = option.value();
 
@@ -299,7 +299,7 @@
       log_packet_info(*p, 1);
     }
 
-    size_t bytes = vxsdr::sender_socket.send_to(boost::asio::buffer(&packet, packet.hdr.packet_size), vxsdr::destination_endpoint);
+    size_t bytes = vxsdr::sender_socket.send_to(net::buffer(&packet, packet.hdr.packet_size), vxsdr::destination_endpoint);
     if(bytes != packet.hdr.packet_size) {
       vxsdr::send_errors++;
       retval = false;
