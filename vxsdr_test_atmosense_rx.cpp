@@ -27,6 +27,7 @@ extern "C" void sig_int_handler(int /* sig_num */) {
 void add_custom_common_options(boost::program_options::options_description &desc)
 {
   desc.add_options()
+    //clang-format off
     ("help", "help message")
     ("config_file", boost::program_options::value<std::string>(), "configuration file name")
     ("prefix", boost::program_options::value<std::string>()->default_value("test-"), "prefix for the output files")
@@ -50,6 +51,7 @@ void add_custom_common_options(boost::program_options::options_description &desc
             "log level (6 = trace, 5 = debug, 4 = info, 3 = warning, 2 = error, 1 = fatal, 0 = none)")
     ("quit_on_error", boost::program_options::value<bool>()->default_value(true), "quit on errors")
     ("log_packets", boost::program_options::value<bool>()->default_value(false), "log command, response, and ack packets")
+    //clang-format on
   ;
 }
 
