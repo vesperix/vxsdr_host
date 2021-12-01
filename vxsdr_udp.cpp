@@ -63,14 +63,14 @@ void vxsdr::udp_receiver() {
 void vxsdr::start_receive() {
     LOG_DEBUG("start_receive started");
     net::ip::udp::endpoint remote_endpoint;
-    uint16_t last_seq = 0;
+    uint16_t last_seq       = 0;
 
-    vxsdr::bytes_received = 0;
+    vxsdr::bytes_received   = 0;
     vxsdr::samples_received = 0;
     vxsdr::packets_received = 0;
-    vxsdr::sequence_errors = 0;
+    vxsdr::sequence_errors  = 0;
 
-    vxsdr::udp_rx_state = TRANSPORT_RUNNING;
+    vxsdr::udp_rx_state     = TRANSPORT_RUNNING;
 
     while (not vxsdr::receiver_thread_stop_flag) {
         static data_queue_element recv_buffer;
@@ -110,7 +110,7 @@ void vxsdr::start_receive() {
             vxsdr::packets_received++;
             vxsdr::packet_types_received[recv_buffer.hdr.packet_type]++;
             vxsdr::bytes_received += bytes_in_packet;
-            bool has_time = (recv_buffer.hdr.flags & (uint8_t)FLAGS_TIME_PRESENT) != 0;
+            bool has_time   = (recv_buffer.hdr.flags & (uint8_t)FLAGS_TIME_PRESENT) != 0;
             bool has_stream = (recv_buffer.hdr.flags & (uint8_t)FLAGS_STREAM_ID_PRESENT) != 0;
             if (recv_buffer.hdr.packet_size != bytes_in_packet) {
                 LOG_ERROR(fmt::format("packet_size in {:s} header incorrect ({:d}, {:d})",
@@ -177,7 +177,7 @@ void vxsdr::start_receive() {
                     break;
                 // tx sginal data acks special cased since they contain throttling information
                 case PACKET_TYPE_TX_SIGNAL_DATA_ACK: {
-                    auto* r = reinterpret_cast<tx_signal_data_ack_packet*>(&recv_buffer);
+                    auto* r                     = reinterpret_cast<tx_signal_data_ack_packet*>(&recv_buffer);
                     vxsdr::tx_buffer_used_bytes = r->tx_buffer_used_bytes;
                     vxsdr::tx_buffer_fill_percent =
                         std::min(100U, (100U * vxsdr::tx_buffer_used_bytes) / vxsdr::tx_buffer_size_bytes);
@@ -198,7 +198,7 @@ void vxsdr::start_receive() {
                 case PACKET_TYPE_DEVICE_CMD_RSP: {
                     switch (recv_buffer.hdr.command) {
                         case DEVICE_CMD_GET_BUFFER_USE: {
-                            auto* r = reinterpret_cast<two_uint32_packet*>(&recv_buffer);
+                            auto* r                     = reinterpret_cast<two_uint32_packet*>(&recv_buffer);
                             vxsdr::tx_buffer_used_bytes = r->value1;
                             vxsdr::rx_buffer_used_bytes = r->value2;
                             vxsdr::tx_buffer_fill_percent =
@@ -207,7 +207,7 @@ void vxsdr::start_receive() {
                                 std::min(100U, (100U * vxsdr::rx_buffer_used_bytes) / vxsdr::rx_buffer_size_bytes);
                         } break;
                         case DEVICE_CMD_GET_BUFFER_INFO: {
-                            auto* r = reinterpret_cast<two_uint32_packet*>(&recv_buffer);
+                            auto* r                     = reinterpret_cast<two_uint32_packet*>(&recv_buffer);
                             vxsdr::tx_buffer_size_bytes = r->value1;
                             vxsdr::rx_buffer_size_bytes = r->value2;
                         } break;
@@ -315,22 +315,22 @@ bool vxsdr::send_packet(packet& packet) {
 void vxsdr::start_send() {
     LOG_DEBUG("start_send started");
 
-    vxsdr::packets_sent = 0;
-    vxsdr::samples_sent = 0;
-    vxsdr::bytes_sent = 0;
+    vxsdr::packets_sent                      = 0;
+    vxsdr::samples_sent                      = 0;
+    vxsdr::bytes_sent                        = 0;
 
     static constexpr size_t data_buffer_size = 16;
     std::array<data_queue_element, data_buffer_size> data_buffer;
     command_queue_element cmd_buffer;
 
-    bool throttling = false;
+    bool throttling                                   = false;
 
     constexpr uint64_t initial_check_interval_samples = 9999;  // a value that's unlikely to be equal to the updated interval
-    uint64_t last_check = 0;
-    uint64_t buffer_check_interval_samples = initial_check_interval_samples;
+    uint64_t last_check                               = 0;
+    uint64_t buffer_check_interval_samples            = initial_check_interval_samples;
 
     // wait for the rx to reach RUNNING
-    unsigned total_wait_ms = 0;
+    unsigned total_wait_ms                            = 0;
     LOG_INFO("waiting for udp rx to reach RUNNING state");
     while (vxsdr::udp_rx_state != TRANSPORT_RUNNING and total_wait_ms < vxsdr::udp_tx_ready_timeout_ms) {
         std::this_thread::sleep_for(std::chrono::milliseconds(vxsdr::udp_tx_ready_wait_ms));
@@ -340,7 +340,7 @@ void vxsdr::start_send() {
     if (total_wait_ms >= vxsdr::udp_tx_ready_timeout_ms) {
         LOG_ERROR("udp tx timed out waiting for udp rx to reach RUNNING state; shutting down");
         vxsdr::receiver_thread_stop_flag = true;
-        vxsdr::sender_thread_stop_flag = true;
+        vxsdr::sender_thread_stop_flag   = true;
     } else {
         LOG_INFO("udp rx in RUNNING state; udp tx starting");
     }

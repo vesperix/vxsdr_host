@@ -8,16 +8,16 @@
 
 #include "vxsdr_header.hpp"
 
-static constexpr unsigned push_queue_timeout_us = 100000;
-static constexpr unsigned pop_queue_timeout_us = 100000;
+static constexpr unsigned push_queue_timeout_us  = 100000;
+static constexpr unsigned pop_queue_timeout_us   = 100000;
 
-static constexpr unsigned push_queue_sleep_us = 10;
-static constexpr unsigned pop_queue_sleep_us = 10;
+static constexpr unsigned push_queue_sleep_us    = 10;
+static constexpr unsigned pop_queue_sleep_us     = 10;
 
 static constexpr unsigned push_queue_interval_us = 0;
-static constexpr unsigned pop_queue_interval_us = 0;
+static constexpr unsigned pop_queue_interval_us  = 0;
 
-static constexpr size_t queue_length = 4096;
+static constexpr size_t queue_length             = 4096;
 
 static boost::lockfree::spsc_queue<largest_data_packet, boost::lockfree::capacity<queue_length> > queue;
 
@@ -28,7 +28,7 @@ void producer(const size_t n_items) {
         largest_data_packet p;
         p.hdr.sequence_counter = i % UINT16_MAX;
 
-        unsigned wait_time_us = 0;
+        unsigned wait_time_us  = 0;
         while (queue.write_available() == 0 and wait_time_us < push_queue_timeout_us) {
             if constexpr (push_queue_sleep_us > 0) {
                 std::this_thread::sleep_for(std::chrono::microseconds(push_queue_sleep_us));
@@ -46,7 +46,7 @@ void producer(const size_t n_items) {
         }
     }
 
-    auto t1 = std::chrono::system_clock::now();
+    auto t1                         = std::chrono::system_clock::now();
     std::chrono::duration<double> d = t1 - t0;
     std::cout << "producer: " << n_items << " pushed in " << d.count() << " sec" << std::endl;
 }
@@ -80,7 +80,7 @@ void consumer(const size_t n_items) {
         }
     }
 
-    auto t1 = std::chrono::system_clock::now();
+    auto t1                         = std::chrono::system_clock::now();
     std::chrono::duration<double> d = t1 - t0;
     std::cout << "consumer: " << n_items << " popped in " << d.count() << " sec" << std::endl;
 }

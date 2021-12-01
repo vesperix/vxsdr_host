@@ -38,7 +38,7 @@ int main(int argc, char* argv[]) {
 
         init_vm(desc, vm, argc, argv);
 
-        net::ip::address_v4 local_ip = net::ip::address_v4::from_string(vm["local_address"].as<std::string>());
+        net::ip::address_v4 local_ip       = net::ip::address_v4::from_string(vm["local_address"].as<std::string>());
         net::ip::address_v4 destination_ip = net::ip::address_v4::from_string(vm["destination_address"].as<std::string>());
         net::ip::udp::endpoint local_send_endpoint(local_ip, vm["local_send_port"].as<unsigned>());
         LOG_INFO(fmt::format("using local send IP {:s} and port {:d}", local_send_endpoint.address().to_string(),
@@ -64,7 +64,7 @@ int main(int argc, char* argv[]) {
             return EXIT_CMD_LINE_ERROR;
         }
 
-        size_t n_samp = std::llround(vm["duration"].as<double>() * vm["rate"].as<double>());
+        size_t n_samp        = std::llround(vm["duration"].as<double>() * vm["rate"].as<double>());
 
         std::string filename = vm["prefix"].as<std::string>();
         if (vm.count("no_filename_time") > 0) {

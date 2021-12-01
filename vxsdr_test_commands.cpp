@@ -19,7 +19,7 @@
 #include "host_radio_options.hpp"
 #include "vxsdr.hpp"
 
-unsigned total_errors = 0;
+unsigned total_errors   = 0;
 unsigned total_warnings = 0;
 
 void test_hello(std::unique_ptr<vxsdr>& radio) {
@@ -82,7 +82,7 @@ void test_time(std::unique_ptr<vxsdr>& radio, const double time_tol_sec = 0.01) 
     LOG_INFO("   testing set_time_now() and get_time_now() with time point");
     {
         auto tp_set = std::chrono::system_clock::now();
-        bool sent = radio->device_set_time_now(tp_set);
+        bool sent   = radio->device_set_time_now(tp_set);
 
         if (not sent) {
             LOG_ERROR("     false returned by device_set_time_now()");
@@ -138,7 +138,7 @@ void test_time(std::unique_ptr<vxsdr>& radio, const double time_tol_sec = 0.01) 
     LOG_INFO("   testing set_time_now and get_time_now with mixed arguments");
     {
         auto tp_set = std::chrono::system_clock::now();
-        bool sent = radio->device_set_time_now(tp_set);
+        bool sent   = radio->device_set_time_now(tp_set);
 
         if (not sent) {
             LOG_ERROR("     false returned by device_set_time_now()");
@@ -636,7 +636,7 @@ int main(int argc, char* argv[]) {
 
         init_vm(desc, vm, argc, argv);
 
-        net::ip::address_v4 local_ip = net::ip::address_v4::from_string(vm["local_address"].as<std::string>());
+        net::ip::address_v4 local_ip       = net::ip::address_v4::from_string(vm["local_address"].as<std::string>());
         net::ip::address_v4 destination_ip = net::ip::address_v4::from_string(vm["destination_address"].as<std::string>());
         net::ip::udp::endpoint local_send_endpoint(local_ip, vm["local_send_port"].as<unsigned>());
         LOG_INFO(fmt::format("using local send IP {:s} and port {:d}", local_send_endpoint.address().to_string(),

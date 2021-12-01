@@ -121,11 +121,11 @@ int set_common_options(boost::program_options::variables_map& vm, std::unique_pt
             double frac;
             // wait until the system clock is in between seconds
             do {
-                auto t = std::chrono::system_clock::now();
-                auto secs = std::chrono::time_point_cast<std::chrono::seconds>(t);
+                auto t     = std::chrono::system_clock::now();
+                auto secs  = std::chrono::time_point_cast<std::chrono::seconds>(t);
                 auto msecs = std::chrono::time_point_cast<std::chrono::milliseconds>(t) -
                              std::chrono::time_point_cast<std::chrono::milliseconds>(secs);
-                frac = 1e-3 * msecs.count();
+                frac  = 1e-3 * msecs.count();
                 t_set = std::chrono::ceil<std::chrono::seconds>(t);
             } while (frac < 0.2 or frac > 0.8);
             if (not radio->device_set_time_next_pps(t_set)) {

@@ -36,46 +36,46 @@ class vxsdr {
 #endif  // VXSDR_ASYNC_RX
 
     // thread realtime priority settings
-    static constexpr bool thread_set_priority = true;
-    static constexpr int send_thread_priority = 20;
-    static constexpr int receive_thread_priority = 20;
+    static constexpr bool thread_set_priority     = true;
+    static constexpr int send_thread_priority     = 20;
+    static constexpr int receive_thread_priority  = 20;
 
     // thread cpu affinity settings
-    static constexpr bool thread_set_affinity = true;
-    static constexpr int send_thread_cpu = 0;
-    static constexpr int receive_thread_cpu = 2;
+    static constexpr bool thread_set_affinity     = true;
+    static constexpr int send_thread_cpu          = 0;
+    static constexpr int receive_thread_cpu       = 2;
 
     // parameters of the internal spsc queues (ring buffers)
-    static constexpr size_t rx_data_queue_length = 65536;  // slots in rx data queue; 65536 * 2048 / 160e6 = 840 ms at 160 MSPS
-    static constexpr size_t tx_data_queue_length = 1024;   // slots in tx data queue;  1024 * 2048 / 160e6 =  13 ms at 160 MSPS
-    static constexpr size_t command_queue_length = 64;     // slots in command msg queue
-    static constexpr size_t response_queue_length = 256;   // slots in response msg queue
+    static constexpr size_t rx_data_queue_length  = 65'536;  // slots in rx data queue; 65536 * 2048 / 160e6 = 840 ms at 160 MSPS
+    static constexpr size_t tx_data_queue_length  =  1'024;   // slots in tx data queue;  1024 * 2048 / 160e6 =  13 ms at 160 MSPS
+    static constexpr size_t command_queue_length  =     64;     // slots in command msg queue
+    static constexpr size_t response_queue_length =    256;    // slots in response msg queue
 
     // timeouts and waits between tries for queue push/pop
 
-    static constexpr unsigned tx_data_queue_timeout_us = 100000;
-    static constexpr unsigned tx_data_queue_wait_us = 10;
+    static constexpr unsigned tx_data_queue_timeout_us     = 100'000;
+    static constexpr unsigned tx_data_queue_wait_us        =      10;
 
-    static constexpr unsigned rx_data_queue_timeout_us = 40000;
-    static constexpr unsigned rx_data_queue_wait_us = 10;
+    static constexpr unsigned rx_data_queue_timeout_us     = 40'000;
+    static constexpr unsigned rx_data_queue_wait_us        =     10;
 
-    static constexpr unsigned command_queue_timeout_us = 100000;
-    static constexpr unsigned command_queue_wait_us = 10;
+    static constexpr unsigned command_queue_timeout_us     = 100'000;
+    static constexpr unsigned command_queue_wait_us        =      10;
 
-    static constexpr unsigned response_queue_timeout_us = 100000;
-    static constexpr unsigned response_queue_wait_us = 10;
+    static constexpr unsigned response_queue_timeout_us    = 100'000;
+    static constexpr unsigned response_queue_wait_us       =      10;
 
     // parameters used to set the OS's network buffer
-    static constexpr unsigned network_send_buffer_bytes = 4194304;      // ~6.6 ms at 160 MSPS
-    static constexpr unsigned network_receive_buffer_bytes = 16777216;  // ~26 ms at 160 MSPS
+    static constexpr unsigned network_send_buffer_bytes    =  4'194'304;   // ~6.6 ms at 160 MSPS
+    static constexpr unsigned network_receive_buffer_bytes = 16'777'216;  // ~26 ms at 160 MSPS
 
     // parameters used to monitor status of the radio's internal buffers (on the other end of the network connection)
     std::atomic<unsigned> tx_buffer_size_bytes = 0, tx_buffer_used_bytes = 0;
     std::atomic<unsigned> rx_buffer_size_bytes = 0, rx_buffer_used_bytes = 0;
     std::atomic<unsigned> tx_buffer_fill_percent = 0, rx_buffer_fill_percent = 0;
 
-    using data_queue_element = largest_data_packet;
-    using command_queue_element = largest_cmd_or_rsp_packet;
+    using data_queue_element     = largest_data_packet;
+    using command_queue_element  = largest_cmd_or_rsp_packet;
     using response_queue_element = largest_cmd_or_rsp_packet;
 
     // data queues
@@ -129,7 +129,7 @@ class vxsdr {
         //
         // net::execution needs Boost 1.76 or higher; use make_work_guard for backwards compatibility
         // auto work = net::require(context.get_executor(), net::execution::outstanding_work.tracked);
-        auto work = net::make_work_guard(context);
+        auto work      = net::make_work_guard(context);
         context_thread = std::thread([&] { context.run(); });
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
 #endif  // VXSDR_ASYNC_RX
@@ -184,7 +184,7 @@ class vxsdr {
     // copy assignment deleted
     vxsdr& operator=(const vxsdr&) = delete;
     // move constructor deleted
-    vxsdr(vxsdr&&) = delete;
+    vxsdr(vxsdr&&)                 = delete;
     // move assignment deleted
     vxsdr& operator=(vxsdr&&) = delete;
 
@@ -211,29 +211,29 @@ class vxsdr {
                 }
             }
             if (rx_data_queue.pop(q)) {
-                bool has_time = (bool)(q.hdr.flags & FLAGS_TIME_PRESENT);
+                bool has_time      = (bool)(q.hdr.flags & FLAGS_TIME_PRESENT);
                 bool has_stream_id = (bool)(q.hdr.flags & FLAGS_STREAM_ID_PRESENT);
                 if (not has_time and not has_stream_id) {
-                    auto* p = reinterpret_cast<data_packet*>(&q);
-                    size_t data_bytes = p->hdr.packet_size - sizeof(packet_header);
+                    auto* p             = reinterpret_cast<data_packet*>(&q);
+                    size_t data_bytes   = p->hdr.packet_size - sizeof(packet_header);
                     size_t data_samples = data_bytes / sizeof(std::complex<int16_t>);
                     std::copy_n(std::begin(p->data), std::min(n_desired - n_received, data_samples), std::back_inserter(data));
                     n_received += data_samples;
                 } else if (has_time and not has_stream_id) {
-                    auto* p = reinterpret_cast<data_packet_time*>(&q);
-                    size_t data_bytes = p->hdr.packet_size - sizeof(packet_header) - sizeof(time_spec_t);
+                    auto* p             = reinterpret_cast<data_packet_time*>(&q);
+                    size_t data_bytes   = p->hdr.packet_size - sizeof(packet_header) - sizeof(time_spec_t);
                     size_t data_samples = data_bytes / sizeof(std::complex<int16_t>);
                     std::copy_n(std::begin(p->data), std::min(n_desired - n_received, data_samples), std::back_inserter(data));
                     n_received += data_samples;
                 } else if (has_stream_id and not has_time) {
-                    auto* p = reinterpret_cast<data_packet_stream*>(&q);
-                    size_t data_bytes = p->hdr.packet_size - sizeof(packet_header) - sizeof(stream_spec_t);
+                    auto* p             = reinterpret_cast<data_packet_stream*>(&q);
+                    size_t data_bytes   = p->hdr.packet_size - sizeof(packet_header) - sizeof(stream_spec_t);
                     size_t data_samples = data_bytes / sizeof(std::complex<int16_t>);
                     std::copy_n(std::begin(p->data), std::min(n_desired - n_received, data_samples), std::back_inserter(data));
                     n_received += data_samples;
                 } else {
-                    auto* p = reinterpret_cast<data_packet_time_stream*>(&q);
-                    size_t data_bytes = p->hdr.packet_size - sizeof(packet_header) - sizeof(time_spec_t) - sizeof(stream_spec_t);
+                    auto* p             = reinterpret_cast<data_packet_time_stream*>(&q);
+                    size_t data_bytes   = p->hdr.packet_size - sizeof(packet_header) - sizeof(time_spec_t) - sizeof(stream_spec_t);
                     size_t data_samples = data_bytes / sizeof(std::complex<int16_t>);
                     std::copy_n(std::begin(p->data), std::min(n_desired - n_received, data_samples), std::back_inserter(data));
                     n_received += data_samples;
@@ -270,29 +270,29 @@ class vxsdr {
                 }
             }
             if (rx_data_queue.pop(q)) {
-                bool has_time = (bool)(q.hdr.flags & FLAGS_TIME_PRESENT);
+                bool has_time      = (bool)(q.hdr.flags & FLAGS_TIME_PRESENT);
                 bool has_stream_id = (bool)(q.hdr.flags & FLAGS_STREAM_ID_PRESENT);
                 if (not has_time and not has_stream_id) {
-                    auto* p = reinterpret_cast<data_packet*>(&q);
-                    size_t data_bytes = p->hdr.packet_size - sizeof(packet_header);
+                    auto* p             = reinterpret_cast<data_packet*>(&q);
+                    size_t data_bytes   = p->hdr.packet_size - sizeof(packet_header);
                     size_t data_samples = data_bytes / sizeof(std::complex<int16_t>);
                     std::copy_n(std::begin(p->data), std::min(n_desired - n_received, data_samples), std::back_inserter(buffer));
                     n_received += data_samples;
                 } else if (has_time and not has_stream_id) {
-                    auto* p = reinterpret_cast<data_packet_time*>(&q);
-                    size_t data_bytes = p->hdr.packet_size - sizeof(packet_header) - sizeof(time_spec_t);
+                    auto* p             = reinterpret_cast<data_packet_time*>(&q);
+                    size_t data_bytes   = p->hdr.packet_size - sizeof(packet_header) - sizeof(time_spec_t);
                     size_t data_samples = data_bytes / sizeof(std::complex<int16_t>);
                     std::copy_n(std::begin(p->data), std::min(n_desired - n_received, data_samples), std::back_inserter(buffer));
                     n_received += data_samples;
                 } else if (has_stream_id and not has_time) {
-                    auto* p = reinterpret_cast<data_packet_stream*>(&q);
-                    size_t data_bytes = p->hdr.packet_size - sizeof(packet_header) - sizeof(stream_spec_t);
+                    auto* p             = reinterpret_cast<data_packet_stream*>(&q);
+                    size_t data_bytes   = p->hdr.packet_size - sizeof(packet_header) - sizeof(stream_spec_t);
                     size_t data_samples = data_bytes / sizeof(std::complex<int16_t>);
                     std::copy_n(std::begin(p->data), std::min(n_desired - n_received, data_samples), std::back_inserter(buffer));
                     n_received += data_samples;
                 } else {
-                    auto* p = reinterpret_cast<data_packet_time_stream*>(&q);
-                    size_t data_bytes = p->hdr.packet_size - sizeof(packet_header) - sizeof(time_spec_t) - sizeof(stream_spec_t);
+                    auto* p             = reinterpret_cast<data_packet_time_stream*>(&q);
+                    size_t data_bytes   = p->hdr.packet_size - sizeof(packet_header) - sizeof(time_spec_t) - sizeof(stream_spec_t);
                     size_t data_samples = data_bytes / sizeof(std::complex<int16_t>);
                     std::copy_n(std::begin(p->data), std::min(n_desired - n_received, data_samples), std::back_inserter(buffer));
                     n_received += data_samples;
@@ -340,7 +340,7 @@ class vxsdr {
                 }
             }
             if (rx_data_queue.pop(q)) {
-                auto* p = reinterpret_cast<packet_header*>(&q);
+                auto* p           = reinterpret_cast<packet_header*>(&q);
                 size_t data_bytes = p->packet_size - sizeof(packet_header);
                 if ((bool)(p->flags & FLAGS_TIME_PRESENT)) {
                     data_bytes -= sizeof(time_spec_t);
@@ -365,11 +365,11 @@ class vxsdr {
         size_t n_put = 0;
         for (size_t i = 0; i < data.size(); i += MAX_DATA_LENGTH_SAMPLES) {
             data_queue_element q;
-            auto* p = reinterpret_cast<data_packet*>(&q);
-            unsigned n_samples = std::min(MAX_DATA_LENGTH_SAMPLES, data.size() - i);
+            auto* p               = reinterpret_cast<data_packet*>(&q);
+            unsigned n_samples    = std::min(MAX_DATA_LENGTH_SAMPLES, data.size() - i);
             unsigned n_data_bytes = n_samples * sizeof(std::complex<int16_t>);
-            uint16_t packet_size = sizeof(packet_header) + n_data_bytes;
-            p->hdr = {PACKET_TYPE_TX_SIGNAL_DATA, 0, subdev, 0, packet_size, 0};
+            uint16_t packet_size  = sizeof(packet_header) + n_data_bytes;
+            p->hdr                = {PACKET_TYPE_TX_SIGNAL_DATA, 0, subdev, 0, packet_size, 0};
             for (unsigned j = 0; j < n_samples; j++) {
                 p->data[j] = data[i + j];
             }
@@ -412,7 +412,7 @@ class vxsdr {
     }
 
     void time_point_to_time_spec_t(const std::chrono::time_point<std::chrono::system_clock>& t, time_spec_t& ts) {
-        auto secs = std::chrono::time_point_cast<std::chrono::seconds>(t);
+        auto secs  = std::chrono::time_point_cast<std::chrono::seconds>(t);
         auto nsecs = std::chrono::time_point_cast<std::chrono::nanoseconds>(t) -
                      std::chrono::time_point_cast<std::chrono::nanoseconds>(secs);
         ts = {(uint32_t)secs.time_since_epoch().count(), (uint32_t)nsecs.count()};
@@ -456,7 +456,7 @@ class vxsdr {
 
     void device_set_time_now(const std::chrono::time_point<std::chrono::system_clock>& t,
                              const uint8_t subdev = 0,
-                             const uint8_t flags = 0) {
+                             const uint8_t flags  = 0) {
         cmd_or_rsp_packet_time p;
         p.hdr = {PACKET_TYPE_DEVICE_CMD,
                  DEVICE_CMD_SET_TIME_NOW,
@@ -470,7 +470,7 @@ class vxsdr {
 
     void device_set_time_next_pps(const std::chrono::time_point<std::chrono::system_clock>& t,
                                   const uint8_t subdev = 0,
-                                  const uint8_t flags = 0) {
+                                  const uint8_t flags  = 0) {
         cmd_or_rsp_packet_time p;
         p.hdr = {PACKET_TYPE_DEVICE_CMD,
                  DEVICE_CMD_SET_TIME_NEXT_PPS,
@@ -496,14 +496,14 @@ class vxsdr {
 
     void tx_start_now_for_n_samples(const uint64_t n, const uint8_t subdev = 0, const uint8_t flags = 0) {
         cmd_or_rsp_packet_samples p;
-        p.hdr = {PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_START_NOW_FOR_N_SAMPLES, subdev, flags, sizeof(p), 0};
+        p.hdr       = {PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_START_NOW_FOR_N_SAMPLES, subdev, flags, sizeof(p), 0};
         p.n_samples = n;
         cmd_queue_push(p);
     }
 
     void rx_start_now_for_n_samples(const uint64_t n, const uint8_t subdev = 0, const uint8_t flags = 0) {
         cmd_or_rsp_packet_samples p;
-        p.hdr = {PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_START_NOW_FOR_N_SAMPLES, subdev, flags, sizeof(p), 0};
+        p.hdr       = {PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_START_NOW_FOR_N_SAMPLES, subdev, flags, sizeof(p), 0};
         p.n_samples = n;
         cmd_queue_push(p);
     }
@@ -511,7 +511,7 @@ class vxsdr {
     void tx_start_at_time_for_n_samples(const std::chrono::time_point<std::chrono::system_clock>& t,
                                         const uint64_t n,
                                         const uint8_t subdev = 0,
-                                        const uint8_t flags = 0) {
+                                        const uint8_t flags  = 0) {
         cmd_or_rsp_packet_time_samples p;
         p.hdr = {PACKET_TYPE_TX_RADIO_CMD,
                  RADIO_CMD_START_AT_TIME_FOR_N_SAMPLES,
@@ -527,7 +527,7 @@ class vxsdr {
     void rx_start_at_time_for_n_samples(const std::chrono::time_point<std::chrono::system_clock>& t,
                                         const uint64_t n,
                                         const uint8_t subdev = 0,
-                                        const uint8_t flags = 0) {
+                                        const uint8_t flags  = 0) {
         cmd_or_rsp_packet_time_samples p;
         p.hdr = {PACKET_TYPE_RX_RADIO_CMD,
                  RADIO_CMD_START_AT_TIME_FOR_N_SAMPLES,
@@ -542,7 +542,7 @@ class vxsdr {
 
     void tx_start_at_time_until_stop(const std::chrono::time_point<std::chrono::system_clock>& t,
                                      const uint8_t subdev = 0,
-                                     const uint8_t flags = 0) {
+                                     const uint8_t flags  = 0) {
         cmd_or_rsp_packet_time p;
         p.hdr = {PACKET_TYPE_TX_RADIO_CMD,
                  RADIO_CMD_START_AT_TIME_UNTIL_STOP,
@@ -556,7 +556,7 @@ class vxsdr {
 
     void rx_start_at_time_until_stop(const std::chrono::time_point<std::chrono::system_clock>& t,
                                      const uint8_t subdev = 0,
-                                     const uint8_t flags = 0) {
+                                     const uint8_t flags  = 0) {
         cmd_or_rsp_packet_time p;
         p.hdr = {PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_START_AT_TIME_UNTIL_STOP, subdev, flags | FLAGS_TIME_PRESENT, sizeof(p), 0};
         time_point_to_time_spec_t(t, p.time);
@@ -565,7 +565,7 @@ class vxsdr {
 
     void tx_set_iq_bias(const double i_bias, const double q_bias, const uint8_t subdev = 0, const uint8_t flags = 0) {
         radio_iq_bias_packet p;
-        p.hdr = {PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_SET_IQ_BIAS, subdev, flags, sizeof(p), 0};
+        p.hdr    = {PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_SET_IQ_BIAS, subdev, flags, sizeof(p), 0};
         p.i_bias = i_bias;
         p.q_bias = q_bias;
         cmd_queue_push(p);
@@ -573,7 +573,7 @@ class vxsdr {
 
     void rx_set_iq_bias(const double i_bias, const double q_bias, const uint8_t subdev = 0, const uint8_t flags = 0) {
         radio_iq_bias_packet p;
-        p.hdr = {PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_SET_IQ_BIAS, subdev, flags, sizeof(p), 0};
+        p.hdr    = {PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_SET_IQ_BIAS, subdev, flags, sizeof(p), 0};
         p.i_bias = i_bias;
         p.q_bias = q_bias;
         cmd_queue_push(p);
@@ -584,9 +584,9 @@ class vxsdr {
                         const double qi_corr,
                         const double qq_corr,
                         const uint8_t subdev = 0,
-                        const uint8_t flags = 0) {
+                        const uint8_t flags  = 0) {
         radio_iq_corr_packet p;
-        p.hdr = {PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_SET_IQ_CORR, subdev, flags, sizeof(p), 0};
+        p.hdr     = {PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_SET_IQ_CORR, subdev, flags, sizeof(p), 0};
         p.ii_corr = ii_corr;
         p.iq_corr = iq_corr;
         p.qi_corr = qi_corr;
@@ -599,9 +599,9 @@ class vxsdr {
                         const double qi_corr,
                         const double qq_corr,
                         const uint8_t subdev = 0,
-                        const uint8_t flags = 0) {
+                        const uint8_t flags  = 0) {
         radio_iq_corr_packet p;
-        p.hdr = {PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_SET_IQ_CORR, subdev, flags, sizeof(p), 0};
+        p.hdr     = {PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_SET_IQ_CORR, subdev, flags, sizeof(p), 0};
         p.ii_corr = ii_corr;
         p.iq_corr = iq_corr;
         p.qi_corr = qi_corr;
@@ -623,14 +623,14 @@ class vxsdr {
 
     void set_tx_rate(const double rate_samples_sec, const uint8_t subdev = 0, const uint8_t flags = 0) {
         radio_sample_rate_packet p;
-        p.hdr = {PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_SET_SAMPLE_RATE, subdev, flags, sizeof(p), 0};
+        p.hdr  = {PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_SET_SAMPLE_RATE, subdev, flags, sizeof(p), 0};
         p.rate = rate_samples_sec;
         cmd_queue_push(p);
     }
 
     void set_rx_rate(const double rate_samples_sec, const uint8_t subdev = 0, const uint8_t flags = 0) {
         radio_sample_rate_packet p;
-        p.hdr = {PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_SET_SAMPLE_RATE, subdev, flags, sizeof(p), 0};
+        p.hdr  = {PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_SET_SAMPLE_RATE, subdev, flags, sizeof(p), 0};
         p.rate = rate_samples_sec;
         cmd_queue_push(p);
     }
@@ -816,10 +816,10 @@ class vxsdr {
         net::ip::udp::endpoint remote_endpoint;
         uint16_t last_seq = 0;
 
-        bytes_received = 0;
-        samples_received = 0;
-        packets_received = 0;
-        sequence_errors = 0;
+        bytes_received    = 0;
+        samples_received  = 0;
+        packets_received  = 0;
+        sequence_errors   = 0;
 
         while (not receiver_thread_stop_flag) {
             static data_queue_element recv_buffer;
@@ -899,8 +899,8 @@ class vxsdr {
                     } break;
                     // tx sginal data acks special cased since they contain throttling information
                     case PACKET_TYPE_TX_SIGNAL_DATA_ACK: {
-                        auto* r = reinterpret_cast<tx_signal_data_ack_packet*>(&recv_buffer);
-                        tx_buffer_used_bytes = r->tx_buffer_used_bytes;
+                        auto* r                = reinterpret_cast<tx_signal_data_ack_packet*>(&recv_buffer);
+                        tx_buffer_used_bytes   = r->tx_buffer_used_bytes;
                         tx_buffer_fill_percent = std::min(100U, (100U * tx_buffer_used_bytes) / tx_buffer_size_bytes);
                         if (forward_acks) {
                             auto* p = reinterpret_cast<response_queue_element*>(&recv_buffer);
@@ -911,19 +911,19 @@ class vxsdr {
                     case PACKET_TYPE_DEVICE_CMD_RSP:
                         switch (recv_buffer.hdr.command) {
                             case DEVICE_CMD_GET_BUFFER_USE: {
-                                auto* r = reinterpret_cast<get_buffer_use_rsp_packet*>(&recv_buffer);
-                                tx_buffer_used_bytes = r->tx_buffer_used_bytes;
-                                rx_buffer_used_bytes = r->rx_buffer_used_bytes;
+                                auto* r                = reinterpret_cast<get_buffer_use_rsp_packet*>(&recv_buffer);
+                                tx_buffer_used_bytes   = r->tx_buffer_used_bytes;
+                                rx_buffer_used_bytes   = r->rx_buffer_used_bytes;
                                 tx_buffer_fill_percent = std::min(100U, (100U * tx_buffer_used_bytes) / tx_buffer_size_bytes);
                                 rx_buffer_fill_percent = std::min(100U, (100U * rx_buffer_used_bytes) / rx_buffer_size_bytes);
-                                auto* p = reinterpret_cast<response_queue_element*>(&recv_buffer);
+                                auto* p                = reinterpret_cast<response_queue_element*>(&recv_buffer);
                                 response_queue_push_wait(*p);
                             } break;
                             case DEVICE_CMD_GET_BUFFER_INFO: {
-                                auto* r = reinterpret_cast<get_buffer_info_rsp_packet*>(&recv_buffer);
+                                auto* r              = reinterpret_cast<get_buffer_info_rsp_packet*>(&recv_buffer);
                                 tx_buffer_size_bytes = r->tx_buffer_size_bytes;
                                 rx_buffer_size_bytes = r->rx_buffer_size_bytes;
-                                auto* p = reinterpret_cast<response_queue_element*>(&recv_buffer);
+                                auto* p              = reinterpret_cast<response_queue_element*>(&recv_buffer);
                                 response_queue_push_wait(*p);
                             } break;
                             default: {
@@ -1002,7 +1002,7 @@ class vxsdr {
     void send_packet(packet& packet) {
         packet_types_sent[packet.hdr.packet_type]++;
         packet.hdr.sequence_counter = (uint16_t)(packets_sent++ % (UINT16_MAX + 1));
-        size_t bytes = sender_socket.send_to(net::buffer(&packet, packet.hdr.packet_size), destination_endpoint);
+        size_t bytes                = sender_socket.send_to(net::buffer(&packet, packet.hdr.packet_size), destination_endpoint);
         if (bytes != packet.hdr.packet_size) {
             send_errors++;
         }
@@ -1043,18 +1043,18 @@ class vxsdr {
     void start_send() {
         LOG_DEBUG("start_send started");
 
-        packets_sent = 0;
-        samples_sent = 0;
-        bytes_sent = 0;
+        packets_sent                             = 0;
+        samples_sent                             = 0;
+        bytes_sent                               = 0;
 
         static constexpr size_t data_buffer_size = 16, cmd_buffer_size = 16;
         std::array<data_queue_element, data_buffer_size> data_buffer;
         std::array<command_queue_element, cmd_buffer_size> cmd_buffer;
 
-        constexpr float throttle_on_percent = 75;
-        constexpr float throttle_off_percent = 50;
-        bool throttling = false;
-        constexpr unsigned throttle_amount_us = 10;  // send time for 8200 bytes over 10 GbE is about 6.7 us
+        constexpr float throttle_on_percent     = 75;
+        constexpr float throttle_off_percent    = 50;
+        bool throttling                         = false;
+        constexpr unsigned throttle_amount_us   = 10;  // send time for 8200 bytes over 10 GbE is about 6.7 us
         constexpr unsigned send_thread_sleep_us = 5;
 
         const uint8_t device_subdev = 0, tx_subdev = 0, rx_subdev = 0;
@@ -1062,8 +1062,8 @@ class vxsdr {
         initialize_sdr(device_subdev, tx_subdev, rx_subdev);
 
         constexpr uint64_t initial_check_interval_samples = 9999;  // a value that's unlikely to be equal to the updated interval
-        uint64_t last_check = 0;
-        uint64_t buffer_check_interval_samples = initial_check_interval_samples;
+        uint64_t last_check                               = 0;
+        uint64_t buffer_check_interval_samples            = initial_check_interval_samples;
 
         while (not sender_thread_stop_flag) {
             if (command_queue.read_available() > 0) {

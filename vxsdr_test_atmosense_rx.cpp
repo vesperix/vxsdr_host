@@ -69,7 +69,7 @@ int main(int argc, char* argv[]) {
 
         init_vm(desc, vm, argc, argv);
 
-        net::ip::address_v4 local_ip = net::ip::address_v4::from_string(vm["local_address"].as<std::string>());
+        net::ip::address_v4 local_ip       = net::ip::address_v4::from_string(vm["local_address"].as<std::string>());
         net::ip::address_v4 destination_ip = net::ip::address_v4::from_string(vm["destination_address"].as<std::string>());
         net::ip::udp::endpoint local_send_endpoint(local_ip, vm["local_send_port"].as<unsigned>());
         LOG_INFO(fmt::format("using local send IP {:s} and port {:d}", local_send_endpoint.address().to_string(),
@@ -131,7 +131,7 @@ int main(int argc, char* argv[]) {
         }
         auto t_start = std::chrono::ceil<std::chrono::seconds>(std::chrono::system_clock::now() +
                                                                std::chrono::seconds(vm["startup_delay"].as<unsigned>()));
-        auto t_wake = t_start + std::chrono::milliseconds(std::lround(1e3 * vm["duration"].as<double>() + 100));
+        auto t_wake  = t_start + std::chrono::milliseconds(std::lround(1e3 * vm["duration"].as<double>() + 100));
 
         LOG_INFO(fmt::format("current time: {:s}", format_time(std::chrono::system_clock::now())));
         auto radio_time = radio->device_get_time_now();
