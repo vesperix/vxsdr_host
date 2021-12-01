@@ -1,7 +1,5 @@
 #include <vector>
 
-#include <boost/format.hpp>
-
 #include "logging.hpp"
 #include "vxsdr_header.h"
 

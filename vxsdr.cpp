@@ -338,11 +338,11 @@
     LOG_DEBUG("put_tx_data started");
 
    if(timeout_s <= 0.0) {
-      LOG_ERROR("timeout_s must be positive in check_rx_data_sequence_only()");
+      LOG_ERROR("timeout_s must be positive in put_tx_data()");
       return 0;
     }
     if(timeout_s > 3600.0) {
-      LOG_ERROR("timeout_s must 3600 or less in check_rx_data_sequence_only()");
+      LOG_ERROR("timeout_s must 3600 or less in put_tx_data()");
       return 0;
     }
     uint32_t timeout_us = std::llround(1'000'000 * timeout_s);
