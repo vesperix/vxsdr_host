@@ -10,8 +10,9 @@
 #include <future>
 #include <optional>
 #include <thread>
-#include <tuple>
+#include <optional>
 #include <vector>
+#include <array>
 
 #include <boost/lockfree/queue.hpp>
 #include <boost/lockfree/spsc_queue.hpp>

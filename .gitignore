@@ -12,4 +12,5 @@ test_rx_seq_only
 vxsdr_test
 vxsdr_test_rx
 vxsdr_test_commands
+vxsdr_test_atmosense_rx
 .vscode
