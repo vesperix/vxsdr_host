@@ -1478,18 +1478,14 @@ std::string vxsdr::error_to_string(const uint32_t reason) {
 bool vxsdr::reset_rx_stream(const uint64_t n_samples_desired) {
     vxsdr::desired_rx_stream_samples =  n_samples_desired;
     vxsdr::sequence_errors_current_stream = 0;
-    vxsdr::packets_received_current_stream = 0;
     vxsdr::samples_received_current_stream = 0;
-    vxsdr::bytes_received_current_stream = 0;
     return true;
 }
 
 bool vxsdr::reset_tx_stream(const uint64_t n_samples_desired) {
     vxsdr::desired_tx_stream_samples =  n_samples_desired;
     vxsdr::send_errors_current_stream = 0;
-    vxsdr::packets_sent_current_stream = 0;
     vxsdr::samples_sent_current_stream = 0;
-    vxsdr::bytes_sent_current_stream = 0;
     return true;
 }
 

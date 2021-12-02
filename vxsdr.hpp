@@ -146,13 +146,12 @@ class vxsdr {
 
     // statistics
     uint64_t send_errors = 0, packets_sent = 0, samples_sent = 0, bytes_sent = 0;
-    uint64_t send_errors_current_stream = 0, packets_sent_current_stream = 0, samples_sent_current_stream = 0,
-             bytes_sent_current_stream = 0;
+    uint64_t send_errors_current_stream = 0, samples_sent_current_stream = 0;
+
     std::array<uint64_t, UINT8_MAX + 1> packet_types_sent = {0};
 
     uint64_t sequence_errors = 0, packets_received = 0, samples_received = 0, bytes_received = 0;
-    uint64_t sequence_errors_current_stream = 0, packets_received_current_stream = 0, samples_received_current_stream = 0,
-             bytes_received_current_stream = 0;
+    uint64_t sequence_errors_current_stream = 0, samples_received_current_stream = 0;
     std::array<uint64_t, UINT8_MAX + 1> packet_types_received = {0};
 
     // diagnostic info gathering for sequence errors

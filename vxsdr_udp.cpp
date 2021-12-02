@@ -141,9 +141,11 @@ void vxsdr::start_receive() {
                 }
                 n_samps = (recv_buffer.hdr.packet_size - header_size) / sizeof(std::complex<int16_t>);
                 vxsdr::samples_received += n_samps;
+                vxsdr::samples_received_current_stream+= n_samps;
             }
             if (vxsdr::packets_received > 1 and recv_buffer.hdr.sequence_counter != (uint16_t)(last_seq + 1)) {
                 vxsdr::sequence_errors++;
+                vxsdr::sequence_errors_current_stream++;
 #ifdef VXSDR_SEQ_ERR_DIAG
                 vxsdr::seq_error_times.push_back(std::chrono::system_clock::now());
                 vxsdr::seq_error_packet_type.push_back(recv_buffer.hdr.packet_type);
@@ -298,7 +300,8 @@ void vxsdr::udp_sender() {
 bool vxsdr::send_packet(packet& packet) {
     bool retval = true;
     vxsdr::packet_types_sent[packet.hdr.packet_type]++;
-    packet.hdr.sequence_counter = (uint16_t)(vxsdr::packets_sent++ % (UINT16_MAX + 1));
+    packet.hdr.sequence_counter = (uint16_t)(vxsdr::packets_sent % (UINT16_MAX + 1));
+    vxsdr::packets_sent++;
 
     if (vxsdr::log_nondata_packets and
         packet.hdr.packet_type != PACKET_TYPE_TX_SIGNAL_DATA and
@@ -312,6 +315,7 @@ bool vxsdr::send_packet(packet& packet) {
     size_t bytes = vxsdr::sender_socket.send_to(net::buffer(&packet, packet.hdr.packet_size), vxsdr::destination_endpoint);
     if (bytes != packet.hdr.packet_size) {
         vxsdr::send_errors++;
+        vxsdr::send_errors_current_stream++;
         retval = false;
     }
     if (packet.hdr.packet_type == PACKET_TYPE_TX_SIGNAL_DATA) {
@@ -323,6 +327,7 @@ bool vxsdr::send_packet(packet& packet) {
             header_size += sizeof(stream_spec_t);
         }
         vxsdr::samples_sent += (packet.hdr.packet_size - header_size) / sizeof(std::complex<int16_t>);
+        vxsdr::samples_sent_current_stream += (packet.hdr.packet_size - header_size) / sizeof(std::complex<int16_t>);
     }
     vxsdr::bytes_sent += bytes;
     return retval;
@@ -341,9 +346,8 @@ void vxsdr::start_send() {
 
     bool throttling                                   = false;
 
-    constexpr uint64_t initial_check_interval_samples = 256;  // a value that's  be equal to the updated interval
     uint64_t last_check                               = 0;
-    uint64_t buffer_check_interval_samples            = initial_check_interval_samples;
+    uint64_t buffer_check_interval_samples            = 2048;
 
     // wait for the rx to reach RUNNING
     unsigned total_wait_ms                            = 0;
