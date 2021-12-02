@@ -361,24 +361,6 @@ void vxsdr::start_send() {
         LOG_INFO("udp rx in RUNNING state");
     }
 
-    // FIXME: replace with returning both buffer size and fill in tx data ack
-    total_wait_ms = 0;
-    LOG_INFO("waiting for buffer size to be set");
-    while (vxsdr::tx_buffer_size_bytes == 0 and total_wait_ms < vxsdr::udp_tx_ready_timeout_ms) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(vxsdr::udp_tx_ready_wait_ms));
-        total_wait_ms += vxsdr::udp_tx_ready_wait_ms;
-    }
-
-    if (total_wait_ms >= vxsdr::udp_tx_ready_timeout_ms) {
-        LOG_ERROR("udp tx timed out waiting for buffer size to be set; shutting down");
-        vxsdr::receiver_thread_stop_flag = true;
-        vxsdr::sender_thread_stop_flag   = true;
-    } else {
-        // check every 1/32 of a buffer
-        buffer_check_interval_samples = vxsdr::tx_buffer_size_bytes / sizeof(std::complex<int16_t>) / 32;
-        LOG_INFO("buffer size set");
-    }
-
     vxsdr::udp_tx_state = TRANSPORT_RUNNING;
     LOG_INFO("udp tx entering RUNNING state");
 
@@ -386,6 +368,27 @@ void vxsdr::start_send() {
         while (vxsdr::command_queue.pop(cmd_buffer)) {
             vxsdr::send_packet(cmd_buffer);
         }
+
+        // FIXME: replace with returning both buffer size and fill in tx data ack
+        if(vxsdr::tx_buffer_size_bytes == 0) {
+            total_wait_ms = 0;
+            LOG_INFO("waiting for buffer size to be set");
+            while (vxsdr::tx_buffer_size_bytes == 0 and total_wait_ms < vxsdr::udp_tx_ready_timeout_ms) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(vxsdr::udp_tx_ready_wait_ms));
+                total_wait_ms += vxsdr::udp_tx_ready_wait_ms;
+            }
+
+            if (total_wait_ms >= vxsdr::udp_tx_ready_timeout_ms) {
+                LOG_ERROR("udp tx timed out waiting for buffer size to be set; shutting down");
+                vxsdr::receiver_thread_stop_flag = true;
+                vxsdr::sender_thread_stop_flag   = true;
+            } else {
+                // check every 1/32 of a buffer
+                buffer_check_interval_samples = vxsdr::tx_buffer_size_bytes / sizeof(std::complex<int16_t>) / 32;
+                LOG_INFO("buffer size set");
+            }
+        }
+
         if ((vxsdr::tx_stream_state == STREAM_WAITING_FOR_START or vxsdr::tx_stream_state == STREAM_RUNNING) and
                    vxsdr::tx_data_queue.read_available() > 0) {
             size_t n_popped = vxsdr::tx_data_queue.pop(&data_buffer.front(), data_buffer.size());
