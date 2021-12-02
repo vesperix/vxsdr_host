@@ -70,6 +70,12 @@ void vxsdr::start_receive() {
     vxsdr::packets_received = 0;
     vxsdr::sequence_errors  = 0;
 
+#ifdef VXSDR_TX_BUFFER_DIAG
+    constexpr size_t buffer_reserve_entries = 65536;
+    vxsdr::buffer_data_times.reserve(buffer_reserve_entries);
+    vxsdr::buffer_fill_bytes.reserve(buffer_reserve_entries);
+#endif // VXSDR_TX_BUFFER_DIAG
+
     vxsdr::udp_rx_state     = TRANSPORT_RUNNING;
 
     while (not vxsdr::receiver_thread_stop_flag) {
