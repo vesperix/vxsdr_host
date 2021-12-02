@@ -156,7 +156,10 @@ class vxsdr {
     std::vector<uint16_t> seq_error_counter;
     std::vector<uint16_t> seq_error_expected;
 #endif  // VXSDR_SEQ_ERR_DIAG
-
+#ifdef VXSDR_TX_BUFFER_DIAG
+    std::vector<std::chrono::time_point<std::chrono::system_clock>> buffer_data_times;
+    std::vector<unsigned> buffer_fill_bytes;
+#endif // VXSDR_TX_BUFFER_DIAG
   public:
     /*!
       @brief Constructor for the @p vxsdr host interface class.

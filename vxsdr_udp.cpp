@@ -179,6 +179,10 @@ void vxsdr::start_receive() {
                 case PACKET_TYPE_TX_SIGNAL_DATA_ACK: {
                     auto* r                     = reinterpret_cast<tx_signal_data_ack_packet*>(&recv_buffer);
                     vxsdr::tx_buffer_used_bytes = r->tx_buffer_used_bytes;
+#ifdef VXSDR_TX_BUFFER_DIAG
+                    vxsdr::buffer_data_times.push_back(std::chrono::system_clock::now());
+                    vxsdr::buffer_fill_bytes.push_back(vxsdr::tx_buffer_used_bytes);
+#endif // VXSDR_TX_BUFFER_DIAG
                     vxsdr::tx_buffer_fill_percent =
                         std::min(100U, (100U * vxsdr::tx_buffer_used_bytes) / vxsdr::tx_buffer_size_bytes);
                     // DO NOT PUSH DATA ACKS TO COMMAND ACK QUEUE!!
@@ -200,6 +204,10 @@ void vxsdr::start_receive() {
                         case DEVICE_CMD_GET_BUFFER_USE: {
                             auto* r                     = reinterpret_cast<two_uint32_packet*>(&recv_buffer);
                             vxsdr::tx_buffer_used_bytes = r->value1;
+#ifdef VXSDR_TX_BUFFER_DIAG
+                            vxsdr::buffer_data_times.push_back(std::chrono::system_clock::now());
+                            vxsdr::buffer_fill_bytes.push_back(vxsdr::tx_buffer_used_bytes);
+#endif // VXSDR_TX_BUFFER_DIAG
                             vxsdr::rx_buffer_used_bytes = r->value2;
                             vxsdr::tx_buffer_fill_percent =
                                 std::min(100U, (100U * vxsdr::tx_buffer_used_bytes) / vxsdr::tx_buffer_size_bytes);
@@ -262,6 +270,12 @@ void vxsdr::start_receive() {
                              vxsdr::seq_error_expected[i]));
     }
 #endif  // VXSDR_SEQ_ERR_DIAG
+#ifdef VXSDR_TX_BUFFER_DIAG
+    LOG_INFO(fmt::format("   {:12d} buffer data points", buffer_data_times.size()));
+    for (unsigned i = 0; i < vxsdr::buffer_data_times.size(); i++) {
+        LOG_INFO(fmt::format(" {:30s} {:8d}", format_time(vxsdr::buffer_data_times[i]), vxsdr::buffer_fill_bytes[i]));
+    }
+#endif // VXSDR_TX_BUFFER_DIAG
 }
 
 void vxsdr::udp_sender() {
@@ -286,8 +300,10 @@ bool vxsdr::send_packet(packet& packet) {
     vxsdr::packet_types_sent[packet.hdr.packet_type]++;
     packet.hdr.sequence_counter = (uint16_t)(vxsdr::packets_sent++ % (UINT16_MAX + 1));
 
-    if (vxsdr::log_nondata_packets and packet.hdr.packet_type != PACKET_TYPE_TX_SIGNAL_DATA and
-        packet.hdr.packet_type != PACKET_TYPE_RX_SIGNAL_DATA and packet.hdr.packet_type != PACKET_TYPE_TX_SIGNAL_DATA_ACK and
+    if (vxsdr::log_nondata_packets and
+        packet.hdr.packet_type != PACKET_TYPE_TX_SIGNAL_DATA and
+        packet.hdr.packet_type != PACKET_TYPE_RX_SIGNAL_DATA and
+        packet.hdr.packet_type != PACKET_TYPE_TX_SIGNAL_DATA_ACK and
         packet.hdr.packet_type != PACKET_TYPE_RX_SIGNAL_DATA_ACK) {
         auto* p = reinterpret_cast<largest_cmd_or_rsp_packet*>(&packet);
         log_packet_info(*p, 1);
