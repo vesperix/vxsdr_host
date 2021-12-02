@@ -249,9 +249,9 @@ size_t vxsdr::write_rx_data(std::ofstream& out_stream, const size_t n_desired, c
             }
             if (buffer.size() >= write_size_samples or n_received >= n_desired) {
                 size_t n_to_write = std::min(n_desired - n_written, write_size_samples);
-                // disable warning for this line because outstream.write requires a char *
-                out_stream.write((char*)buffer.data(),
-                                 sizeof(std::complex<int16_t>) * n_to_write);  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast)
+                // disable clang-tidy warning for this line because outstream.write requires a char *
+                // NOLINTNEXTLINE(cppcoreguidelines-pro-type-cstyle-cast)
+                out_stream.write((char*)buffer.data(), sizeof(std::complex<int16_t>) * n_to_write);
                 if (out_stream.fail()) {
                     LOG_ERROR(fmt::format("error writing to output file ({:d}, {:d})", n_received, n_desired));
                     break;
