@@ -189,7 +189,7 @@ void vxsdr::start_receive() {
                     vxsdr::tx_buffer_used_bytes = r->tx_buffer_used_bytes;
 #ifdef VXSDR_TX_BUFFER_DIAG
                     vxsdr::buffer_data_times.push_back(std::chrono::system_clock::now());
-                    vxsdr::buffer_fill_bytes.push_back(vxsdr::tx_buffer_used_bytes);
+                    vxsdr::buffer_fill_bytes.push_back(r->tx_buffer_used_bytes);
 #endif // VXSDR_TX_BUFFER_DIAG
                     vxsdr::tx_buffer_fill_percent =
                         std::min(100U, (100U * vxsdr::tx_buffer_used_bytes) / vxsdr::tx_buffer_size_bytes);
@@ -214,7 +214,7 @@ void vxsdr::start_receive() {
                             vxsdr::tx_buffer_used_bytes = r->value1;
 #ifdef VXSDR_TX_BUFFER_DIAG
                             vxsdr::buffer_data_times.push_back(std::chrono::system_clock::now());
-                            vxsdr::buffer_fill_bytes.push_back(vxsdr::tx_buffer_used_bytes);
+                            vxsdr::buffer_fill_bytes.push_back(r->value1);
 #endif // VXSDR_TX_BUFFER_DIAG
                             vxsdr::rx_buffer_used_bytes = r->value2;
                             vxsdr::tx_buffer_fill_percent =
@@ -279,10 +279,14 @@ void vxsdr::start_receive() {
     }
 #endif  // VXSDR_SEQ_ERR_DIAG
 #ifdef VXSDR_TX_BUFFER_DIAG
-    LOG_INFO(fmt::format("   {:12d} buffer data points", buffer_data_times.size()));
+    LOG_INFO(fmt::format("   {:12d} buffer data points", vxsdr::buffer_data_times.size()));
     for (unsigned i = 0; i < vxsdr::buffer_data_times.size(); i++) {
         LOG_INFO(fmt::format(" {:30s} {:8d}", format_time(vxsdr::buffer_data_times[i]), vxsdr::buffer_fill_bytes[i]));
+        vxsdr::buffer_fill_min = std::min(vxsdr::buffer_fill_bytes[i], vxsdr::buffer_fill_min);
+        vxsdr::buffer_fill_max = std::max(vxsdr::buffer_fill_bytes[i], vxsdr::buffer_fill_max);
     }
+    LOG_INFO(fmt::format("   {:12d} bytes minimum", vxsdr::buffer_fill_min));
+    LOG_INFO(fmt::format("   {:12d} bytes maximum", vxsdr::buffer_fill_max));
 #endif // VXSDR_TX_BUFFER_DIAG
 }
 

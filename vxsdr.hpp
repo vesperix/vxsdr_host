@@ -163,7 +163,8 @@ class vxsdr {
 #endif  // VXSDR_SEQ_ERR_DIAG
 #ifdef VXSDR_TX_BUFFER_DIAG
     std::vector<std::chrono::time_point<std::chrono::system_clock>> buffer_data_times;
-    std::vector<unsigned> buffer_fill_bytes;
+    std::vector<uint32_t> buffer_fill_bytes;
+    uint32_t buffer_fill_min = UINT32_MAX, buffer_fill_max = 0;
 #endif // VXSDR_TX_BUFFER_DIAG
   public:
     /*!
