@@ -138,15 +138,21 @@ class vxsdr {
     // flags used to indicate the data transfer stream state
     enum stream_state_t { STREAM_UNINITIALIZED, STREAM_WAITING_FOR_START, STREAM_RUNNING, STREAM_STOPPED, STREAM_ERROR };
     std::atomic<stream_state_t> tx_stream_state{STREAM_UNINITIALIZED}, rx_stream_state{STREAM_UNINITIALIZED};
+    // number of samples in current stream (0 if continuous)
+    uint64_t desired_tx_stream_samples = 0, desired_rx_stream_samples = 0;
 
     // flags used for orderly shutdown
     std::atomic<bool> sender_thread_stop_flag = false, receiver_thread_stop_flag = false;
 
     // statistics
     uint64_t send_errors = 0, packets_sent = 0, samples_sent = 0, bytes_sent = 0;
+    uint64_t send_errors_current_stream = 0, packets_sent_current_stream = 0, samples_sent_current_stream = 0,
+             bytes_sent_current_stream = 0;
     std::array<uint64_t, UINT8_MAX + 1> packet_types_sent = {0};
 
     uint64_t sequence_errors = 0, packets_received = 0, samples_received = 0, bytes_received = 0;
+    uint64_t sequence_errors_current_stream = 0, packets_received_current_stream = 0, samples_received_current_stream = 0,
+             bytes_received_current_stream = 0;
     std::array<uint64_t, UINT8_MAX + 1> packet_types_received = {0};
 
     // diagnostic info gathering for sequence errors
@@ -919,6 +925,8 @@ class vxsdr {
 
     [[nodiscard]] bool cmd_queue_push_check(packet& p, const std::string& cmd_name = "unknown");
     void async_handler();
+    bool reset_rx_stream(const uint64_t n_samples_desired = 0);
+    bool reset_tx_stream(const uint64_t n_samples_desired = 0);
     void receiver();
     void sender();
     void udp_receiver();

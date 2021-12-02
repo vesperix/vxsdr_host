@@ -341,7 +341,7 @@ void vxsdr::start_send() {
 
     bool throttling                                   = false;
 
-    constexpr uint64_t initial_check_interval_samples = 9999;  // a value that's unlikely to be equal to the updated interval
+    constexpr uint64_t initial_check_interval_samples = 256;  // a value that's  be equal to the updated interval
     uint64_t last_check                               = 0;
     uint64_t buffer_check_interval_samples            = initial_check_interval_samples;
 
@@ -358,20 +358,35 @@ void vxsdr::start_send() {
         vxsdr::receiver_thread_stop_flag = true;
         vxsdr::sender_thread_stop_flag   = true;
     } else {
-        LOG_INFO("udp rx in RUNNING state; udp tx starting");
+        LOG_INFO("udp rx in RUNNING state");
+    }
+
+    // FIXME: replace with returning both buffer size and fill in tx data ack
+    total_wait_ms = 0;
+    LOG_INFO("waiting for buffer size to be set");
+    while (vxsdr::tx_buffer_size_bytes == 0 and total_wait_ms < vxsdr::udp_tx_ready_timeout_ms) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(vxsdr::udp_tx_ready_wait_ms));
+        total_wait_ms += vxsdr::udp_tx_ready_wait_ms;
+    }
+
+    if (total_wait_ms >= vxsdr::udp_tx_ready_timeout_ms) {
+        LOG_ERROR("udp tx timed out waiting for buffer size to be set; shutting down");
+        vxsdr::receiver_thread_stop_flag = true;
+        vxsdr::sender_thread_stop_flag   = true;
+    } else {
+        // check every 1/32 of a buffer
+        buffer_check_interval_samples = vxsdr::tx_buffer_size_bytes / sizeof(std::complex<int16_t>) / 32;
+        LOG_INFO("buffer size set");
     }
 
     vxsdr::udp_tx_state = TRANSPORT_RUNNING;
+    LOG_INFO("udp tx entering RUNNING state");
 
     while (not vxsdr::sender_thread_stop_flag) {
         while (vxsdr::command_queue.pop(cmd_buffer)) {
             vxsdr::send_packet(cmd_buffer);
         }
-        if (buffer_check_interval_samples == initial_check_interval_samples and vxsdr::tx_buffer_size_bytes > 0) {
-            // once tx_buffer_size_bytes has been set, update buffer_check_interval_samples
-            buffer_check_interval_samples =
-                vxsdr::tx_buffer_size_bytes / sizeof(std::complex<int16_t>) / 32;  // check every 1/32 of a buffer
-        } else if ((vxsdr::tx_stream_state == STREAM_WAITING_FOR_START or vxsdr::tx_stream_state == STREAM_RUNNING) and
+        if ((vxsdr::tx_stream_state == STREAM_WAITING_FOR_START or vxsdr::tx_stream_state == STREAM_RUNNING) and
                    vxsdr::tx_data_queue.read_available() > 0) {
             size_t n_popped = vxsdr::tx_data_queue.pop(&data_buffer.front(), data_buffer.size());
             for (size_t i = 0; i < n_popped; i++) {

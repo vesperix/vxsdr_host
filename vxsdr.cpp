@@ -512,6 +512,7 @@ bool vxsdr::tx_start_now_until_stop(const uint8_t subdev, const uint8_t flags) {
                               vxsdr::stream_state_to_string(vxsdr::tx_stream_state)));
         return false;
     }
+    reset_tx_stream(0);
     header_only_packet p;
     p.hdr        = {PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_START_NOW_UNTIL_STOP, subdev, flags, sizeof(p), 0};
     auto resp_ok = vxsdr::send_packet_and_check_response(p, "tx_start_now_until_stop()");
@@ -528,6 +529,7 @@ bool vxsdr::rx_start_now_until_stop(const uint8_t subdev, const uint8_t flags) {
                               vxsdr::stream_state_to_string(vxsdr::rx_stream_state)));
         return false;
     }
+    reset_rx_stream(0);
     header_only_packet p;
     p.hdr        = {PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_START_NOW_UNTIL_STOP, subdev, flags, sizeof(p), 0};
     auto resp_ok = vxsdr::send_packet_and_check_response(p, "rx_start_now_until_stop()");
@@ -544,6 +546,7 @@ bool vxsdr::tx_start_now_for_n_samples(const uint64_t n, const uint8_t subdev, c
                               vxsdr::stream_state_to_string(vxsdr::tx_stream_state)));
         return false;
     }
+    reset_tx_stream(n);
     cmd_or_rsp_packet_samples p;
     p.hdr        = {PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_START_NOW_FOR_N_SAMPLES, subdev, flags, sizeof(p), 0};
     p.n_samples  = n;
@@ -561,6 +564,7 @@ bool vxsdr::rx_start_now_for_n_samples(const uint64_t n, const uint8_t subdev, c
                               vxsdr::stream_state_to_string(vxsdr::rx_stream_state)));
         return false;
     }
+    reset_rx_stream(n);
     cmd_or_rsp_packet_samples p;
     p.hdr        = {PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_START_NOW_FOR_N_SAMPLES, subdev, flags, sizeof(p), 0};
     p.n_samples  = n;
@@ -581,6 +585,7 @@ bool vxsdr::tx_start_at_time_for_n_samples(const std::chrono::time_point<std::ch
                               vxsdr::stream_state_to_string(vxsdr::tx_stream_state)));
         return false;
     }
+    reset_tx_stream(n);
     cmd_or_rsp_packet_time_samples p = {};
     p.hdr                            = {PACKET_TYPE_TX_RADIO_CMD,
              RADIO_CMD_START_AT_TIME_FOR_N_SAMPLES,
@@ -607,6 +612,7 @@ bool vxsdr::rx_start_at_time_for_n_samples(const std::chrono::time_point<std::ch
                               vxsdr::stream_state_to_string(vxsdr::rx_stream_state)));
         return false;
     }
+    reset_rx_stream(n);
     cmd_or_rsp_packet_time_samples p = {};
     p.hdr                            = {PACKET_TYPE_RX_RADIO_CMD,
              RADIO_CMD_START_AT_TIME_FOR_N_SAMPLES,
@@ -632,6 +638,7 @@ bool vxsdr::tx_start_at_time_until_stop(const std::chrono::time_point<std::chron
                               vxsdr::stream_state_to_string(vxsdr::tx_stream_state)));
         return false;
     }
+    reset_tx_stream(0);
     cmd_or_rsp_packet_time p = {};
     p.hdr                    = {PACKET_TYPE_TX_RADIO_CMD,
              RADIO_CMD_START_AT_TIME_UNTIL_STOP,
@@ -656,6 +663,7 @@ bool vxsdr::rx_start_at_time_until_stop(const std::chrono::time_point<std::chron
                               vxsdr::stream_state_to_string(vxsdr::rx_stream_state)));
         return false;
     }
+    reset_rx_stream(0);
     cmd_or_rsp_packet_time p = {};
     p.hdr                    = {PACKET_TYPE_RX_RADIO_CMD,
              RADIO_CMD_START_AT_TIME_UNTIL_STOP,
@@ -1465,6 +1473,24 @@ std::string vxsdr::error_to_string(const uint32_t reason) {
         default:
             return fmt::format("error {:d}", reason);
     }
+}
+
+bool vxsdr::reset_rx_stream(const uint64_t n_samples_desired) {
+    vxsdr::desired_rx_stream_samples =  n_samples_desired;
+    vxsdr::sequence_errors_current_stream = 0;
+    vxsdr::packets_received_current_stream = 0;
+    vxsdr::samples_received_current_stream = 0;
+    vxsdr::bytes_received_current_stream = 0;
+    return true;
+}
+
+bool vxsdr::reset_tx_stream(const uint64_t n_samples_desired) {
+    vxsdr::desired_tx_stream_samples =  n_samples_desired;
+    vxsdr::send_errors_current_stream = 0;
+    vxsdr::packets_sent_current_stream = 0;
+    vxsdr::samples_sent_current_stream = 0;
+    vxsdr::bytes_sent_current_stream = 0;
+    return true;
 }
 
 void vxsdr::async_handler() {
