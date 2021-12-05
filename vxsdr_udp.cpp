@@ -191,8 +191,12 @@ void vxsdr::start_receive() {
                     vxsdr::buffer_data_times.push_back(std::chrono::system_clock::now());
                     vxsdr::buffer_fill_bytes.push_back(r->tx_buffer_used_bytes);
 #endif // VXSDR_TX_BUFFER_DIAG
-                    vxsdr::tx_buffer_fill_percent =
-                        std::min(100U, (100U * vxsdr::tx_buffer_used_bytes) / vxsdr::tx_buffer_size_bytes);
+                    if(vxsdr::tx_buffer_size_bytes > 0) {
+                        vxsdr::tx_buffer_fill_percent =
+                            std::min(100U, (100U * vxsdr::tx_buffer_used_bytes) / vxsdr::tx_buffer_size_bytes);
+                    } else {
+                        vxsdr::tx_buffer_fill_percent = 0;
+                    }
                     // DO NOT PUSH DATA ACKS TO COMMAND ACK QUEUE!!
                 } break;
 
@@ -217,10 +221,18 @@ void vxsdr::start_receive() {
                             vxsdr::buffer_fill_bytes.push_back(r->value1);
 #endif // VXSDR_TX_BUFFER_DIAG
                             vxsdr::rx_buffer_used_bytes = r->value2;
-                            vxsdr::tx_buffer_fill_percent =
-                                std::min(100U, (100U * vxsdr::tx_buffer_used_bytes) / vxsdr::tx_buffer_size_bytes);
-                            vxsdr::rx_buffer_fill_percent =
-                                std::min(100U, (100U * vxsdr::rx_buffer_used_bytes) / vxsdr::rx_buffer_size_bytes);
+                            if(vxsdr::tx_buffer_size_bytes > 0) {
+                                vxsdr::tx_buffer_fill_percent =
+                                    std::min(100U, (100U * vxsdr::tx_buffer_used_bytes) / vxsdr::tx_buffer_size_bytes);
+                            } else {
+                                vxsdr::tx_buffer_fill_percent = 0;
+                            }
+                            if(vxsdr::rx_buffer_size_bytes > 0) {
+                                vxsdr::rx_buffer_fill_percent =
+                                    std::min(100U, (100U * vxsdr::rx_buffer_used_bytes) / vxsdr::rx_buffer_size_bytes);
+                            } else {
+                                vxsdr::rx_buffer_fill_percent = 0;
+                            }
                         } break;
                         case DEVICE_CMD_GET_BUFFER_INFO: {
                             auto* r                     = reinterpret_cast<two_uint32_packet*>(&recv_buffer);
@@ -354,7 +366,7 @@ void vxsdr::start_send() {
     std::array<data_queue_element, data_buffer_size> data_buffer;
     command_queue_element cmd_buffer;
 
-    bool throttling                                   = false;
+    unsigned throttling                      = 0;
 
     uint64_t last_check                               = 0;
     uint64_t buffer_check_interval_samples            = 2048;
@@ -383,47 +395,36 @@ void vxsdr::start_send() {
             vxsdr::send_packet(cmd_buffer);
         }
 
-        // FIXME: replace with returning both buffer size and fill in tx data ack
-        if(vxsdr::tx_buffer_size_bytes == 0) {
-            total_wait_ms = 0;
-            LOG_INFO("waiting for buffer size to be set");
-            while (vxsdr::tx_buffer_size_bytes == 0 and total_wait_ms < vxsdr::udp_tx_ready_timeout_ms) {
-                std::this_thread::sleep_for(std::chrono::milliseconds(vxsdr::udp_tx_ready_wait_ms));
-                total_wait_ms += vxsdr::udp_tx_ready_wait_ms;
-            }
-
-            if (total_wait_ms >= vxsdr::udp_tx_ready_timeout_ms) {
-                LOG_ERROR("udp tx timed out waiting for buffer size to be set; shutting down");
-                vxsdr::receiver_thread_stop_flag = true;
-                vxsdr::sender_thread_stop_flag   = true;
-            } else {
-                // check every 1/32 of a buffer
-                buffer_check_interval_samples = vxsdr::tx_buffer_size_bytes / sizeof(std::complex<int16_t>) / 32;
-                LOG_INFO("buffer size set");
-            }
-        }
-
         if ((vxsdr::tx_stream_state == STREAM_WAITING_FOR_START or vxsdr::tx_stream_state == STREAM_RUNNING) and
                    vxsdr::tx_data_queue.read_available() > 0) {
-            size_t n_popped = vxsdr::tx_data_queue.pop(&data_buffer.front(), data_buffer.size());
-            for (size_t i = 0; i < n_popped; i++) {
-                if (vxsdr::samples_sent - last_check >= buffer_check_interval_samples) {
-                    // request ack to update buffer use
-                    data_buffer[i].hdr.flags |= FLAGS_REQUEST_ACK;
-                    vxsdr::send_packet(data_buffer[i]);
-                    last_check = vxsdr::samples_sent;
-                } else {
-                    vxsdr::send_packet(data_buffer[i]);
+            size_t n_popped = 0;
+            if(vxsdr::tx_buffer_fill_percent < vxsdr::throttle_hard_percent) {
+                n_popped = vxsdr::tx_data_queue.pop(&data_buffer.front(), data_buffer.size());
+                for (size_t i = 0; i < n_popped; i++) {
+                    if (vxsdr::samples_sent - last_check >= buffer_check_interval_samples) {
+                        // request ack to update buffer use
+                        data_buffer[i].hdr.flags |= FLAGS_REQUEST_ACK;
+                        vxsdr::send_packet(data_buffer[i]);
+                        last_check = vxsdr::samples_sent;
+                    } else {
+                        vxsdr::send_packet(data_buffer[i]);
+                    }
+                    // throttle if needed
+                    if (vxsdr::tx_buffer_fill_percent > vxsdr::throttle_on_percent) {
+                        throttling = true;
+                    } else if (vxsdr::tx_buffer_fill_percent <= vxsdr::throttle_off_percent) {
+                        throttling = false;
+                    }
+                    if (throttling) {
+                        std::this_thread::sleep_for(std::chrono::microseconds(vxsdr::throttle_amount_us));
+                    }
                 }
-                // throttle if needed
-                if (vxsdr::tx_buffer_fill_percent > vxsdr::throttle_on_percent) {
-                    throttling = true;
-                } else if (vxsdr::tx_buffer_fill_percent <= vxsdr::throttle_off_percent) {
-                    throttling = false;
-                }
-                if (throttling) {
-                    std::this_thread::sleep_for(std::chrono::microseconds(vxsdr::throttle_amount_us));
-                }
+            } else {
+                // throttle hard means send one empty data packet and request ack to update buffer use
+                data_buffer[0].hdr = { PACKET_TYPE_TX_SIGNAL_DATA, 0, 0, FLAGS_REQUEST_ACK, sizeof(header_only_packet), 0 };
+                vxsdr::send_packet(data_buffer[0]);
+                last_check = vxsdr::samples_sent;
+                std::this_thread::sleep_for(std::chrono::microseconds(vxsdr::throttle_amount_us));
             }
         } else {
             if (vxsdr::send_thread_sleep_us > 0) {
