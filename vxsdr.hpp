@@ -64,8 +64,8 @@ class vxsdr {
     static constexpr size_t tx_data_queue_length =  1'024;  // slots in tx data queue;  1024 * 2048 / 160e6 =  13 ms at 160 MSPS
 
     // parameters used to set the OS's network buffer
-    static constexpr unsigned network_send_buffer_bytes     =  4'194'304;  // ~6.6 ms at 160 MSPS
-    static constexpr unsigned network_receive_buffer_bytes  = 16'777'216;  // ~26 ms at 160 MSPS
+    static constexpr unsigned network_send_buffer_bytes     =  1'048'576;  // ~1.6 ms at 160 MSPS
+    static constexpr unsigned network_receive_buffer_bytes  =  1'048'576;  // ~1.6 ms at 160 MSPS
 
     // timeouts and waits between tries for queue push/pop
     static constexpr double tx_data_queue_timeout_s         = 1.0;
@@ -76,9 +76,10 @@ class vxsdr {
     static constexpr unsigned rx_data_queue_wait_us         = 10;
 
     // transmit throttling settings
-    static constexpr float throttle_on_percent              = 75;
-    static constexpr float throttle_off_percent             = 50;
-    static constexpr unsigned throttle_amount_us            = 10;  // send time for 8200 bytes over 10 GbE is about 6.7 us
+    static constexpr unsigned throttle_hard_percent         = 80;
+    static constexpr unsigned throttle_on_percent           = 75;
+    static constexpr unsigned throttle_off_percent          = 50;
+    static constexpr unsigned throttle_amount_us            = 20;  // send time for 8200 bytes over 10 GbE is about 6.7 us
     static constexpr unsigned send_thread_sleep_us          = 5;
 
     // parmeters of the internal MPMC queues used for commands, responses, errors, acks, and async messages
