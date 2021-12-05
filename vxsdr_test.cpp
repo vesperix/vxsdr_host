@@ -109,17 +109,16 @@ int main(int argc, char* argv[]) {
 
         LOG_INFO("sending data...");
 
-        auto t_start = std::chrono::system_clock::now() + std::chrono::duration(std::chrono::milliseconds(10));
+        auto t     = std::chrono::system_clock::now();
+        auto secs  = std::chrono::time_point_cast<std::chrono::seconds>(t);
+        auto t_start = secs + std::chrono::seconds(2);
 
         if (not radio->tx_start_at_time_for_n_samples(t_start, n_samp)) {
             LOG_ERROR("error in tx_start_at_time_for_n_samples");
         }
-        size_t n_sent = radio->put_tx_data(data, n_samp);
+        size_t n_sent = radio->put_tx_data(data, 0, 3.0);
         if (n_sent != n_samp) {
             LOG_ERROR(fmt::format("error in put_tx_data ({:d} of {:d} sent)", n_sent, n_samp));
-        }
-        if (not radio->tx_stop_now()) {
-            LOG_ERROR("error in tx_stop_now");
         }
 
         LOG_INFO("send complete");
@@ -139,7 +138,9 @@ int main(int argc, char* argv[]) {
 
         LOG_INFO(fmt::format("receiving data to file {:s}", filename));
 
-        t_start = std::chrono::system_clock::now() + std::chrono::duration(std::chrono::milliseconds(10));
+        t     = std::chrono::system_clock::now();
+        secs  = std::chrono::time_point_cast<std::chrono::seconds>(t);
+        t_start = secs + std::chrono::seconds(2);
 
         if (not radio->rx_start_at_time_for_n_samples(t_start, n_samp)) {
             LOG_ERROR("error in rx_start_at_time_for_n_samples");
