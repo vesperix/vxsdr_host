@@ -313,7 +313,7 @@ void log_packet_info(packet& packet, const int direction) {
                     LOG_PACKET(fmt::format("   data_flow_error_flags     = {:s}", std::bitset<8>((sr->value4) % 256).to_string()));
                     LOG_PACKET(fmt::format("   ddr_arbiter_status        = {:d}", sr->value5));
                     LOG_PACKET(fmt::format("   ethernet_status           = {:s}", std::bitset<8>((sr->value6) % 256).to_string()));
-                    LOG_PACKET(fmt::format("   adc_dac_status            = {:s}", std::bitset<32>((sr->value7)).to_string()));
+                    LOG_PACKET(fmt::format("   adc_dac_status            = {:x}", sr->value7));
                     LOG_PACKET(fmt::format("   ddr_cal_result            = {:d}", sr->value8));
                 } break;
                 case DEVICE_CMD_GET_BUFFER_INFO: {
