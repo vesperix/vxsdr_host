@@ -395,6 +395,8 @@ void vxsdr::start_send() {
     vxsdr::udp_tx_state = TRANSPORT_RUNNING;
     LOG_INFO("udp tx entering RUNNING state");
 
+    bool throttling = false;
+
     while (not vxsdr::sender_thread_stop_flag) {
         while (vxsdr::command_queue.pop(cmd_buffer)) {
             vxsdr::send_packet(cmd_buffer);
@@ -415,7 +417,6 @@ void vxsdr::start_send() {
                         vxsdr::send_packet(data_buffer[i]);
                     }
                     // throttle if needed
-                    bool throttling;
                     if (vxsdr::tx_buffer_fill_percent > vxsdr::throttle_on_percent) {
                         throttling = true;
                     } else if (vxsdr::tx_buffer_fill_percent <= vxsdr::throttle_off_percent) {
