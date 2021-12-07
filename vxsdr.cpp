@@ -47,8 +47,9 @@ vxsdr::vxsdr(const net::ip::udp::endpoint& local_send_endpoint,
             throw std::runtime_error("timeout waiting for UDP transport in vxsdr constructor");
         }
     }
-    if (not tx_stop_now() or not rx_stop_now() or not device_get_buffer_info() or not set_tx_enable(true) or
-        not set_rx_enable(true)) {
+    if (not tx_stop_now() or not rx_stop_now() or
+        not device_get_buffer_info()
+        or not set_tx_enable(true) or not set_rx_enable(true)) {
         LOG_ERROR("error initializing sdr");
         throw std::runtime_error("error initializing sdr in vxsdr constructor");
     }

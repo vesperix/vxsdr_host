@@ -218,11 +218,11 @@ void vxsdr::start_receive() {
                             auto* r                     = reinterpret_cast<two_uint32_packet*>(&recv_buffer);
                             // FIXME: returned buffer size and use are in 128-bit words
                             vxsdr::tx_buffer_used_bytes = 16 * r->value1;
+                            vxsdr::rx_buffer_used_bytes = 16 * r->value2;
 #ifdef VXSDR_TX_BUFFER_DIAG
                             vxsdr::buffer_data_times.push_back(std::chrono::system_clock::now());
                             vxsdr::buffer_fill_bytes.push_back(r->value1);
 #endif // VXSDR_TX_BUFFER_DIAG
-                            vxsdr::rx_buffer_used_bytes = r->value2;
                             if(vxsdr::tx_buffer_size_bytes > 0) {
                                 vxsdr::tx_buffer_fill_percent =
                                     std::min(100U, (100U * vxsdr::tx_buffer_used_bytes) / vxsdr::tx_buffer_size_bytes);
@@ -244,8 +244,7 @@ void vxsdr::start_receive() {
                         } break;
                         case DEVICE_CMD_GET_STATUS: {
                             auto* r                     = reinterpret_cast<eight_uint32_packet*>(&recv_buffer);
-                            // FIXME: returned buffer size and use are in 128-bit words
-                            vxsdr::tx_packet_oos_count = r->value3;
+                            vxsdr::tx_packet_oos_count  = r->value3;
                         } break;
                         default:
                             break;
@@ -374,8 +373,6 @@ void vxsdr::start_send() {
     std::array<data_queue_element, data_buffer_size> data_buffer;
     command_queue_element cmd_buffer;
 
-    unsigned throttling                      = 0;
-
     uint64_t last_check                               = 0;
     uint64_t buffer_check_interval_samples            = 2048;
 
@@ -418,6 +415,7 @@ void vxsdr::start_send() {
                         vxsdr::send_packet(data_buffer[i]);
                     }
                     // throttle if needed
+                    bool throttling;
                     if (vxsdr::tx_buffer_fill_percent > vxsdr::throttle_on_percent) {
                         throttling = true;
                     } else if (vxsdr::tx_buffer_fill_percent <= vxsdr::throttle_off_percent) {
