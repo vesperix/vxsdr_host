@@ -24,14 +24,13 @@ vxsdr::vxsdr(const net::ip::udp::endpoint& local_send_endpoint,
     destination_endpoint    = device_endpoint;
 #ifdef VXSDR_ASYNC_RX
     // https://www.boost.org/doc/libs/1_77_0/doc/html/boost_asio/example/cpp11/futures/daytime_client.cpp
-    // We run the io_context off in its own thread so that it operates
-    // completely asynchronously with respect to the rest of the program.
+    // We run the io_context in its own thread so that it operates
+    // asynchronously with respect to the rest of the program.
     //
     // net::execution needs Boost 1.76 or higher; use make_work_guard for backwards compatibility
     // auto work = net::require(context.get_executor(), net::execution::outstanding_work.tracked);
     auto work      = net::make_work_guard(context);
     context_thread = std::thread([&] { context.run(); });
-    std::this_thread::sleep_for(std::chrono::milliseconds(1));
 #endif  // VXSDR_ASYNC_RX
     async_handler_thread        = std::thread([&] { async_handler(); });
     udp_rx_state                = TRANSPORT_STARTING;
