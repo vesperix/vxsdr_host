@@ -103,6 +103,8 @@ class vxsdr {
     std::atomic<unsigned> tx_buffer_size_bytes = 0, tx_buffer_used_bytes = 0;
     std::atomic<unsigned> rx_buffer_size_bytes = 0, rx_buffer_used_bytes = 0;
     std::atomic<unsigned> tx_buffer_fill_percent = 0, rx_buffer_fill_percent = 0;
+    // last number of sequence errors reported by the radio for tx packets
+    std::atomic<unsigned> tx_packet_oos_count = 0;
 
     using data_queue_element      = largest_data_packet;
     using command_queue_element   = largest_cmd_or_rsp_packet;

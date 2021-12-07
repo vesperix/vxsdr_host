@@ -305,13 +305,16 @@ void log_packet_info(packet& packet, const int direction) {
                 } break;
                 case DEVICE_CMD_GET_STATUS: {
                     LOG_PACKET(fmt::format("DEVICE_CMD_RSP: GET_STATUS"));
-                    auto* sr = reinterpret_cast<six_uint32_packet*>(&packet);
+                    auto* sr = reinterpret_cast<eight_uint32_packet*>(&packet);
+                    // FIXME: figure out
                     LOG_PACKET(fmt::format("   fpga_temperature          = {:d}", sr->value1));
                     LOG_PACKET(fmt::format("   dac_temperature           = {:d}", sr->value2));
                     LOG_PACKET(fmt::format("   sequence_error_count      = {:d}", sr->value3));
                     LOG_PACKET(fmt::format("   data_flow_error_flags     = {:s}", std::bitset<8>((sr->value4) % 256).to_string()));
                     LOG_PACKET(fmt::format("   ddr_arbiter_status        = {:d}", sr->value5));
                     LOG_PACKET(fmt::format("   ethernet_status           = {:s}", std::bitset<8>((sr->value6) % 256).to_string()));
+                    LOG_PACKET(fmt::format("   adc_dac_status            = {:s}", std::bitset<32>((sr->value7)).to_string()));
+                    LOG_PACKET(fmt::format("   ddr_cal_result            = {:d}", sr->value8));
                 } break;
                 case DEVICE_CMD_GET_BUFFER_INFO: {
                     LOG_PACKET(fmt::format("DEVICE_CMD_RSP: GET_BUFFER_INFO"));
@@ -433,10 +436,12 @@ void log_packet_info(packet& packet, const int direction) {
             break;
         case PACKET_TYPE_TX_SIGNAL_DATA_ACK: {
             LOG_PACKET(fmt::format("TX_SIGNAL_DATA_ACK"));
-            auto* br = reinterpret_cast<tx_signal_data_ack_packet*>(&packet);
-            LOG_PACKET(fmt::format("   requester_seq_num         = {:d}", (uint64_t)br->requester_seq_num));
-            LOG_PACKET(fmt::format("   tx_buffer_used_bytes      = {:d}", (uint32_t)br->tx_buffer_used_bytes));
-            LOG_PACKET(fmt::format("   sequence_error_count      = {:d}", (uint32_t)br->sequence_error_count));
+            auto* br = reinterpret_cast<six_uint32_packet*>(&packet);
+            LOG_PACKET(fmt::format("   requester_seq_num         = {:d}", br->value1));
+            // FIXME: use and size are in 128-bit words
+            LOG_PACKET(fmt::format("   tx_buffer_used_bytes      = {:d}", 16 * br->value3));
+            LOG_PACKET(fmt::format("   tx_buffer_size_bytes      = {:d}", 16 * br->value4));
+            LOG_PACKET(fmt::format("   sequence_error_count      = {:d}", br->value5));
         } break;
         case PACKET_TYPE_ASYNC_MSG:
             LOG_PACKET(fmt::format("ASYNC_MSG: {:s}", async_msg_to_name(packet.hdr.command)));

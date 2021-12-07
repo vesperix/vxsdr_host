@@ -82,8 +82,10 @@ void vxsdr::start_receive() {
         static data_queue_element recv_buffer;
         size_t bytes_in_packet = 0, n_samps = 0;
 #ifndef VXSDR_ASYNC_RX
+        // sync receive
         bytes_in_packet = vxsdr::receiver_socket.receive_from(net::buffer(&recv_buffer, sizeof(recv_buffer)), remote_endpoint);
 #else
+        // async receive
         /*
             https://www.boost.org/doc/libs/1_77_0/doc/html/boost_asio/example/cpp11/futures/daytime_client.cpp
 
@@ -183,20 +185,19 @@ void vxsdr::start_receive() {
                         }
                     }
                     break;
-                // tx sginal data acks special cased since they contain throttling information
+                // tx signal data acks special cased since they contain throttling information
                 case PACKET_TYPE_TX_SIGNAL_DATA_ACK: {
-                    auto* r                     = reinterpret_cast<tx_signal_data_ack_packet*>(&recv_buffer);
-                    vxsdr::tx_buffer_used_bytes = r->tx_buffer_used_bytes;
+                    auto* r                     = reinterpret_cast<six_uint32_packet*>(&recv_buffer);
+                    // FIXME: returned buffer size and use are in 128-bit words
+                    vxsdr::tx_buffer_used_bytes = 16 * r->value3;
+                    vxsdr::tx_buffer_size_bytes = 16 * r->value4;
+                    vxsdr::tx_packet_oos_count = r->value5;
 #ifdef VXSDR_TX_BUFFER_DIAG
                     vxsdr::buffer_data_times.push_back(std::chrono::system_clock::now());
                     vxsdr::buffer_fill_bytes.push_back(r->tx_buffer_used_bytes);
 #endif // VXSDR_TX_BUFFER_DIAG
-                    if(vxsdr::tx_buffer_size_bytes > 0) {
-                        vxsdr::tx_buffer_fill_percent =
+                    vxsdr::tx_buffer_fill_percent =
                             std::min(100U, (100U * vxsdr::tx_buffer_used_bytes) / vxsdr::tx_buffer_size_bytes);
-                    } else {
-                        vxsdr::tx_buffer_fill_percent = 0;
-                    }
                     // DO NOT PUSH DATA ACKS TO COMMAND ACK QUEUE!!
                 } break;
 
@@ -215,7 +216,8 @@ void vxsdr::start_receive() {
                     switch (recv_buffer.hdr.command) {
                         case DEVICE_CMD_GET_BUFFER_USE: {
                             auto* r                     = reinterpret_cast<two_uint32_packet*>(&recv_buffer);
-                            vxsdr::tx_buffer_used_bytes = r->value1;
+                            // FIXME: returned buffer size and use are in 128-bit words
+                            vxsdr::tx_buffer_used_bytes = 16 * r->value1;
 #ifdef VXSDR_TX_BUFFER_DIAG
                             vxsdr::buffer_data_times.push_back(std::chrono::system_clock::now());
                             vxsdr::buffer_fill_bytes.push_back(r->value1);
@@ -236,8 +238,14 @@ void vxsdr::start_receive() {
                         } break;
                         case DEVICE_CMD_GET_BUFFER_INFO: {
                             auto* r                     = reinterpret_cast<two_uint32_packet*>(&recv_buffer);
-                            vxsdr::tx_buffer_size_bytes = r->value1;
-                            vxsdr::rx_buffer_size_bytes = r->value2;
+                            // FIXME: returned buffer size and use are in 128-bit words
+                            vxsdr::tx_buffer_size_bytes = 16 * r->value1;
+                            vxsdr::rx_buffer_size_bytes = 16 * r->value2;
+                        } break;
+                        case DEVICE_CMD_GET_STATUS: {
+                            auto* r                     = reinterpret_cast<eight_uint32_packet*>(&recv_buffer);
+                            // FIXME: returned buffer size and use are in 128-bit words
+                            vxsdr::tx_packet_oos_count = r->value3;
                         } break;
                         default:
                             break;

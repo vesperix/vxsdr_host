@@ -281,6 +281,18 @@ class PACKED six_uint32_packet : public packet {
     uint32_t value6 = 0;
 };
 
+class PACKED eight_uint32_packet : public packet {
+  public:
+    uint32_t value1 = 0;
+    uint32_t value2 = 0;
+    uint32_t value3 = 0;
+    uint32_t value4 = 0;
+    uint32_t value5 = 0;
+    uint32_t value6 = 0;
+    uint32_t value7 = 0;
+    uint32_t value8 = 0;
+};
+
 class PACKED one_double_packet : public packet {
   public:
     double value1 = 0.0;
@@ -360,16 +372,6 @@ class PACKED cmd_or_rsp_packet_time_samples : public packet {
 
 class PACKED largest_cmd_or_rsp_packet : public cmd_or_rsp_packet_time_stream {
     [[maybe_unused]] uint8_t payload[MAX_PAYLOAD_LENGTH_BYTES] = {0};
-};
-
-// FIXME: this needs redefinition to include tx buffer size
-class PACKED tx_signal_data_ack_packet : public packet {
-  public:
-    uint64_t requester_seq_num    = 0;
-    //    uint32_t               requester_seq_num = 0;
-    //    uint32_t               tx_buffer_size_bytes = 0;
-    uint32_t tx_buffer_used_bytes = 0;
-    uint32_t sequence_error_count = 0;
 };
 
 #endif  // __cplusplus

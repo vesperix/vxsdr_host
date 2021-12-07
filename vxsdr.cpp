@@ -1151,6 +1151,32 @@ std::optional<capabilities_t> vxsdr::get_rx_capabilities(const uint8_t subdev, c
     return std::nullopt;
 }
 
+std::optional<std::array<uint32_t, 2>> vxsdr::device_get_buffer_info(const uint8_t subdev, const uint8_t flags) {
+    header_only_packet p;
+    p.hdr    = {PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_GET_BUFFER_INFO, subdev, flags, sizeof(p), 0};
+    auto res = vxsdr::send_packet_and_return_response(p, "device_get_buffer_info()");
+    if (res) {
+        auto q                      = res.value();
+        auto* r                     = reinterpret_cast<two_uint32_packet*>(&q);
+        std::array<uint32_t, 2> ret = {8 * r->value1, 16 * r->value2}; // sizes returned by radio are in 128-bit words
+        return ret;
+    }
+    return std::nullopt;
+}
+
+std::optional<std::array<uint32_t, 2>> vxsdr::device_get_buffer_use(const uint8_t subdev, const uint8_t flags) {
+    header_only_packet p;
+    p.hdr    = {PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_GET_BUFFER_USE, subdev, flags, sizeof(p), 0};
+    auto res = vxsdr::send_packet_and_return_response(p, "device_get_buffer_use()");
+    if (res) {
+        auto q                      = res.value();
+        auto* r                     = reinterpret_cast<two_uint32_packet*>(&q);
+        std::array<uint32_t, 2> ret = {8 * r->value1, 16 * r->value2}; // sizes returned by radio are in 128-bit words
+        return ret;
+    }
+    return std::nullopt;
+}
+
 std::optional<std::array<bool, 3>> vxsdr::device_get_timing_status(const uint8_t subdev, const uint8_t flags) {
     // FIXME: these need to be defined as part of a generic API when stable
     constexpr uint32_t TIMING_STATUS_EXT_PPS_LOCK   = 0x00000001;
@@ -1498,30 +1524,4 @@ void vxsdr::async_handler() {
         std::this_thread::sleep_for(std::chrono::milliseconds(async_queue_check_ms));
     }
     LOG_DEBUG("async_handler finished");
-}
-
-std::optional<std::array<uint32_t, 2>> vxsdr::device_get_buffer_info(const uint8_t subdev, const uint8_t flags) {
-    header_only_packet p;
-    p.hdr    = {PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_GET_BUFFER_INFO, subdev, flags, sizeof(p), 0};
-    auto res = vxsdr::send_packet_and_return_response(p, "device_get_buffer_info()");
-    if (res) {
-        auto q                      = res.value();
-        auto* r                     = reinterpret_cast<two_uint32_packet*>(&q);
-        std::array<uint32_t, 2> ret = {r->value1, r->value2};
-        return ret;
-    }
-    return std::nullopt;
-}
-
-std::optional<std::array<uint32_t, 2>> vxsdr::device_get_buffer_use(const uint8_t subdev, const uint8_t flags) {
-    header_only_packet p;
-    p.hdr    = {PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_GET_BUFFER_USE, subdev, flags, sizeof(p), 0};
-    auto res = vxsdr::send_packet_and_return_response(p, "device_get_buffer_use()");
-    if (res) {
-        auto q                      = res.value();
-        auto* r                     = reinterpret_cast<two_uint32_packet*>(&q);
-        std::array<uint32_t, 2> ret = {r->value1, r->value2};
-        return ret;
-    }
-    return std::nullopt;
 }
