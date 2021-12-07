@@ -606,7 +606,7 @@ bool vxsdr::tx_start_now_for_n_samples(const uint64_t n, const uint8_t subdev, c
         return false;
     }
     vxsdr::reset_tx_stream(n);
-    cmd_or_rsp_packet_samples p;
+    cmd_or_rsp_packet_samples p{};
     p.hdr        = {PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_START_NOW_FOR_N_SAMPLES, subdev, flags, sizeof(p), 0};
     p.n_samples  = n;
     auto resp_ok = vxsdr::send_packet_and_check_response(p, "tx_start_now_for_n_samples()");
@@ -629,7 +629,7 @@ bool vxsdr::rx_start_now_for_n_samples(const uint64_t n, const uint8_t subdev, c
         return false;
     }
     vxsdr::reset_rx_stream(n);
-    cmd_or_rsp_packet_samples p;
+    cmd_or_rsp_packet_samples p{};
     p.hdr        = {PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_START_NOW_FOR_N_SAMPLES, subdev, flags, sizeof(p), 0};
     p.n_samples  = n;
     auto resp_ok = vxsdr::send_packet_and_check_response(p, "rx_start_now_for_n_samples()");
