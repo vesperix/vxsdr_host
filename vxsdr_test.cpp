@@ -145,7 +145,8 @@ int main(int argc, char* argv[]) {
         if (not radio->rx_start_at_time_for_n_samples(t_start, n_samp)) {
             LOG_ERROR("error in rx_start_at_time_for_n_samples");
         }
-        size_t n_rec = radio->get_rx_data(data, n_samp);
+        //size_t n_rec = radio->get_rx_data(data, n_samp);
+        size_t n_rec = radio->check_rx_data_sequence_only(n_samp);
         if (n_rec != n_samp) {
             LOG_ERROR(fmt::format("error in get_rx_data ({:d} of {:d} received)", n_rec, n_samp));
         }
