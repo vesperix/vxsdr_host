@@ -408,7 +408,7 @@ bool vxsdr::device_clear_status(const uint8_t subdev, const uint8_t flags) {
     return vxsdr::send_packet_and_check_response(p, "device_clear_status()");
 }
 
-std::optional<std::array<uint32_t, 6>> vxsdr::device_get_status(const uint8_t subdev, const uint8_t flags) {
+std::optional<std::array<uint32_t, 8>> vxsdr::device_get_status(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p;
     p.hdr    = {PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_GET_STATUS, subdev, flags, sizeof(p), 0};
     auto res = vxsdr::send_packet_and_return_response(p, "device_get_status()");
@@ -510,7 +510,7 @@ std::optional<vxsdr::stream_state_t> vxsdr::get_tx_stream_state(const uint8_t su
     // FIXME: temporary implementation using device_get_status
     auto res = vxsdr::device_get_status(subdev, flags);
     if(res) {
-        uint32_t stat = res.value()[6] >> 16U;
+        uint32_t stat = res->at(6) >> 16U;
         bool running_flag = (stat & 0x01U) != 0;
         bool waiting_flag = (stat & 0x02U) != 0;
         if (not running_flag and not waiting_flag) {
@@ -532,7 +532,7 @@ std::optional<vxsdr::stream_state_t> vxsdr::get_rx_stream_state(const uint8_t su
     // FIXME: temporary implementation using device_get_status
     auto res = vxsdr::device_get_status(subdev, flags);
     if(res) {
-        uint32_t stat = res.value()[6] & 0xFFFFU;
+        uint32_t stat = res->at(6) & 0xFFFFU;
         bool running_flag = (stat & 0x01U) != 0;
         bool waiting_flag = (stat & 0x02U) != 0;
         if (not running_flag and not waiting_flag) {

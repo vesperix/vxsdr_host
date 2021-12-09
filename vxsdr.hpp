@@ -282,7 +282,7 @@ class vxsdr {
       @param subdev the subdevice number
       @param flags the packet flags
     */
-    std::optional<std::array<uint32_t, 6>> device_get_status(const uint8_t subdev = 0, const uint8_t flags = 0);
+    std::optional<std::array<uint32_t, 8>> device_get_status(const uint8_t subdev = 0, const uint8_t flags = 0);
 
     /*!
       @brief Sets the device time immediately.
