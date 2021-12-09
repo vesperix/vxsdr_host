@@ -19,6 +19,21 @@
 #include "host_radio_options.hpp"
 #include "vxsdr.hpp"
 
+std::string stream_state_to_string(const vxsdr::stream_state_t state) {
+    switch (state) {
+        case vxsdr::STREAM_WAITING_FOR_START:
+            return "WAITING_FOR_START";
+        case vxsdr::STREAM_RUNNING:
+            return "RUNNING";
+        case vxsdr::STREAM_STOPPED:
+            return "STOPPED";
+        case vxsdr::STREAM_ERROR:
+            return "ERROR";
+        default:
+            return "UNKNOWN";
+    }
+}
+
 unsigned total_errors   = 0;
 unsigned total_warnings = 0;
 
@@ -614,7 +629,7 @@ void test_stream_state(std::unique_ptr<vxsdr>& radio) {
         if (res.value() == vxsdr::STREAM_STOPPED) {
             LOG_INFO("      passed");
         } else {
-            LOG_ERROR("      incorrect value returned by get_tx_stream_state()");
+            LOG_ERROR("      incorrect value returned by get_tx_stream_state(): {:s}", stream_state_to_string(res.value()));
             total_errors++;
         }
     } else {
@@ -634,7 +649,7 @@ void test_stream_state(std::unique_ptr<vxsdr>& radio) {
         if (res.value() == vxsdr::STREAM_RUNNING) {
             LOG_INFO("      passed");
         } else {
-            LOG_ERROR("      incorrect value returned by get_tx_stream_state()");
+            LOG_ERROR("      incorrect value returned by get_tx_stream_state(): {:s}", stream_state_to_string(res.value()));
             total_errors++;
         }
     } else {
@@ -661,7 +676,7 @@ void test_stream_state(std::unique_ptr<vxsdr>& radio) {
         if (res.value() == vxsdr::STREAM_WAITING_FOR_START) {
             LOG_INFO("      passed");
         } else {
-            LOG_ERROR("      incorrect value returned by get_tx_stream_state()");
+            LOG_ERROR("      incorrect value returned by get_tx_stream_state(): {:s}", stream_state_to_string(res.value()));
             total_errors++;
         }
     } else {
@@ -686,7 +701,7 @@ void test_stream_state(std::unique_ptr<vxsdr>& radio) {
         if (res.value() == vxsdr::STREAM_STOPPED) {
             LOG_INFO("      passed");
         } else {
-            LOG_ERROR("      incorrect value returned by get_rx_stream_state()");
+            LOG_ERROR("      incorrect value returned by get_rx_stream_state(): {:s}", stream_state_to_string(res.value()));
             total_errors++;
         }
     } else {
@@ -706,7 +721,7 @@ void test_stream_state(std::unique_ptr<vxsdr>& radio) {
         if (res.value() == vxsdr::STREAM_RUNNING) {
             LOG_INFO("      passed");
         } else {
-            LOG_ERROR("      incorrect value returned by get_rx_stream_state()");
+            LOG_ERROR("      incorrect value returned by get_rx_stream_state(): {:s}", stream_state_to_string(res.value()));
             total_errors++;
         }
     } else {
@@ -733,7 +748,7 @@ void test_stream_state(std::unique_ptr<vxsdr>& radio) {
         if (res.value() == vxsdr::STREAM_WAITING_FOR_START) {
             LOG_INFO("      passed");
         } else {
-            LOG_ERROR("      incorrect value returned by get_rx_stream_state()");
+            LOG_ERROR("      incorrect value returned by get_rx_stream_state(): {:s}", stream_state_to_string(res.value()));
             total_errors++;
         }
     } else {
