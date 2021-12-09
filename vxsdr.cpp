@@ -414,8 +414,8 @@ std::optional<std::array<uint32_t, 6>> vxsdr::device_get_status(const uint8_t su
     auto res = vxsdr::send_packet_and_return_response(p, "device_get_status()");
     if (res) {
         auto q                      = res.value();
-        auto* r                     = reinterpret_cast<six_uint32_packet*>(&q);
-        std::array<uint32_t, 6> res = {r->value1, r->value2, r->value3, r->value4, r->value5, r->value6};
+        auto* r                     = reinterpret_cast<eight_uint32_packet*>(&q);
+        std::array<uint32_t, 8> res = {r->value1, r->value2, r->value3, r->value4, r->value5, r->value6, r->value7, r->value8};
         return res;
     }
     return std::nullopt;
