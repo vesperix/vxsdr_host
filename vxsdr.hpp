@@ -41,6 +41,8 @@ namespace net = boost::asio;
 */
 
 class vxsdr {
+  public:
+    enum stream_state_t { STREAM_STOPPED, STREAM_WAITING_FOR_START, STREAM_RUNNING, STREAM_ERROR };
   private:
 #ifdef VXSDR_ASYNC_RX
     // socket_receive_timeout setting for async rx
@@ -139,7 +141,6 @@ class vxsdr {
     std::atomic<transport_state_t> udp_tx_state{TRANSPORT_UNINITIALIZED}, udp_rx_state{TRANSPORT_UNINITIALIZED};
 
     // flags used to indicate the data transfer stream state
-    enum stream_state_t { STREAM_STOPPED, STREAM_WAITING_FOR_START, STREAM_RUNNING, STREAM_ERROR };
     std::atomic<stream_state_t> tx_stream_state{STREAM_STOPPED}, rx_stream_state{STREAM_STOPPED};
     // number of samples in current stream (0 if continuous)
     uint64_t desired_tx_stream_samples = 0, desired_rx_stream_samples = 0;

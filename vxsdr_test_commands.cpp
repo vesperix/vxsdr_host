@@ -599,10 +599,155 @@ void test_iq(std::unique_ptr<vxsdr>& radio) {
     LOG_INFO("completed iq tests");
 }
 
-void test_status(std::unique_ptr<vxsdr>& radio) {
-    LOG_INFO("starting status tests");
+void test_stream_state(std::unique_ptr<vxsdr>& radio) {
+    LOG_INFO("starting stream state tests");
 
-    LOG_INFO("completed status tests");
+    LOG_INFO("   testing tx stop");
+
+    if(not radio->tx_stop_now()) {
+        LOG_ERROR("      error stopping tx with tx_stop_now()");
+        total_errors++;
+    }
+
+    auto res = radio->get_tx_stream_state();
+    if (res) {
+        if (res.value() == vxsdr::STREAM_STOPPED) {
+            LOG_INFO("      passed");
+        } else {
+            LOG_ERROR("      incorrect value returned by get_tx_stream_state()");
+            total_errors++;
+        }
+    } else {
+        LOG_ERROR("     no value returned by get_tx_stream_state()");
+        total_errors++;
+    }
+
+    LOG_INFO("   testing tx start now until stop");
+
+    if(not radio->tx_start_now_until_stop()) {
+        LOG_ERROR("      error starting tx with tx_start_now_until_stop()");
+        total_errors++;
+    }
+
+    res = radio->get_tx_stream_state();
+    if (res) {
+        if (res.value() == vxsdr::STREAM_RUNNING) {
+            LOG_INFO("      passed");
+        } else {
+            LOG_ERROR("      incorrect value returned by get_tx_stream_state()");
+            total_errors++;
+        }
+    } else {
+        LOG_ERROR("     no value returned by get_tx_stream_state()");
+        total_errors++;
+    }
+
+    if(not radio->tx_stop_now()) {
+        LOG_ERROR("      error stopping tx with tx_stop_now()");
+        total_errors++;
+    }
+
+    LOG_INFO("   testing tx start at time until stop");
+
+    auto t_start = std::chrono::system_clock::now() + std::chrono::minutes(1);
+
+    if(not radio->tx_start_at_time_until_stop(t_start)) {
+        LOG_ERROR("      error starting tx with tx_start_at_time_until_stop()");
+        total_errors++;
+    }
+
+    res = radio->get_tx_stream_state();
+    if (res) {
+        if (res.value() == vxsdr::STREAM_WAITING_FOR_START) {
+            LOG_INFO("      passed");
+        } else {
+            LOG_ERROR("      incorrect value returned by get_tx_stream_state()");
+            total_errors++;
+        }
+    } else {
+        LOG_ERROR("     no value returned by get_tx_stream_state()");
+        total_errors++;
+    }
+
+    if(not radio->tx_stop_now()) {
+        LOG_ERROR("      error stopping tx with tx_stop_now()");
+        total_errors++;
+    }
+
+    LOG_INFO("   testing rx stop");
+
+    if(not radio->rx_stop_now()) {
+        LOG_ERROR("      error stopping rx with rx_stop_now()");
+        total_errors++;
+    }
+
+    res = radio->get_rx_stream_state();
+    if (res) {
+        if (res.value() == vxsdr::STREAM_STOPPED) {
+            LOG_INFO("      passed");
+        } else {
+            LOG_ERROR("      incorrect value returned by get_rx_stream_state()");
+            total_errors++;
+        }
+    } else {
+        LOG_ERROR("     no value returned by get_rx_stream_state()");
+        total_errors++;
+    }
+
+    LOG_INFO("   testing rx start now until stop");
+
+    if(not radio->rx_start_now_until_stop()) {
+        LOG_ERROR("      error starting rx with rx_start_now_until_stop()");
+        total_errors++;
+    }
+
+    res = radio->get_rx_stream_state();
+    if (res) {
+        if (res.value() == vxsdr::STREAM_RUNNING) {
+            LOG_INFO("      passed");
+        } else {
+            LOG_ERROR("      incorrect value returned by get_rx_stream_state()");
+            total_errors++;
+        }
+    } else {
+        LOG_ERROR("     no value returned by get_rx_stream_state()");
+        total_errors++;
+    }
+
+    if(not radio->rx_stop_now()) {
+        LOG_ERROR("      error stopping rx with rx_stop_now()");
+        total_errors++;
+    }
+
+    LOG_INFO("   testing rx start at time until stop");
+
+    t_start = std::chrono::system_clock::now() + std::chrono::minutes(1);
+
+    if(not radio->rx_start_at_time_until_stop(t_start)) {
+        LOG_ERROR("      error starting rx with rx_start_at_time_until_stop()");
+        total_errors++;
+    }
+
+    res = radio->get_rx_stream_state();
+    if (res) {
+        if (res.value() == vxsdr::STREAM_WAITING_FOR_START) {
+            LOG_INFO("      passed");
+        } else {
+            LOG_ERROR("      incorrect value returned by get_rx_stream_state()");
+            total_errors++;
+        }
+    } else {
+        LOG_ERROR("     no value returned by get_rx_stream_state()");
+        total_errors++;
+    }
+
+    if(not radio->rx_stop_now()) {
+        LOG_ERROR("      error stopping rx with rx_stop_now()");
+        total_errors++;
+    }
+
+
+    LOG_INFO("completed stream state tests");
 }
 
 void test_capabilities(std::unique_ptr<vxsdr>& radio) {
@@ -611,10 +756,10 @@ void test_capabilities(std::unique_ptr<vxsdr>& radio) {
     LOG_INFO("completed capabilities tests");
 }
 
-void test_stream(std::unique_ptr<vxsdr>& radio) {
-    LOG_INFO("starting stream tests");
+void test_status(std::unique_ptr<vxsdr>& radio) {
+    LOG_INFO("starting status tests");
 
-    LOG_INFO("completed stream tests");
+    LOG_INFO("completed status tests");
 }
 
 extern "C" void sig_int_handler(int /* sig_num */) {
@@ -664,10 +809,10 @@ int main(int argc, char* argv[]) {
         test_freq(radio);
         test_rate(radio);
         test_gain(radio);
+        test_stream_state(radio);
         // test_iq(radio);
         // test_status(radio);
         // test_capabilities(radio);
-        // test_stream(radio);
     } catch (std::exception& e) {
         LOG_FATAL(fmt::format("testing exception caught: {:s}", e.what()));
         return EXIT_INTERNAL_ERROR;
