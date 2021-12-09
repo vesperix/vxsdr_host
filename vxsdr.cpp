@@ -748,6 +748,40 @@ bool vxsdr::rx_start_at_time_until_stop(const std::chrono::time_point<std::chron
     return false;
 }
 
+bool vxsdr::tx_stop_now(const uint8_t subdev, const uint8_t flags) {
+    if (vxsdr::tx_stream_state == STREAM_ERROR) {
+        LOG_ERROR(fmt::format("tx stream state is {:s} in tx_stop_now()", vxsdr::stream_state_to_string(vxsdr::tx_stream_state)));
+    } else if(vxsdr::tx_stream_state == STREAM_STOPPED) {
+        LOG_INFO(fmt::format("tx stream state is {:s} in tx_stop_now()", vxsdr::stream_state_to_string(vxsdr::tx_stream_state)));
+    }
+    // send a stop anyway, even if we think the state is wrong
+    header_only_packet p;
+    p.hdr        = {PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_STOP_NOW, subdev, flags, sizeof(p), 0};
+    auto resp_ok = vxsdr::send_packet_and_check_response(p, "tx_stop_now()");
+    if (resp_ok) {
+        vxsdr::tx_stream_state = STREAM_STOPPED;
+        return true;
+    }
+    return false;
+}
+
+bool vxsdr::rx_stop_now(const uint8_t subdev, const uint8_t flags) {
+    if (vxsdr::rx_stream_state == STREAM_ERROR) {
+        LOG_ERROR(fmt::format("rx stream state is {:s} in rx_stop_now()", vxsdr::stream_state_to_string(vxsdr::rx_stream_state)));
+    } else if(vxsdr::rx_stream_state == STREAM_STOPPED) {
+        LOG_INFO(fmt::format("rx stream state is {:s} in rx_stop_now()", vxsdr::stream_state_to_string(vxsdr::rx_stream_state)));
+    }
+    // send a stop anyway, even if we think the state is wrong
+    header_only_packet p;
+    p.hdr        = {PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_STOP_NOW, subdev, flags, sizeof(p), 0};
+    auto resp_ok = vxsdr::send_packet_and_check_response(p, "rx_stop_now()");
+    if (resp_ok) {
+        vxsdr::rx_stream_state = STREAM_STOPPED;
+        return true;
+    }
+    return false;
+}
+
 bool vxsdr::set_tx_iq_bias(const double i_bias, const double q_bias, const uint8_t subdev, const uint8_t flags) {
     two_double_packet p;
     p.hdr    = {PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_SET_IQ_BIAS, subdev, flags, sizeof(p), 0};
@@ -844,36 +878,6 @@ std::optional<std::array<double, 4>> vxsdr::get_rx_iq_corr(const uint8_t subdev,
         return corr;
     }
     return std::nullopt;
-}
-
-bool vxsdr::tx_stop_now(const uint8_t subdev, const uint8_t flags) {
-    if (vxsdr::tx_stream_state != STREAM_RUNNING and vxsdr::tx_stream_state != STREAM_WAITING_FOR_START) {
-        LOG_WARN(fmt::format("tx stream state is {:s} in tx_stop_now()", vxsdr::stream_state_to_string(vxsdr::tx_stream_state)));
-    }
-    // send a stop anyway, even if we think the state is wrong
-    header_only_packet p;
-    p.hdr        = {PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_STOP_NOW, subdev, flags, sizeof(p), 0};
-    auto resp_ok = vxsdr::send_packet_and_check_response(p, "tx_stop_now()");
-    if (resp_ok) {
-        vxsdr::tx_stream_state = STREAM_STOPPED;
-        return true;
-    }
-    return false;
-}
-
-bool vxsdr::rx_stop_now(const uint8_t subdev, const uint8_t flags) {
-    if (vxsdr::rx_stream_state != STREAM_RUNNING and vxsdr::rx_stream_state != STREAM_WAITING_FOR_START) {
-        LOG_WARN(fmt::format("rx stream state is {:s} in rx_stop_now()", vxsdr::stream_state_to_string(vxsdr::rx_stream_state)));
-    }
-    // send a stop anyway, even if we think the state is wrong
-    header_only_packet p;
-    p.hdr        = {PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_STOP_NOW, subdev, flags, sizeof(p), 0};
-    auto resp_ok = vxsdr::send_packet_and_check_response(p, "rx_stop_now()");
-    if (resp_ok) {
-        vxsdr::rx_stream_state = STREAM_STOPPED;
-        return true;
-    }
-    return false;
 }
 
 std::optional<std::array<double, 2>> vxsdr::get_tx_freq_range(const uint8_t subdev, const uint8_t flags) {
