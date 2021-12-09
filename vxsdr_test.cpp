@@ -156,8 +156,8 @@ int main(int argc, char* argv[]) {
 
         LOG_INFO("receive complete");
 
-        size_t n_written = write_cplx_16(filename, data);
-        LOG_INFO(fmt::format("{:d} samples written", n_written));
+        //size_t n_written = write_cplx_16(filename, data);
+        //LOG_INFO(fmt::format("{:d} samples written", n_written));
 
         LOG_INFO("getting status...");
         status = radio->device_get_status();
