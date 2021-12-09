@@ -13,6 +13,8 @@ void log_init(const std::string& logfilename) {
     multi_logger->set_level(spdlog::level::debug);
     multi_logger->set_pattern("[%Y-%m-%d %T.%f] [%t] [%=8l] %v");
     spdlog::register_logger(multi_logger);
+    // auto-flush on errors or more severe events
+    multi_logger->flush_on(spdlog::level::err);
 }
 
 void log_close() {
