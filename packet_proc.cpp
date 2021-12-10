@@ -252,16 +252,16 @@ std::string async_msg_to_name(const uint8_t msg) {
 
 void log_packet_info(packet& packet, const int direction) {
     if (direction == 0) {
-        LOG_PACKET(fmt::format("PACKET: type 0x{:02X} command 0x{:02X} flags 0x{:02X} subdevice {:d} size {:d} sequence {:d}",
+        LOG_PACKET(fmt::format("PACKET: type 0x{:02X} cmd 0x{:02X} flags 0x{:02X} subdev {:d} size {:d} seq {:d}",
                                packet.hdr.packet_type, packet.hdr.command, packet.hdr.flags, packet.hdr.target_subdevice,
                                packet.hdr.packet_size, packet.hdr.sequence_counter));
     } else if (direction > 0) {
-        LOG_PACKET(fmt::format("PACKET SENT: type 0x{:02X} command 0x{:02X} flags 0x{:02X} subdevice {:d} size {:d} sequence {:d}",
+        LOG_PACKET(fmt::format("PACKET SENT: type 0x{:02X} cmd 0x{:02X} flags 0x{:02X} subdev {:d} size {:d} seq {:d}",
                                packet.hdr.packet_type, packet.hdr.command, packet.hdr.flags, packet.hdr.target_subdevice,
                                packet.hdr.packet_size, packet.hdr.sequence_counter));
     } else {
         LOG_PACKET(
-            fmt::format("PACKET RECEIVED: type 0x{:02X} command 0x{:02X} flags 0x{:02X} subdevice {:d} size {:d} sequence {:d}",
+            fmt::format("PACKET RECEIVED: type 0x{:02X} cmd 0x{:02X} flags 0x{:02X} subdev {:d} size {:d} seq {:d}",
                         packet.hdr.packet_type, packet.hdr.command, packet.hdr.flags, packet.hdr.target_subdevice,
                         packet.hdr.packet_size, packet.hdr.sequence_counter));
     }
@@ -438,9 +438,8 @@ void log_packet_info(packet& packet, const int direction) {
             LOG_PACKET(fmt::format("TX_SIGNAL_DATA_ACK"));
             auto* br = reinterpret_cast<six_uint32_packet*>(&packet);
             LOG_PACKET(fmt::format("   requester_seq_num         = {:d}", br->value1));
-            // FIXME: use and size are in 128-bit words
-            LOG_PACKET(fmt::format("   tx_buffer_used_bytes      = {:d}", 16 * br->value3));
-            LOG_PACKET(fmt::format("   tx_buffer_size_bytes      = {:d}", 16 * br->value4));
+            LOG_PACKET(fmt::format("   tx_buffer_used_bytes      = {:d}", br->value3));
+            LOG_PACKET(fmt::format("   tx_buffer_size_bytes      = {:d}", br->value4));
             LOG_PACKET(fmt::format("   sequence_error_count      = {:d}", br->value5));
         } break;
         case PACKET_TYPE_ASYNC_MSG:

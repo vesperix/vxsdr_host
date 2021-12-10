@@ -1231,7 +1231,7 @@ std::optional<std::array<uint32_t, 2>> vxsdr::device_get_buffer_info(const uint8
     if (res) {
         auto q                      = res.value();
         auto* r                     = reinterpret_cast<two_uint32_packet*>(&q);
-        std::array<uint32_t, 2> ret = {8 * r->value1, 16 * r->value2}; // sizes returned by radio are in 128-bit words
+        std::array<uint32_t, 2> ret = {r->value1, r->value2};
         return ret;
     }
     return std::nullopt;
@@ -1244,7 +1244,7 @@ std::optional<std::array<uint32_t, 2>> vxsdr::device_get_buffer_use(const uint8_
     if (res) {
         auto q                      = res.value();
         auto* r                     = reinterpret_cast<two_uint32_packet*>(&q);
-        std::array<uint32_t, 2> ret = {8 * r->value1, 16 * r->value2}; // sizes returned by radio are in 128-bit words
+        std::array<uint32_t, 2> ret = {r->value1, r->value2};
         return ret;
     }
     return std::nullopt;
