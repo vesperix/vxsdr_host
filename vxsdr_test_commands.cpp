@@ -123,7 +123,7 @@ void test_time(std::unique_ptr<vxsdr>& radio, const double time_tol_sec = 0.01) 
 
     LOG_INFO("   testing set_time_now and get_time_now with s and ns");
     {
-        struct timespec ts_set;
+        struct timespec ts_set{};
         timespec_get(&ts_set, TIME_UTC);
         bool sent = radio->device_set_time_now(ts_set.tv_sec, ts_set.tv_nsec);
 
@@ -134,7 +134,7 @@ void test_time(std::unique_ptr<vxsdr>& radio, const double time_tol_sec = 0.01) 
 
         std::this_thread::sleep_for(std::chrono::seconds(1));
 
-        uint32_t t_sec, t_ns;
+        uint32_t t_sec = 0, t_ns = 0;
         bool result = radio->device_get_time_now(t_sec, t_ns);
         if (result) {
             double diff = t_sec - ts_set.tv_sec + 1e-9 * (t_ns - ts_set.tv_nsec);
@@ -162,7 +162,7 @@ void test_time(std::unique_ptr<vxsdr>& radio, const double time_tol_sec = 0.01) 
 
         std::this_thread::sleep_for(std::chrono::seconds(1));
 
-        uint32_t t_sec, t_ns;
+        uint32_t t_sec = 0, t_ns = 0;
         bool result = radio->device_get_time_now(t_sec, t_ns);
         if (result) {
             double diff = (t_sec + 1e-9 * t_ns) - std::chrono::duration<double>(tp_set.time_since_epoch()).count();
@@ -176,7 +176,7 @@ void test_time(std::unique_ptr<vxsdr>& radio, const double time_tol_sec = 0.01) 
             LOG_ERROR("     no value returned by device_get_time_now()");
             total_errors++;
         }
-        struct timespec ts_set;
+        struct timespec ts_set{};
         timespec_get(&ts_set, TIME_UTC);
         sent = radio->device_set_time_now(ts_set.tv_sec, ts_set.tv_nsec);
 
@@ -765,12 +765,12 @@ void test_stream_state(std::unique_ptr<vxsdr>& radio) {
     LOG_INFO("completed stream state tests");
 }
 
-void test_repeated_commands(std::unique_ptr<vxsdr>& radio, unsigned iterations) {
+void test_repeated_commands(std::unique_ptr<vxsdr>& radio, const unsigned iterations) {
 
     const double rate = 160e6, rate_tol_hz = 1.0;
 
     for (unsigned i = 0; i < iterations; i++) {
-        LOG_INFO(fmt::format("   repeated commands iteration {:d} of {d}", i + 1, iterations));
+        LOG_INFO(fmt::format("   repeated commands iteration {:d} of {:d}", i + 1, iterations));
 
         LOG_INFO("      setting rx rate");
 
@@ -783,9 +783,9 @@ void test_repeated_commands(std::unique_ptr<vxsdr>& radio, unsigned iterations) 
 
         LOG_INFO("      getting rx rate");
 
-        auto rmx = radio->get_rx_rate();
-        if (rmx) {
-            double diff = rmx.value() - rate;
+        auto res = radio->get_rx_rate();
+        if (res) {
+            double diff = res.value() - rate;
             if (abs(diff) < rate_tol_hz) {
                 LOG_INFO("      passed");
             } else {
@@ -807,9 +807,26 @@ void test_capabilities(std::unique_ptr<vxsdr>& radio) {
 
 void test_status(std::unique_ptr<vxsdr>& radio) {
     LOG_INFO("starting status tests");
-        LOG_INFO("   getting status");
+    LOG_INFO("   getting status");
 
     auto sta = radio->device_get_status();
+    if (sta) {
+        LOG_INFO("   passed");
+    } else {
+        LOG_ERROR("  no value returned by device_get_status()");
+        total_errors++;
+    }
+
+    LOG_INFO("   clearing status");
+    auto sent = radio->device_clear_status();
+    if (sent) {
+        LOG_INFO("   passed");
+    } else {
+        LOG_ERROR("  no value returned by device_clear_status()");
+        total_errors++;
+    }
+
+    sta = radio->device_get_status();
     if (sta) {
         LOG_INFO("   passed");
     } else {
@@ -868,7 +885,7 @@ int main(int argc, char* argv[]) {
         test_time(radio);
         test_gain(radio);
         test_stream_state(radio);
-        test_repeated_commands(radio, 1000);
+        test_repeated_commands(radio, 1'000);
         test_status(radio);
         // test_iq(radio);
         // test_capabilities(radio);
@@ -877,7 +894,7 @@ int main(int argc, char* argv[]) {
         return EXIT_INTERNAL_ERROR;
     }
 
-    LOG_INFO(fmt::format("{:s} finished with {:d} erors and {:d} warnings", argv[0], total_errors, total_warnings));
+    LOG_INFO(fmt::format("{:s} finished with {:d} errors and {:d} warnings", argv[0], total_errors, total_warnings));
     if (total_errors > 0) {
         return EXIT_FAILURE;
     }
