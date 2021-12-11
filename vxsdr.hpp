@@ -185,7 +185,7 @@ class vxsdr {
           const net::ip::udp::endpoint& local_receive_endpoint,
           const net::ip::udp::endpoint& device_endpoint,
           const bool nondata_packet_logging = false,
-          const bool set_affinity           = true,
+          const bool set_affinity           = false,
           const unsigned base_cpu_number    = 0,
           const bool set_priority           = true,
           const int base_priority           = 5);
