@@ -63,7 +63,7 @@ void test_hello(std::unique_ptr<vxsdr>& radio) {
             total_errors++;
         }
     }
-
+#ifdef TEST_INCORRECT_SUBDEVICE
     LOG_INFO("   testing return with incorrect subdevice");
     {
         auto result = radio->device_hello(99);
@@ -75,7 +75,7 @@ void test_hello(std::unique_ptr<vxsdr>& radio) {
             LOG_INFO("      passed");
         }
     }
-
+#endif // TEST_INCORRECT_SUBDEVICE
     LOG_INFO("completed hello tests");
 }
 
@@ -820,9 +820,9 @@ int main(int argc, char* argv[]) {
 
     try {
         test_hello(radio);
-        test_time(radio);
         test_freq(radio);
         test_rate(radio);
+        test_time(radio);
         test_gain(radio);
         test_stream_state(radio);
         // test_iq(radio);
