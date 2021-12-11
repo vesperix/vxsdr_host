@@ -222,7 +222,7 @@ void test_rate(std::unique_ptr<vxsdr>& radio, const double rate_tol_hz = 1.0) {
         }
 
         if (rate) {
-            double rmin = rate.value()[0], rmax = rate.value()[1];
+            double rmin = rate->at(0), rmax = rate->at(1);
 
             LOG_INFO("      setting maximum rate");
             bool sent = radio->set_tx_rate(rmax);
@@ -286,7 +286,7 @@ void test_rate(std::unique_ptr<vxsdr>& radio, const double rate_tol_hz = 1.0) {
         }
 
         if (rate) {
-            double rmin = rate.value()[0], rmax = rate.value()[1];
+            double rmin = rate->at(0), rmax = rate->at(1);
 
             LOG_INFO("      setting maximum rate");
             bool sent = radio->set_rx_rate(rmax);
@@ -356,7 +356,7 @@ void test_gain(std::unique_ptr<vxsdr>& radio, const double gain_tol_db = 0.1) {
         }
 
         if (gain) {
-            double rmin = gain.value()[0], rmax = gain.value()[1];
+            double rmin = gain->at(0), rmax = gain->at(1);
 
             LOG_INFO("      setting maximum gain");
             bool sent = radio->set_tx_gain(rmax);
@@ -420,7 +420,7 @@ void test_gain(std::unique_ptr<vxsdr>& radio, const double gain_tol_db = 0.1) {
         }
 
         if (gain) {
-            double rmin = gain.value()[0], rmax = gain.value()[1];
+            double rmin = gain->at(0), rmax = gain->at(1);
 
             LOG_INFO("      setting maximum gain");
             bool sent = radio->set_rx_gain(rmax);
@@ -490,7 +490,7 @@ void test_freq(std::unique_ptr<vxsdr>& radio, const double freq_tol_hz = 1.0) {
         }
 
         if (freq) {
-            double rmin = freq.value()[0], rmax = freq.value()[1];
+            double rmin = freq->at(0), rmax = freq->at(1);
 
             LOG_INFO("      setting maximum freq");
             bool sent = radio->set_tx_freq(rmax);
@@ -554,7 +554,7 @@ void test_freq(std::unique_ptr<vxsdr>& radio, const double freq_tol_hz = 1.0) {
         }
 
         if (freq) {
-            double rmin = freq.value()[0], rmax = freq.value()[1];
+            double rmin = freq->at(0), rmax = freq->at(1);
 
             LOG_INFO("      setting maximum freq");
             bool sent = radio->set_rx_freq(rmax);
@@ -619,7 +619,7 @@ void test_stream_state(std::unique_ptr<vxsdr>& radio) {
 
     LOG_INFO("   testing tx stop");
 
-    if(not radio->tx_stop_now()) {
+    if (not radio->tx_stop_now()) {
         LOG_ERROR("      error stopping tx with tx_stop_now()");
         total_errors++;
     }
@@ -639,7 +639,7 @@ void test_stream_state(std::unique_ptr<vxsdr>& radio) {
 
     LOG_INFO("   testing tx start now until stop");
 
-    if(not radio->tx_start_now_until_stop()) {
+    if (not radio->tx_start_now_until_stop()) {
         LOG_ERROR("      error starting tx with tx_start_now_until_stop()");
         total_errors++;
     }
@@ -657,7 +657,7 @@ void test_stream_state(std::unique_ptr<vxsdr>& radio) {
         total_errors++;
     }
 
-    if(not radio->tx_stop_now()) {
+    if (not radio->tx_stop_now()) {
         LOG_ERROR("      error stopping tx with tx_stop_now()");
         total_errors++;
     }
@@ -666,7 +666,7 @@ void test_stream_state(std::unique_ptr<vxsdr>& radio) {
 
     auto t_start = std::chrono::system_clock::now() + std::chrono::minutes(1);
 
-    if(not radio->tx_start_at_time_until_stop(t_start)) {
+    if (not radio->tx_start_at_time_until_stop(t_start)) {
         LOG_ERROR("      error starting tx with tx_start_at_time_until_stop()");
         total_errors++;
     }
@@ -684,14 +684,14 @@ void test_stream_state(std::unique_ptr<vxsdr>& radio) {
         total_errors++;
     }
 
-    if(not radio->tx_stop_now()) {
+    if (not radio->tx_stop_now()) {
         LOG_ERROR("      error stopping tx with tx_stop_now()");
         total_errors++;
     }
 
     LOG_INFO("   testing rx stop");
 
-    if(not radio->rx_stop_now()) {
+    if (not radio->rx_stop_now()) {
         LOG_ERROR("      error stopping rx with rx_stop_now()");
         total_errors++;
     }
@@ -711,7 +711,7 @@ void test_stream_state(std::unique_ptr<vxsdr>& radio) {
 
     LOG_INFO("   testing rx start now until stop");
 
-    if(not radio->rx_start_now_until_stop()) {
+    if (not radio->rx_start_now_until_stop()) {
         LOG_ERROR("      error starting rx with rx_start_now_until_stop()");
         total_errors++;
     }
@@ -729,7 +729,7 @@ void test_stream_state(std::unique_ptr<vxsdr>& radio) {
         total_errors++;
     }
 
-    if(not radio->rx_stop_now()) {
+    if (not radio->rx_stop_now()) {
         LOG_ERROR("      error stopping rx with rx_stop_now()");
         total_errors++;
     }
@@ -738,7 +738,7 @@ void test_stream_state(std::unique_ptr<vxsdr>& radio) {
 
     t_start = std::chrono::system_clock::now() + std::chrono::minutes(1);
 
-    if(not radio->rx_start_at_time_until_stop(t_start)) {
+    if (not radio->rx_start_at_time_until_stop(t_start)) {
         LOG_ERROR("      error starting rx with rx_start_at_time_until_stop()");
         total_errors++;
     }
@@ -756,13 +756,47 @@ void test_stream_state(std::unique_ptr<vxsdr>& radio) {
         total_errors++;
     }
 
-    if(not radio->rx_stop_now()) {
+    if (not radio->rx_stop_now()) {
         LOG_ERROR("      error stopping rx with rx_stop_now()");
         total_errors++;
     }
 
 
     LOG_INFO("completed stream state tests");
+}
+
+void test_repeated_commands(std::unique_ptr<vxsdr>& radio, unsigned iterations) {
+
+    const double rate = 160e6, rate_tol_hz = 1.0;
+
+    for (unsigned i = 0; i < iterations; i++) {
+        LOG_INFO(fmt::format("   repeated commands iteration {:d} of {d}", i + 1, iterations));
+
+        LOG_INFO("      setting rx rate");
+
+        bool sent = radio->set_rx_rate(rate);
+
+        if (not sent) {
+            LOG_ERROR("     false returned by set_rx_rate()");
+            total_errors++;
+        }
+
+        LOG_INFO("      getting rx rate");
+
+        auto rmx = radio->get_rx_rate();
+        if (rmx) {
+            double diff = rmx.value() - rate;
+            if (abs(diff) < rate_tol_hz) {
+                LOG_INFO("      passed");
+            } else {
+                LOG_ERROR("      incorrect value returned by get_rx_rate()");
+                total_errors++;
+            }
+        } else {
+            LOG_ERROR("     no value returned by get_rx_rate()");
+            total_errors++;
+        }
+    }
 }
 
 void test_capabilities(std::unique_ptr<vxsdr>& radio) {
@@ -773,6 +807,15 @@ void test_capabilities(std::unique_ptr<vxsdr>& radio) {
 
 void test_status(std::unique_ptr<vxsdr>& radio) {
     LOG_INFO("starting status tests");
+        LOG_INFO("   getting status");
+
+    auto sta = radio->device_get_status();
+    if (sta) {
+        LOG_INFO("   passed");
+    } else {
+        LOG_ERROR("  no value returned by device_get_status()");
+        total_errors++;
+    }
 
     LOG_INFO("completed status tests");
 }
@@ -825,8 +868,9 @@ int main(int argc, char* argv[]) {
         test_time(radio);
         test_gain(radio);
         test_stream_state(radio);
+        test_repeated_commands(radio, 1000);
+        test_status(radio);
         // test_iq(radio);
-        // test_status(radio);
         // test_capabilities(radio);
     } catch (std::exception& e) {
         LOG_FATAL(fmt::format("testing exception caught: {:s}", e.what()));
