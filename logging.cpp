@@ -14,15 +14,6 @@ void log_init(const std::string& logfilename) {
     spdlog::register_logger(multi_logger);
     // auto-flush on errors or more severe events
     multi_logger->flush_on(spdlog::level::err);
-
-#ifdef VXSDR_TESTING
-    auto tlog = std::make_shared<spdlog::sinks::basic_file_sink_mt>(logfilename + ".test");
-    tlog->set_pattern("[%Y-%m-%d %T.%f] [%t] [%L] %v");
-    spdlog::sinks_init_list test_list = {clog, tlog};
-    auto test_logger = std::make_shared<spdlog::logger>("test", test_list.begin(), test_list.end());
-    spdlog::register_logger(test_logger);
-#endif // VXSDR_TESTING
-
 }
 
 void log_close() {

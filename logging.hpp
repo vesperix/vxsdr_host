@@ -30,14 +30,6 @@
 // what level to use for packet logs
 #define LOG_PACKET(...) SPDLOG_LOGGER_INFO(spdlog::get("multi"), __VA_ARGS__)
 
-// logs for unit testing
-#ifdef VXSDR_TESTING
-#define LOG_TEST_INFO(...)    SPDLOG_LOGGER_INFO(spdlog::get("test"), __VA_ARGS__)
-#define LOG_TEST_ERROR(...)   SPDLOG_LOGGER_ERROR(spdlog::get("test"), __VA_ARGS__)
-#endif // VXSDR_TESTING
-
-
-
 void log_init(const std::string& logfilename);
 void log_close();
 void log_set_level(const int level);
