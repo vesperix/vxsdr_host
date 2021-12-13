@@ -74,6 +74,8 @@ int main(int argc, char* argv[]) {
         }
         filename.append(vm["suffix"].as<std::string>());
 
+        LOG_INFO(fmt::format("output file {:s}", filename));
+
         LOG_DEBUG("getting radio time");
         auto t1 = radio->device_get_time_now();
         if (t1.has_value()) {

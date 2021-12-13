@@ -9,11 +9,12 @@ void log_init(const std::string& logfilename) {
 
     spdlog::sinks_init_list sink_list = {flog, clog};
     auto multi_logger = std::make_shared<spdlog::logger>("multi", sink_list.begin(), sink_list.end());
-    multi_logger->set_level(spdlog::level::debug);
     multi_logger->set_pattern("[%Y-%m-%d %T.%f] [%t] [%L] %v");
     spdlog::register_logger(multi_logger);
     // auto-flush on errors or more severe events
     multi_logger->flush_on(spdlog::level::err);
+    // set the default level here
+    spdlog::get("multi")->set_level(spdlog::level::info);
 }
 
 void log_close() {

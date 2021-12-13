@@ -760,7 +760,7 @@ bool vxsdr::tx_stop_now(const uint8_t subdev, const uint8_t flags) {
     if (vxsdr::tx_stream_state == STREAM_ERROR) {
         LOG_ERROR(fmt::format("tx stream state is {:s} in tx_stop_now()", vxsdr::stream_state_to_string(vxsdr::tx_stream_state)));
     } else if(vxsdr::tx_stream_state == STREAM_STOPPED) {
-        LOG_INFO(fmt::format("tx stream state is {:s} in tx_stop_now()", vxsdr::stream_state_to_string(vxsdr::tx_stream_state)));
+        LOG_DEBUG(fmt::format("tx stream state is {:s} in tx_stop_now()", vxsdr::stream_state_to_string(vxsdr::tx_stream_state)));
     }
     // send a stop anyway, even if we think the state is wrong
     header_only_packet p;
@@ -777,7 +777,7 @@ bool vxsdr::rx_stop_now(const uint8_t subdev, const uint8_t flags) {
     if (vxsdr::rx_stream_state == STREAM_ERROR) {
         LOG_ERROR(fmt::format("rx stream state is {:s} in rx_stop_now()", vxsdr::stream_state_to_string(vxsdr::rx_stream_state)));
     } else if(vxsdr::rx_stream_state == STREAM_STOPPED) {
-        LOG_INFO(fmt::format("rx stream state is {:s} in rx_stop_now()", vxsdr::stream_state_to_string(vxsdr::rx_stream_state)));
+        LOG_DEBUG(fmt::format("rx stream state is {:s} in rx_stop_now()", vxsdr::stream_state_to_string(vxsdr::rx_stream_state)));
     }
     // send a stop anyway, even if we think the state is wrong
     header_only_packet p;
@@ -1583,6 +1583,7 @@ bool vxsdr::reset_rx_stream(const uint64_t n_samples_desired) {
     vxsdr::desired_rx_stream_samples =  n_samples_desired;
     vxsdr::sequence_errors_current_stream = 0;
     vxsdr::samples_received_current_stream = 0;
+    vxsdr::rx_data_queue.reset();
     return true;
 }
 
@@ -1590,6 +1591,7 @@ bool vxsdr::reset_tx_stream(const uint64_t n_samples_desired) {
     vxsdr::desired_tx_stream_samples =  n_samples_desired;
     vxsdr::send_errors_current_stream = 0;
     vxsdr::samples_sent_current_stream = 0;
+    vxsdr::tx_data_queue.reset();
     return true;
 }
 
