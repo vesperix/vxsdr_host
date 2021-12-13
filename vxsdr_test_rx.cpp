@@ -86,9 +86,8 @@ int main(int argc, char* argv[]) {
         LOG_INFO(fmt::format("using rate      {:.5e}", radio->get_rx_rate().value_or(-1)));
         LOG_INFO(fmt::format("using rx_gain   {:.1f}", radio->get_rx_gain().value_or(-1)));
 
-        // radio->rx_start_now_for_n_samples(n_samp);
-        if (not radio->rx_start_now_until_stop()) {
-            LOG_ERROR("rx_start_now_until_stop() failed");
+        if (not radio->rx_start_now_for_n_samples(n_samp)) {
+            LOG_ERROR("rx_start_now_for_n_samples() failed");
         }
         size_t n_written = radio->check_rx_data_sequence_only(n_samp);
         if (not radio->rx_stop_now()) {
