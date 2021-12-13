@@ -74,35 +74,12 @@ int main(int argc, char* argv[]) {
         }
         filename.append(vm["suffix"].as<std::string>());
 
-        LOG_DEBUG("sleeping for 1 s");
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-        LOG_DEBUG("getting time once");
+        LOG_DEBUG("getting radio time");
         auto t1 = radio->device_get_time_now();
         if (t1.has_value()) {
-            LOG_INFO(fmt::format("t1:           {:s}", format_time(t1.value())));
+            LOG_INFO(fmt::format("radio time: {:s}", format_time(t1.value())));
         } else {
-            LOG_INFO("t1 has no value");
-        }
-        LOG_DEBUG("sleeping for 1 s");
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-        LOG_DEBUG("getting time again");
-        auto t2 = radio->device_get_time_now();
-        if (t2.has_value()) {
-            LOG_INFO(fmt::format("t2:           {:s}", format_time(t2.value())));
-        } else {
-            LOG_INFO("t2 has no value");
-        }
-
-        LOG_DEBUG("setting time to system clock");
-        if (not radio->device_set_time_now(std::chrono::system_clock::now())) {
-            LOG_ERROR("device_set_time_now() failed");
-        }
-        LOG_DEBUG("getting time again");
-        auto t3 = radio->device_get_time_now();
-        if (t3.has_value()) {
-            LOG_INFO(fmt::format("t3:           {:s}", format_time(t3.value())));
-        } else {
-            LOG_INFO("t3 has no value");
+            LOG_ERROR("unable to get radio time");
         }
 
         LOG_INFO(fmt::format("using frequency {:.5e}", radio->get_rx_freq().value_or(-1)));

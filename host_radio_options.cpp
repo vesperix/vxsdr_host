@@ -139,7 +139,7 @@ int set_common_options(boost::program_options::variables_map& vm, std::unique_pt
                 LOG_ERROR("error in set_common_options: device_set_time_next_pps");
             }
             // wait until time is set
-            std::this_thread::sleep_until(t_set + std::chrono::milliseconds(10));
+            std::this_thread::sleep_until(t_set + std::chrono::milliseconds(100));
         } else {
             LOG_FATAL(fmt::format("Error: unknown option value for --time_source: {:s}", vm["time_source"].as<std::string>()));
             exit(EXIT_CMD_LINE_ERROR);
