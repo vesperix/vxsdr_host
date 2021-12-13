@@ -19,7 +19,7 @@ COMMON_SRC = packet_proc.cpp utility.cpp logging.cpp compile_checks.cpp
 LIB_SRC = vxsdr.cpp vxsdr_udp.cpp
 LIB_LDFLAGS = -lpthread
 
-PROGS = vxsdr_test vxsdr_test_rx vxsdr_test_commands vxsdr_test_atmosense_rx
+PROGS = vxsdr_rx vxsdr_test vxsdr_test_rx vxsdr_test_commands vxsdr_test_atmosense_rx
 
 LIBS = libvxsdr.so
 
@@ -32,6 +32,9 @@ docs: $(DOCS)
 .PHONY: all docs
 
 vxsdr_test: vxsdr_test.cpp host_radio_options.cpp $(COMMON_INCLUDES) $(COMMON_SRC) #libvxsdr.so
+	$(CXX) $(CXX_FLAGS) -o $@ $< host_radio_options.cpp $(COMMON_SRC) $(LIB_SRC) $(CXX_LDFLAGS) #-L. -lvxsdr
+
+vxsdr_rx: vxsdr_rx.cpp host_radio_options.cpp $(COMMON_INCLUDES) $(COMMON_SRC) #libvxsdr.so
 	$(CXX) $(CXX_FLAGS) -o $@ $< host_radio_options.cpp $(COMMON_SRC) $(LIB_SRC) $(CXX_LDFLAGS) #-L. -lvxsdr
 
 vxsdr_test_rx: vxsdr_test_rx.cpp host_radio_options.cpp $(COMMON_INCLUDES) $(COMMON_SRC) #libvxsdr.so
