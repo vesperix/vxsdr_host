@@ -768,7 +768,7 @@ void test_stream_state(std::unique_ptr<vxsdr>& radio) {
 
 void test_repeated_commands(std::unique_ptr<vxsdr>& radio, const unsigned iterations) {
 
-    const double rate = 160e6, rate_tol_hz = 1.0, time_tol_sec = 3e-3;;
+    const double rate = 160e6, rate_tol_hz = 1.0, time_tol_sec = 2e-2;;
 
     for (unsigned i = 0; i < iterations; i++) {
         LOG_INFO(fmt::format("TESTING:   repeated commands iteration {:d} of {:d}", i + 1, iterations));
