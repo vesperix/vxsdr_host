@@ -206,7 +206,8 @@ size_t vxsdr::write_rx_data(std::ofstream& out_stream, const size_t n_desired, c
         write_size_samples = MAX_DATA_LENGTH_SAMPLES;
     }
 
-    std::vector<std::complex<int16_t>> buffer(2 * write_size_samples);
+    std::vector<std::complex<int16_t>> buffer;
+    buffer.reserve(2 * write_size_samples);
 
     LOG_INFO(fmt::format("receiving {:d} samples", n_desired));
 
@@ -1580,18 +1581,28 @@ std::string vxsdr::error_to_string(const uint32_t reason) {
 }
 
 bool vxsdr::reset_rx_stream(const uint64_t n_samples_desired) {
+    LOG_DEBUG("reset rx stream started");
     vxsdr::desired_rx_stream_samples =  n_samples_desired;
     vxsdr::sequence_errors_current_stream = 0;
     vxsdr::samples_received_current_stream = 0;
     vxsdr::rx_data_queue.reset();
+    if(rx_data_queue.read_available() > 0) {
+        LOG_ERROR("rx data queue should be empty");
+    }
+    LOG_DEBUG("reset rx stream finished");
     return true;
 }
 
 bool vxsdr::reset_tx_stream(const uint64_t n_samples_desired) {
+    LOG_DEBUG("reset tx stream started");
     vxsdr::desired_tx_stream_samples =  n_samples_desired;
     vxsdr::send_errors_current_stream = 0;
     vxsdr::samples_sent_current_stream = 0;
     vxsdr::tx_data_queue.reset();
+    if(tx_data_queue.read_available() > 0) {
+        LOG_ERROR("tx data queue should be empty");
+    }
+    LOG_DEBUG("reset tx stream finished");
     return true;
 }
 
