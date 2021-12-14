@@ -260,9 +260,7 @@ size_t vxsdr::write_rx_data(std::ofstream& out_stream, const size_t n_desired, c
                 n_written += n_to_write;
                 // copy anything that hasn't been written to the front of the buffer
                 size_t n_to_copy = std::min(n_desired - n_written, buffer.size() - n_to_write);
-                for (size_t i = 0; i < n_to_copy; i++) {
-                    buffer[i] = buffer[n_to_write + i];
-                }
+                std::copy_n(buffer.begin() + n_to_write, n_to_copy, buffer.begin());
                 buffer.resize(n_to_copy);
             }
 
