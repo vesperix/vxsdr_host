@@ -66,17 +66,6 @@ int main(int argc, char* argv[]) {
 
         size_t n_samp        = std::llround(vm["duration"].as<double>() * vm["rate"].as<double>());
 
-        std::string filename = vm["prefix"].as<std::string>();
-        if (vm.count("no_filename_time") > 0) {
-            filename.append(make_filename_no_time(vm["freq"].as<double>(), vm["rate"].as<double>()));
-        } else {
-            filename.append(make_filename_time(std::chrono::system_clock::now(), vm["freq"].as<double>(), vm["rate"].as<double>()));
-        }
-        filename.append(vm["suffix"].as<std::string>());
-
-        LOG_INFO(fmt::format("output file {:s}", filename));
-
-        LOG_DEBUG("getting radio time");
         auto t1 = radio->device_get_time_now();
         if (t1.has_value()) {
             LOG_INFO(fmt::format("radio time: {:s}", format_time(t1.value())));
@@ -84,13 +73,27 @@ int main(int argc, char* argv[]) {
             LOG_ERROR("unable to get radio time");
         }
 
+        auto t_start = std::chrono::ceil<std::chrono::seconds>(std::chrono::system_clock::now()) +
+                std::chrono::seconds(2);
+        LOG_INFO(fmt::format("start time: {:s}", format_time(t_start)));
+
+        std::string filename = vm["prefix"].as<std::string>();
+        if (vm.count("no_filename_time") > 0) {
+            filename.append(make_filename_no_time(vm["freq"].as<double>(), vm["rate"].as<double>()));
+        } else {
+            filename.append(make_filename_time(t_start, vm["freq"].as<double>(), vm["rate"].as<double>()));
+        }
+        filename.append(vm["suffix"].as<std::string>());
+
+        LOG_INFO(fmt::format("output file {:s}", filename));
+
         LOG_INFO(fmt::format("using frequency {:.5e}", radio->get_rx_freq().value_or(-1)));
         LOG_INFO(fmt::format("using rate      {:.5e}", radio->get_rx_rate().value_or(-1)));
         LOG_INFO(fmt::format("using rx_gain   {:.1f}", radio->get_rx_gain().value_or(-1)));
 
         std::ofstream outfile(filename, std::ios_base::binary | std::ios_base::out);
-        if (not radio->rx_start_now_for_n_samples(n_samp)) {
-            LOG_ERROR("rx_start_now_for_n_samples() failed");
+        if (not radio->rx_start_at_time_for_n_samples(t_start, n_samp)) {
+            LOG_ERROR("rx_start_at_time_for_n_samples() failed");
         }
         size_t n_written = radio->write_rx_data(outfile, n_samp);
         outfile.close();

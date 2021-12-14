@@ -256,12 +256,12 @@ void log_packet_info(packet& packet, const int direction) {
                                packet.hdr.packet_type, packet.hdr.command, packet.hdr.flags, packet.hdr.target_subdevice,
                                packet.hdr.packet_size, packet.hdr.sequence_counter));
     } else if (direction > 0) {
-        LOG_PACKET(fmt::format("PACKET SENT: type 0x{:02X} cmd 0x{:02X} flags 0x{:02X} subdev {:d} size {:d} seq {:d}",
+        LOG_PACKET(fmt::format("SENT: type 0x{:02X} cmd 0x{:02X} flags 0x{:02X} subdev {:d} size {:d} seq {:d}",
                                packet.hdr.packet_type, packet.hdr.command, packet.hdr.flags, packet.hdr.target_subdevice,
                                packet.hdr.packet_size, packet.hdr.sequence_counter));
     } else {
         LOG_PACKET(
-            fmt::format("PACKET RECEIVED: type 0x{:02X} cmd 0x{:02X} flags 0x{:02X} subdev {:d} size {:d} seq {:d}",
+            fmt::format("RECEIVED: type 0x{:02X} cmd 0x{:02X} flags 0x{:02X} subdev {:d} size {:d} seq {:d}",
                         packet.hdr.packet_type, packet.hdr.command, packet.hdr.flags, packet.hdr.target_subdevice,
                         packet.hdr.packet_size, packet.hdr.sequence_counter));
     }
