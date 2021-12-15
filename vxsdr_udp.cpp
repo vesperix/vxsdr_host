@@ -292,10 +292,14 @@ void vxsdr::start_receive() {
     }
     LOG_INFO(fmt::format("   {:12d} samples received", vxsdr::samples_received));
     LOG_INFO(fmt::format("   {:12d} bytes received", vxsdr::bytes_received));
-    LOG_INFO(fmt::format("   {:12d} sequence errors", vxsdr::sequence_errors));
+    if(sequence_errors == 0) {
+        LOG_INFO(fmt::format("   {:12d} sequence errors", sequence_errors));
+    } else {
+        LOG_ERROR(fmt::format("   {:12d} sequence errors", sequence_errors));
+    }
 #ifdef VXSDR_SEQ_ERR_DIAG
     for (unsigned i = 0; i < vxsdr::seq_error_times.size(); i++) {
-        LOG_INFO(fmt::format(" {:30s} {:20s} {:8d} {:8d}", format_time(vxsdr::seq_error_times[i]),
+        LOG_DEBUG(fmt::format(" {:30s} {:20s} {:8d} {:8d}", format_time(vxsdr::seq_error_times[i]),
                              packet_type_to_name(vxsdr::seq_error_packet_type[i]), vxsdr::seq_error_counter[i],
                              vxsdr::seq_error_expected[i]));
     }
