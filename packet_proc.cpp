@@ -340,7 +340,44 @@ void log_packet_info(packet& packet, const int direction) {
             }
             break;
         case PACKET_TYPE_RX_RADIO_CMD:
-            LOG_PACKET(fmt::format("RX_RADIO_CMD: {:s}", radio_cmd_to_name(packet.hdr.command)));
+            switch (packet.hdr.command) {
+                case RADIO_CMD_START_NOW_FOR_N_SAMPLES: {
+                    LOG_PACKET(fmt::format("RX_RADIO_CMD: START_NOW_FOR_N_SAMPLES"));
+                    auto* tr = reinterpret_cast<cmd_or_rsp_packet_samples*>(&packet);
+                    LOG_PACKET(fmt::format("   samples                   = {:d}", tr->n_samples));
+                } break;
+                case RADIO_CMD_START_AT_TIME_UNTIL_STOP: {
+                    auto* tr = reinterpret_cast<cmd_or_rsp_packet_time*>(&packet);
+                    LOG_PACKET(fmt::format("RX_RADIO_CMD: START_AT_TIME_UNTIL_STOP"));
+                    LOG_PACKET(fmt::format("   seconds                   = {:d}", (uint32_t)(tr->time.seconds)));
+                    LOG_PACKET(fmt::format("   nanoseconds               = {:09d}", (uint32_t)(tr->time.nanoseconds)));
+                } break;
+                case RADIO_CMD_START_AT_TIME_FOR_N_SAMPLES: {
+                    LOG_PACKET(fmt::format("RX_RADIO_CMD: START_AT_TIME_FOR_N_SAMPLES"));
+                    auto* tr = reinterpret_cast<cmd_or_rsp_packet_time_samples*>(&packet);
+                    LOG_PACKET(fmt::format("   seconds                   = {:d}", (uint32_t)(tr->time.seconds)));
+                    LOG_PACKET(fmt::format("   nanoseconds               = {:09d}", (uint32_t)(tr->time.nanoseconds)));
+                    LOG_PACKET(fmt::format("   samples                   = {:d}", tr->n_samples));
+                } break;
+                case RADIO_CMD_SET_RF_FREQ: {
+                    LOG_PACKET(fmt::format("RX_RADIO_CMD: SET_RF_FREQ"));
+                    auto* fr = reinterpret_cast<one_double_packet*>(&packet);
+                    LOG_PACKET(fmt::format("   freq                      = {:.5e}", fr->value1));
+                } break;
+                case RADIO_CMD_SET_RF_GAIN: {
+                    LOG_PACKET(fmt::format("RX_RADIO_CMD: SET_RF_GAIN"));
+                    auto* gr = reinterpret_cast<one_double_packet*>(&packet);
+                    LOG_PACKET(fmt::format("   gain                      = {:.2f}", gr->value1));
+                } break;
+                case RADIO_CMD_SET_SAMPLE_RATE: {
+                    LOG_PACKET(fmt::format("RX_RADIO_CMD: SET_SAMPLE_RATE"));
+                    auto* sr = reinterpret_cast<one_double_packet*>(&packet);
+                    LOG_PACKET(fmt::format("   rate                      = {:.5e}", sr->value1));
+                } break;
+                default:
+                    LOG_PACKET(fmt::format("RX_RADIO_CMD: {:s}", radio_cmd_to_name(packet.hdr.command)));
+                    break;
+            }
             break;
         case PACKET_TYPE_RX_RADIO_CMD_RSP:
             switch (packet.hdr.command) {
@@ -386,7 +423,44 @@ void log_packet_info(packet& packet, const int direction) {
             LOG_PACKET(fmt::format("RX_RADIO_CMD_ACK: {:s}", radio_cmd_to_name(packet.hdr.command)));
             break;
         case PACKET_TYPE_TX_RADIO_CMD:
-            LOG_PACKET(fmt::format("TX_RADIO_CMD: {:s}", radio_cmd_to_name(packet.hdr.command)));
+            switch (packet.hdr.command) {
+                case RADIO_CMD_START_NOW_FOR_N_SAMPLES: {
+                    LOG_PACKET(fmt::format("TX_RADIO_CMD: START_NOW_FOR_N_SAMPLES"));
+                    auto* tr = reinterpret_cast<cmd_or_rsp_packet_samples*>(&packet);
+                    LOG_PACKET(fmt::format("   samples                   = {:d}", tr->n_samples));
+                } break;
+                case RADIO_CMD_START_AT_TIME_UNTIL_STOP: {
+                    auto* tr = reinterpret_cast<cmd_or_rsp_packet_time*>(&packet);
+                    LOG_PACKET(fmt::format("TX_RADIO_CMD: START_AT_TIME_UNTIL_STOP"));
+                    LOG_PACKET(fmt::format("   seconds                   = {:d}", (uint32_t)(tr->time.seconds)));
+                    LOG_PACKET(fmt::format("   nanoseconds               = {:09d}", (uint32_t)(tr->time.nanoseconds)));
+                } break;
+                case RADIO_CMD_START_AT_TIME_FOR_N_SAMPLES: {
+                    LOG_PACKET(fmt::format("TX_RADIO_CMD: START_AT_TIME_FOR_N_SAMPLES"));
+                    auto* tr = reinterpret_cast<cmd_or_rsp_packet_time_samples*>(&packet);
+                    LOG_PACKET(fmt::format("   seconds                   = {:d}", (uint32_t)(tr->time.seconds)));
+                    LOG_PACKET(fmt::format("   nanoseconds               = {:09d}", (uint32_t)(tr->time.nanoseconds)));
+                    LOG_PACKET(fmt::format("   samples                   = {:d}", tr->n_samples));
+                } break;
+                case RADIO_CMD_SET_RF_FREQ: {
+                    LOG_PACKET(fmt::format("TX_RADIO_CMD: SET_RF_FREQ"));
+                    auto* fr = reinterpret_cast<one_double_packet*>(&packet);
+                    LOG_PACKET(fmt::format("   freq                      = {:.5e}", fr->value1));
+                } break;
+                case RADIO_CMD_SET_RF_GAIN: {
+                    LOG_PACKET(fmt::format("TX_RADIO_CMD: SET_RF_GAIN"));
+                    auto* gr = reinterpret_cast<one_double_packet*>(&packet);
+                    LOG_PACKET(fmt::format("   gain                      = {:.2f}", gr->value1));
+                } break;
+                case RADIO_CMD_SET_SAMPLE_RATE: {
+                    LOG_PACKET(fmt::format("TX_RADIO_CMD: SET_SAMPLE_RATE"));
+                    auto* sr = reinterpret_cast<one_double_packet*>(&packet);
+                    LOG_PACKET(fmt::format("   rate                      = {:.5e}", sr->value1));
+                } break;
+                default:
+                    LOG_PACKET(fmt::format("TX_RADIO_CMD: {:s}", radio_cmd_to_name(packet.hdr.command)));
+                    break;
+            }
             break;
         case PACKET_TYPE_TX_RADIO_CMD_RSP:
             switch (packet.hdr.command) {
