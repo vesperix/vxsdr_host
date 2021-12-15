@@ -262,9 +262,12 @@ void vxsdr::start_receive() {
 
                 // DEVICE_CMD_RSP handled above
                 case PACKET_TYPE_ASYNC_MSG: {
-                    // FIXME: do whatever is needed to notify or shut down!!!
-                    auto* p = reinterpret_cast<async_msg_queue_element*>(&recv_buffer);
-                    vxsdr::async_msg_queue.bounded_push(*p);
+                    // if the first packet received is an out of sequence async msg, ignore it as an expected response
+                    if(vxsdr::packets_received > 1 or recv_buffer.hdr.command != ASYNC_OUT_OF_SEQUENCE) {
+                        // FIXME: do whatever is needed to notify or shut down!!!
+                        auto* p = reinterpret_cast<async_msg_queue_element*>(&recv_buffer);
+                        vxsdr::async_msg_queue.bounded_push(*p);
+                    }
                 } break;
 
                 // packet types that should never show up at the host are ignored
