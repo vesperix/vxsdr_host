@@ -27,31 +27,36 @@ extern "C" void sig_int_handler(int /* sig_num */) {
 void add_custom_common_options(boost::program_options::options_description& desc) {
     desc.add_options()
         //clang-format off
-        ("help", "help message")("config_file", boost::program_options::value<std::string>(), "configuration file name")(
-            "prefix", boost::program_options::value<std::string>()->default_value("test-"), "prefix for the output files")
+        ("help", "help message")("config_file", boost::program_options::value<std::string>(), "configuration file name")
+        ("prefix", boost::program_options::value<std::string>()->default_value("test-"), "prefix for the output files")
 #ifdef USE_FLAC
-            ("suffix", boost::program_options::value<std::string>()->default_value(".flac"), "suffix for the output files")
+        ("suffix", boost::program_options::value<std::string>()->default_value(".flac"), "suffix for the output files")
 #else
-            ("suffix", boost::program_options::value<std::string>()->default_value(".dat"), "suffix for the output files")
+        ("suffix", boost::program_options::value<std::string>()->default_value(".dat"), "suffix for the output files")
 #endif  // USE_FLAC
-                ("duration", boost::program_options::value<double>()->default_value(1.0), "duration in seconds")(
-                    "no_filename_time", "do not include time in output filenames")(
-                    "clock_source", boost::program_options::value<std::string>()->default_value("internal"),
-                    "source for frequency reference")("time_source",
-                                                      boost::program_options::value<std::string>()->default_value("system"),
-                                                      "source for PPS reference")(
-                    "startup_delay", boost::program_options::value<unsigned>()->default_value(3), "startup delay in seconds")(
-                    "rate", boost::program_options::value<double>()->default_value(80e6), "RX sample rate in Hz")(
-                    "demod_freqs", boost::program_options::value<std::string>()->required(),
-                    "comma-separated list of demodulation frequencies in Hz")(
-                    "filename_format", boost::program_options::value<std::string>()->default_value("{:.4e}-khz-ch-{:02d}"),
-                    "fmt::format filename format with entries for demod frequency and channel number")(
-                    "cic_r", boost::program_options::value<unsigned>()->default_value(125), "CIC filter rate reduction factor")(
-                    "verbose", boost::program_options::value<int>(),
-                    "log level (6 = trace, 5 = debug, 4 = info, 3 = warning, 2 = error, 1 = fatal, 0 = none)")(
-                    "quit_on_error", boost::program_options::value<bool>()->default_value(true), "quit on errors")(
-                    "log_packets", boost::program_options::value<bool>()->default_value(false),
-                    "log command, response, and ack packets")
+        ("duration", boost::program_options::value<double>()->default_value(1.0), "duration in seconds")
+        ("no_filename_time", "do not include time in output filenames")
+        ("clock_source", boost::program_options::value<std::string>()->default_value("internal"), "source for frequency reference")
+        ("time_source", boost::program_options::value<std::string>()->default_value("system"), "source for PPS reference")
+        ("startup_delay", boost::program_options::value<unsigned>()->default_value(3), "startup delay in seconds")
+        ("rate", boost::program_options::value<double>()->default_value(80e6), "RX sample rate in Hz")
+        ("demod_freqs", boost::program_options::value<std::string>()->required(),
+                "comma-separated list of demodulation frequencies in Hz")
+        ("filename_format", boost::program_options::value<std::string>()->default_value("{:.4e}-khz-ch-{:02d}"),
+                "fmt::format filename format with entries for demod frequency and channel number")
+        ("cic_r", boost::program_options::value<unsigned>()->default_value(125), "CIC filter rate reduction factor")
+        ("verbose", boost::program_options::value<int>(),
+                "log level (6 = trace, 5 = debug, 4 = info, 3 = warning, 2 = error, 1 = fatal, 0 = none)")
+        ("quit_on_error", boost::program_options::value<bool>()->default_value(true), "quit on errors")
+        ("log_packets", boost::program_options::value<bool>()->default_value(false), "log command, response, and ack packets")
+        ("set_affinity", boost::program_options::value<bool>()->default_value(false),
+                 "set CPU affinity for UDP handler threads")
+        ("affinity_base_cpu", boost::program_options::value<unsigned>()->default_value(0),
+                "lowest CPU number to use for UDP handler threads when affinity is used")
+        ("set_priority", boost::program_options::value<bool>()->default_value(true),
+                "set realtime priority for UDP handler threads")
+        ("thread_priority", boost::program_options::value<int>()->default_value(5),
+                "priority to use for UDP handler threads when affinity is used")
         //clang-format on
         ;
 }

@@ -768,37 +768,10 @@ void test_stream_state(std::unique_ptr<vxsdr>& radio) {
 
 void test_repeated_commands(std::unique_ptr<vxsdr>& radio, const unsigned iterations) {
 
-    const double rate = 160e6, rate_tol_hz = 1.0, time_tol_sec = 3e-3;;
+    const double rate = 80e6, rate_tol_hz = 1.0;
 
     for (unsigned i = 0; i < iterations; i++) {
         LOG_INFO(fmt::format("TESTING:   repeated commands iteration {:d} of {:d}", i + 1, iterations));
-
-        LOG_INFO("TESTING:      testing set_time_now() and get_time_now() with time point");
-        {
-            auto tp_set = std::chrono::system_clock::now();
-            bool sent   = radio->device_set_time_now(tp_set);
-
-            if (not sent) {
-                LOG_ERROR("TESTING:         false returned by device_set_time_now()");
-                total_errors++;
-            }
-
-            std::this_thread::sleep_for(std::chrono::milliseconds(10));
-
-            auto result = radio->device_get_time_now();
-            if (result) {
-                std::chrono::duration<double> diff = result.value() - tp_set;
-                if (fabs(0.01 - diff.count()) < time_tol_sec) {
-                    LOG_INFO("TESTING:          passed with time_point");
-                } else {
-                    LOG_ERROR(fmt::format("TESTING:        time difference is too large: {:e}", diff.count()));
-                    total_errors++;
-                }
-            } else {
-                LOG_ERROR("TESTING:         no value returned by device_get_time_now()");
-                total_errors++;
-            }
-        }
 
         LOG_INFO("TESTING:       setting rx rate");
 
@@ -824,6 +797,19 @@ void test_repeated_commands(std::unique_ptr<vxsdr>& radio, const unsigned iterat
             LOG_ERROR("TESTING:      no value returned by get_rx_rate()");
             total_errors++;
         }
+
+        LOG_INFO("TESTING:      testing get_time_now() with time point");
+        {
+            auto result = radio->device_get_time_now();
+            if (result) {
+                LOG_INFO("TESTING:          passed with time_point");
+
+            } else {
+                LOG_ERROR("TESTING:         no value returned by device_get_time_now()");
+                total_errors++;
+            }
+        }
+
     }
 }
 
