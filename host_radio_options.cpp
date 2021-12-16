@@ -41,7 +41,8 @@ void add_common_options(boost::program_options::options_description& desc) {
         ("duration", boost::program_options::value<double>()->default_value(1.0), "duration in seconds")
         ("no_filename_time", "do not include time in output filenames")
         ("clock_source", boost::program_options::value<std::string>(), "source for frequency reference")
-        ("time_source", boost::program_options::value<std::string>(), "source for PPS reference")
+        ("time_source", boost::program_options::value<std::string>()->default_value("system"),
+                 "source for time reference [system or pps]")
         ("rate", boost::program_options::value<double>()->required(), "TX/RX sample rate in Hz")
         ("freq", boost::program_options::value<double>()->required(), "TX/RX center frequency in Hz")
         ("verbose_level", boost::program_options::value<int>(),
@@ -141,7 +142,8 @@ int set_common_options(boost::program_options::variables_map& vm, std::unique_pt
             // wait until time is set
             std::this_thread::sleep_until(t_set + std::chrono::milliseconds(100));
         } else {
-            LOG_FATAL(fmt::format("Error: unknown option value for --time_source: {:s}", vm["time_source"].as<std::string>()));
+            LOG_FATAL(fmt::format("Error: unknown option value for --time_source: {:s} (allowed values are pps or system",
+                     vm["time_source"].as<std::string>()));
             exit(EXIT_CMD_LINE_ERROR);
         }
     }
