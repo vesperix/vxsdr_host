@@ -126,12 +126,13 @@ int set_common_options(boost::program_options::variables_map& vm, std::unique_pt
             }
         } else if (ts_str.compare("pps") == 0) {
             std::chrono::time_point<std::chrono::system_clock> t_set;
+            std::chrono::milliseconds msecs;
             // wait until the system clock is in between seconds
             do {
-                std::this_thread::sleep_for(std::chrono::miliseconds(10));
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
                 auto t     = std::chrono::system_clock::now();
                 auto secs  = std::chrono::floor<std::chrono::seconds>(t);
-                auto msecs = std::chrono::time_point_cast<std::chrono::milliseconds>(t) -
+                msecs = std::chrono::time_point_cast<std::chrono::milliseconds>(t) -
                              std::chrono::time_point_cast<std::chrono::milliseconds>(secs);
                 t_set = std::chrono::ceil<std::chrono::seconds>(t);
             } while (msecs.count() < 200 or msecs.count() > 800);
