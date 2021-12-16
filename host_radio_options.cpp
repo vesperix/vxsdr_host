@@ -136,11 +136,11 @@ int set_common_options(boost::program_options::variables_map& vm, std::unique_pt
                              std::chrono::time_point_cast<std::chrono::milliseconds>(secs);
                 t_set = std::chrono::ceil<std::chrono::seconds>(t);
             } while (msecs.count() < 200 or msecs.count() > 800);
+            // need to sleep here to avoid timeout (default host timeout is 500 ms)
+            std::this_thread::sleep_until(t_set - std::chrono::milliseconds(200));
             if (not radio->device_set_time_next_pps(t_set)) {
                 LOG_ERROR("error in set_common_options: device_set_time_next_pps");
             }
-            // wait until time is set
-            std::this_thread::sleep_until(t_set + std::chrono::milliseconds(200));
         } else {
             LOG_FATAL(fmt::format("Error: unknown option value for --time_source: {:s} (allowed values are host or pps)",
                      vm["time_source"].as<std::string>()));
