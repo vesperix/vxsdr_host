@@ -125,19 +125,20 @@ int set_common_options(boost::program_options::variables_map& vm, std::unique_pt
                 LOG_ERROR("error in set_common_options: device_set_time_now");
             }
         } else if (ts_str.compare("pps") == 0) {
+            constexpr unsigned max_host_clock_error_ms = 200; // cannot be 500 or more!
+            auto t_now = std::chrono::system_clock::now();
+            auto msecs = std::chrono::time_point_cast<std::chrono::milliseconds>(t_now) -
+                         std::chrono::time_point_cast<std::chrono::milliseconds>(std::chrono::floor<std::chrono::seconds>(t_now));
             std::chrono::time_point<std::chrono::system_clock> t_set;
-            std::chrono::milliseconds msecs;
-            // wait until the system clock is in between seconds
-            do {
-                std::this_thread::sleep_for(std::chrono::milliseconds(10));
-                auto t     = std::chrono::system_clock::now();
-                auto secs  = std::chrono::floor<std::chrono::seconds>(t);
-                msecs = std::chrono::time_point_cast<std::chrono::milliseconds>(t) -
-                             std::chrono::time_point_cast<std::chrono::milliseconds>(secs);
-                t_set = std::chrono::ceil<std::chrono::seconds>(t);
-            } while (msecs.count() < 200 or msecs.count() > 800);
-            // need to sleep here to avoid timeout (default host timeout is 500 ms)
-            std::this_thread::sleep_until(t_set - std::chrono::milliseconds(200));
+            if (msecs.count() < 1000 - max_host_clock_error_ms) {
+                // set time at next second (i.e. ceil(t_now))
+                t_set = std::chrono::ceil<std::chrono::seconds>(t_now);
+            } else {
+                // too close to second boundary, wait until second after next
+                t_set = std::chrono::ceil<std::chrono::seconds>(t_now) + std::chrono::seconds(1);
+            }
+            // wait until nearly t_set, then send the command
+            std::this_thread::sleep_until(t_set - std::chrono::milliseconds(max_host_clock_error_ms));
             if (not radio->device_set_time_next_pps(t_set)) {
                 LOG_ERROR("error in set_common_options: device_set_time_next_pps");
             }
