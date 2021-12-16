@@ -68,34 +68,32 @@ extern "C" {
 //     bits 3-7: reserved for additional settings
 
 // Device Commands
-#define DEVICE_CMD_HELLO               (0x00)
-#define DEVICE_CMD_SET_TIME_NOW        (0x01)  // error if TIME_PRESENT is 0
-#define DEVICE_CMD_SET_TIME_NEXT_PPS   (0x02)  // error if TIME_PRESENT is 0
-#define DEVICE_CMD_GET_TIME            (0x03)
-#define DEVICE_CMD_GET_STATUS          (0x04)
-#define DEVICE_CMD_CLEAR_STATUS        (0x05)  // resets error flags and counters
-#define DEVICE_CMD_GET_BUFFER_INFO     (0x06)  // info on how many buffers and their purpose
-#define DEVICE_CMD_GET_BUFFER_USE \
-    (0x07)                                     // asks for buffer info
-                                               // 0x08-0x0F reserved
-#define DEVICE_CMD_GET_TRANSPORT_INFO  (0x10)  // unimplemented // how many interfaces, what kind
-#define DEVICE_CMD_GET_TRANSPORT_ADDR  (0x11)
-#define DEVICE_CMD_GET_MAX_PAYLOAD     (0x12)
-#define DEVICE_CMD_CLEAR_DATA_BUFFER   (0x13)
+#define DEVICE_CMD_HELLO                      (0x00)
+#define DEVICE_CMD_SET_TIME_NOW               (0x01)  // error if TIME_PRESENT is 0
+#define DEVICE_CMD_SET_TIME_NEXT_PPS          (0x02)  // error if TIME_PRESENT is 0
+#define DEVICE_CMD_GET_TIME                   (0x03)
+#define DEVICE_CMD_GET_STATUS                 (0x04)
+#define DEVICE_CMD_CLEAR_STATUS               (0x05)  // resets error flags and counters
+#define DEVICE_CMD_GET_BUFFER_INFO            (0x06)  // info on how many buffers and their purpose
+#define DEVICE_CMD_GET_BUFFER_USE             (0x07)  // asks for buffer info
+// 0x09-0x0F reserved
+#define DEVICE_CMD_GET_TRANSPORT_INFO         (0x10)  // unimplemented // how many interfaces, what kind
+#define DEVICE_CMD_GET_TRANSPORT_ADDR         (0x11)
+#define DEVICE_CMD_GET_MAX_PAYLOAD            (0x12)
+#define DEVICE_CMD_CLEAR_DATA_BUFFER          (0x13)
 // 0x14-0x1F reserved for more get_transport stuff as needed
-#define DEVICE_CMD_DISCOVER            (0x20)  //
-#define DEVICE_CMD_SET_TRANSPORT_ADDR  (0x21)
-#define DEVICE_CMD_SET_MAX_PAYLOAD     (0x22)
-#define DEVICE_CMD_SAVE_TRANSPORT_ADDR (0x23)
+#define DEVICE_CMD_DISCOVER                   (0x20)
+#define DEVICE_CMD_SET_TRANSPORT_ADDR         (0x21)
+#define DEVICE_CMD_SET_MAX_PAYLOAD            (0x22)
+#define DEVICE_CMD_SAVE_TRANSPORT_ADDR        (0x23)
 // 0x24-0x2F reserved for more set_transport stuff as needed
-#define DEVICE_CMD_GET_CHANNEL_INFO \
-    (0x30)                                   // unimplemented // how many, are they TX/RX, etc
-                                             // 0x31-0x4F reserved for channel parameter get and set
-#define DEVICE_CMD_GET_TIMING_INFO   (0x50)  // unimplemented // what timing inputs are available
-#define DEVICE_CMD_GET_TIMING_STATUS (0x51)  // PPS present/absent; 10 MHz locked/unlocked
-#define DEVICE_CMD_GET_TIMING_REF    (0x52)  // unimplemented // current sources of 10 MHz and PPS
-#define DEVICE_CMD_SET_TIMING_REF \
-    (0x53)  // unimplemented // set sources of 10 MHz and PPS
+#define DEVICE_CMD_GET_CHANNEL_INFO           (0x30)  // unimplemented // how many, are they TX/RX, etc
+// 0x31-0x4F reserved for channel parameter get and set
+#define DEVICE_CMD_GET_TIMING_INFO            (0x50)  // unimplemented // what timing inputs are available
+#define DEVICE_CMD_GET_TIMING_STATUS          (0x51)  // PPS present/absent; 10 MHz locked/unlocked
+#define DEVICE_CMD_GET_TIMING_REF             (0x52)  // unimplemented // current sources of 10 MHz and PPS
+#define DEVICE_CMD_SET_TIMING_REF             (0x53)  // unimplemented // set sources of 10 MHz and PPS
+#define DEVICE_CMD_GET_TIMING_RESOLUTION      (0x54)
             // these may be removed before release
 #define DEVICE_CMD_READ_DAC_REG               (0x60)
 #define DEVICE_CMD_WRITE_DAC_REG              (0x61)

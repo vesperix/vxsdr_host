@@ -871,6 +871,14 @@ class vxsdr {
     std::optional<std::array<bool, 3>> device_get_timing_status(const uint8_t subdev = 0, const uint8_t flags = 0);
 
     /*!
+      @brief Gets the resolution of the device's clock.
+      @returns a std::optional with a double containing the resolution in seconds
+      @param subdev the subdevice number
+      @param flags the packet flags
+    */
+    std::optional<double> device_get_timing_resolution(const uint8_t subdev = 0, const uint8_t flags = 0);
+
+    /*!
       @brief Sets the timeout used by the host for commands sent to the device.
       We do not recommend values less than 0.5 seconds
       @returns @p true if the timeout is set, @p false if it is out of range

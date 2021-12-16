@@ -1275,6 +1275,18 @@ std::optional<std::array<bool, 3>> vxsdr::device_get_timing_status(const uint8_t
     return std::nullopt;
 }
 
+std::optional<double> vxsdr::device_get_timing_resolution(const uint8_t subdev, const uint8_t flags) {
+    header_only_packet p = {};
+    p.hdr    = {PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_GET_TIMING_RESOLUTION, subdev, flags, sizeof(p), 0};
+    auto res = vxsdr::send_packet_and_return_response(p, "device_get_timing_resolution()");
+    if (res) {
+        auto q  = res.value();
+        auto* r = reinterpret_cast<one_double_packet*>(&q);
+        return r->value1;
+    }
+    return std::nullopt;
+}
+
 bool vxsdr::set_host_device_command_timeout(const double timeout_s) {
     if (timeout_s <= 0.0 or timeout_s > 3600.0) {
         return false;
