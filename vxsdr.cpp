@@ -254,7 +254,7 @@ size_t vxsdr::write_rx_data(std::ofstream& out_stream, const size_t n_desired, c
                 // NOLINTNEXTLINE(cppcoreguidelines-pro-type-cstyle-cast)
                 out_stream.write((char*)buffer.data(), sizeof(std::complex<int16_t>) * n_to_write);
                 if (out_stream.fail()) {
-                    LOG_ERROR(fmt::format("error writing to output file ({:d}, {:d})", n_received, n_desired));
+                    LOG_ERROR(fmt::format("error writing to output file ({:d} of {:d} samples)", n_received, n_desired));
                     break;
                 }
                 n_written += n_to_write;
