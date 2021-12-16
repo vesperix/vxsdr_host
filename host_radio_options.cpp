@@ -126,21 +126,20 @@ int set_common_options(boost::program_options::variables_map& vm, std::unique_pt
             }
         } else if (ts_str.compare("pps") == 0) {
             std::chrono::time_point<std::chrono::system_clock> t_set;
-            double frac;
             // wait until the system clock is in between seconds
             do {
+                std::this_thread::sleep_for(std::chrono::miliseconds(10));
                 auto t     = std::chrono::system_clock::now();
-                auto secs  = std::chrono::time_point_cast<std::chrono::seconds>(t);
+                auto secs  = std::chrono::floor<std::chrono::seconds>(t);
                 auto msecs = std::chrono::time_point_cast<std::chrono::milliseconds>(t) -
                              std::chrono::time_point_cast<std::chrono::milliseconds>(secs);
-                frac  = 1e-3 * msecs.count();
                 t_set = std::chrono::ceil<std::chrono::seconds>(t);
-            } while (frac < 0.2 or frac > 0.8);
+            } while (msecs.count() < 200 or msecs.count() > 800);
             if (not radio->device_set_time_next_pps(t_set)) {
                 LOG_ERROR("error in set_common_options: device_set_time_next_pps");
             }
             // wait until time is set
-            std::this_thread::sleep_until(t_set + std::chrono::milliseconds(100));
+            std::this_thread::sleep_until(t_set + std::chrono::milliseconds(200));
         } else {
             LOG_FATAL(fmt::format("Error: unknown option value for --time_source: {:s} (allowed values are host or pps)",
                      vm["time_source"].as<std::string>()));
