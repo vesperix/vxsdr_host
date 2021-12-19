@@ -67,7 +67,7 @@ class vxsdr {
 
     // parameters used to set the OS's network buffer
     static constexpr unsigned network_send_buffer_bytes     =  1'048'576;  // ~1.6 ms at 160 MSPS
-    static constexpr unsigned network_receive_buffer_bytes  =  1'048'576;  // ~1.6 ms at 160 MSPS
+    static constexpr unsigned network_receive_buffer_bytes  = 16'777'216;  // ~26 ms at 160 MSPS
 
     // timeouts and waits between tries for queue push/pop
     static constexpr double tx_data_queue_timeout_s         = 1.0;
