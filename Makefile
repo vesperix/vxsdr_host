@@ -20,9 +20,12 @@ LIB_INCLUDES = vxsdr_header.h vxsdr.hpp
 LIB_SRC = vxsdr.cpp vxsdr_udp.cpp
 LIB_LDFLAGS =
 
+AR = ar
+AR_FLAGS = rcs
+
 PROGS = vxsdr_rx vxsdr_test vxsdr_test_rx vxsdr_test_commands vxsdr_test_atmosense_rx
 
-LIBS = libvxsdr.so
+LIBS = libvxsdr.so libvxsdr.a
 
 DOCS = docs/html/index.html
 
@@ -31,6 +34,9 @@ all: $(PROGS) $(LIBS) Makefile
 docs: $(DOCS)
 
 .PHONY: all docs
+
+.cpp.o:
+	$(CXX) $(CXX_FLAGS) -c -o $@ $<
 
 vxsdr_test: vxsdr_test.cpp host_radio_options.cpp $(COMMON_INCLUDES) $(COMMON_SRC)
 	$(CXX) $(CXX_FLAGS) -o $@ $< host_radio_options.cpp $(COMMON_SRC) $(CXX_LDFLAGS)
@@ -48,10 +54,10 @@ vxsdr_test_commands: vxsdr_test_commands.cpp host_radio_options.cpp $(COMMON_INC
 	$(CXX) $(CXX_FLAGS) -o $@ $< host_radio_options.cpp $(COMMON_SRC) $(CXX_LDFLAGS)
 
 libvxsdr.so: $(LIB_INCLUDES) $(LIB_SRC)
-	$(CXX) $(CXX_FLAGS) -o $@ -fPIC -shared $(LIB_SRC) $(LIB_LDFLAGS)
+	$(CXX) $(CXX_FLAGS) -o $@ -Wl,-soname,libvxsdr.so.1 -fPIC -shared $(LIB_SRC) $(LIB_LDFLAGS)
 
-libvxsdr.a: vxsdr.hpp $(LIB_INCLUDES) $(LIB_SRC)
-	$(CXX) $(CXX_FLAGS) -o $@ $(LIB_SRC) $(LIB_LDFLAGS)
+libvxsdr.a: vxsdr.o vxsdr_udp.o
+	$(AR) $(AR_FLAGS) $@ $^
 
 docs/html/index.html: Doxyfile vxsdr.hpp
 	doxygen Doxyfile
