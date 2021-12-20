@@ -1113,7 +1113,7 @@ std::optional<std::string> vxsdr::get_tx_port_name(const unsigned port_num, cons
     if (res) {
         auto q  = res.value();
         auto* r = reinterpret_cast<name_packet*>(&q);
-        return std::string((char*)r->name, MAX_PAYLOAD_LENGTH_BYTES - 1);
+        return std::string((char*)r->name, std::min(strlen((char*)r->name), MAX_PAYLOAD_LENGTH_BYTES - 1));
     }
     return std::nullopt;
 }
@@ -1126,7 +1126,7 @@ std::optional<std::string> vxsdr::get_rx_port_name(const unsigned port_num, cons
     if (res) {
         auto q  = res.value();
         auto* r = reinterpret_cast<name_packet*>(&q);
-        return std::string((char*)r->name, MAX_PAYLOAD_LENGTH_BYTES - 1);
+        return std::string((char*)r->name, std::min(strlen((char*)r->name), MAX_PAYLOAD_LENGTH_BYTES - 1));
     }
     return std::nullopt;
 }
@@ -1163,7 +1163,7 @@ bool vxsdr::set_rx_port(const std::string& port_name, const uint8_t subdev, cons
 
 std::optional<unsigned> vxsdr::get_tx_port(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p = {};
-    p.hdr                = {PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_GET_RF_PORT_NAME, subdev, flags, sizeof(p), 0};
+    p.hdr                = {PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_GET_RF_PORT, subdev, flags, sizeof(p), 0};
     auto res             = vxsdr::send_packet_and_return_response(p, "get_tx_port()");
     if (res) {
         auto q  = res.value();
@@ -1175,7 +1175,7 @@ std::optional<unsigned> vxsdr::get_tx_port(const uint8_t subdev, const uint8_t f
 
 std::optional<unsigned> vxsdr::get_rx_port(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p = {};
-    p.hdr                = {PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_GET_RF_PORT_NAME, subdev, flags, sizeof(p), 0};
+    p.hdr                = {PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_GET_RF_PORT, subdev, flags, sizeof(p), 0};
     auto res             = vxsdr::send_packet_and_return_response(p, "get_rx_port()");
     if (res) {
         auto q  = res.value();
