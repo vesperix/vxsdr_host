@@ -1268,7 +1268,8 @@ std::optional<std::array<bool, 3>> vxsdr::device_get_timing_status(const uint8_t
     if (res) {
         auto q                  = res.value();
         auto* r                 = reinterpret_cast<one_uint32_packet*>(&q);
-        std::array<bool, 3> ret = {(bool)(r->value1 & TIMING_STATUS_EXT_PPS_LOCK), (bool)(r->value1 & TIMING_STATUS_EXT_10MHZ_LOCK),
+        std::array<bool, 3> ret = {(bool)(r->value1 & TIMING_STATUS_EXT_PPS_LOCK),
+                                   (bool)(r->value1 & TIMING_STATUS_EXT_10MHZ_LOCK),
                                    (bool)(r->value1 & TIMING_STATUS_REF_OSC_LOCK)};
         return ret;
     }

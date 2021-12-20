@@ -177,6 +177,8 @@ std::string radio_cmd_to_name(const uint8_t cmd) {
             return "SET_RF_ENABLED";
         case RADIO_CMD_SET_RF_PORT:
             return "SET_RF_PORT";
+        case RADIO_CMD_SET_RF_PORT_BY_NAME:
+            return "SET_RF_PORT_BY_NAME";
         case RADIO_CMD_SET_LO_INPUT:
             return "SET_LO_INPUT";
         case RADIO_CMD_SET_MASTER_CLK:
@@ -334,6 +336,18 @@ void log_packet_info(packet& packet, const int direction) {
                     LOG_PACKET(fmt::format("   seconds                   = {:d}", (uint32_t)(tr->time.seconds)));
                     LOG_PACKET(fmt::format("   nanoseconds               = {:09d}", (uint32_t)(tr->time.nanoseconds)));
                 } break;
+                case DEVICE_CMD_GET_TIMING_RESOLUTION: {
+                    LOG_PACKET(fmt::format("DEVICE_CMD_RSP: GET_TIMING_RESOLUTION"));
+                    auto* tr = reinterpret_cast<one_double_packet*>(&packet);
+                    LOG_PACKET(fmt::format("   resolution_sec            = {:e}", tr->value1));
+                } break;
+                case DEVICE_CMD_GET_TIMING_STATUS: {
+                    LOG_PACKET(fmt::format("DEVICE_CMD_RSP: GET_GET_TIMING_STATUS"));
+                    auto* r = reinterpret_cast<one_uint32_packet*>(&packet);
+                    LOG_PACKET(fmt::format("   pps lock                  = {}", (bool)(r->value1 & TIMING_STATUS_EXT_PPS_LOCK)));
+                    LOG_PACKET(fmt::format("   10 MHz lock               = {}", (bool)(r->value1 & TIMING_STATUS_EXT_10MHZ_LOCK))),
+                    LOG_PACKET(fmt::format("   reference oscillator lock = {}", (bool)(r->value1 & TIMING_STATUS_REF_OSC_LOCK)));
+                } break;
                 default:
                     LOG_PACKET(fmt::format("DEVICE_CMD_RSP: {:s}", device_cmd_to_name(packet.hdr.command)));
                     break;
@@ -374,6 +388,11 @@ void log_packet_info(packet& packet, const int direction) {
                     auto* sr = reinterpret_cast<one_double_packet*>(&packet);
                     LOG_PACKET(fmt::format("   rate                      = {:.5e}", sr->value1));
                 } break;
+                case RADIO_CMD_SET_RF_PORT: {
+                    LOG_PACKET(fmt::format("RX_RADIO_CMD: SET_RF_PORT"));
+                    auto* sr = reinterpret_cast<one_uint32_packet*>(&packet);
+                    LOG_PACKET(fmt::format("   port                      = {:d}", sr->value1));
+                } break;
                 default:
                     LOG_PACKET(fmt::format("RX_RADIO_CMD: {:s}", radio_cmd_to_name(packet.hdr.command)));
                     break;
@@ -413,6 +432,16 @@ void log_packet_info(packet& packet, const int direction) {
                     LOG_PACKET(fmt::format("RX_RADIO_CMD_RSP: GET_CAPABILITIES"));
                     auto* sr = reinterpret_cast<one_uint64_packet*>(&packet);
                     LOG_PACKET(fmt::format("   capabilities              = {:#X}", sr->value1));
+                } break;
+                case RADIO_CMD_GET_RF_PORT: {
+                    LOG_PACKET(fmt::format("RX_RADIO_CMD_RSP: GET_RF_PORT"));
+                    auto* sr = reinterpret_cast<one_uint32_packet*>(&packet);
+                    LOG_PACKET(fmt::format("   port                      = {:d}", sr->value1));
+                } break;
+                case RADIO_CMD_GET_RF_PORT_NAME: {
+                    LOG_PACKET(fmt::format("RX_RADIO_CMD_RSP: GET_RF_PORT_NAME"));
+                    auto* sr = reinterpret_cast<name_packet*>(&packet);
+                    LOG_PACKET(fmt::format("   name                      = {:s}", std::string(sr->name)));
                 } break;
                 default:
                     LOG_PACKET(fmt::format("RX_RADIO_CMD_RSP: {:s}", radio_cmd_to_name(packet.hdr.command)));
@@ -462,6 +491,11 @@ void log_packet_info(packet& packet, const int direction) {
                     auto* sr = reinterpret_cast<one_double_packet*>(&packet);
                     LOG_PACKET(fmt::format("   rate                      = {:.5e}", sr->value1));
                 } break;
+                case RADIO_CMD_SET_RF_PORT: {
+                    LOG_PACKET(fmt::format("TX_RADIO_CMD: SET_RF_PORT"));
+                    auto* sr = reinterpret_cast<one_uint32_packet*>(&packet);
+                    LOG_PACKET(fmt::format("   port                      = {:d}", sr->value1));
+                } break;
                 default:
                     LOG_PACKET(fmt::format("TX_RADIO_CMD: {:s}", radio_cmd_to_name(packet.hdr.command)));
                     break;
@@ -501,6 +535,16 @@ void log_packet_info(packet& packet, const int direction) {
                     LOG_PACKET(fmt::format("TX_RADIO_CMD_RSP: GET_CAPABILITIES"));
                     auto* sr = reinterpret_cast<one_uint64_packet*>(&packet);
                     LOG_PACKET(fmt::format("   capabilities              = {:#X}", sr->value1));
+                } break;
+                case RADIO_CMD_GET_RF_PORT: {
+                    LOG_PACKET(fmt::format("TX_RADIO_CMD_RSP: GET_RF_PORT"));
+                    auto* sr = reinterpret_cast<one_uint32_packet*>(&packet);
+                    LOG_PACKET(fmt::format("   port                      = {:d}", sr->value1));
+                } break;
+                case RADIO_CMD_GET_RF_PORT_NAME: {
+                    LOG_PACKET(fmt::format("TX_RADIO_CMD_RSP: GET_RF_PORT_NAME"));
+                    auto* sr = reinterpret_cast<name_packet*>(&packet);
+                    LOG_PACKET(fmt::format("   name                      = {:s}", std::string(sr->name)));
                 } break;
                 default:
                     LOG_PACKET(fmt::format("TX_RADIO_CMD_RSP: {:s}", radio_cmd_to_name(packet.hdr.command)));

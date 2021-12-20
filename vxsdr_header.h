@@ -214,6 +214,11 @@ extern "C" {
 #define MAX_DATA_LENGTH_SAMPLES               (2048UL)
 #define MAX_PAYLOAD_LENGTH_BYTES              (32UL)  // maximum length of a CMD or RSP packet, excluding header
 
+// FIXME: these are for timing status; need to be defined as part of a generic API when stable
+constexpr uint32_t TIMING_STATUS_EXT_PPS_LOCK   = 0x00000001;
+constexpr uint32_t TIMING_STATUS_EXT_10MHZ_LOCK = 0x00000002;
+constexpr uint32_t TIMING_STATUS_REF_OSC_LOCK   = 0x00000004;
+
 #define PACKED                                __attribute__((packed))
 
 typedef struct PACKED {
