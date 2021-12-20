@@ -813,8 +813,160 @@ void test_repeated_commands(std::unique_ptr<vxsdr>& radio, const unsigned iterat
     }
 }
 
+void test_ports(std::unique_ptr<vxsdr>& radio) {
+    LOG_INFO("TESTING: starting port tests");
+
+    LOG_INFO("TESTING:    getting number of tx ports");
+    auto ntx = radio->get_tx_num_ports();
+    if (ntx) {
+        LOG_INFO("TESTING:    passed");
+    } else {
+        LOG_ERROR("TESTING:   no value returned by device_get_num_tx_ports()");
+        total_errors++;
+    }
+
+    for (unsigned i = 0; i < ntx.value(); i++) {
+        LOG_INFO(fmt::format("TESTING:       setting tx port {:d} by number", i));
+        if (radio->set_tx_port(i)) {
+            LOG_INFO("TESTING:       passed");
+        } else {
+            LOG_ERROR(fmt::format("TESTING:      false returned by set_tx_port({:d})", i));
+            total_errors++;
+        }
+
+        LOG_INFO("TESTING:       getting tx port number");
+        auto pnum = radio->get_tx_port();
+        if (pnum) {
+            if (pnum.value() == i) {
+                LOG_INFO("TESTING:       passed");
+            } else {
+                LOG_ERROR(fmt::format("TESTING:       get does not match set ({:d}, {:d})", pnum.value(), i));
+                total_errors++;
+            }
+        } else {
+            LOG_ERROR("TESTING:      no value returned by device_get_tx_port()");
+            total_errors++;
+        }
+
+        LOG_INFO(fmt::format("TESTING:       getting name of tx port {:d}", i));
+        auto pname = radio->get_tx_port_name(i);
+        if (pname) {
+            LOG_INFO(fmt::format("TESTING:       passed ({:s})", pname.value()));
+        } else {
+            LOG_ERROR("TESTING:      no value returned by device_get_tx_port_name()");
+            total_errors++;
+        }
+
+        LOG_INFO(fmt::format("TESTING:       setting tx port by name ({:s})", pname.value()));
+        if (radio->set_tx_port(pname.value())) {
+            LOG_INFO("TESTING:       passed");
+        } else {
+            LOG_ERROR(fmt::format("TESTING:      false returned by set_tx_port({:s})", pname.value()));
+            total_errors++;
+        }
+
+        LOG_INFO(fmt::format("TESTING:       getting name of tx port {:d}", i));
+        auto pname2 = radio->get_tx_port_name(i);
+        if (pname2) {
+            if(pname2.value() == pname.value()) {
+                LOG_INFO("TESTING:       passed");
+            } else {
+                LOG_ERROR(fmt::format("TESTING:       get does not match set ({:s}, {:s})",
+                            pname2.value(), pname.value()));
+                total_errors++;
+            }
+        } else {
+            LOG_ERROR("TESTING:      no value returned by device_get_tx_port_name()");
+            total_errors++;
+        }
+    }
+
+    LOG_INFO("TESTING:    getting number of rx ports");
+    auto nrx = radio->get_rx_num_ports();
+    if (nrx) {
+        LOG_INFO("TESTING:    passed");
+    } else {
+        LOG_ERROR("TESTING:   no value returned by device_get_num_rx_ports()");
+        total_errors++;
+    }
+
+    for (unsigned i = 0; i < nrx.value(); i++) {
+        LOG_INFO(fmt::format("TESTING:       setting rx port {:d} by number", i));
+        if (radio->set_rx_port(i)) {
+            LOG_INFO("TESTING:       passed");
+        } else {
+            LOG_ERROR(fmt::format("TESTING:      false returned by set_rx_port({:d})", i));
+            total_errors++;
+        }
+
+        LOG_INFO("TESTING:       getting rx port number");
+        auto pnum = radio->get_rx_port();
+        if (pnum) {
+            if (pnum.value() == i) {
+                LOG_INFO("TESTING:       passed");
+            } else {
+                LOG_ERROR(fmt::format("TESTING:       get does not match set ({:d}, {:d})", pnum.value(), i));
+                total_errors++;
+            }
+        } else {
+            LOG_ERROR("TESTING:      no value returned by device_get_rx_port()");
+            total_errors++;
+        }
+
+        LOG_INFO(fmt::format("TESTING:       getting name of rx port {:d}", i));
+        auto pname = radio->get_rx_port_name(i);
+        if (pname) {
+            LOG_INFO(fmt::format("TESTING:       passed ({:s})", pname.value()));
+        } else {
+            LOG_ERROR("TESTING:      no value returned by device_get_rx_port_name()");
+            total_errors++;
+        }
+
+        LOG_INFO(fmt::format("TESTING:       setting rx port by name ({:s})", pname.value()));
+        if (radio->set_rx_port(pname.value())) {
+            LOG_INFO("TESTING:       passed");
+        } else {
+            LOG_ERROR(fmt::format("TESTING:      false returned by set_rx_port({:s})", pname.value()));
+            total_errors++;
+        }
+
+        LOG_INFO(fmt::format("TESTING:       getting name of rx port {:d}", i));
+        auto pname2 = radio->get_rx_port_name(i);
+        if (pname2) {
+            if(pname2.value() == pname.value()) {
+                LOG_INFO("TESTING:       passed");
+            } else {
+                LOG_ERROR(fmt::format("TESTING:       get does not match set ({:s}, {:s})",
+                            pname2.value(), pname.value()));
+                total_errors++;
+            }
+        } else {
+            LOG_ERROR("TESTING:      no value returned by device_get_rx_port_name()");
+            total_errors++;
+        }
+    }
+
+    LOG_INFO("TESTING: completed port tests");
+}
+
 void test_capabilities(std::unique_ptr<vxsdr>& radio) {
     LOG_INFO("TESTING: starting capabilities tests");
+
+    auto txcap = radio->get_tx_capabilities();
+    if (txcap) {
+        LOG_INFO("TESTING:    passed");
+    } else {
+        LOG_ERROR("TESTING:   no value returned by device_get_tx_capabilities()");
+        total_errors++;
+    }
+
+    auto rxcap = radio->get_rx_capabilities();
+    if (rxcap) {
+        LOG_INFO("TESTING:    passed");
+    } else {
+        LOG_ERROR("TESTING:   no value returned by device_get_rx_capabilities()");
+        total_errors++;
+    }
 
     LOG_INFO("TESTING: completed capabilities tests");
 }
@@ -840,11 +992,47 @@ void test_status(std::unique_ptr<vxsdr>& radio) {
         total_errors++;
     }
 
-    sta = radio->device_get_status();
-    if (sta) {
+    auto sta2 = radio->device_get_status();
+    if (sta2) {
         LOG_INFO("TESTING:    passed");
     } else {
         LOG_ERROR("TESTING:   no value returned by device_get_status()");
+        total_errors++;
+    }
+
+    LOG_INFO("TESTING:    getting timing status");
+    auto tsta = radio->device_get_timing_status();
+    if (tsta) {
+        LOG_INFO("TESTING:    passed");
+    } else {
+        LOG_ERROR("TESTING:   no value returned by device_get_timing_status()");
+        total_errors++;
+    }
+
+    LOG_INFO("TESTING:    getting timing resolution");
+    auto tres = radio->device_get_timing_resolution();
+    if (tres) {
+        LOG_INFO("TESTING:    passed");
+    } else {
+        LOG_ERROR("TESTING:   no value returned by device_get_timing_resolution()");
+        total_errors++;
+    }
+
+    LOG_INFO("TESTING:    getting buffer info");
+    auto binfo = radio->device_get_buffer_info();
+    if (binfo) {
+        LOG_INFO("TESTING:    passed");
+    } else {
+        LOG_ERROR("TESTING:   no value returned by device_get_buffer_info()");
+        total_errors++;
+    }
+
+    LOG_INFO("TESTING:    getting buffer use");
+    auto buse = radio->device_get_buffer_use();
+    if (buse) {
+        LOG_INFO("TESTING:    passed");
+    } else {
+        LOG_ERROR("TESTING:   no value returned by device_get_buffer_use()");
         total_errors++;
     }
 
@@ -900,10 +1088,12 @@ int main(int argc, char* argv[]) {
         test_time(radio);
         test_gain(radio);
         test_stream_state(radio);
-        test_repeated_commands(radio, 1'000);
+        //test_repeated_commands(radio, 1'000);
         test_status(radio);
+        test_ports(radio);
+        test_capabilities(radio);
         // test_iq(radio);
-        // test_capabilities(radio);
+
     } catch (std::exception& e) {
         LOG_ERROR(fmt::format("TESTING: testing exception caught: {:s}", e.what()));
         return EXIT_INTERNAL_ERROR;
