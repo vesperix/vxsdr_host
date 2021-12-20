@@ -1140,7 +1140,7 @@ bool vxsdr::set_tx_port(const unsigned port_num, const uint8_t subdev, const uin
 
 bool vxsdr::set_tx_port(const std::string& port_name, const uint8_t subdev, const uint8_t flags) {
     name_packet p = {};
-    p.hdr         = {PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_SET_RF_PORT, subdev, flags, sizeof(p), 0};
+    p.hdr         = {PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_SET_RF_PORT_BY_NAME, subdev, flags, sizeof(p), 0};
     strncpy((char*)p.name, port_name.c_str(), MAX_PAYLOAD_LENGTH_BYTES - 1);
     p.name[MAX_PAYLOAD_LENGTH_BYTES - 1] = 0;
     return vxsdr::send_packet_and_check_response(p, "set_tx_port() [by name]");
@@ -1155,7 +1155,7 @@ bool vxsdr::set_rx_port(const unsigned port_num, const uint8_t subdev, const uin
 
 bool vxsdr::set_rx_port(const std::string& port_name, const uint8_t subdev, const uint8_t flags) {
     name_packet p = {};
-    p.hdr         = {PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_SET_RF_PORT, subdev, flags, sizeof(p), 0};
+    p.hdr         = {PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_SET_RF_PORT_BY_NAME, subdev, flags, sizeof(p), 0};
     strncpy((char*)p.name, port_name.c_str(), MAX_PAYLOAD_LENGTH_BYTES - 1);
     p.name[MAX_PAYLOAD_LENGTH_BYTES - 1] = 0;
     return vxsdr::send_packet_and_check_response(p, "set_rx_port() [by name]");

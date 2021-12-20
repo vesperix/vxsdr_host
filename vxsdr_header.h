@@ -153,6 +153,7 @@ extern "C" {
 #define RADIO_CMD_SET_RF_BW                   (0x24)  // unimplemented
 #define RADIO_CMD_SET_RF_ENABLED              (0x25)
 #define RADIO_CMD_SET_RF_PORT                 (0x26)
+#define RADIO_CMD_SET_RF_PORT_BY_NAME         (0x27)
 #define RADIO_CMD_SET_LO_INPUT                (0x29)  // unimplemented
 // 0x2A - 0x2F reserved
 #define RADIO_CMD_SET_MASTER_CLK              (0x30)  // unimplemented

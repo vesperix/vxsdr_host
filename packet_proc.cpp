@@ -412,7 +412,7 @@ void log_packet_info(packet& packet, const int direction) {
                 case RADIO_CMD_GET_CAPABILITIES: {
                     LOG_PACKET(fmt::format("RX_RADIO_CMD_RSP: GET_CAPABILITIES"));
                     auto* sr = reinterpret_cast<one_uint64_packet*>(&packet);
-                    LOG_PACKET(fmt::format("   capabilities              = {:s}", std::bitset<64>(sr->value1).to_string()));
+                    LOG_PACKET(fmt::format("   capabilities              = {:#X}", sr->value1));
                 } break;
                 default:
                     LOG_PACKET(fmt::format("RX_RADIO_CMD_RSP: {:s}", radio_cmd_to_name(packet.hdr.command)));
@@ -500,7 +500,7 @@ void log_packet_info(packet& packet, const int direction) {
                 case RADIO_CMD_GET_CAPABILITIES: {
                     LOG_PACKET(fmt::format("TX_RADIO_CMD_RSP: GET_CAPABILITIES"));
                     auto* sr = reinterpret_cast<one_uint64_packet*>(&packet);
-                    LOG_PACKET(fmt::format("   capabilities              = {:s}", std::bitset<64>(sr->value1).to_string()));
+                    LOG_PACKET(fmt::format("   capabilities              = {:#X}", sr->value1));
                 } break;
                 default:
                     LOG_PACKET(fmt::format("TX_RADIO_CMD_RSP: {:s}", radio_cmd_to_name(packet.hdr.command)));
