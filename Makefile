@@ -16,8 +16,9 @@ endif
 COMMON_INCLUDES = packet_proc.hpp vxsdr_header.h host_radio_options.hpp utility.hpp logging.hpp
 COMMON_SRC = packet_proc.cpp utility.cpp logging.cpp compile_checks.cpp vxsdr.cpp vxsdr_udp.cpp
 
-LIB_SRC = COMMON_SRC
-LIB_LDFLAGS = -lpthread -lspdlog
+LIB_INCLUDES = vxsdr_header.h vxsdr.hpp
+LIB_SRC = vxsdr.cpp vxsdr_udp.cpp
+LIB_LDFLAGS =
 
 PROGS = vxsdr_rx vxsdr_test vxsdr_test_rx vxsdr_test_commands vxsdr_test_atmosense_rx
 
@@ -46,8 +47,11 @@ vxsdr_test_atmosense_rx: vxsdr_test_atmosense_rx.cpp host_radio_options.cpp $(CO
 vxsdr_test_commands: vxsdr_test_commands.cpp host_radio_options.cpp $(COMMON_INCLUDES) $(COMMON_SRC)
 	$(CXX) $(CXX_FLAGS) -o $@ $< host_radio_options.cpp $(COMMON_SRC) $(CXX_LDFLAGS)
 
-libvxsdr.so: vxsdr.hpp $(COMMON_INCLUDES) $(COMMON_SRC)
-	$(CXX) $(CXX_FLAGS) -o $@ -fPIC -shared $(COMMON_SRC) $(LIB_LDFLAGS)
+libvxsdr.so: $(LIB_INCLUDES) $(LIB_SRC)
+	$(CXX) $(CXX_FLAGS) -o $@ -fPIC -shared $(LIB_SRC) $(LIB_LDFLAGS)
+
+libvxsdr.a: vxsdr.hpp $(LIB_INCLUDES) $(LIB_SRC)
+	$(CXX) $(CXX_FLAGS) -o $@ $(LIB_SRC) $(LIB_LDFLAGS)
 
 docs/html/index.html: Doxyfile vxsdr.hpp
 	doxygen Doxyfile
