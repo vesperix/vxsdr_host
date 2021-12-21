@@ -665,16 +665,16 @@ void test_iq(std::unique_ptr<vxsdr>& radio) {
     if (radio->set_tx_iq_corr(ii_corr, iq_corr, qi_corr, qq_corr)) {
         cres = radio->get_tx_iq_corr();
         if (cres) {
-            double ii_diff = res->at(0) - ii_corr_ok;
-            double iq_diff = res->at(1) - iq_corr_ok;
-            double qi_diff = res->at(2) - qi_corr_ok;
-            double qq_diff = res->at(3) - qq_corr_ok;
+            double ii_diff = cres->at(0) - ii_corr_ok;
+            double iq_diff = cres->at(1) - iq_corr_ok;
+            double qi_diff = cres->at(2) - qi_corr_ok;
+            double qq_diff = cres->at(3) - qq_corr_ok;
             if(fabs(ii_diff) < corr_tol and fabs(iq_diff) < corr_tol and
                fabs(qi_diff) < corr_tol and fabs(qq_diff) < corr_tol) {
                 LOG_INFO("TESTING:       passed");
             } else {
                 LOG_ERROR(fmt::format("TESTING:       incorrect values returned by get_tx_iq_corr(): ({:.6f}, {:.6f}, {:.6f}, {:.6f})",
-                        res->at(0), res->at(1), res->at(2), res->at(3)));
+                        cres->at(0), cres->at(1), cres->at(2), cres->at(3)));
                 total_errors++;
             }
         } else {
@@ -691,16 +691,16 @@ void test_iq(std::unique_ptr<vxsdr>& radio) {
     if (radio->set_rx_iq_corr(ii_corr, iq_corr, qi_corr, qq_corr)) {
         cres = radio->get_rx_iq_corr();
         if (cres) {
-            double ii_diff = res->at(0) - ii_corr_ok;
-            double iq_diff = res->at(1) - iq_corr_ok;
-            double qi_diff = res->at(2) - qi_corr_ok;
-            double qq_diff = res->at(3) - qq_corr_ok;
+            double ii_diff = cres->at(0) - ii_corr_ok;
+            double iq_diff = cres->at(1) - iq_corr_ok;
+            double qi_diff = cres->at(2) - qi_corr_ok;
+            double qq_diff = cres->at(3) - qq_corr_ok;
             if(fabs(ii_diff) < corr_tol and fabs(iq_diff) < corr_tol and
                fabs(qi_diff) < corr_tol and fabs(qq_diff) < corr_tol) {
                 LOG_INFO("TESTING:       passed");
             } else {
                 LOG_ERROR(fmt::format("TESTING:       incorrect values returned by get_rx_iq_corr(): ({:.6f}, {:.6f}, {:.6f}, {:.6f})",
-                        res->at(0), res->at(1), res->at(2), res->at(3)));
+                        cres->at(0), cres->at(1), cres->at(2), cres->at(3)));
                 total_errors++;
             }
         } else {
@@ -1196,7 +1196,7 @@ int main(int argc, char* argv[]) {
         test_status(radio);
         test_ports(radio);
         test_capabilities(radio);
-        // test_iq(radio);
+        test_iq(radio);
 
     } catch (std::exception& e) {
         LOG_ERROR(fmt::format("TESTING: testing exception caught: {:s}", e.what()));
