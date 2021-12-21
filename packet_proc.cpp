@@ -393,6 +393,11 @@ void log_packet_info(packet& packet, const int direction) {
                     auto* sr = reinterpret_cast<one_uint32_packet*>(&packet);
                     LOG_PACKET(fmt::format("   port                      = {:d}", sr->value1));
                 } break;
+                case RADIO_CMD_SET_RF_ENABLED: {
+                    LOG_PACKET(fmt::format("RX_RADIO_CMD: SET_RF_ENABLED"));
+                    auto* sr = reinterpret_cast<one_uint32_packet*>(&packet);
+                    LOG_PACKET(fmt::format("   enabled                   = {:d}", sr->value1));
+                } break;
                 default:
                     LOG_PACKET(fmt::format("RX_RADIO_CMD: {:s}", radio_cmd_to_name(packet.hdr.command)));
                     break;
@@ -442,6 +447,11 @@ void log_packet_info(packet& packet, const int direction) {
                     LOG_PACKET(fmt::format("RX_RADIO_CMD_RSP: GET_RF_PORT_NAME"));
                     auto* sr = reinterpret_cast<name_packet*>(&packet);
                     LOG_PACKET(fmt::format("   name                      = {:s}", std::string(sr->name)));
+                } break;
+                case RADIO_CMD_GET_RF_ENABLED: {
+                    LOG_PACKET(fmt::format("RX_RADIO_CMD_RSP: GET_RF_ENABLED"));
+                    auto* sr = reinterpret_cast<one_uint32_packet*>(&packet);
+                    LOG_PACKET(fmt::format("   enabled                   = {:d}", sr->value1));
                 } break;
                 default:
                     LOG_PACKET(fmt::format("RX_RADIO_CMD_RSP: {:s}", radio_cmd_to_name(packet.hdr.command)));
@@ -496,6 +506,11 @@ void log_packet_info(packet& packet, const int direction) {
                     auto* sr = reinterpret_cast<one_uint32_packet*>(&packet);
                     LOG_PACKET(fmt::format("   port                      = {:d}", sr->value1));
                 } break;
+                case RADIO_CMD_SET_RF_ENABLED: {
+                    LOG_PACKET(fmt::format("TX_RADIO_CMD: SET_RF_ENABLED"));
+                    auto* sr = reinterpret_cast<one_uint32_packet*>(&packet);
+                    LOG_PACKET(fmt::format("   enabled                   = {:d}", sr->value1));
+                } break;
                 default:
                     LOG_PACKET(fmt::format("TX_RADIO_CMD: {:s}", radio_cmd_to_name(packet.hdr.command)));
                     break;
@@ -545,6 +560,11 @@ void log_packet_info(packet& packet, const int direction) {
                     LOG_PACKET(fmt::format("TX_RADIO_CMD_RSP: GET_RF_PORT_NAME"));
                     auto* sr = reinterpret_cast<name_packet*>(&packet);
                     LOG_PACKET(fmt::format("   name                      = {:s}", std::string(sr->name)));
+                } break;
+                case RADIO_CMD_GET_RF_ENABLED: {
+                    LOG_PACKET(fmt::format("TX_RADIO_CMD_RSP: GET_RF_ENABLED"));
+                    auto* sr = reinterpret_cast<one_uint32_packet*>(&packet);
+                    LOG_PACKET(fmt::format("   enabled                   = {:d}", sr->value1));
                 } break;
                 default:
                     LOG_PACKET(fmt::format("TX_RADIO_CMD_RSP: {:s}", radio_cmd_to_name(packet.hdr.command)));
