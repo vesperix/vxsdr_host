@@ -797,12 +797,20 @@ bool vxsdr::set_tx_iq_bias(const double i_bias, const double q_bias, const uint8
     return vxsdr::send_packet_and_check_response(p, "set_tx_iq_bias()");
 }
 
+bool vxsdr::set_tx_iq_bias(const std::array<double, 2> bias, const uint8_t subdev, const uint8_t flags) {
+    return vxsdr::set_tx_iq_bias(bias.at(0), bias.at(1), subdev, flags);
+}
+
 bool vxsdr::set_rx_iq_bias(const double i_bias, const double q_bias, const uint8_t subdev, const uint8_t flags) {
     two_double_packet p;
     p.hdr    = {PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_SET_IQ_BIAS, subdev, flags, sizeof(p), 0};
     p.value1 = std::min(1.0, std::max(-1.0, i_bias));
     p.value2 = std::min(1.0, std::max(-1.0, q_bias));
     return vxsdr::send_packet_and_check_response(p, "set_rx_iq_bias()");
+}
+
+bool vxsdr::set_rx_iq_bias(const std::array<double, 2> bias, const uint8_t subdev, const uint8_t flags) {
+    return vxsdr::set_rx_iq_bias(bias.at(0), bias.at(1), subdev, flags);
 }
 
 std::optional<std::array<double, 2>> vxsdr::get_tx_iq_bias(const uint8_t subdev, const uint8_t flags) {
@@ -846,6 +854,10 @@ bool vxsdr::set_tx_iq_corr(const double ii_corr,
     return vxsdr::send_packet_and_check_response(p, "set_tx_iq_corr()");
 }
 
+bool vxsdr::set_tx_iq_corr(const std::array<double, 4> corr, const uint8_t subdev, const uint8_t flags) {
+    return vxsdr::set_tx_iq_corr(corr.at(0), corr.at(1), corr.at(2), corr.at(3), subdev, flags);
+}
+
 bool vxsdr::set_rx_iq_corr(const double ii_corr,
                            const double iq_corr,
                            const double qi_corr,
@@ -859,6 +871,10 @@ bool vxsdr::set_rx_iq_corr(const double ii_corr,
     p.value3 = qi_corr;
     p.value4 = qq_corr;
     return vxsdr::send_packet_and_check_response(p, "set_rx_iq_corr()");
+}
+
+bool vxsdr::set_rx_iq_corr(const std::array<double, 4> corr, const uint8_t subdev, const uint8_t flags) {
+    return vxsdr::set_rx_iq_corr(corr.at(0), corr.at(1), corr.at(2), corr.at(3), subdev, flags);
 }
 
 std::optional<std::array<double, 4>> vxsdr::get_tx_iq_corr(const uint8_t subdev, const uint8_t flags) {

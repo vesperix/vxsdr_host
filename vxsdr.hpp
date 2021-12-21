@@ -470,6 +470,15 @@ class vxsdr {
     bool set_tx_iq_bias(const double i_bias, const double q_bias, const uint8_t subdev = 0, const uint8_t flags = 0);
 
     /*!
+      @brief Sets the IQ DC bias for the transmitter to control LO feedthrough.
+      @returns @b true if the device responds to the command, @b false otherwise
+      @param bias   a std::array containing i_bias, q_bias in that order
+      @param subdev the subdevice number
+      @param flags the packet flags
+    */
+    bool set_tx_iq_bias(const std::array<double, 2> bias, const uint8_t subdev = 0, const uint8_t flags = 0);
+
+    /*!
       @brief Sets the IQ DC bias for the receiver to control LO feedthrough.
       @returns @b true if the device responds to the command, @b false otherwise
       @param i_bias the I channel bias (-1 >= @p i_bias >= 1)
@@ -478,6 +487,15 @@ class vxsdr {
       @param flags the packet flags
     */
     bool set_rx_iq_bias(const double i_bias, const double q_bias, const uint8_t subdev = 0, const uint8_t flags = 0);
+
+    /*!
+      @brief Sets the IQ DC bias for the receiver to control LO feedthrough.
+      @returns @b true if the device responds to the command, @b false otherwise
+      @param bias   a std::array containing i_bias, q_bias in that order
+      @param subdev the subdevice number
+      @param flags the packet flags
+    */
+    bool set_rx_iq_bias(const std::array<double, 2> bias, const uint8_t subdev = 0, const uint8_t flags = 0);
 
     /*!
       @brief Gets the IQ DC bias for the transmitter.
@@ -515,6 +533,15 @@ class vxsdr {
                         const uint8_t flags  = 0);
 
     /*!
+      @brief Sets the IQ correction for the transmitter to control image rejection.
+      @returns @b true if the device responds to the command, @b false otherwise
+      @param corr    a std::array containing ii_corr, iq_corr, qi_corr, and qq_corr, in that order
+      @param subdev the subdevice number
+      @param flags the packet flags
+    */
+    bool set_tx_iq_corr(const std::array<double, 4> corr, const uint8_t subdev = 0, const uint8_t flags  = 0);
+
+    /*!
       @brief Sets the IQ correction for the receiver to control image rejection.
       @returns @b true if the device responds to the command, @b false otherwise
       @param ii_corr I-I channel correction
@@ -530,6 +557,15 @@ class vxsdr {
                         const double qq_corr,
                         const uint8_t subdev = 0,
                         const uint8_t flags  = 0);
+
+    /*!
+      @brief Sets the IQ correction for the receiver to control image rejection.
+      @returns @b true if the device responds to the command, @b false otherwise
+      @param corr    a std::array containing ii_corr, iq_corr, qi_corr, and qq_corr, in that order
+      @param subdev the subdevice number
+      @param flags the packet flags
+    */
+    bool set_rx_iq_corr(const std::array<double, 4> corr, const uint8_t subdev = 0, const uint8_t flags  = 0);
 
     /*!
       @brief Gets the IQ correction for the transmitter.
