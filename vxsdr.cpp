@@ -1308,12 +1308,12 @@ bool vxsdr::set_host_device_command_timeout(const double timeout_s) {
     if (timeout_s <= 0.0 or timeout_s > 3600.0) {
         return false;
     }
-    device_response_timeout_ms = std::llround(1e3 * timeout_s);
+    device_response_timeout_us = std::llround(1e6 * timeout_s);
     return true;
 }
 
 double vxsdr::get_host_device_command_timeout() const {
-    return 1e-3 * device_response_timeout_ms;
+    return 1e-6 * device_response_timeout_us;
 }
 
 std::vector<net::ip::address_v4> device_discover_ipv4_addresses(const net::ip::address_v4& local_addr,
@@ -1451,10 +1451,10 @@ bool vxsdr::device_set_max_payload_bytes(const unsigned max_payload_bytes) {
     }
     response_queue_element q;
     bool got_response     = false;
-    unsigned wait_time_ms = 0;
-    while (not(got_response = response_queue.pop(q)) and wait_time_ms < vxsdr::device_response_timeout_ms) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(vxsdr::device_response_wait_ms));
-        wait_time_ms += vxsdr::device_response_wait_ms;
+    uint64_t wait_time_us = 0;
+    while (not(got_response = response_queue.pop(q)) and wait_time_us < vxsdr::device_response_timeout_us) {
+        std::this_thread::sleep_for(std::chrono::microseconds(vxsdr::device_response_wait_us));
+        wait_time_us += vxsdr::device_response_wait_us;
     }
     if (got_response) {
         if (((p.hdr.packet_type == PACKET_TYPE_DEVICE_CMD and q.hdr.packet_type == PACKET_TYPE_DEVICE_CMD_RSP) or
@@ -1464,7 +1464,7 @@ bool vxsdr::device_set_max_payload_bytes(const unsigned max_payload_bytes) {
 #ifdef VXSDR_RESPONSE_TIME_DIAG
             auto t1 = std::chrono::system_clock::now();
             std::chrono::duration<double> diff = t1 - t0;
-            LOG_INFO(fmt::format("TIMING: type 0x{:02x} cmd 0x{:02x} response {:10.2f} ms", p.hdr.packet_type, p.hdr.command, 1e3 * diff.count()));
+            LOG_INFO(fmt::format("TIMING: type 0x{:02x} cmd 0x{:02x} response {:10.3f} ms", p.hdr.packet_type, p.hdr.command, 1e3 * diff.count()));
 #endif // VXSDR_RESPONSE_TIME_DIAG
             return true;
         }
@@ -1482,7 +1482,7 @@ bool vxsdr::device_set_max_payload_bytes(const unsigned max_payload_bytes) {
 #ifdef VXSDR_RESPONSE_TIME_DIAG
     auto t1 = std::chrono::system_clock::now();
     std::chrono::duration<double> diff = t1 - t0;
-    LOG_ERROR(fmt::format("TIMING: type 0x{:02x} cmd 0x{:02x} response {:10.2f} ms", p.hdr.packet_type, p.hdr.command, 1e3 * diff.count()));
+    LOG_ERROR(fmt::format("TIMING: type 0x{:02x} cmd 0x{:02x} response {:10.3f} ms", p.hdr.packet_type, p.hdr.command, 1e3 * diff.count()));
 #endif // VXSDR_RESPONSE_TIME_DIAG
     LOG_ERROR(fmt::format("timeout waiting for response in {:s}", cmd_name));
     return false;
@@ -1498,10 +1498,10 @@ bool vxsdr::device_set_max_payload_bytes(const unsigned max_payload_bytes) {
     }
     response_queue_element q;
     bool got_response     = false;
-    unsigned wait_time_ms = 0;
-    while (not(got_response = response_queue.pop(q)) and wait_time_ms < vxsdr::device_response_timeout_ms) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(vxsdr::device_response_wait_ms));
-        wait_time_ms += vxsdr::device_response_wait_ms;
+    uint64_t wait_time_us = 0;
+    while (not(got_response = response_queue.pop(q)) and wait_time_us < vxsdr::device_response_timeout_us) {
+        std::this_thread::sleep_for(std::chrono::microseconds(vxsdr::device_response_wait_us));
+        wait_time_us += vxsdr::device_response_wait_us;
     }
     if (got_response) {
         if (((p.hdr.packet_type == PACKET_TYPE_DEVICE_CMD and q.hdr.packet_type == PACKET_TYPE_DEVICE_CMD_RSP) or
@@ -1511,7 +1511,7 @@ bool vxsdr::device_set_max_payload_bytes(const unsigned max_payload_bytes) {
 #ifdef VXSDR_RESPONSE_TIME_DIAG
             auto t1 = std::chrono::system_clock::now();
             std::chrono::duration<double> diff = t1 - t0;
-            LOG_INFO(fmt::format("TIMING: type 0x{:02x} cmd 0x{:02x} response {:10.2f} ms", p.hdr.packet_type, p.hdr.command, 1e3 * diff.count()));
+            LOG_INFO(fmt::format("TIMING: type 0x{:02x} cmd 0x{:02x} response {:10.3f} ms", p.hdr.packet_type, p.hdr.command, 1e3 * diff.count()));
 #endif // VXSDR_RESPONSE_TIME_DIAG
             return q;
         }
@@ -1529,7 +1529,7 @@ bool vxsdr::device_set_max_payload_bytes(const unsigned max_payload_bytes) {
 #ifdef VXSDR_RESPONSE_TIME_DIAG
     auto t1 = std::chrono::system_clock::now();
     std::chrono::duration<double> diff = t1 - t0;
-    LOG_ERROR(fmt::format("TIMING: type 0x{:02x} cmd 0x{:02x} response {:10.2f} ms", p.hdr.packet_type, p.hdr.command, 1e3 * diff.count()));
+    LOG_ERROR(fmt::format("TIMING: type 0x{:02x} cmd 0x{:02x} response {:10.3f} ms", p.hdr.packet_type, p.hdr.command, 1e3 * diff.count()));
 #endif // VXSDR_RESPONSE_TIME_DIAG
     LOG_ERROR(fmt::format("timeout waiting for response in {:s}", cmd_name));
     return std::nullopt;
@@ -1546,10 +1546,10 @@ bool vxsdr::device_set_max_payload_bytes(const unsigned max_payload_bytes) {
     if ((q.hdr.flags & FLAGS_REQUEST_ACK) != 0) {
         cmd_ack_queue_element a;
         bool got_response     = false;
-        unsigned wait_time_ms = 0;
-        while (not(got_response = vxsdr::cmd_ack_queue.pop(a)) and wait_time_ms < device_response_timeout_ms) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(device_response_wait_ms));
-            wait_time_ms += device_response_wait_ms;
+        uint64_t wait_time_us = 0;
+        while (not(got_response = vxsdr::cmd_ack_queue.pop(a)) and wait_time_us < device_response_timeout_us) {
+            std::this_thread::sleep_for(std::chrono::microseconds(device_response_wait_us));
+            wait_time_us += device_response_wait_us;
         }
         if (got_response) {
             auto* r                 = reinterpret_cast<header_only_packet*>(&a);

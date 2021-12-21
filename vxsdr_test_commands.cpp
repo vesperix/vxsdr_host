@@ -869,48 +869,29 @@ void test_stream_state(std::unique_ptr<vxsdr>& radio) {
 
 void test_repeated_commands(std::unique_ptr<vxsdr>& radio, const unsigned iterations) {
 
-    const double rate = 80e6, rate_tol_hz = 1.0;
-
     for (unsigned i = 0; i < iterations; i++) {
         LOG_INFO(fmt::format("TESTING:   repeated commands iteration {:d} of {:d}", i + 1, iterations));
 
-        LOG_INFO("TESTING:       setting rx rate");
+        LOG_INFO("TESTING:       setting rx enabled");
 
-        bool sent = radio->set_rx_rate(rate);
+        bool sent = radio->set_rx_enable(1);
 
-        if (not sent) {
-            LOG_ERROR("TESTING:      false returned by set_rx_rate()");
-            total_errors++;
-        }
-
-        LOG_INFO("TESTING:       getting rx rate");
-
-        auto res = radio->get_rx_rate();
-        if (res) {
-            double diff = res.value() - rate;
-            if (abs(diff) < rate_tol_hz) {
-                LOG_INFO("TESTING:       passed");
-            } else {
-                LOG_ERROR("TESTING:       incorrect value returned by get_rx_rate()");
-                total_errors++;
-            }
+        if (sent) {
+            LOG_INFO("TESTING:       passed");
         } else {
-            LOG_ERROR("TESTING:      no value returned by get_rx_rate()");
+            LOG_ERROR("TESTING:    failed");
             total_errors++;
         }
 
-        LOG_INFO("TESTING:      testing get_time_now() with time point");
-        {
-            auto result = radio->device_get_time_now();
-            if (result) {
-                LOG_INFO("TESTING:          passed with time_point");
+        LOG_INFO("TESTING:       setting rx disabled");
+        sent = radio->set_rx_enable(0);
 
-            } else {
-                LOG_ERROR("TESTING:         no value returned by device_get_time_now()");
-                total_errors++;
-            }
+        if (sent) {
+            LOG_INFO("TESTING:       passed");
+        } else {
+            LOG_ERROR("TESTING:    failed");
+            total_errors++;
         }
-
     }
 }
 
@@ -1190,7 +1171,7 @@ int main(int argc, char* argv[]) {
         test_time(radio);
         test_gain(radio);
         test_stream_state(radio);
-        //test_repeated_commands(radio, 1'000);
+        //test_repeated_commands(radio, 100);
         test_status(radio);
         test_ports(radio);
         test_capabilities(radio);
