@@ -176,6 +176,7 @@ class vxsdr {
       @param local_send_endpoint the endpoint (IP address and port) used to send
       @param local_receive_endpoint the endpoint used to receive
       @param device_endpoint the endpoint of the target device
+      @param nondata_packet_logging log all nondata packets (debugging only)
       @param set_affinity controls whether threads set affinity for a specific processor
       @param base_cpu_number the starting processor to use if affinity is set
       @param set_priority controls whether threads set realtime priority
@@ -934,11 +935,14 @@ class vxsdr {
       IPv4 addresses of the devices which respond.
       @returns a std::vector containing the IPv4 addresses of discovered devices (which may have zero length if no devices are
       found)
-      @param broadcast_address the broadcast address
+      @param local_addr the local address to send from
+      @param broadcast_addr the broadcast address
+      @param destination_port the port to broadcast to
+      @param timeout_s the time in seconds to wait for responses
     */
     std::vector<net::ip::address_v4> device_discover_ipv4_addresses(const net::ip::address_v4& local_addr,
                                                                     const net::ip::address_v4& broadcast_addr,
-                                                                    const unsigned destination_port,
+                                                                    const unsigned destination_port = 1030,
                                                                     const double timeout_s = 10);
 
     /*!
