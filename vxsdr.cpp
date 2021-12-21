@@ -879,7 +879,7 @@ bool vxsdr::set_rx_iq_corr(const std::array<double, 4> corr, const uint8_t subde
 
 std::optional<std::array<double, 4>> vxsdr::get_tx_iq_corr(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p;
-    p.hdr    = {PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_GET_IQ_BIAS, subdev, flags, sizeof(p), 0};
+    p.hdr    = {PACKET_TYPE_TX_RADIO_CMD, RADIO_CMD_GET_IQ_CORR, subdev, flags, sizeof(p), 0};
     auto res = vxsdr::send_packet_and_return_response(p, "get_tx_iq_corr()");
     if (res) {
         auto q                     = res.value();
@@ -892,7 +892,7 @@ std::optional<std::array<double, 4>> vxsdr::get_tx_iq_corr(const uint8_t subdev,
 
 std::optional<std::array<double, 4>> vxsdr::get_rx_iq_corr(const uint8_t subdev, const uint8_t flags) {
     header_only_packet p;
-    p.hdr    = {PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_GET_IQ_BIAS, subdev, flags, sizeof(p), 0};
+    p.hdr    = {PACKET_TYPE_RX_RADIO_CMD, RADIO_CMD_GET_IQ_CORR, subdev, flags, sizeof(p), 0};
     auto res = vxsdr::send_packet_and_return_response(p, "get_rx_iq_corr()");
     if (res) {
         auto q                     = res.value();
