@@ -1464,7 +1464,7 @@ bool vxsdr::device_set_max_payload_bytes(const unsigned max_payload_bytes) {
 #ifdef VXSDR_RESPONSE_TIME_DIAG
             auto t1 = std::chrono::system_clock::now();
             std::chrono::duration<double> diff = t1 - t0;
-            LOG_INFO(fmt::format("packet response time {:10.3f} ms", 1e3 * diff.count()));
+            LOG_INFO(fmt::format("TIMING: type 0x{:02x} cmd 0x{:02x} response {:10.2f} ms", p.hdr.packet_type, p.hdr.command, 1e3 * diff.count()));
 #endif // VXSDR_RESPONSE_TIME_DIAG
             return true;
         }
@@ -1482,7 +1482,7 @@ bool vxsdr::device_set_max_payload_bytes(const unsigned max_payload_bytes) {
 #ifdef VXSDR_RESPONSE_TIME_DIAG
     auto t1 = std::chrono::system_clock::now();
     std::chrono::duration<double> diff = t1 - t0;
-    LOG_ERROR(fmt::format("packet response time {:10.3f} ms", 1e3 * diff.count()));
+    LOG_ERROR(fmt::format("TIMING: type 0x{:02x} cmd 0x{:02x} response {:10.2f} ms", p.hdr.packet_type, p.hdr.command, 1e3 * diff.count()));
 #endif // VXSDR_RESPONSE_TIME_DIAG
     LOG_ERROR(fmt::format("timeout waiting for response in {:s}", cmd_name));
     return false;
@@ -1511,7 +1511,7 @@ bool vxsdr::device_set_max_payload_bytes(const unsigned max_payload_bytes) {
 #ifdef VXSDR_RESPONSE_TIME_DIAG
             auto t1 = std::chrono::system_clock::now();
             std::chrono::duration<double> diff = t1 - t0;
-            LOG_INFO(fmt::format("packet response time {:10.3f} ms", 1e3 * diff.count()));
+            LOG_INFO(fmt::format("TIMING: type 0x{:02x} cmd 0x{:02x} response {:10.2f} ms", p.hdr.packet_type, p.hdr.command, 1e3 * diff.count()));
 #endif // VXSDR_RESPONSE_TIME_DIAG
             return q;
         }
@@ -1529,7 +1529,7 @@ bool vxsdr::device_set_max_payload_bytes(const unsigned max_payload_bytes) {
 #ifdef VXSDR_RESPONSE_TIME_DIAG
     auto t1 = std::chrono::system_clock::now();
     std::chrono::duration<double> diff = t1 - t0;
-    LOG_ERROR(fmt::format("packet response time {:10.3f} ms", 1e3 * diff.count()));
+    LOG_ERROR(fmt::format("TIMING: type 0x{:02x} cmd 0x{:02x} response {:10.2f} ms", p.hdr.packet_type, p.hdr.command, 1e3 * diff.count()));
 #endif // VXSDR_RESPONSE_TIME_DIAG
     LOG_ERROR(fmt::format("timeout waiting for response in {:s}", cmd_name));
     return std::nullopt;
