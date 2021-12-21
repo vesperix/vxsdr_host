@@ -657,9 +657,9 @@ void test_iq(std::unique_ptr<vxsdr>& radio) {
         total_errors++;
     }
 
-    const double ii_corr = 0.9, iq_corr = -0.1, qi_corr = 0.1, qq_corr = 1.1;
-    const double ii_corr_ok = 0.9, iq_corr_ok = -0.1, qi_corr_ok = 0.1, qq_corr_ok = 1.1; // FIXME: expected values after rotation
-    const double  corr_tol = 0.02;
+    const double ii_corr    = 0.9,      iq_corr    = -0.1, qi_corr    = 0.2,      qq_corr    = 1.1;
+    const double ii_corr_ok = 0.905539, iq_corr_ok =  0.0, qi_corr_ok = 0.077302, qq_corr_ok = 1.115358; // values after rotation
+    const double  corr_tol = 0.0002;
     LOG_INFO("TESTING:    testing set tx correction");
 
     if (radio->set_tx_iq_corr(ii_corr, iq_corr, qi_corr, qq_corr)) {
