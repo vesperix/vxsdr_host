@@ -612,6 +612,106 @@ void test_freq(std::unique_ptr<vxsdr>& radio, const double freq_tol_hz = 1.0) {
 void test_iq(std::unique_ptr<vxsdr>& radio) {
     LOG_INFO("TESTING: starting iq tests");
 
+    LOG_INFO("TESTING:    testing get tx bias");
+
+    auto res = radio->get_tx_iq_bias();
+    if (res) {
+        LOG_INFO("TESTING:       passed");
+    } else {
+        LOG_ERROR("TESTING:      no value returned by get_tx_iq_bias()");
+        total_errors++;
+    }
+
+    const double i_bias = 0.1, q_bias = -0.1, bias_tol = 0.02;
+
+    LOG_INFO("TESTING:    testing set tx bias");
+
+    if (radio->set_tx_iq_bias(i_bias, q_bias)) {
+        res = radio->get_tx_iq_bias();
+        if (res) {
+            double i_diff = res->at(0) - i_bias;
+            double q_diff = res->at(1) - q_bias;
+            if(fabs(i_diff) < bias_tol and fabs(q_diff) < bias_tol) {
+                LOG_INFO("TESTING:       passed");
+            } else {
+                LOG_ERROR(fmt::format("TESTING:       incorrect values returned by get_tx_iq_bias(): ({:.6f}, {:.6f})",
+                        res->at(0), res->at(1)));
+                total_errors++;
+            }
+        } else {
+            LOG_ERROR("TESTING:      no value returned by get_tx_iq_bias()");
+            total_errors++;
+        }
+    } else {
+        LOG_ERROR("TESTING:      false returned by set_tx_iq_bias()");
+        total_errors++;
+    }
+
+    LOG_INFO("TESTING:    testing get tx correction");
+
+    auto cres = radio->get_tx_iq_corr();
+    if (cres) {
+        LOG_INFO("TESTING:       passed");
+    } else {
+        LOG_ERROR("TESTING:      no value returned by get_tx_iq_corr()");
+        total_errors++;
+    }
+
+    const double ii_corr = 0.9, iq_corr = -0.1, qi_corr = 0.1, qq_corr = 1.1;
+    const double ii_corr_ok = 0.9, iq_corr_ok = -0.1, qi_corr_ok = 0.1, qq_corr_ok = 1.1; // FIXME: expected values after rotation
+    const double  corr_tol = 0.02;
+    LOG_INFO("TESTING:    testing set tx correction");
+
+    if (radio->set_tx_iq_corr(ii_corr, iq_corr, qi_corr, qq_corr)) {
+        cres = radio->get_tx_iq_corr();
+        if (cres) {
+            double ii_diff = res->at(0) - ii_corr_ok;
+            double iq_diff = res->at(1) - iq_corr_ok;
+            double qi_diff = res->at(2) - qi_corr_ok;
+            double qq_diff = res->at(3) - qq_corr_ok;
+            if(fabs(ii_diff) < corr_tol and fabs(iq_diff) < corr_tol and
+               fabs(qi_diff) < corr_tol and fabs(qq_diff) < corr_tol) {
+                LOG_INFO("TESTING:       passed");
+            } else {
+                LOG_ERROR(fmt::format("TESTING:       incorrect values returned by get_tx_iq_corr(): ({:.6f}, {:.6f}, {:.6f}, {:.6f})",
+                        res->at(0), res->at(1), res->at(2), res->at(3)));
+                total_errors++;
+            }
+        } else {
+            LOG_ERROR("TESTING:      no value returned by get_tx_iq_corr()");
+            total_errors++;
+        }
+    } else {
+        LOG_ERROR("TESTING:      false returned by set_tx_iq_corr()");
+        total_errors++;
+    }
+
+    LOG_INFO("TESTING:    testing set rx correction");
+
+    if (radio->set_rx_iq_corr(ii_corr, iq_corr, qi_corr, qq_corr)) {
+        cres = radio->get_rx_iq_corr();
+        if (cres) {
+            double ii_diff = res->at(0) - ii_corr_ok;
+            double iq_diff = res->at(1) - iq_corr_ok;
+            double qi_diff = res->at(2) - qi_corr_ok;
+            double qq_diff = res->at(3) - qq_corr_ok;
+            if(fabs(ii_diff) < corr_tol and fabs(iq_diff) < corr_tol and
+               fabs(qi_diff) < corr_tol and fabs(qq_diff) < corr_tol) {
+                LOG_INFO("TESTING:       passed");
+            } else {
+                LOG_ERROR(fmt::format("TESTING:       incorrect values returned by get_rx_iq_corr(): ({:.6f}, {:.6f}, {:.6f}, {:.6f})",
+                        res->at(0), res->at(1), res->at(2), res->at(3)));
+                total_errors++;
+            }
+        } else {
+            LOG_ERROR("TESTING:      no value returned by get_rx_iq_corr()");
+            total_errors++;
+        }
+    } else {
+        LOG_ERROR("TESTING:      false returned by set_rx_iq_corr()");
+        total_errors++;
+    }
+
     LOG_INFO("TESTING: completed iq tests");
 }
 
@@ -630,7 +730,8 @@ void test_stream_state(std::unique_ptr<vxsdr>& radio) {
         if (res.value() == vxsdr::STREAM_STOPPED) {
             LOG_INFO("TESTING:       passed");
         } else {
-            LOG_ERROR("TESTING:       incorrect value returned by get_tx_stream_state(): {:s}", stream_state_to_string(res.value()));
+            LOG_ERROR(fmt::format("TESTING:       incorrect value returned by get_tx_stream_state(): {:s}",
+                    stream_state_to_string(res.value())));
             total_errors++;
         }
     } else {
