@@ -431,7 +431,7 @@ void log_packet_info(packet& packet, const int direction) {
                 case RADIO_CMD_GET_CAPABILITIES: {
                     LOG_PACKET(fmt::format("RX_RADIO_CMD_RSP: GET_CAPABILITIES"));
                     auto* sr = reinterpret_cast<one_uint64_packet*>(&packet);
-                    LOG_PACKET(fmt::format("   capabilities              = {:#X}", sr->value1));
+                    LOG_PACKET(fmt::format("   capabilities              = 0x{:X}", sr->value1));
                 } break;
                 case RADIO_CMD_GET_RF_PORT: {
                     LOG_PACKET(fmt::format("RX_RADIO_CMD_RSP: GET_RF_PORT"));
@@ -534,7 +534,7 @@ void log_packet_info(packet& packet, const int direction) {
                 case RADIO_CMD_GET_CAPABILITIES: {
                     LOG_PACKET(fmt::format("TX_RADIO_CMD_RSP: GET_CAPABILITIES"));
                     auto* sr = reinterpret_cast<one_uint64_packet*>(&packet);
-                    LOG_PACKET(fmt::format("   capabilities              = {:#X}", sr->value1));
+                    LOG_PACKET(fmt::format("   capabilities              = 0x{:X}", sr->value1));
                 } break;
                 case RADIO_CMD_GET_RF_PORT: {
                     LOG_PACKET(fmt::format("TX_RADIO_CMD_RSP: GET_RF_PORT"));
