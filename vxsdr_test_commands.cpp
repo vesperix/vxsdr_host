@@ -921,133 +921,131 @@ void test_ports(std::unique_ptr<vxsdr>& radio) {
     auto ntx = radio->get_tx_num_ports();
     if (ntx) {
         LOG_INFO("TESTING:    passed");
+        for (unsigned i = 0; i < ntx.value(); i++) {
+                LOG_INFO(fmt::format("TESTING:       setting tx port {:d} by number", i));
+                if (radio->set_tx_port(i)) {
+                    LOG_INFO("TESTING:       passed");
+                } else {
+                    LOG_ERROR(fmt::format("TESTING:      false returned by set_tx_port({:d})", i));
+                    total_errors++;
+                }
+
+                LOG_INFO("TESTING:       getting tx port number");
+                auto pnum = radio->get_tx_port();
+                if (pnum) {
+                    if (pnum.value() == i) {
+                        LOG_INFO("TESTING:       passed");
+                    } else {
+                        LOG_ERROR(fmt::format("TESTING:       get does not match set ({:d}, {:d})", pnum.value(), i));
+                        total_errors++;
+                    }
+                } else {
+                    LOG_ERROR("TESTING:      no value returned by device_get_tx_port()");
+                    total_errors++;
+                }
+
+                LOG_INFO(fmt::format("TESTING:       getting name of tx port {:d}", i));
+                auto pname = radio->get_tx_port_name(i);
+                if (pname) {
+                    LOG_INFO(fmt::format("TESTING:       passed ({:s})", pname.value()));
+        /* FIXME: set by name not yet implemented
+                    LOG_INFO(fmt::format("TESTING:       setting tx port by name ({:s})", pname.value()));
+                    if (radio->set_tx_port(pname.value())) {
+                        LOG_INFO("TESTING:       passed");
+                    } else {
+                        LOG_ERROR(fmt::format("TESTING:      false returned by set_tx_port({:s})", pname.value()));
+                        total_errors++;
+                    }
+
+                    LOG_INFO(fmt::format("TESTING:       getting name of tx port {:d}", i));
+                    auto pname2 = radio->get_tx_port_name(i);
+                    if (pname2) {
+                        if(pname2.value() == pname.value()) {
+                            LOG_INFO("TESTING:       passed");
+                        } else {
+                            LOG_ERROR(fmt::format("TESTING:       get does not match set ({:s}, {:s})",
+                                        pname2.value(), pname.value()));
+                            total_errors++;
+                        }
+                    } else {
+                        LOG_ERROR("TESTING:      no value returned by device_get_tx_port_name()");
+                        total_errors++;
+                    }
+        */
+                } else {
+                    LOG_ERROR("TESTING:      no value returned by device_get_tx_port_name()");
+                    total_errors++;
+                }
+
+            }
     } else {
         LOG_ERROR("TESTING:   no value returned by device_get_num_tx_ports()");
         total_errors++;
-    }
-
-    for (unsigned i = 0; i < ntx.value(); i++) {
-        LOG_INFO(fmt::format("TESTING:       setting tx port {:d} by number", i));
-        if (radio->set_tx_port(i)) {
-            LOG_INFO("TESTING:       passed");
-        } else {
-            LOG_ERROR(fmt::format("TESTING:      false returned by set_tx_port({:d})", i));
-            total_errors++;
-        }
-
-        LOG_INFO("TESTING:       getting tx port number");
-        auto pnum = radio->get_tx_port();
-        if (pnum) {
-            if (pnum.value() == i) {
-                LOG_INFO("TESTING:       passed");
-            } else {
-                LOG_ERROR(fmt::format("TESTING:       get does not match set ({:d}, {:d})", pnum.value(), i));
-                total_errors++;
-            }
-        } else {
-            LOG_ERROR("TESTING:      no value returned by device_get_tx_port()");
-            total_errors++;
-        }
-
-        LOG_INFO(fmt::format("TESTING:       getting name of tx port {:d}", i));
-        auto pname = radio->get_tx_port_name(i);
-        if (pname) {
-            LOG_INFO(fmt::format("TESTING:       passed ({:s})", pname.value()));
-/* FIXME: set by name not yet implemented
-            LOG_INFO(fmt::format("TESTING:       setting tx port by name ({:s})", pname.value()));
-            if (radio->set_tx_port(pname.value())) {
-                LOG_INFO("TESTING:       passed");
-            } else {
-                LOG_ERROR(fmt::format("TESTING:      false returned by set_tx_port({:s})", pname.value()));
-                total_errors++;
-            }
-
-            LOG_INFO(fmt::format("TESTING:       getting name of tx port {:d}", i));
-            auto pname2 = radio->get_tx_port_name(i);
-            if (pname2) {
-                if(pname2.value() == pname.value()) {
-                    LOG_INFO("TESTING:       passed");
-                } else {
-                    LOG_ERROR(fmt::format("TESTING:       get does not match set ({:s}, {:s})",
-                                pname2.value(), pname.value()));
-                    total_errors++;
-                }
-            } else {
-                LOG_ERROR("TESTING:      no value returned by device_get_tx_port_name()");
-                total_errors++;
-            }
-*/
-        } else {
-            LOG_ERROR("TESTING:      no value returned by device_get_tx_port_name()");
-            total_errors++;
-        }
-
     }
 
     LOG_INFO("TESTING:    getting number of rx ports");
     auto nrx = radio->get_rx_num_ports();
     if (nrx) {
         LOG_INFO("TESTING:    passed");
-    } else {
-        LOG_ERROR("TESTING:   no value returned by device_get_num_rx_ports()");
-        total_errors++;
-    }
-
-    for (unsigned i = 0; i < nrx.value(); i++) {
-        LOG_INFO(fmt::format("TESTING:       setting rx port {:d} by number", i));
-        if (radio->set_rx_port(i)) {
-            LOG_INFO("TESTING:       passed");
-        } else {
-            LOG_ERROR(fmt::format("TESTING:      false returned by set_rx_port({:d})", i));
-            total_errors++;
-        }
-
-        LOG_INFO("TESTING:       getting rx port number");
-        auto pnum = radio->get_rx_port();
-        if (pnum) {
-            if (pnum.value() == i) {
+        for (unsigned i = 0; i < nrx.value(); i++) {
+            LOG_INFO(fmt::format("TESTING:       setting rx port {:d} by number", i));
+            if (radio->set_rx_port(i)) {
                 LOG_INFO("TESTING:       passed");
             } else {
-                LOG_ERROR(fmt::format("TESTING:       get does not match set ({:d}, {:d})", pnum.value(), i));
+                LOG_ERROR(fmt::format("TESTING:      false returned by set_rx_port({:d})", i));
                 total_errors++;
             }
-        } else {
-            LOG_ERROR("TESTING:      no value returned by device_get_rx_port()");
-            total_errors++;
-        }
 
-        LOG_INFO(fmt::format("TESTING:       getting name of rx port {:d}", i));
-        auto pname = radio->get_rx_port_name(i);
-        if (pname) {
-            LOG_INFO(fmt::format("TESTING:       passed ({:s})", pname.value()));
-/* FIXME: set by name not yet implemented
-            LOG_INFO(fmt::format("TESTING:       setting rx port by name ({:s})", pname.value()));
-            if (radio->set_rx_port(pname.value())) {
-                LOG_INFO("TESTING:       passed");
+            LOG_INFO("TESTING:       getting rx port number");
+            auto pnum = radio->get_rx_port();
+            if (pnum) {
+                if (pnum.value() == i) {
+                    LOG_INFO("TESTING:       passed");
+                } else {
+                    LOG_ERROR(fmt::format("TESTING:       get does not match set ({:d}, {:d})", pnum.value(), i));
+                    total_errors++;
+                }
             } else {
-                LOG_ERROR(fmt::format("TESTING:      false returned by set_rx_port({:s})", pname.value()));
+                LOG_ERROR("TESTING:      no value returned by device_get_rx_port()");
                 total_errors++;
             }
 
             LOG_INFO(fmt::format("TESTING:       getting name of rx port {:d}", i));
-            auto pname2 = radio->get_rx_port_name(i);
-            if (pname2) {
-                if(pname2.value() == pname.value()) {
+            auto pname = radio->get_rx_port_name(i);
+            if (pname) {
+                LOG_INFO(fmt::format("TESTING:       passed ({:s})", pname.value()));
+    /* FIXME: set by name not yet implemented
+                LOG_INFO(fmt::format("TESTING:       setting rx port by name ({:s})", pname.value()));
+                if (radio->set_rx_port(pname.value())) {
                     LOG_INFO("TESTING:       passed");
                 } else {
-                    LOG_ERROR(fmt::format("TESTING:       get does not match set ({:s}, {:s})",
-                                pname2.value(), pname.value()));
+                    LOG_ERROR(fmt::format("TESTING:      false returned by set_rx_port({:s})", pname.value()));
                     total_errors++;
                 }
+
+                LOG_INFO(fmt::format("TESTING:       getting name of rx port {:d}", i));
+                auto pname2 = radio->get_rx_port_name(i);
+                if (pname2) {
+                    if(pname2.value() == pname.value()) {
+                        LOG_INFO("TESTING:       passed");
+                    } else {
+                        LOG_ERROR(fmt::format("TESTING:       get does not match set ({:s}, {:s})",
+                                    pname2.value(), pname.value()));
+                        total_errors++;
+                    }
+                } else {
+                    LOG_ERROR("TESTING:      no value returned by device_get_rx_port_name()");
+                    total_errors++;
+                }
+    */
             } else {
                 LOG_ERROR("TESTING:      no value returned by device_get_rx_port_name()");
                 total_errors++;
             }
-*/
-        } else {
-            LOG_ERROR("TESTING:      no value returned by device_get_rx_port_name()");
-            total_errors++;
         }
+    } else {
+        LOG_ERROR("TESTING:   no value returned by device_get_num_rx_ports()");
+        total_errors++;
     }
 
     LOG_INFO("TESTING: completed port tests");
