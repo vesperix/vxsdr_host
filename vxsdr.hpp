@@ -42,7 +42,7 @@ namespace net = boost::asio;
 
 class vxsdr {
   public:
-    enum stream_state_t { STREAM_STOPPED, STREAM_WAITING_FOR_START, STREAM_RUNNING, STREAM_ERROR };
+    enum stream_state_t { STREAM_STOPPED = 0, STREAM_RUNNING, STREAM_WAITING_FOR_START, STREAM_ERROR };
   private:
 #ifdef VXSDR_ASYNC_RX
     // socket_receive_timeout setting for async rx
