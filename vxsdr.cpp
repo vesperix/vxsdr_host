@@ -1443,6 +1443,9 @@ bool vxsdr::device_set_max_payload_bytes(const unsigned max_payload_bytes) {
 // private functions
 
 [[nodiscard]] bool vxsdr::send_packet_and_check_response(packet& p, const std::string& cmd_name) {
+#ifdef VXSDR_RESPONSE_TIME_DIAG
+    auto t0 = std::chrono::system_clock::now();
+#endif // VXSDR_RESPONSE_TIME_DIAG
     if (not vxsdr::cmd_queue_push_check(p)) {
         return false;
     }
@@ -1458,6 +1461,11 @@ bool vxsdr::device_set_max_payload_bytes(const unsigned max_payload_bytes) {
              (p.hdr.packet_type == PACKET_TYPE_TX_RADIO_CMD and q.hdr.packet_type == PACKET_TYPE_TX_RADIO_CMD_RSP) or
              (p.hdr.packet_type == PACKET_TYPE_RX_RADIO_CMD and q.hdr.packet_type == PACKET_TYPE_RX_RADIO_CMD_RSP)) and
             q.hdr.command == p.hdr.command) {
+#ifdef VXSDR_RESPONSE_TIME_DIAG
+            auto t1 = std::chrono::system_clock::now();
+            std::chrono::duration<double> diff = t1 - t0;
+            LOG_INFO(fmt::format("packet response time {:10.3f} ms", 1e3 * diff.count()));
+#endif // VXSDR_RESPONSE_TIME_DIAG
             return true;
         }
         if (((p.hdr.packet_type == PACKET_TYPE_DEVICE_CMD and q.hdr.packet_type == PACKET_TYPE_DEVICE_CMD_ERR) or
@@ -1471,12 +1479,20 @@ bool vxsdr::device_set_max_payload_bytes(const unsigned max_payload_bytes) {
         LOG_ERROR(fmt::format("invalid response received in {:s}", cmd_name));
         return false;
     }
+#ifdef VXSDR_RESPONSE_TIME_DIAG
+    auto t1 = std::chrono::system_clock::now();
+    std::chrono::duration<double> diff = t1 - t0;
+    LOG_ERROR(fmt::format("packet response time {:10.3f} ms", 1e3 * diff.count()));
+#endif // VXSDR_RESPONSE_TIME_DIAG
     LOG_ERROR(fmt::format("timeout waiting for response in {:s}", cmd_name));
     return false;
 }
 
 [[nodiscard]] std::optional<vxsdr::response_queue_element> vxsdr::send_packet_and_return_response(packet& p,
                                                                                                   const std::string& cmd_name) {
+#ifdef VXSDR_RESPONSE_TIME_DIAG
+    auto t0 = std::chrono::system_clock::now();
+#endif // VXSDR_RESPONSE_TIME_DIAG
     if (not vxsdr::cmd_queue_push_check(p)) {
         return std::nullopt;
     }
@@ -1492,6 +1508,11 @@ bool vxsdr::device_set_max_payload_bytes(const unsigned max_payload_bytes) {
              (p.hdr.packet_type == PACKET_TYPE_TX_RADIO_CMD and q.hdr.packet_type == PACKET_TYPE_TX_RADIO_CMD_RSP) or
              (p.hdr.packet_type == PACKET_TYPE_RX_RADIO_CMD and q.hdr.packet_type == PACKET_TYPE_RX_RADIO_CMD_RSP)) and
             q.hdr.command == p.hdr.command) {
+#ifdef VXSDR_RESPONSE_TIME_DIAG
+            auto t1 = std::chrono::system_clock::now();
+            std::chrono::duration<double> diff = t1 - t0;
+            LOG_INFO(fmt::format("packet response time {:10.3f} ms", 1e3 * diff.count()));
+#endif // VXSDR_RESPONSE_TIME_DIAG
             return q;
         }
         if (((p.hdr.packet_type == PACKET_TYPE_DEVICE_CMD and q.hdr.packet_type == PACKET_TYPE_DEVICE_CMD_ERR) or
@@ -1505,6 +1526,11 @@ bool vxsdr::device_set_max_payload_bytes(const unsigned max_payload_bytes) {
         LOG_ERROR(fmt::format("invalid response received in {:s}", cmd_name));
         return std::nullopt;
     }
+#ifdef VXSDR_RESPONSE_TIME_DIAG
+    auto t1 = std::chrono::system_clock::now();
+    std::chrono::duration<double> diff = t1 - t0;
+    LOG_ERROR(fmt::format("packet response time {:10.3f} ms", 1e3 * diff.count()));
+#endif // VXSDR_RESPONSE_TIME_DIAG
     LOG_ERROR(fmt::format("timeout waiting for response in {:s}", cmd_name));
     return std::nullopt;
 }
