@@ -162,7 +162,8 @@ extern "C" {
 #define RADIO_CMD_GET_RF_FREQ_RANGE           (0x33)
 #define RADIO_CMD_GET_RF_GAIN_RANGE           (0x34)
 #define RADIO_CMD_GET_SAMPLE_RATE_RANGE       (0x35)
-// 0x36 - 0x3F reserved
+#define RADIO_CMD_GET_STREAM_STATE            (0x36)
+// 0x37 - 0x3F reserved
 #define RADIO_CMD_SET_ADC_TEST_PATTERN        (0x40)
 #define RADIO_CMD_GET_IQ_BIAS                 (0x41)
 #define RADIO_CMD_GET_IQ_CORR                 (0x42)
