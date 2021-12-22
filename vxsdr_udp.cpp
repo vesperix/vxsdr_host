@@ -391,7 +391,7 @@ void vxsdr::start_send() {
         total_wait_us += vxsdr::udp_ready_wait_us;
     }
 
-    if (total_wait_us >= vxsdr::udp_tx_ready_timeout_us) {
+    if (total_wait_us >= vxsdr::udp_ready_timeout_us) {
         LOG_ERROR("udp tx timed out waiting for udp rx to reach RUNNING state; shutting down");
         vxsdr::receiver_thread_stop_flag = true;
         vxsdr::sender_thread_stop_flag   = true;

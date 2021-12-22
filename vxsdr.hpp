@@ -70,7 +70,7 @@ class vxsdr {
     static constexpr unsigned network_receive_buffer_bytes  = 16'777'216;  // ~26 ms at 160 MSPS
 
     // timeouts and waits between tries for queue push/pop
-    static constexpr double tx_data_push_timeout_s          = 1.0;
+    static constexpr double tx_data_put_timeout_s           = 1.0;
     static constexpr unsigned tx_data_queue_wait_us         = 10;
 
     static constexpr double rx_data_queue_pop_timeout_s     = 1.0;

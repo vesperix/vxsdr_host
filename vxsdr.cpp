@@ -41,7 +41,7 @@ vxsdr::vxsdr(const net::ip::udp::endpoint& local_send_endpoint,
     while (udp_tx_state != TRANSPORT_RUNNING or udp_rx_state != TRANSPORT_RUNNING) {
         std::this_thread::sleep_for(std::chrono::microseconds(udp_ready_wait_us));
         total_wait_time_us += udp_ready_wait_us;
-        if (total_wait_time_us > udp_ready_wait_us) {
+        if (total_wait_time_us > 2 * udp_ready_wait_us) {
             LOG_ERROR(fmt::format("timeout waiting for UDP transport: tx = {:s} rx ={:s}",
                                   vxsdr::transport_state_to_string(udp_tx_state), vxsdr::transport_state_to_string(udp_rx_state)));
             throw std::runtime_error("timeout waiting for UDP transport in vxsdr constructor");
