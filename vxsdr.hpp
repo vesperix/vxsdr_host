@@ -70,7 +70,7 @@ class vxsdr {
     static constexpr unsigned network_receive_buffer_bytes  = 16'777'216;  // ~26 ms at 160 MSPS
 
     // timeouts and waits between tries for queue push/pop
-    static constexpr double tx_data_queue_timeout_s         = 1.0;
+    static constexpr double tx_data_push_timeout_s          = 1.0;
     static constexpr unsigned tx_data_queue_wait_us         = 10;
 
     static constexpr double rx_data_queue_pop_timeout_s     = 1.0;
@@ -97,9 +97,9 @@ class vxsdr {
     // how often to check the async queue
     static constexpr unsigned async_queue_check_ms          = 10;
 
-    // the UDP tx waits for the rx to reach RUNNING state before entering RUNNING itself
-    static constexpr unsigned udp_tx_ready_timeout_ms       = 1'000;
-    static constexpr unsigned udp_tx_ready_wait_ms          = 1;
+    // timeouts for the UDP transport to reach ready state
+    static constexpr unsigned udp_ready_timeout_us         = 100'000;
+    static constexpr unsigned udp_ready_wait_us            = 100;
 
     // parameters used to monitor status of the radio's internal buffers (on the other end of the network connection)
     std::atomic<unsigned> tx_buffer_size_bytes = 0, tx_buffer_used_bytes = 0;
@@ -247,7 +247,7 @@ class vxsdr {
     */
     size_t put_tx_data(std::vector<std::complex<int16_t>> data,
                        const uint8_t subdev   = 0,
-                       const double timeout_s = tx_data_queue_timeout_s);
+                       const double timeout_s = tx_data_put_timeout_s);
 
     /*!
       @brief Requests basic information from the device.
