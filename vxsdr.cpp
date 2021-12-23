@@ -64,13 +64,8 @@ vxsdr::~vxsdr() {
     set_rx_enable(false);
     LOG_DEBUG("joining receiver_thread");
     receiver_thread_stop_flag = true;
-    // wait for twice the time each thread could be sleeping
-    std::this_thread::sleep_for(std::chrono::microseconds(2 * rx_data_queue_push_timeout_us));
-    if (receiver_thread.joinable()) {
-        receiver_thread.join();
-    }
     boost::system::error_code err;
-#ifndef VXSDR_ASYNCH__RX
+#ifndef VXSDR_ASYNC_RX
     // use shutdown() to terminate the blocking read
     receiver_socket.shutdown(net::ip::udp::socket::shutdown_receive, err);
     if (err != boost::system::errc::success and err != boost::system::errc::not_connected) {
@@ -78,6 +73,9 @@ vxsdr::~vxsdr() {
         LOG_ERROR(fmt::format("receiver socket shutdown: {:s}", err.message()));
     }
 #endif  // VXSDR_ASYNC_RX
+    if (receiver_thread.joinable()) {
+        receiver_thread.join();
+    }
     udp_rx_state = TRANSPORT_SHUTDOWN;
     receiver_socket.close(err);
     if (err != boost::system::errc::success) {
