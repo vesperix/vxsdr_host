@@ -1176,7 +1176,6 @@ int main(int argc, char* argv[]) {
         test_ports(radio);
         test_capabilities(radio);
         test_iq(radio);
-
     } catch (std::exception& e) {
         LOG_ERROR(fmt::format("TESTING: testing exception caught: {:s}", e.what()));
         return EXIT_INTERNAL_ERROR;

@@ -168,20 +168,8 @@ void vxsdr::start_receive() {
                 case PACKET_TYPE_RX_SIGNAL_DATA:
                     if (vxsdr::rx_stream_state == STREAM_RUNNING) {
                         if (not vxsdr::rx_data_queue.push(recv_buffer)) {
-                            unsigned wait_time_us = 0;
-                            while (vxsdr::rx_data_queue.write_available() == 0 and
-                                   wait_time_us < vxsdr::rx_data_queue_push_timeout_us) {
-                                if (vxsdr::rx_data_queue_wait_us > 0) {
-                                    std::this_thread::sleep_for(std::chrono::microseconds(vxsdr::rx_data_queue_wait_us));
-                                    wait_time_us += vxsdr::rx_data_queue_wait_us;
-                                } else {
-                                    break;  // avoid an endless loop if rx_data_queue_wait_us = 0
-                                }
-                            }
-                            if (not vxsdr::rx_data_queue.push(recv_buffer)) {
-                                LOG_ERROR(fmt::format("timeout pushing to rx data queue: {:d}", vxsdr::samples_received));
-                                vxsdr::rx_stream_state = STREAM_ERROR;
-                            }
+                            LOG_ERROR(fmt::format("error pushing to rx data queue: {:d}", vxsdr::samples_received));
+                            vxsdr::rx_stream_state = STREAM_ERROR;
                         }
                     }
                     break;
@@ -384,14 +372,13 @@ void vxsdr::start_send() {
     uint64_t buffer_check_interval_samples   = 2048;
 
     // wait for the rx to reach RUNNING
-    uint64_t total_wait_us                   = 0;
+    auto start_time = std::chrono::steady_clock::now();
     LOG_INFO("waiting for udp rx to reach RUNNING state");
-    while (vxsdr::udp_rx_state != TRANSPORT_RUNNING and total_wait_us < vxsdr::udp_ready_timeout_us) {
-        std::this_thread::sleep_for(std::chrono::microseconds(vxsdr::udp_ready_wait_us));
-        total_wait_us += vxsdr::udp_ready_wait_us;
+    while (vxsdr::udp_rx_state != TRANSPORT_RUNNING and (std::chrono::steady_clock::now() - start_time) < vxsdr::udp_ready_timeout) {
+        std::this_thread::sleep_for(vxsdr::udp_ready_wait);
     }
 
-    if (total_wait_us >= vxsdr::udp_ready_timeout_us) {
+    if ((std::chrono::steady_clock::now() - start_time) >= vxsdr::udp_ready_timeout) {
         LOG_ERROR("udp tx timed out waiting for udp rx to reach RUNNING state; shutting down");
         vxsdr::receiver_thread_stop_flag = true;
         vxsdr::sender_thread_stop_flag   = true;

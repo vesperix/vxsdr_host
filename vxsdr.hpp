@@ -13,6 +13,7 @@
 #include <vector>
 #include <array>
 #include <chrono>
+using namespace std::chrono_literals;
 
 #include <boost/lockfree/queue.hpp>
 #include <boost/lockfree/spsc_queue.hpp>
@@ -74,7 +75,6 @@ class vxsdr {
     static constexpr unsigned tx_data_queue_wait_us         = 10;
 
     static constexpr double rx_data_queue_pop_timeout_s     = 1.0;
-    static constexpr unsigned rx_data_queue_push_timeout_us = 40'000;
     static constexpr unsigned rx_data_queue_wait_us         = 10;
 
     // transmit throttling settings
@@ -90,16 +90,16 @@ class vxsdr {
     static constexpr size_t cmd_ack_queue_length            = 32;   // slots in command ack queue
     static constexpr size_t async_msg_queue_length          = 256;  // slots in async msg queue
 
-    // timeouts and waits for responses from device
-    unsigned device_response_timeout_us                     = 1'000'000;
-    static constexpr unsigned device_response_wait_us       = 10;
+    // timeout and wait between checks for responses from device
+    std::chrono::duration<uint64_t, std::micro> device_response_timeout;
+    static constexpr auto device_response_wait              = 100us;
 
     // how often to check the async queue
     static constexpr unsigned async_queue_check_us          = 100;
 
     // timeouts for the UDP transport to reach ready state
-    static constexpr unsigned udp_ready_timeout_us         = 100'000;
-    static constexpr unsigned udp_ready_wait_us            = 100;
+    static constexpr auto udp_ready_timeout                 = 100'000us;
+    static constexpr auto udp_ready_wait                    = 100us;
 
     // parameters used to monitor status of the radio's internal buffers (on the other end of the network connection)
     std::atomic<unsigned> tx_buffer_size_bytes = 0, tx_buffer_used_bytes = 0;

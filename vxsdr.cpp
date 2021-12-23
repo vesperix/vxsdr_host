@@ -14,6 +14,7 @@ vxsdr::vxsdr(const net::ip::udp::endpoint& local_send_endpoint,
              const int base_priority)
     : sender_socket(context, local_send_endpoint), receiver_socket(context, local_receive_endpoint) {
     LOG_DEBUG("vxsdr constructor entered");
+    device_response_timeout = 1s;
     log_nondata_packets     = nondata_packet_logging;
     thread_set_affinity     = set_affinity;
     send_thread_cpu         = base_cpu_number;
@@ -37,11 +38,10 @@ vxsdr::vxsdr(const net::ip::udp::endpoint& local_send_endpoint,
     receiver_thread             = std::thread([&] { receiver(); });
     udp_tx_state                = TRANSPORT_STARTING;
     sender_thread               = std::thread([&] { sender(); });
-    uint64_t total_wait_time_us = 0;
+    auto start_time = std::chrono::steady_clock::now();
     while (udp_tx_state != TRANSPORT_RUNNING or udp_rx_state != TRANSPORT_RUNNING) {
-        std::this_thread::sleep_for(std::chrono::microseconds(udp_ready_wait_us));
-        total_wait_time_us += udp_ready_wait_us;
-        if (total_wait_time_us > 2 * udp_ready_wait_us) {
+        std::this_thread::sleep_for(udp_ready_wait);
+        if ((std::chrono::steady_clock::now() - start_time) > udp_ready_timeout) {
             LOG_ERROR(fmt::format("timeout waiting for UDP transport: tx = {:s} rx ={:s}",
                                   vxsdr::transport_state_to_string(udp_tx_state), vxsdr::transport_state_to_string(udp_rx_state)));
             throw std::runtime_error("timeout waiting for UDP transport in vxsdr constructor");
@@ -62,7 +62,6 @@ vxsdr::~vxsdr() {
     rx_stop_now();
     set_tx_enable(false);
     set_rx_enable(false);
-    LOG_DEBUG("joining receiver_thread");
     receiver_thread_stop_flag = true;
     boost::system::error_code err;
 #ifndef VXSDR_ASYNC_RX
@@ -83,8 +82,6 @@ vxsdr::~vxsdr() {
     }
     LOG_DEBUG("joining sender thread");
     sender_thread_stop_flag = true;
-    // wait for twice the time each thread could be sleeping
-    std::this_thread::sleep_for(std::chrono::microseconds(2 * std::max(throttle_amount_us, send_thread_sleep_us)));
     if (sender_thread.joinable()) {
         sender_thread.join();
     }
@@ -97,8 +94,6 @@ vxsdr::~vxsdr() {
     LOG_DEBUG("joining context thread");
     context_thread.join();
 #endif  // VXSDR_ASYNC_RX
-    // wait for twice the time each thread could be sleeping
-    std::this_thread::sleep_for(std::chrono::microseconds(2 * async_queue_check_us));
     LOG_DEBUG("joining error_handler thread");
     if (async_handler_thread.joinable()) {
         async_handler_thread.join();
@@ -1297,15 +1292,16 @@ std::optional<double> vxsdr::device_get_timing_resolution(const uint8_t subdev, 
 }
 
 bool vxsdr::set_host_device_command_timeout(const double timeout_s) {
-    if (timeout_s <= 0.0 or timeout_s > 3600.0) {
+    uint64_t timeout_us = std::llround(1e6 * timeout_s);
+    if (timeout_us < 1 or timeout_us > 3'600'000'000ULL) {
         return false;
     }
-    device_response_timeout_us = std::llround(1e6 * timeout_s);
+    device_response_timeout = std::chrono::microseconds(timeout_us);
     return true;
 }
 
 double vxsdr::get_host_device_command_timeout() const {
-    return 1e-6 * device_response_timeout_us;
+    return std::chrono::duration<double>(device_response_timeout).count();
 }
 
 std::vector<net::ip::address_v4> device_discover_ipv4_addresses(const net::ip::address_v4& local_addr,
@@ -1366,7 +1362,7 @@ std::vector<net::ip::address_v4> device_discover_ipv4_addresses(const net::ip::a
         return ret;
     }
 
-    auto t_start                    = std::chrono::system_clock::now();
+    auto t_start                    = std::chrono::steady_clock::now();
     std::chrono::duration<double> t = {};
 
     do {
@@ -1385,7 +1381,7 @@ std::vector<net::ip::address_v4> device_discover_ipv4_addresses(const net::ip::a
                 LOG_WARN("extraneous response received in device_discover_ipv4_addresses()");
             }
         }
-        t = t_start - std::chrono::system_clock::now();
+        t = t_start - std::chrono::steady_clock::now();
     } while (t.count() <= timeout_s);
 
     discover_socket.close(error);
@@ -1436,17 +1432,16 @@ bool vxsdr::device_set_max_payload_bytes(const unsigned max_payload_bytes) {
 
 [[nodiscard]] bool vxsdr::send_packet_and_check_response(packet& p, const std::string& cmd_name) {
 #ifdef VXSDR_RESPONSE_TIME_DIAG
-    auto t0 = std::chrono::system_clock::now();
+    auto t0 = std::chrono::steady_clock::now();
 #endif // VXSDR_RESPONSE_TIME_DIAG
     if (not vxsdr::cmd_queue_push_check(p)) {
         return false;
     }
     response_queue_element q;
     bool got_response     = false;
-    uint64_t wait_time_us = 0;
-    while (not(got_response = response_queue.pop(q)) and wait_time_us < vxsdr::device_response_timeout_us) {
-        std::this_thread::sleep_for(std::chrono::microseconds(vxsdr::device_response_wait_us));
-        wait_time_us += vxsdr::device_response_wait_us;
+    auto start_time = std::chrono::steady_clock::now();
+    while (not(got_response = response_queue.pop(q)) and (std::chrono::steady_clock::now() - start_time) < vxsdr::device_response_timeout) {
+        std::this_thread::sleep_for(vxsdr::device_response_wait);
     }
     if (got_response) {
         if (((p.hdr.packet_type == PACKET_TYPE_DEVICE_CMD and q.hdr.packet_type == PACKET_TYPE_DEVICE_CMD_RSP) or
@@ -1454,7 +1449,7 @@ bool vxsdr::device_set_max_payload_bytes(const unsigned max_payload_bytes) {
              (p.hdr.packet_type == PACKET_TYPE_RX_RADIO_CMD and q.hdr.packet_type == PACKET_TYPE_RX_RADIO_CMD_RSP)) and
             q.hdr.command == p.hdr.command) {
 #ifdef VXSDR_RESPONSE_TIME_DIAG
-            auto t1 = std::chrono::system_clock::now();
+            auto t1 = std::chrono::steady_clock::now();
             std::chrono::duration<double> diff = t1 - t0;
             LOG_INFO(fmt::format("TIMING: type 0x{:02x} cmd 0x{:02x} response {:10.3f} ms", p.hdr.packet_type, p.hdr.command, 1e3 * diff.count()));
 #endif // VXSDR_RESPONSE_TIME_DIAG
@@ -1472,7 +1467,7 @@ bool vxsdr::device_set_max_payload_bytes(const unsigned max_payload_bytes) {
         return false;
     }
 #ifdef VXSDR_RESPONSE_TIME_DIAG
-    auto t1 = std::chrono::system_clock::now();
+    auto t1 = std::chrono::steady_clock::now();
     std::chrono::duration<double> diff = t1 - t0;
     LOG_ERROR(fmt::format("TIMING: type 0x{:02x} cmd 0x{:02x} response {:10.3f} ms", p.hdr.packet_type, p.hdr.command, 1e3 * diff.count()));
 #endif // VXSDR_RESPONSE_TIME_DIAG
@@ -1483,17 +1478,16 @@ bool vxsdr::device_set_max_payload_bytes(const unsigned max_payload_bytes) {
 [[nodiscard]] std::optional<vxsdr::response_queue_element> vxsdr::send_packet_and_return_response(packet& p,
                                                                                                   const std::string& cmd_name) {
 #ifdef VXSDR_RESPONSE_TIME_DIAG
-    auto t0 = std::chrono::system_clock::now();
+    auto t0 = std::chrono::steady_clock::now();
 #endif // VXSDR_RESPONSE_TIME_DIAG
     if (not vxsdr::cmd_queue_push_check(p)) {
         return std::nullopt;
     }
     response_queue_element q;
     bool got_response     = false;
-    uint64_t wait_time_us = 0;
-    while (not(got_response = response_queue.pop(q)) and wait_time_us < vxsdr::device_response_timeout_us) {
-        std::this_thread::sleep_for(std::chrono::microseconds(vxsdr::device_response_wait_us));
-        wait_time_us += vxsdr::device_response_wait_us;
+    auto start_time = std::chrono::steady_clock::now();
+    while (not(got_response = response_queue.pop(q)) and (std::chrono::steady_clock::now() - start_time) < vxsdr::device_response_timeout)  {
+        std::this_thread::sleep_for(vxsdr::device_response_wait);
     }
     if (got_response) {
         if (((p.hdr.packet_type == PACKET_TYPE_DEVICE_CMD and q.hdr.packet_type == PACKET_TYPE_DEVICE_CMD_RSP) or
@@ -1501,7 +1495,7 @@ bool vxsdr::device_set_max_payload_bytes(const unsigned max_payload_bytes) {
              (p.hdr.packet_type == PACKET_TYPE_RX_RADIO_CMD and q.hdr.packet_type == PACKET_TYPE_RX_RADIO_CMD_RSP)) and
             q.hdr.command == p.hdr.command) {
 #ifdef VXSDR_RESPONSE_TIME_DIAG
-            auto t1 = std::chrono::system_clock::now();
+            auto t1 = std::chrono::steady_clock::now();
             std::chrono::duration<double> diff = t1 - t0;
             LOG_INFO(fmt::format("TIMING: type 0x{:02x} cmd 0x{:02x} response {:10.3f} ms", p.hdr.packet_type, p.hdr.command, 1e3 * diff.count()));
 #endif // VXSDR_RESPONSE_TIME_DIAG
@@ -1519,7 +1513,7 @@ bool vxsdr::device_set_max_payload_bytes(const unsigned max_payload_bytes) {
         return std::nullopt;
     }
 #ifdef VXSDR_RESPONSE_TIME_DIAG
-    auto t1 = std::chrono::system_clock::now();
+    auto t1 = std::chrono::steady_clock::now();
     std::chrono::duration<double> diff = t1 - t0;
     LOG_ERROR(fmt::format("TIMING: type 0x{:02x} cmd 0x{:02x} response {:10.3f} ms", p.hdr.packet_type, p.hdr.command, 1e3 * diff.count()));
 #endif // VXSDR_RESPONSE_TIME_DIAG
@@ -1538,10 +1532,9 @@ bool vxsdr::device_set_max_payload_bytes(const unsigned max_payload_bytes) {
     if ((q.hdr.flags & FLAGS_REQUEST_ACK) != 0) {
         cmd_ack_queue_element a;
         bool got_response     = false;
-        uint64_t wait_time_us = 0;
-        while (not(got_response = vxsdr::cmd_ack_queue.pop(a)) and wait_time_us < device_response_timeout_us) {
-            std::this_thread::sleep_for(std::chrono::microseconds(device_response_wait_us));
-            wait_time_us += device_response_wait_us;
+        auto start_time = std::chrono::steady_clock::now();
+        while (not(got_response = response_queue.pop(q)) and (std::chrono::steady_clock::now() - start_time) < vxsdr::device_response_timeout) {
+            std::this_thread::sleep_for(device_response_wait);
         }
         if (got_response) {
             auto* r                 = reinterpret_cast<header_only_packet*>(&a);
@@ -1566,8 +1559,8 @@ bool vxsdr::device_set_max_payload_bytes(const unsigned max_payload_bytes) {
 
 void vxsdr::time_point_to_time_spec_t(const std::chrono::time_point<std::chrono::system_clock>& t, time_spec_t& ts) {
     auto secs = std::chrono::time_point_cast<std::chrono::seconds>(t);
-    auto nsecs =
-        std::chrono::time_point_cast<std::chrono::nanoseconds>(t) - std::chrono::time_point_cast<std::chrono::nanoseconds>(secs);
+    auto nsecs = std::chrono::time_point_cast<std::chrono::nanoseconds>(t)
+                    - std::chrono::time_point_cast<std::chrono::nanoseconds>(secs);
     ts.seconds     = (uint32_t)secs.time_since_epoch().count();
     ts.nanoseconds = (uint32_t)nsecs.count();
 }
