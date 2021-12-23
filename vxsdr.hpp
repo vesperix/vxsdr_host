@@ -2,7 +2,6 @@
 #define VXSDR_HPP
 
 #include <atomic>
-#include <chrono>
 #include <complex>
 #include <cstdint>
 #include <cstring>
@@ -13,6 +12,7 @@
 #include <optional>
 #include <vector>
 #include <array>
+#include <chrono>
 
 #include <boost/lockfree/queue.hpp>
 #include <boost/lockfree/spsc_queue.hpp>
@@ -95,7 +95,7 @@ class vxsdr {
     static constexpr unsigned device_response_wait_us       = 10;
 
     // how often to check the async queue
-    static constexpr unsigned async_queue_check_ms          = 10;
+    static constexpr unsigned async_queue_check_us          = 100;
 
     // the UDP tx waits for the rx to reach RUNNING state before entering RUNNING itself
     static constexpr unsigned udp_tx_ready_timeout_ms       = 1'000;

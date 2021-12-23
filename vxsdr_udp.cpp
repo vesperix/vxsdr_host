@@ -449,7 +449,6 @@ void vxsdr::start_send() {
 
     vxsdr::udp_tx_state = TRANSPORT_SHUTDOWN;
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
     LOG_INFO("start_send exiting:");
     LOG_INFO(fmt::format("   {:12d} packets sent", packets_sent));
     for (unsigned i = 0; i < vxsdr::packet_types_sent.size(); i++) {

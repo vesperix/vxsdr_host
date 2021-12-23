@@ -64,6 +64,11 @@ vxsdr::~vxsdr() {
     set_rx_enable(false);
     LOG_DEBUG("joining receiver_thread");
     receiver_thread_stop_flag = true;
+    // wait for twice the time each thread could be sleeping
+    std::this_thread::sleep_for(std::chrono::microseconds(2 * rx_data_queue_push_timeout_us));
+    if (receiver_thread.joinable()) {
+        receiver_thread.join();
+    }
     boost::system::error_code err;
 #ifndef VXSDR_ASYNCH__RX
     // use shutdown() to terminate the blocking read
@@ -73,9 +78,6 @@ vxsdr::~vxsdr() {
         LOG_ERROR(fmt::format("receiver socket shutdown: {:s}", err.message()));
     }
 #endif  // VXSDR_ASYNC_RX
-    if (receiver_thread.joinable()) {
-        receiver_thread.join();
-    }
     udp_rx_state = TRANSPORT_SHUTDOWN;
     receiver_socket.close(err);
     if (err != boost::system::errc::success) {
@@ -83,6 +85,8 @@ vxsdr::~vxsdr() {
     }
     LOG_DEBUG("joining sender thread");
     sender_thread_stop_flag = true;
+    // wait for twice the time each thread could be sleeping
+    std::this_thread::sleep_for(std::chrono::microseconds(2 * std::max(throttle_amount_us, send_thread_sleep_us)));
     if (sender_thread.joinable()) {
         sender_thread.join();
     }
@@ -95,6 +99,8 @@ vxsdr::~vxsdr() {
     LOG_DEBUG("joining context thread");
     context_thread.join();
 #endif  // VXSDR_ASYNC_RX
+    // wait for twice the time each thread could be sleeping
+    std::this_thread::sleep_for(std::chrono::microseconds(2 * async_queue_check_us));
     LOG_DEBUG("joining error_handler thread");
     if (async_handler_thread.joinable()) {
         async_handler_thread.join();
@@ -424,8 +430,7 @@ bool vxsdr::device_set_time_now(const std::chrono::time_point<std::chrono::syste
                                 const uint8_t subdev,
                                 const uint8_t flags) {
     cmd_or_rsp_packet_time p = {};
-    p.hdr                    = {
-        PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_SET_TIME_NOW, subdev, static_cast<uint8_t>(flags | FLAGS_TIME_PRESENT), sizeof(p), 0};
+    p.hdr = {PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_SET_TIME_NOW, subdev, static_cast<uint8_t>(flags | FLAGS_TIME_PRESENT), sizeof(p), 0};
     vxsdr::time_point_to_time_spec_t(t, p.time);
     return vxsdr::send_packet_and_check_response(p, "device_set_time_now()");
 }
@@ -434,20 +439,14 @@ bool vxsdr::device_set_time_next_pps(const std::chrono::time_point<std::chrono::
                                      const uint8_t subdev,
                                      const uint8_t flags) {
     cmd_or_rsp_packet_time p = {};
-    p.hdr                    = {PACKET_TYPE_DEVICE_CMD,
-             DEVICE_CMD_SET_TIME_NEXT_PPS,
-             subdev,
-             static_cast<uint8_t>(flags | FLAGS_TIME_PRESENT),
-             sizeof(p),
-             0};
+    p.hdr = {PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_SET_TIME_NEXT_PPS, subdev, static_cast<uint8_t>(flags | FLAGS_TIME_PRESENT), sizeof(p), 0};
     vxsdr::time_point_to_time_spec_t(t, p.time);
     return vxsdr::send_packet_and_check_response(p, "device_set_time_next_pps()");
 }
 
 bool vxsdr::device_set_time_now(const int64_t sec, const int32_t nsec, const uint8_t subdev, const uint8_t flags) {
     cmd_or_rsp_packet_time p = {};
-    p.hdr                    = {
-        PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_SET_TIME_NOW, subdev, static_cast<uint8_t>(flags | FLAGS_TIME_PRESENT), sizeof(p), 0};
+    p.hdr = {PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_SET_TIME_NOW, subdev, static_cast<uint8_t>(flags | FLAGS_TIME_PRESENT), sizeof(p), 0};
     if (sec >= 0 and sec <= UINT32_MAX and nsec >= 0 and nsec < 1'000'000'000) {
         p.time.seconds     = sec;
         p.time.nanoseconds = nsec;
@@ -459,12 +458,7 @@ bool vxsdr::device_set_time_now(const int64_t sec, const int32_t nsec, const uin
 
 bool vxsdr::device_set_time_next_pps(const int64_t sec, const int32_t nsec, const uint8_t subdev, const uint8_t flags) {
     cmd_or_rsp_packet_time p = {};
-    p.hdr                    = {PACKET_TYPE_DEVICE_CMD,
-             DEVICE_CMD_SET_TIME_NEXT_PPS,
-             subdev,
-             static_cast<uint8_t>(flags | FLAGS_TIME_PRESENT),
-             sizeof(p),
-             0};
+    p.hdr = {PACKET_TYPE_DEVICE_CMD, DEVICE_CMD_SET_TIME_NEXT_PPS, subdev, static_cast<uint8_t>(flags | FLAGS_TIME_PRESENT), sizeof(p), 0};
     if (sec >= 0 and sec <= UINT32_MAX and nsec >= 0 and nsec < 1'000'000'000) {
         p.time.seconds     = sec;
         p.time.nanoseconds = nsec;
@@ -1666,7 +1660,7 @@ void vxsdr::async_handler() {
         while (async_msg_queue.pop(a)) {
             log_packet_info(a);
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds(async_queue_check_ms));
+        std::this_thread::sleep_for(std::chrono::microseconds(async_queue_check_us));
     }
     LOG_DEBUG("async_handler finished");
 }
