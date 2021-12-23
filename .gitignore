@@ -4,6 +4,7 @@
 *.pdf
 *.json
 *.so
+*.a
 docs
 host_tx_throttle
 test_rx
