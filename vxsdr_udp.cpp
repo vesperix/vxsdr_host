@@ -380,18 +380,18 @@ void vxsdr::start_send() {
     std::array<data_queue_element, data_buffer_size> data_buffer;
     command_queue_element cmd_buffer;
 
-    uint64_t last_check                               = 0;
-    uint64_t buffer_check_interval_samples            = 2048;
+    uint64_t last_check                      = 0;
+    uint64_t buffer_check_interval_samples   = 2048;
 
     // wait for the rx to reach RUNNING
-    unsigned total_wait_ms                            = 0;
+    uint64_t total_wait_us                   = 0;
     LOG_INFO("waiting for udp rx to reach RUNNING state");
-    while (vxsdr::udp_rx_state != TRANSPORT_RUNNING and total_wait_ms < vxsdr::udp_tx_ready_timeout_ms) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(vxsdr::udp_tx_ready_wait_ms));
-        total_wait_ms += vxsdr::udp_tx_ready_wait_ms;
+    while (vxsdr::udp_rx_state != TRANSPORT_RUNNING and total_wait_us < vxsdr::udp_ready_timeout_us) {
+        std::this_thread::sleep_for(std::chrono::microseconds(vxsdr::udp_ready_wait_us));
+        total_wait_us += vxsdr::udp_ready_wait_us;
     }
 
-    if (total_wait_ms >= vxsdr::udp_tx_ready_timeout_ms) {
+    if (total_wait_us >= vxsdr::udp_ready_timeout_us) {
         LOG_ERROR("udp tx timed out waiting for udp rx to reach RUNNING state; shutting down");
         vxsdr::receiver_thread_stop_flag = true;
         vxsdr::sender_thread_stop_flag   = true;
