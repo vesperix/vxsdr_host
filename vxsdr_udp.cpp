@@ -149,7 +149,7 @@ void vxsdr::start_receive() {
                 }
                 n_samps = (recv_buffer.hdr.packet_size - header_size) / sizeof(std::complex<int16_t>);
                 vxsdr::samples_received += n_samps;
-                vxsdr::samples_received_current_stream+= n_samps;
+                vxsdr::samples_received_current_stream += n_samps;
             }
             if (vxsdr::packets_received > 1 and recv_buffer.hdr.sequence_counter != (uint16_t)(last_seq + 1)) {
                 vxsdr::sequence_errors++;
@@ -168,8 +168,9 @@ void vxsdr::start_receive() {
                 case PACKET_TYPE_RX_SIGNAL_DATA:
                     if (vxsdr::rx_stream_state == STREAM_RUNNING) {
                         if (not vxsdr::rx_data_queue.push(recv_buffer)) {
+                            // FIXME: should stream state change?
                             LOG_ERROR(fmt::format("error pushing to rx data queue: {:d}", vxsdr::samples_received));
-                            vxsdr::rx_stream_state = STREAM_ERROR;
+                            // vvxsdr::rx_stream_state = STREAM_ERROR;
                         }
                     }
                     break;
@@ -199,7 +200,6 @@ void vxsdr::start_receive() {
                 } break;
 
                 // the buffer info commands are special cased so they automatically update the buffer sizes and use
-                // since they are not part of the public interface, they are not pushed into any queue
                 case PACKET_TYPE_DEVICE_CMD_RSP: {
                     switch (recv_buffer.hdr.command) {
                         case DEVICE_CMD_GET_BUFFER_USE: {
