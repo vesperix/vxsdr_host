@@ -196,7 +196,8 @@ size_t vxsdr::write_rx_data(std::ofstream& out_stream, const size_t n_desired, c
         return 0;
     }
 
-    size_t n_received = 0, n_written = 0;
+    size_t n_received = 0;
+    size_t n_written = 0;
     data_queue_element q;
 
     if (write_size_samples < MAX_DATA_LENGTH_SAMPLES) {
@@ -355,10 +356,7 @@ size_t vxsdr::put_tx_data(std::vector<std::complex<int16_t>> data, const uint8_t
         unsigned n_data_bytes = n_samples * sizeof(std::complex<int16_t>);
         uint16_t packet_size  = sizeof(packet_header) + n_data_bytes;
         p->hdr                = {PACKET_TYPE_TX_SIGNAL_DATA, 0, subdev, 0, packet_size, 0};
-        for (unsigned j = 0; j < n_samples; j++) {
-            p->data[j] = data[i + j];
-        }
-
+        std::copy_n(data.begin() + i, n_samples, std::begin(p->data));
         uint32_t wait_time_us = 0;
         // setting tx_data_queue_wait_us = 0 results in a busy wait with no timeout
         while (tx_data_queue.write_available() == 0 and wait_time_us < timeout_us) {

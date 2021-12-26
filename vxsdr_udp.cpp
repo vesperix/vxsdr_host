@@ -115,7 +115,7 @@ void vxsdr::start_receive() {
 
         if (bytes_in_packet >= sizeof(packet_header) and remote_endpoint == destination_endpoint) {
             vxsdr::packets_received++;
-            vxsdr::packet_types_received[recv_buffer.hdr.packet_type]++;
+            vxsdr::packet_types_received.at(recv_buffer.hdr.packet_type)++;
             vxsdr::bytes_received += bytes_in_packet;
             bool has_time   = (recv_buffer.hdr.flags & (uint8_t)FLAGS_TIME_PRESENT) != 0;
             bool has_stream = (recv_buffer.hdr.flags & (uint8_t)FLAGS_STREAM_ID_PRESENT) != 0;
@@ -272,8 +272,8 @@ void vxsdr::start_receive() {
     LOG_INFO("start_receive exiting:");
     LOG_INFO(fmt::format("   {:12d} packets received", vxsdr::packets_received));
     for (unsigned i = 0; i < vxsdr::packet_types_received.size(); i++) {
-        if (vxsdr::packet_types_received[i] > 0) {
-            LOG_INFO(fmt::format("   {:12d} {:20s} ({:d})", vxsdr::packet_types_received[i], packet_type_to_name(i), i));
+        if (vxsdr::packet_types_received.at(i) > 0) {
+            LOG_INFO(fmt::format("   {:12d} {:20s} ({:d})", vxsdr::packet_types_received.at(i), packet_type_to_name(i), i));
         }
     }
     LOG_INFO(fmt::format("   {:12d} samples received", vxsdr::samples_received));
@@ -321,7 +321,7 @@ void vxsdr::udp_sender() {
 
 bool vxsdr::send_packet(packet& packet) {
     bool retval = true;
-    vxsdr::packet_types_sent[packet.hdr.packet_type]++;
+    vxsdr::packet_types_sent.at(packet.hdr.packet_type)++;
     packet.hdr.sequence_counter = (uint16_t)(vxsdr::packets_sent % (UINT16_MAX + 1));
     vxsdr::packets_sent++;
 
@@ -402,11 +402,11 @@ void vxsdr::start_send() {
                 for (size_t i = 0; i < n_popped; i++) {
                     if (vxsdr::samples_sent - last_check >= buffer_check_interval_samples) {
                         // request ack to update buffer use
-                        data_buffer[i].hdr.flags |= FLAGS_REQUEST_ACK;
-                        vxsdr::send_packet(data_buffer[i]);
+                        data_buffer.at(i).hdr.flags |= FLAGS_REQUEST_ACK;
+                        vxsdr::send_packet(data_buffer.at(i));
                         last_check = vxsdr::samples_sent;
                     } else {
-                        vxsdr::send_packet(data_buffer[i]);
+                        vxsdr::send_packet(data_buffer.at(i));
                     }
                     // throttle if needed
                     if (vxsdr::tx_buffer_fill_percent > vxsdr::throttle_on_percent) {
@@ -437,8 +437,8 @@ void vxsdr::start_send() {
     LOG_INFO("start_send exiting:");
     LOG_INFO(fmt::format("   {:12d} packets sent", packets_sent));
     for (unsigned i = 0; i < vxsdr::packet_types_sent.size(); i++) {
-        if (vxsdr::packet_types_sent[i] > 0) {
-            LOG_INFO(fmt::format("   {:12d} {:20s} ({:d})", vxsdr::packet_types_sent[i], packet_type_to_name(i), i));
+        if (vxsdr::packet_types_sent.at(i) > 0) {
+            LOG_INFO(fmt::format("   {:12d} {:20s} ({:d})", vxsdr::packet_types_sent.at(i), packet_type_to_name(i), i));
         }
     }
     LOG_INFO(fmt::format("   {:12d} samples sent", vxsdr::samples_sent));
