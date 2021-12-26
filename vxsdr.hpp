@@ -927,7 +927,7 @@ class vxsdr {
       @brief Gets the current timeout used by the host for commands sent to the device.
       @returns the timeout in seconds
     */
-    double get_host_device_command_timeout() const;
+    [[nodiscard]] double get_host_device_command_timeout() const;
 
     /*!
       @brief
