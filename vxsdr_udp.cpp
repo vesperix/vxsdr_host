@@ -285,17 +285,17 @@ void vxsdr::start_receive() {
     }
 #ifdef VXSDR_SEQ_ERR_DIAG
     for (unsigned i = 0; i < vxsdr::seq_error_times.size(); i++) {
-        LOG_DEBUG(fmt::format(" {:30s} {:20s} {:8d} {:8d}", format_time(vxsdr::seq_error_times[i]),
-                             packet_type_to_name(vxsdr::seq_error_packet_type[i]), vxsdr::seq_error_counter[i],
-                             vxsdr::seq_error_expected[i]));
+        LOG_DEBUG(fmt::format(" {:30s} {:20s} {:8d} {:8d}", format_time(vxsdr::seq_error_times.at(i)),
+                             packet_type_to_name(vxsdr::seq_error_packet_type.at(i)), vxsdr::seq_error_counter.at(i),
+                             vxsdr::seq_error_expected.at(i)));
     }
 #endif  // VXSDR_SEQ_ERR_DIAG
 #ifdef VXSDR_TX_BUFFER_DIAG
     LOG_INFO(fmt::format("   {:12d} buffer data points", vxsdr::buffer_data_times.size()));
     for (unsigned i = 0; i < vxsdr::buffer_data_times.size(); i++) {
-        LOG_INFO(fmt::format(" {:30s} {:8d}", format_time(vxsdr::buffer_data_times[i]), vxsdr::buffer_fill_bytes[i]));
-        vxsdr::buffer_fill_min = std::min(vxsdr::buffer_fill_bytes[i], vxsdr::buffer_fill_min);
-        vxsdr::buffer_fill_max = std::max(vxsdr::buffer_fill_bytes[i], vxsdr::buffer_fill_max);
+        LOG_INFO(fmt::format(" {:30s} {:8d}", format_time(vxsdr::buffer_data_times.at(i)), vxsdr::buffer_fill_bytes.at(i)));
+        vxsdr::buffer_fill_min = std::min(vxsdr::buffer_fill_bytes.at(i), vxsdr::buffer_fill_min);
+        vxsdr::buffer_fill_max = std::max(vxsdr::buffer_fill_bytes.at(i), vxsdr::buffer_fill_max);
     }
     LOG_INFO(fmt::format("   {:12d} bytes minimum", vxsdr::buffer_fill_min));
     LOG_INFO(fmt::format("   {:12d} bytes maximum", vxsdr::buffer_fill_max));
