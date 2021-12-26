@@ -80,7 +80,7 @@ void vxsdr::start_receive() {
 
     while (not vxsdr::receiver_thread_stop_flag) {
         static data_queue_element recv_buffer;
-        size_t bytes_in_packet = 0, n_samps = 0;
+        size_t bytes_in_packet = 0;
 #ifndef VXSDR_ASYNC_RX
         // sync receive
         bytes_in_packet = vxsdr::receiver_socket.receive_from(net::buffer(&recv_buffer, sizeof(recv_buffer)), remote_endpoint);
@@ -114,7 +114,6 @@ void vxsdr::start_receive() {
 #endif  // VXSDR_ASYNC_RX
 
         if (bytes_in_packet >= sizeof(packet_header) and remote_endpoint == destination_endpoint) {
-            n_samps = 0;
             vxsdr::packets_received++;
             vxsdr::packet_types_received[recv_buffer.hdr.packet_type]++;
             vxsdr::bytes_received += bytes_in_packet;
@@ -147,7 +146,7 @@ void vxsdr::start_receive() {
                 if (has_stream) {
                     header_size += sizeof(stream_spec_t);
                 }
-                n_samps = (recv_buffer.hdr.packet_size - header_size) / sizeof(std::complex<int16_t>);
+                size_t n_samps = (recv_buffer.hdr.packet_size - header_size) / sizeof(std::complex<int16_t>);
                 vxsdr::samples_received += n_samps;
                 vxsdr::samples_received_current_stream += n_samps;
             }
