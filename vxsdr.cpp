@@ -12,9 +12,8 @@ vxsdr::vxsdr(const net::ip::udp::endpoint& local_send_endpoint,
              const unsigned base_cpu_number,
              const bool set_priority,
              const int base_priority)
-    : sender_socket(context, local_send_endpoint), receiver_socket(context, local_receive_endpoint) {
+    : device_response_timeout {1s}, sender_socket(context, local_send_endpoint), receiver_socket(context, local_receive_endpoint) {
     LOG_DEBUG("vxsdr constructor entered");
-    device_response_timeout = 1s;
     log_nondata_packets     = nondata_packet_logging;
     thread_set_affinity     = set_affinity;
     send_thread_cpu         = base_cpu_number;
@@ -1533,7 +1532,7 @@ bool vxsdr::device_set_max_payload_bytes(const unsigned max_payload_bytes) {
         cmd_ack_queue_element a;
         bool got_response     = false;
         auto start_time = std::chrono::steady_clock::now();
-        while (not(got_response = response_queue.pop(q)) and (std::chrono::steady_clock::now() - start_time) < vxsdr::device_response_timeout) {
+        while (not(got_response = cmd_ack_queue.pop(a)) and (std::chrono::steady_clock::now() - start_time) < vxsdr::device_response_timeout) {
             std::this_thread::sleep_for(device_response_wait);
         }
         if (got_response) {
