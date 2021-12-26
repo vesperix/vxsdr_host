@@ -182,7 +182,7 @@ void vxsdr::start_receive() {
                     vxsdr::tx_packet_oos_count = r->value5;
 #ifdef VXSDR_TX_BUFFER_DIAG
                     vxsdr::buffer_data_times.push_back(std::chrono::system_clock::now());
-                    vxsdr::buffer_fill_bytes.push_back(r->tx_buffer_used_bytes);
+                    vxsdr::buffer_fill_bytes.push_back(r->value3);
 #endif // VXSDR_TX_BUFFER_DIAG
                     vxsdr::tx_buffer_fill_percent =
                             std::min(100U, (100U * vxsdr::tx_buffer_used_bytes) / vxsdr::tx_buffer_size_bytes);
@@ -203,9 +203,8 @@ void vxsdr::start_receive() {
                     switch (recv_buffer.hdr.command) {
                         case DEVICE_CMD_GET_BUFFER_USE: {
                             auto* r                     = reinterpret_cast<two_uint32_packet*>(&recv_buffer);
-                            // FIXME: returned buffer size and use are in 128-bit words
-                            vxsdr::tx_buffer_used_bytes = 16 * r->value1;
-                            vxsdr::rx_buffer_used_bytes = 16 * r->value2;
+                            vxsdr::tx_buffer_used_bytes = r->value1;
+                            vxsdr::rx_buffer_used_bytes = r->value2;
 #ifdef VXSDR_TX_BUFFER_DIAG
                             vxsdr::buffer_data_times.push_back(std::chrono::system_clock::now());
                             vxsdr::buffer_fill_bytes.push_back(r->value1);
@@ -226,8 +225,8 @@ void vxsdr::start_receive() {
                         case DEVICE_CMD_GET_BUFFER_INFO: {
                             auto* r                     = reinterpret_cast<two_uint32_packet*>(&recv_buffer);
                             // FIXME: returned buffer size and use are in 128-bit words
-                            vxsdr::tx_buffer_size_bytes = 16 * r->value1;
-                            vxsdr::rx_buffer_size_bytes = 16 * r->value2;
+                            vxsdr::tx_buffer_size_bytes = r->value1;
+                            vxsdr::rx_buffer_size_bytes = r->value2;
                         } break;
                         case DEVICE_CMD_GET_STATUS: {
                             auto* r                     = reinterpret_cast<eight_uint32_packet*>(&recv_buffer);

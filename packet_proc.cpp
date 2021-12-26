@@ -308,7 +308,6 @@ void log_packet_info(packet& packet, const int direction) {
                 case DEVICE_CMD_GET_STATUS: {
                     LOG_PACKET(fmt::format("DEVICE_CMD_RSP: GET_STATUS"));
                     auto* sr = reinterpret_cast<eight_uint32_packet*>(&packet);
-                    // FIXME: figure out
                     LOG_PACKET(fmt::format("   fpga_temperature          = {:d}", sr->value1));
                     LOG_PACKET(fmt::format("   dac_temperature           = {:d}", sr->value2));
                     LOG_PACKET(fmt::format("   sequence_error_count      = {:d}", sr->value3));
