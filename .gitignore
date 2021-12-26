@@ -6,10 +6,7 @@
 *.so
 *.a
 docs
-host_tx_throttle
-test_rx
-test_tx
-test_rx_seq_only
+vxsdr_rx
 vxsdr_test
 vxsdr_test_rx
 vxsdr_test_commands
