@@ -220,7 +220,7 @@ constexpr uint32_t TIMING_STATUS_EXT_PPS_LOCK   = 0x00000001;
 constexpr uint32_t TIMING_STATUS_EXT_10MHZ_LOCK = 0x00000002;
 constexpr uint32_t TIMING_STATUS_REF_OSC_LOCK   = 0x00000004;
 
-#define PACKED                                __attribute__((packed))
+#define PACKED                               // __attribute__((packed))
 
 typedef struct PACKED {
     uint8_t packet_type;
@@ -254,7 +254,7 @@ class PACKED header_only_packet : public packet {};
 
 class PACKED async_msg_packet : public packet {};
 
-class one_uint32_packet : public packet {
+class PACKED one_uint32_packet : public packet {
   public:
     uint32_t value1   = 0;
     uint32_t reserved = 0;
@@ -351,7 +351,7 @@ class PACKED data_packet_time_stream : public packet {
     std::complex<int16_t> data[MAX_DATA_LENGTH_SAMPLES];
 };
 
-class largest_data_packet : public data_packet_time_stream {};
+class PACKED largest_data_packet : public data_packet_time_stream {};
 
 class PACKED cmd_or_rsp_packet_time : public packet {
   public:
