@@ -1611,7 +1611,7 @@ std::string vxsdr::error_to_string(const uint32_t reason) {
         case ERR_BAD_PKT_SIZE:
             return "BAD_PKT_SIZE";
         default:
-            return fmt::format("error {:d}", reason);
+            return "UNKNOWN ERROR";
     }
 }
 

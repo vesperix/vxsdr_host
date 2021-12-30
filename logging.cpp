@@ -1,5 +1,7 @@
 #include "logging.hpp"
 
+#ifndef VXSDR_DISABLE_LOGGING
+
 void log_init(const std::string& logfilename) {
     // console logger and its settings
     auto clog = std::make_shared<spdlog::sinks::stdout_sink_mt>();
@@ -48,3 +50,5 @@ void log_set_level(const int verbose) {
             LOG_ERROR("unknown log level requested");
     }
 }
+
+#endif //  VXSDR_DISABLE_LOGGING

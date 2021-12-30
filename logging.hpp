@@ -1,6 +1,10 @@
 #ifndef LOGGING_HPP
 #define LOGGING_HPP
 
+#include <string>
+
+#ifndef VXSDR_DISABLE_LOGGING
+
 // disable exceptions in logging
 #define SPDLOG_NO_EXCEPTIONS
 // use the compiled library
@@ -33,5 +37,26 @@
 void log_init(const std::string& logfilename);
 void log_close();
 void log_set_level(const int level);
+
+#else
+
+#define LOG_INIT(x)     {}
+
+#define LOG_TRACE(...)  {}
+#define LOG_DEBUG(...)  {}
+#define LOG_INFO(...)   {}
+#define LOG_WARN(...)   {}
+#define LOG_ERROR(...)  {}
+#define LOG_FATAL(...)  {}
+
+#define LOG_CLOSE()     {}
+
+#define LOG_PACKET(...) {}
+
+void log_init(const std::string& logfilename) {};
+void log_close() {};
+void log_set_level(const int level) {};
+
+#endif  // VXSDR_DISABLE_LOGGING
 
 #endif  // LOGGING_HPP
