@@ -19,7 +19,6 @@ COMMON_SRC = packet_proc.cpp utility.cpp logging.cpp compile_checks.cpp vxsdr.cp
 LIB_INCLUDES = vxsdr_header.h vxsdr.hpp
 LIB_SRC = vxsdr.cpp vxsdr_udp.cpp
 LIB_CXXFLAGS = #-DVXSDR_DISABLE_LOGGING
-LIB_LDFLAGS = -lfmt
 
 AR = ar
 AR_FLAGS = rcs
@@ -54,8 +53,14 @@ vxsdr_test_atmosense_rx: vxsdr_test_atmosense_rx.cpp host_radio_options.cpp $(CO
 vxsdr_test_commands: vxsdr_test_commands.cpp host_radio_options.cpp $(COMMON_INCLUDES) $(COMMON_SRC)
 	$(CXX) $(CXX_FLAGS) $(LIB_CXXFLAGS) -o $@ $< host_radio_options.cpp $(COMMON_SRC) $(CXX_LDFLAGS)
 
+vxsdr.o: vxsdr.cpp
+	$(CXX) $(CXX_FLAGS) $(LIB_CXXFLAGS) -c -o $@ $<
+
+vxsdr_udp.o: vxsdr_udp.cpp
+	$(CXX) $(CXX_FLAGS) $(LIB_CXXFLAGS) -c -o $@ $<
+
 libvxsdr.so: $(LIB_INCLUDES) $(LIB_SRC)
-	$(CXX) $(CXX_FLAGS) $(LIB_CXXFLAGS) -o $@ -Wl,-soname,libvxsdr.so.1 -fPIC -shared $(LIB_SRC) $(LIB_LDFLAGS)
+	$(CXX) $(CXX_FLAGS) $(LIB_CXXFLAGS) -o $@ -Wl,-soname,libvxsdr.so.1 -fPIC -shared $(LIB_SRC)
 
 libvxsdr.a: vxsdr.o vxsdr_udp.o
 	$(AR) $(AR_FLAGS) $@ $^
