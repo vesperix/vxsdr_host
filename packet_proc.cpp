@@ -344,7 +344,7 @@ void log_packet_info(packet& packet, const int direction) {
                     LOG_PACKET(fmt::format("DEVICE_CMD_RSP: GET_GET_TIMING_STATUS"));
                     auto* r = reinterpret_cast<one_uint32_packet*>(&packet);
                     LOG_PACKET(fmt::format("   pps lock                  = {}", (bool)(r->value1 & TIMING_STATUS_EXT_PPS_LOCK)));
-                    LOG_PACKET(fmt::format("   10 MHz lock               = {}", (bool)(r->value1 & TIMING_STATUS_EXT_10MHZ_LOCK))),
+                    LOG_PACKET(fmt::format("   10 MHz lock               = {}", (bool)(r->value1 & TIMING_STATUS_EXT_10MHZ_LOCK)));
                     LOG_PACKET(fmt::format("   reference oscillator lock = {}", (bool)(r->value1 & TIMING_STATUS_REF_OSC_LOCK)));
                 } break;
                 default:
