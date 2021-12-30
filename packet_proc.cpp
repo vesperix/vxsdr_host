@@ -41,8 +41,7 @@ std::string packet_type_to_name(const uint8_t number) {
         case PACKET_TYPE_INVALID_PACKET:
             return "INVALID_PACKET";
         default:
-            return fmt::format("packet type {:d}", number);
-            ;
+            return "UNKNOWN_PACKET_TYPE";
     }
 }
 
@@ -109,9 +108,10 @@ std::string device_cmd_to_name(const uint8_t cmd) {
         case DEVICE_CMD_RESET:
             return "RESET";
         default:
-            return fmt::format("command {:d}", cmd);
+            return "UNKNOWN_DEVICE_CMD";
     }
 }
+
 std::string device_cmd_error_to_name(const uint32_t reason) {
     switch (reason) {
         case DEVICE_CMD_ERR_BAD_CMD:
@@ -129,7 +129,7 @@ std::string device_cmd_error_to_name(const uint32_t reason) {
         case DEVICE_CMD_ERR_BAD_PKT_SIZE:
             return "BAD_PKT_SIZE";
         default:
-            return fmt::format("reason {:d}", reason);
+            return "UNKNOWN_DEVICE_CMD_ERROR";
     }
 }
 
@@ -202,7 +202,7 @@ std::string radio_cmd_to_name(const uint8_t cmd) {
         case RADIO_CMD_SET_IQ_CORR:
             return "SET_IQ_CORR";
         default:
-            return fmt::format("command {:d}", cmd);
+            return "UNKNOWN_RADIO_CMD";
     }
 }
 
@@ -223,7 +223,7 @@ std::string radio_cmd_error_to_name(const uint32_t reason) {
         case RADIO_CMD_ERR_BAD_PKT_SIZE:
             return "BAD_PKT_SIZE";
         default:
-            return fmt::format("reason {:d}", reason);
+            return "UNKNOWN_RADIO_CMD_ERROR";
     }
 }
 
@@ -248,7 +248,7 @@ std::string async_msg_to_name(const uint8_t msg) {
         case ASYNC_PPS_TIMEOUT:
             return "PPS_TIMEOUT";
         default:
-            return fmt::format("message {:d}", msg);
+            return "UNKNOWN_ASYNC_MSG";
     }
 }
 

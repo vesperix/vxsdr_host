@@ -34,11 +34,10 @@
 // what level to use for packet logs
 #define LOG_PACKET(...) SPDLOG_LOGGER_INFO(spdlog::get("multi"), __VA_ARGS__)
 
-void log_init(const std::string& logfilename);
-void log_close();
-void log_set_level(const int level);
-
 #else
+
+// need fmtlib if not using spdlog's
+#include <fmt/core.h>
 
 #define LOG_INIT(x)     {}
 
@@ -53,10 +52,10 @@ void log_set_level(const int level);
 
 #define LOG_PACKET(...) {}
 
-void log_init(const std::string& logfilename) {};
-void log_close() {};
-void log_set_level(const int level) {};
-
 #endif  // VXSDR_DISABLE_LOGGING
+
+void log_init(const std::string& logfilename);
+void log_close();
+void log_set_level(const int level);
 
 #endif  // LOGGING_HPP

@@ -51,4 +51,10 @@ void log_set_level(const int verbose) {
     }
 }
 
+#else
+
+void log_init(const std::string& logfilename) {};
+void log_close() {};
+void log_set_level(const int level) {};
+
 #endif //  VXSDR_DISABLE_LOGGING

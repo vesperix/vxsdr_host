@@ -19,7 +19,7 @@ COMMON_SRC = packet_proc.cpp utility.cpp logging.cpp compile_checks.cpp vxsdr.cp
 LIB_INCLUDES = vxsdr_header.h vxsdr.hpp
 LIB_SRC = vxsdr.cpp vxsdr_udp.cpp
 LIB_CXXFLAGS = #-DVXSDR_DISABLE_LOGGING
-LIB_LDFLAGS =
+LIB_LDFLAGS = -lfmt
 
 AR = ar
 AR_FLAGS = rcs
