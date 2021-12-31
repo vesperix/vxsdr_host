@@ -54,6 +54,9 @@ vxsdr_test_atmosense_rx: vxsdr_test_atmosense_rx.cpp host_radio_options.o $(COMM
 vxsdr_test_commands: vxsdr_test_commands.cpp host_radio_options.o $(COMMON_INCLUDES) $(COMMON_OBJ) libvxsdr.a
 	$(CXX) $(CXX_FLAGS) $(LIB_CXXFLAGS) -o $@ $< host_radio_options.o $(COMMON_OBJ) $(CXX_LDFLAGS)
 
+compile_checks.o: compile_checks.cpp vxsdr_header.h
+	$(CXX) $(CXX_FLAGS) $(LIB_CXXFLAGS) -c -o $@ $<
+
 vxsdr.o: vxsdr.cpp vxsdr.hpp vxsdr_header.h
 	$(CXX) $(CXX_FLAGS) $(LIB_CXXFLAGS) -c -o $@ $<
 
