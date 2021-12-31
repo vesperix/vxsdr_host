@@ -37,6 +37,13 @@ namespace net = boost::asio;
 #include "packet_proc.hpp"
 #include "vxsdr_header.h"
 
+#ifdef VXSDR_DISABLE_LOGGING
+// no diagnostics if logging is off
+#undef VXSDR_SEQ_ERR_DIAG
+#undef VXSDR_RESPONSE_TIME_DIAG
+#undef VXSDR_TX_BUFFER_DIAG
+#endif // VXSDR_DISABLE_LOGGING
+
 /*! @class vxsdr vxsdr.hpp
     @brief The vxsdr class contains the host interface for the VXSDR
 */

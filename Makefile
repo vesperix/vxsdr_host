@@ -5,7 +5,7 @@ CXX_DEFINES = -DVXSDR_SEQ_ERR_DIAG -DVXSDR_RESPONSE_TIME_DIAG #-DVXSDR_TX_BUFFER
 CXX_BASEFLAGS = -Wall -pedantic -std=c++17 $(CXX_EXTRA_FLAGS)
 CXX_OPTFLAGS = -O3
 CXX_DBGFLAGS = -g -Og -fsanitize=address
-CXX_LDFLAGS = -lpthread -lboost_program_options -lboost_system -lspdlog
+CXX_LDFLAGS = -lpthread -lboost_program_options -lboost_system -lspdlog -L. -lvxsdr
 
 ifdef VXSDR_DEBUG
 	CXX_FLAGS = $(CXX_BASEFLAGS) $(CXX_DBGFLAGS) $(CXX_DEFINES)
@@ -14,7 +14,7 @@ else
 endif
 
 COMMON_INCLUDES = packet_proc.hpp vxsdr_header.h host_radio_options.hpp utility.hpp logging.hpp
-COMMON_OBJ = packet_proc.o utility.o logging.o compile_checks.o vxsdr.o vxsdr_udp.o
+COMMON_OBJ = packet_proc.o utility.o logging.o compile_checks.o #vxsdr.o vxsdr_udp.o
 
 LIB_INCLUDES = vxsdr_header.h vxsdr.hpp
 LIB_SRC = vxsdr.cpp vxsdr_udp.cpp
@@ -38,19 +38,19 @@ docs: $(DOCS)
 .cpp.o:
 	$(CXX) $(CXX_FLAGS) -c -o $@ $<
 
-vxsdr_test: vxsdr_test.cpp host_radio_options.o $(COMMON_INCLUDES) $(COMMON_OBJ)
+vxsdr_test: vxsdr_test.cpp host_radio_options.o $(COMMON_INCLUDES) $(COMMON_OBJ) libvxsdr.a
 	$(CXX) $(CXX_FLAGS) -o $@ $< host_radio_options.o $(COMMON_OBJ) $(CXX_LDFLAGS)
 
-vxsdr_rx: vxsdr_rx.cpp host_radio_options.o $(COMMON_INCLUDES) $(COMMON_OBJ)
+vxsdr_rx: vxsdr_rx.cpp host_radio_options.o $(COMMON_INCLUDES) $(COMMON_OBJ) libvxsdr.a
 	$(CXX) $(CXX_FLAGS) -o $@ $< host_radio_options.o $(COMMON_OBJ) $(CXX_LDFLAGS)
 
-vxsdr_test_rx: vxsdr_test_rx.cpp host_radio_options.o $(COMMON_INCLUDES) $(COMMON_OBJ)
+vxsdr_test_rx: vxsdr_test_rx.cpp host_radio_options.o $(COMMON_INCLUDES) $(COMMON_OBJ) libvxsdr.a
 	$(CXX) $(CXX_FLAGS) -o $@ $< host_radio_options.o $(COMMON_OBJ) $(CXX_LDFLAGS)
 
-vxsdr_test_atmosense_rx: vxsdr_test_atmosense_rx.cpp host_radio_options.o $(COMMON_INCLUDES) $(COMMON_OBJ)
+vxsdr_test_atmosense_rx: vxsdr_test_atmosense_rx.cpp host_radio_options.o $(COMMON_INCLUDES) $(COMMON_OBJ) libvxsdr.a
 	$(CXX) $(CXX_FLAGS) -o $@ $< host_radio_options.o $(COMMON_OBJ) $(CXX_LDFLAGS)
 
-vxsdr_test_commands: vxsdr_test_commands.cpp host_radio_options.o $(COMMON_INCLUDES) $(COMMON_OBJ)
+vxsdr_test_commands: vxsdr_test_commands.cpp host_radio_options.o $(COMMON_INCLUDES) $(COMMON_OBJ) libvxsdr.a
 	$(CXX) $(CXX_FLAGS) $(LIB_CXXFLAGS) -o $@ $< host_radio_options.o $(COMMON_OBJ) $(CXX_LDFLAGS)
 
 vxsdr.o: vxsdr.cpp
