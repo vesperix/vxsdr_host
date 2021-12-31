@@ -1,7 +1,7 @@
 
 CXX = clang++-10
 
-CXX_DEFINES = -DVXSDR_SEQ_ERR_DIAG -DVXSDR_RESPONSE_TIME_DIAG #-DVXSDR_TX_BUFFER_DIAG
+CXX_DEFINES =
 CXX_BASEFLAGS = -Wall -pedantic -std=c++17 $(CXX_EXTRA_FLAGS)
 CXX_OPTFLAGS = -O3
 CXX_DBGFLAGS = -g -Og -fsanitize=address
@@ -16,9 +16,10 @@ endif
 COMMON_INCLUDES = packet_proc.hpp vxsdr_header.h host_radio_options.hpp utility.hpp logging.hpp
 COMMON_OBJ = packet_proc.o utility.o logging.o compile_checks.o #vxsdr.o vxsdr_udp.o
 
+LIB_DEFINES = -DVXSDR_SEQ_ERR_DIAG -DVXSDR_RESPONSE_TIME_DIAG #-DVXSDR_TX_BUFFER_DIAG
 LIB_INCLUDES = vxsdr_header.h vxsdr.hpp
-LIB_SRC = vxsdr.cpp vxsdr_udp.cpp
-LIB_CXXFLAGS = #-DVXSDR_DISABLE_LOGGING
+LIB_OBJ = vxsdr.o vxsdr_device_cmds.o vxsdr_radio_cmds.o vxsdr_udp.o
+LIB_CXXFLAGS = -fPIC $(LIB_DEFINES)
 
 AR = ar
 AR_FLAGS = rcs
@@ -53,16 +54,22 @@ vxsdr_test_atmosense_rx: vxsdr_test_atmosense_rx.cpp host_radio_options.o $(COMM
 vxsdr_test_commands: vxsdr_test_commands.cpp host_radio_options.o $(COMMON_INCLUDES) $(COMMON_OBJ) libvxsdr.a
 	$(CXX) $(CXX_FLAGS) $(LIB_CXXFLAGS) -o $@ $< host_radio_options.o $(COMMON_OBJ) $(CXX_LDFLAGS)
 
-vxsdr.o: vxsdr.cpp
+vxsdr.o: vxsdr.cpp vxsdr.hpp vxsdr_header.h
 	$(CXX) $(CXX_FLAGS) $(LIB_CXXFLAGS) -c -o $@ $<
 
-vxsdr_udp.o: vxsdr_udp.cpp
+vxsdr_device_cmds.o: vxsdr_device_cmds.cpp vxsdr.hpp vxsdr_header.h
 	$(CXX) $(CXX_FLAGS) $(LIB_CXXFLAGS) -c -o $@ $<
 
-libvxsdr.so: $(LIB_INCLUDES) $(LIB_SRC)
-	$(CXX) $(CXX_FLAGS) $(LIB_CXXFLAGS) -o $@ -Wl,-soname,libvxsdr.so.1 -fPIC -shared $(LIB_SRC)
+vxsdr_radio_cmds.o: vxsdr_radio_cmds.cpp vxsdr.hpp vxsdr_header.h
+	$(CXX) $(CXX_FLAGS) $(LIB_CXXFLAGS) -c -o $@ $<
 
-libvxsdr.a: vxsdr.o vxsdr_udp.o
+vxsdr_udp.o: vxsdr_udp.cpp vxsdr.hpp vxsdr_header.h
+	$(CXX) $(CXX_FLAGS) $(LIB_CXXFLAGS) -c -o $@ $<
+
+libvxsdr.so: $(LIB_OBJ)
+	$(CXX) $(CXX_FLAGS) $(LIB_CXXFLAGS) -o $@ -Wl,-soname,libvxsdr.so.1 -fPIC -shared $(LIB_OBJ)
+
+libvxsdr.a: $(LIB_OBJ)
 	$(AR) $(AR_FLAGS) $@ $^
 
 docs/html/index.html: Doxyfile vxsdr.hpp
