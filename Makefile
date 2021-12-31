@@ -5,7 +5,7 @@ CXX_DEFINES = -DVXSDR_SEQ_ERR_DIAG -DVXSDR_RESPONSE_TIME_DIAG #-DVXSDR_TX_BUFFER
 CXX_BASEFLAGS = -Wall -pedantic -std=c++17 $(CXX_EXTRA_FLAGS)
 CXX_OPTFLAGS = -O3
 CXX_DBGFLAGS = -g -Og -fsanitize=address
-CXX_LDFLAGS = -lpthread -lboost_program_options -lboost_system -lspdlog -L. -lvxsdr
+CXX_LDFLAGS = -lpthread -lboost_program_options -lboost_system -lspdlog libvxsdr.a
 
 ifdef VXSDR_DEBUG
 	CXX_FLAGS = $(CXX_BASEFLAGS) $(CXX_DBGFLAGS) $(CXX_DEFINES)
