@@ -12,13 +12,12 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/program_options.hpp>
 #include <boost/version.hpp>
+#include <vxsdr.hpp>
 
 #include "errors.hpp"
 #define VXSDR_TESTING
 #include "logging.hpp"
-
 #include "host_radio_options.hpp"
-#include "vxsdr.hpp"
 
 std::string stream_state_to_string(const vxsdr::stream_state_t state) {
     switch (state) {
@@ -1153,8 +1152,7 @@ int main(int argc, char* argv[]) {
         LOG_INFO(fmt::format("using destination IP {:s} and port {:d}", destination_endpoint.address().to_string(),
                              destination_endpoint.port()));
 
-        radio = std::make_unique<vxsdr>(local_send_endpoint, local_receive_endpoint, destination_endpoint,
-                                        vm["log_packets"].as<bool>());
+        radio = std::make_unique<vxsdr>(local_send_endpoint, local_receive_endpoint, destination_endpoint);
         // let radio complete initialization
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
         set_common_options(vm, radio);

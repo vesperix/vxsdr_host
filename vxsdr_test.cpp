@@ -12,12 +12,12 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/program_options.hpp>
 #include <boost/version.hpp>
+#include <vxsdr.hpp>
 
 #include "errors.hpp"
 #include "logging.hpp"
 
 #include "host_radio_options.hpp"
-#include "vxsdr.hpp"
 
 extern "C" void sig_int_handler(int /* sig_num */) {
     LOG_FATAL("terminated by SIGINT (ctrl-C)");
@@ -54,8 +54,7 @@ int main(int argc, char* argv[]) {
 
         std::unique_ptr<vxsdr> radio;
         try {
-            radio = std::make_unique<vxsdr>(local_send_endpoint, local_receive_endpoint, destination_endpoint,
-                                             vm["log_packets"].as<bool>());
+            radio = std::make_unique<vxsdr>(local_send_endpoint, local_receive_endpoint, destination_endpoint);
         } catch (std::runtime_error& e) {
             LOG_FATAL(fmt::format("exception caught during vxsdr initialization: {:s}", e.what()));
             LOG_FATAL(fmt::format("{:s} finished with exception", argv[0]));

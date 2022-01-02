@@ -17,7 +17,7 @@
 #include "logging.hpp"
 
 #include "host_radio_options.hpp"
-#include "vxsdr.hpp"
+#include <vxsdr.hpp>
 
 extern "C" void sig_int_handler(int /* sig_num */) {
     LOG_FATAL("terminated by SIGINT (ctrl-C)");
@@ -52,7 +52,7 @@ int main(int argc, char* argv[]) {
 
         std::unique_ptr<vxsdr> radio;
         try {
-            radio = std::make_unique<vxsdr>(local_send_endpoint, local_receive_endpoint, destination_endpoint, vm["log_packets"].as<bool>(),
+            radio = std::make_unique<vxsdr>(local_send_endpoint, local_receive_endpoint, destination_endpoint,
                                     vm["set_affinity"].as<bool>(), vm["affinity_base_cpu"].as<unsigned>(),
                                     vm["set_priority"].as<bool>(), vm["thread_priority"].as<int>());
         } catch (std::runtime_error& e) {
