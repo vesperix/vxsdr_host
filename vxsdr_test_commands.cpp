@@ -18,6 +18,7 @@
 #define VXSDR_TESTING
 #include "logging.hpp"
 #include "host_radio_options.hpp"
+#include "utility.hpp"
 
 std::string stream_state_to_string(const vxsdr::stream_state_t state) {
     switch (state) {
@@ -54,7 +55,7 @@ void test_hello(std::unique_ptr<vxsdr>& radio) {
 
     LOG_INFO("TESTING:    testing return with ack requested");
     {
-        auto result = radio->device_hello(0, FLAGS_REQUEST_ACK);
+        auto result = radio->device_hello(0, vxsdr::flags_request_ack);
 
         if (result) {
             LOG_INFO("TESTING:       passed");

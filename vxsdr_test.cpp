@@ -16,6 +16,7 @@
 
 #include "errors.hpp"
 #include "logging.hpp"
+#include "utility.hpp"
 
 #include "host_radio_options.hpp"
 

@@ -17,6 +17,7 @@
 #include "errors.hpp"
 #include "logging.hpp"
 #include "host_radio_options.hpp"
+#include "utility.hpp"
 
 extern "C" void sig_int_handler(int /* sig_num */) {
     LOG_FATAL("terminated by SIGINT (ctrl-C)");
