@@ -53,17 +53,6 @@ void test_hello(std::unique_ptr<vxsdr>& radio) {
         }
     }
 
-    LOG_INFO("TESTING:    testing return with ack requested");
-    {
-        auto result = radio->device_hello(0, vxsdr::flags_request_ack);
-
-        if (result) {
-            LOG_INFO("TESTING:       passed");
-        } else {
-            LOG_ERROR("TESTING:       no value returned by device_hello((0, FLAGS_REQUEST_ACK)");
-            total_errors++;
-        }
-    }
 #ifdef TEST_INCORRECT_SUBDEVICE
     LOG_INFO("TESTING:    testing return with incorrect subdevice");
     {
