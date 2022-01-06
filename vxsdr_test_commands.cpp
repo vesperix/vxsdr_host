@@ -1,4 +1,3 @@
-#include <chrono>
 #include <complex>
 #include <csignal>
 #include <cstdlib>
@@ -8,6 +7,8 @@
 #include <limits>
 #include <string>
 #include <thread>
+#include <chrono>
+using namespace std::chrono_literals;
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/program_options.hpp>
@@ -94,7 +95,7 @@ void test_time(std::unique_ptr<vxsdr>& radio, const double time_tol_sec = 0.01) 
             total_errors++;
         }
 
-        std::this_thread::sleep_for(std::chrono::seconds(1));
+        std::this_thread::sleep_for(1s);
 
         auto result = radio->device_get_time_now();
         if (result) {
@@ -122,7 +123,7 @@ void test_time(std::unique_ptr<vxsdr>& radio, const double time_tol_sec = 0.01) 
             total_errors++;
         }
 
-        std::this_thread::sleep_for(std::chrono::seconds(1));
+        std::this_thread::sleep_for(1s);
 
         uint32_t t_sec = 0, t_ns = 0;
         bool result = radio->device_get_time_now(t_sec, t_ns);
@@ -150,7 +151,7 @@ void test_time(std::unique_ptr<vxsdr>& radio, const double time_tol_sec = 0.01) 
             total_errors++;
         }
 
-        std::this_thread::sleep_for(std::chrono::seconds(1));
+        std::this_thread::sleep_for(1s);
 
         uint32_t t_sec = 0, t_ns = 0;
         bool result = radio->device_get_time_now(t_sec, t_ns);
