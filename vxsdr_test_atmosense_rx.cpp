@@ -112,9 +112,7 @@ int main(int argc, char* argv[]) {
             return EXIT_CMD_LINE_ERROR;
         }
 
-        auto radio =
-            std::make_unique<vxsdr>(local_send_endpoint, local_receive_endpoint, destination_endpoint,
-                                    vm["set_affinity"].as<bool>(), vm["affinity_base_cpu"].as<unsigned>(),
+        auto radio = std::make_unique<vxsdr>(vm["local_address"].as<std::string>(), vm["destination_address"].as<std::string>(),
                                     vm["set_priority"].as<bool>(), vm["thread_priority"].as<int>());
         // let radio complete initialization
         std::this_thread::sleep_for(std::chrono::milliseconds(10));

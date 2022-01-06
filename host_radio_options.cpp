@@ -48,10 +48,6 @@ void add_common_options(boost::program_options::options_description& desc) {
         ("verbose_level", boost::program_options::value<int>(),
                 "log level (6 = trace, 5 = debug, 4 = info, 3 = warning, 2 = error, 1 = fatal, 0 = none)")
         ("quit_on_error", boost::program_options::value<bool>()->default_value(true), "quit on errors")
-        ("set_affinity", boost::program_options::value<bool>()->default_value(false),
-                 "set CPU affinity for UDP handler threads")
-        ("affinity_base_cpu", boost::program_options::value<unsigned>()->default_value(0),
-                "lowest CPU number to use for UDP handler threads when affinity is used")
         ("set_priority", boost::program_options::value<bool>()->default_value(true),
                 "set realtime priority for UDP handler threads")
         ("thread_priority", boost::program_options::value<int>()->default_value(5),
@@ -64,12 +60,9 @@ void add_network_options(boost::program_options::options_description& desc) {
     // clang-format off
     desc.add_options()
         ("local_address", boost::program_options::value<std::string>()->required(), "IPv4 address of local interface")
-        ("local_receive_port", boost::program_options::value<unsigned>()->default_value(1030), "port to receive on local interface")
-        ("local_send_port", boost::program_options::value<unsigned>()->default_value(55123), "port to send on local interface")
         ("destination_address", boost::program_options::value<std::string>()->required(),
                 "IPv4 address of destination (including broadcast/multicast)")
         ("netmask", boost::program_options::value<std::string>()->default_value("255.255.255.0"), "IPv4 netmask of local interface")
-        ("destination_port", boost::program_options::value<unsigned>()->default_value(1030), "port to use on destination")
         ("payload_size", boost::program_options::value<size_t>()->default_value(8192), "maximum data packet payload size in bytes")
         ;
     // clang-format on
