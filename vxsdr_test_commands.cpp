@@ -841,7 +841,7 @@ void test_ports(std::unique_ptr<vxsdr>& radio) {
                 auto pname = radio->get_tx_port_name(i);
                 if (pname) {
                     LOG_INFO(fmt::format("TESTING:       passed ({:s})", pname.value()));
-
+/* FIXME: set by name not yet implemented
                     LOG_INFO(fmt::format("TESTING:       setting tx port by name ({:s})", pname.value()));
                     if (radio->set_tx_port_by_name(pname.value())) {
                         LOG_INFO("TESTING:       passed");
@@ -864,6 +864,7 @@ void test_ports(std::unique_ptr<vxsdr>& radio) {
                         LOG_ERROR("TESTING:      no value returned by device_get_tx_port_name()");
                         total_errors++;
                     }
+*/
 
                 } else {
                     LOG_ERROR("TESTING:      no value returned by device_get_tx_port_name()");
@@ -907,7 +908,7 @@ void test_ports(std::unique_ptr<vxsdr>& radio) {
             auto pname = radio->get_rx_port_name(i);
             if (pname) {
                 LOG_INFO(fmt::format("TESTING:       passed ({:s})", pname.value()));
-
+/* FIXME: set by name not yet implemented
                 LOG_INFO(fmt::format("TESTING:       setting rx port by name ({:s})", pname.value()));
                 if (radio->set_rx_port_by_name(pname.value())) {
                     LOG_INFO("TESTING:       passed");
@@ -930,7 +931,7 @@ void test_ports(std::unique_ptr<vxsdr>& radio) {
                     LOG_ERROR("TESTING:      no value returned by device_get_rx_port_name()");
                     total_errors++;
                 }
-
+*/
             } else {
                 LOG_ERROR("TESTING:      no value returned by device_get_rx_port_name()");
                 total_errors++;
