@@ -85,7 +85,7 @@ void test_time(std::unique_ptr<vxsdr>& radio, const double time_tol_sec = 0.01) 
         }
     }
 
-    LOG_INFO("TESTING:    testing set_time_now() and get_time_now() with time point");
+    LOG_INFO("TESTING:    testing set_time_now() and get_time_now()");
     {
         auto tp_set = std::chrono::system_clock::now();
         bool sent   = radio->device_set_time_now(tp_set);
@@ -101,91 +101,9 @@ void test_time(std::unique_ptr<vxsdr>& radio, const double time_tol_sec = 0.01) 
         if (result) {
             std::chrono::duration<double> diff = result.value() - tp_set;
             if (fabs(1.0 - diff.count()) < time_tol_sec) {
-                LOG_INFO("TESTING:       passed with time_point");
+                LOG_INFO("TESTING:       passed");
             } else {
                 LOG_ERROR(fmt::format("TESTING:     time difference is too large: {:e}", diff.count()));
-                total_errors++;
-            }
-        } else {
-            LOG_ERROR("TESTING:      no value returned by device_get_time_now()");
-            total_errors++;
-        }
-    }
-
-    LOG_INFO("TESTING:    testing set_time_now and get_time_now with s and ns");
-    {
-        struct timespec ts_set{};
-        timespec_get(&ts_set, TIME_UTC);
-        bool sent = radio->device_set_time_now(ts_set.tv_sec, ts_set.tv_nsec);
-
-        if (not sent) {
-            LOG_ERROR("TESTING:      false returned by device_set_time_now()");
-            total_errors++;
-        }
-
-        std::this_thread::sleep_for(1s);
-
-        uint32_t t_sec = 0, t_ns = 0;
-        bool result = radio->device_get_time_now(t_sec, t_ns);
-        if (result) {
-            double diff = t_sec - ts_set.tv_sec + 1e-9 * (t_ns - ts_set.tv_nsec);
-            if (fabs(1.0 - diff) < time_tol_sec) {
-                LOG_INFO("TESTING:       passed with s and ns");
-            } else {
-                LOG_ERROR(fmt::format("TESTING:     time difference is too large: {:e}", diff));
-                total_errors++;
-            }
-        } else {
-            LOG_ERROR("TESTING:      no value returned by device_get_time_now()");
-            total_errors++;
-        }
-    }
-
-    LOG_INFO("TESTING:    testing set_time_now and get_time_now with mixed arguments");
-    {
-        auto tp_set = std::chrono::system_clock::now();
-        bool sent   = radio->device_set_time_now(tp_set);
-
-        if (not sent) {
-            LOG_ERROR("TESTING:      false returned by device_set_time_now()");
-            total_errors++;
-        }
-
-        std::this_thread::sleep_for(1s);
-
-        uint32_t t_sec = 0, t_ns = 0;
-        bool result = radio->device_get_time_now(t_sec, t_ns);
-        if (result) {
-            double diff = (t_sec + 1e-9 * t_ns) - std::chrono::duration<double>(tp_set.time_since_epoch()).count();
-            if (fabs(1.0 - diff) < time_tol_sec) {
-                LOG_INFO("TESTING:       passed set with time_point read with s and ns");
-            } else {
-                LOG_ERROR(fmt::format("TESTING:     time difference is too large: {:e}", diff));
-                total_errors++;
-            }
-        } else {
-            LOG_ERROR("TESTING:      no value returned by device_get_time_now()");
-            total_errors++;
-        }
-        struct timespec ts_set{};
-        timespec_get(&ts_set, TIME_UTC);
-        sent = radio->device_set_time_now(ts_set.tv_sec, ts_set.tv_nsec);
-
-        if (not sent) {
-            LOG_ERROR("TESTING:      false returned by device_set_time_now()");
-            total_errors++;
-        }
-
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-
-        auto result2 = radio->device_get_time_now();
-        if (result2) {
-            double diff =
-                std::chrono::duration<double>(result2.value().time_since_epoch()).count() - (ts_set.tv_sec + 1e-9 * ts_set.tv_nsec);
-            if (fabs(1.0 - diff) < time_tol_sec) {
-                LOG_INFO("TESTING:       passed set with s and ns read with time_point");
-            } else {
-                LOG_ERROR(fmt::format("TESTING:     time difference is too large: {:e}", diff));
                 total_errors++;
             }
         } else {
@@ -616,7 +534,9 @@ void test_iq(std::unique_ptr<vxsdr>& radio) {
 
     LOG_INFO("TESTING:    testing set tx bias");
 
-    if (radio->set_tx_iq_bias(i_bias, q_bias)) {
+    const std::array<double, 2> bias_test = {i_bias, q_bias};
+
+    if (radio->set_tx_iq_bias(bias_test)) {
         res = radio->get_tx_iq_bias();
         if (res) {
             double i_diff = res->at(0) - i_bias;
@@ -652,7 +572,9 @@ void test_iq(std::unique_ptr<vxsdr>& radio) {
     const double  corr_tol = 0.0002;
     LOG_INFO("TESTING:    testing set tx correction");
 
-    if (radio->set_tx_iq_corr(ii_corr, iq_corr, qi_corr, qq_corr)) {
+    const std::array<double, 4> corr_test = {ii_corr, iq_corr, qi_corr, qq_corr};
+
+    if (radio->set_tx_iq_corr(corr_test)) {
         cres = radio->get_tx_iq_corr();
         if (cres) {
             double ii_diff = cres->at(0) - ii_corr_ok;
@@ -678,7 +600,7 @@ void test_iq(std::unique_ptr<vxsdr>& radio) {
 
     LOG_INFO("TESTING:    testing set rx correction");
 
-    if (radio->set_rx_iq_corr(ii_corr, iq_corr, qi_corr, qq_corr)) {
+    if (radio->set_rx_iq_corr(corr_test)) {
         cres = radio->get_rx_iq_corr();
         if (cres) {
             double ii_diff = cres->at(0) - ii_corr_ok;
@@ -919,9 +841,9 @@ void test_ports(std::unique_ptr<vxsdr>& radio) {
                 auto pname = radio->get_tx_port_name(i);
                 if (pname) {
                     LOG_INFO(fmt::format("TESTING:       passed ({:s})", pname.value()));
-        /* FIXME: set by name not yet implemented
+
                     LOG_INFO(fmt::format("TESTING:       setting tx port by name ({:s})", pname.value()));
-                    if (radio->set_tx_port(pname.value())) {
+                    if (radio->set_tx_port_by_name(pname.value())) {
                         LOG_INFO("TESTING:       passed");
                     } else {
                         LOG_ERROR(fmt::format("TESTING:      false returned by set_tx_port({:s})", pname.value()));
@@ -942,7 +864,7 @@ void test_ports(std::unique_ptr<vxsdr>& radio) {
                         LOG_ERROR("TESTING:      no value returned by device_get_tx_port_name()");
                         total_errors++;
                     }
-        */
+
                 } else {
                     LOG_ERROR("TESTING:      no value returned by device_get_tx_port_name()");
                     total_errors++;
@@ -985,9 +907,9 @@ void test_ports(std::unique_ptr<vxsdr>& radio) {
             auto pname = radio->get_rx_port_name(i);
             if (pname) {
                 LOG_INFO(fmt::format("TESTING:       passed ({:s})", pname.value()));
-    /* FIXME: set by name not yet implemented
+
                 LOG_INFO(fmt::format("TESTING:       setting rx port by name ({:s})", pname.value()));
-                if (radio->set_rx_port(pname.value())) {
+                if (radio->set_rx_port_by_name(pname.value())) {
                     LOG_INFO("TESTING:       passed");
                 } else {
                     LOG_ERROR(fmt::format("TESTING:      false returned by set_rx_port({:s})", pname.value()));
@@ -1008,7 +930,7 @@ void test_ports(std::unique_ptr<vxsdr>& radio) {
                     LOG_ERROR("TESTING:      no value returned by device_get_rx_port_name()");
                     total_errors++;
                 }
-    */
+
             } else {
                 LOG_ERROR("TESTING:      no value returned by device_get_rx_port_name()");
                 total_errors++;
