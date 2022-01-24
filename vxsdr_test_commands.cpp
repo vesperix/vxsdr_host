@@ -388,6 +388,16 @@ void test_freq(std::unique_ptr<vxsdr>& radio, const double freq_tol_hz = 1.0) {
 
     LOG_INFO("TESTING:    testing tx");
     {
+        LOG_INFO("TESTING:       getting number of channels");
+
+        auto num = radio->get_tx_num_channels();
+        if (num) {
+            LOG_INFO("TESTING:       passed");
+        } else {
+            LOG_ERROR("TESTING:      no value returned by get_tx_num_channels()");
+            total_errors++;
+        }
+
         LOG_INFO("TESTING:       getting freq range");
 
         auto freq = radio->get_tx_freq_range();
@@ -452,6 +462,16 @@ void test_freq(std::unique_ptr<vxsdr>& radio, const double freq_tol_hz = 1.0) {
 
     LOG_INFO("TESTING:    testing rx");
     {
+        LOG_INFO("TESTING:       getting number of channels");
+
+        auto num = radio->get_rx_num_channels();
+        if (num) {
+            LOG_INFO("TESTING:       passed");
+        } else {
+            LOG_ERROR("TESTING:      no value returned by get_rx_num_channels()");
+            total_errors++;
+        }
+
         LOG_INFO("TESTING:       getting freq range");
 
         auto freq = radio->get_rx_freq_range();
