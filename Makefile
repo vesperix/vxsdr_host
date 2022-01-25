@@ -1,49 +1,47 @@
-CC = gcc
 
-CC_DEFINES =
-CC_BASEFLAGS = -Wall -pedantic -std=gnu11
-CC_OPTFLAGS = -O3
-CC_DBGFLAGS = -g -Og
-CC_LDFLAGS = -lpthread -lm
+CXX = clang++-10
 
-CXX = g++
-
-CXX_DEFINES = -DBOOST_LOG_DYN_LINK -DBOOST_BIND_GLOBAL_PLACEHOLDERS
-CXX_BASEFLAGS = -Wall -pedantic -std=c++14
+CXX_DEFINES =
+CXX_BASEFLAGS = -Wall -pedantic -std=c++17 $(CXX_EXTRA_FLAGS)
 CXX_OPTFLAGS = -O3
-CXX_DBGFLAGS = -g -Og
-CXX_LDFLAGS = -lpthread -lboost_log -lboost_program_options -lboost_system
+CXX_DBGFLAGS = -g -Og -fsanitize=address
+CXX_LDFLAGS = -lpthread -lboost_program_options -lboost_system -lspdlog -lvxsdr
 
-#DEBUG = 1
-
-ifdef DEBUG
-	CC_FLAGS = $(CC_BASEFLAGS) $(CC_DBGFLAGS) $(CC_DEFINES)
+ifdef VXSDR_DEBUG
 	CXX_FLAGS = $(CXX_BASEFLAGS) $(CXX_DBGFLAGS) $(CXX_DEFINES)
 else
-	CC_FLAGS = $(CC_BASEFLAGS) $(CC_OPTFLAGS) $(CC_DEFINES)
 	CXX_FLAGS = $(CXX_BASEFLAGS) $(CXX_OPTFLAGS) $(CXX_DEFINES)
 endif
 
-COMMON_INCLUDES = packet_proc.cpp vxsdr_header.hpp host_radio_options.hpp utility.hpp
-COMMON_SRC = host_radio_options.cpp packet_proc.cpp utility.cpp
+COMMON_INCLUDES = host_radio_options.hpp utility.hpp logging.hpp
+COMMON_OBJ = host_radio_options.o utility.o logging.o
 
-PROGS = host_tx_throttle vxsdr_test test_rx test_tx
+PROGS = vxsdr_rx vxsdr_test vxsdr_test_rx vxsdr_test_tx vxsdr_test_commands vxsdr_test_atmosense_rx
 
 all: $(PROGS) Makefile
 
 .PHONY: all
 
-host_tx_throttle: host_tx_throttle.cpp udp_tx_rx.hpp $(COMMON_INCLUDES)
-	$(CXX) $(CXX_FLAGS) -o $@ $< $(COMMON_SRC) $(CXX_LDFLAGS)
+.cpp.o:
+	$(CXX) $(CXX_FLAGS) -c -o $@ $<
 
-test_rx: test_rx.cpp test_tx_rx.hpp $(COMMON_INCLUDES)
-	$(CXX) $(CXX_FLAGS) -o $@ $< $(COMMON_SRC) $(CXX_LDFLAGS)
+vxsdr_test: vxsdr_test.cpp $(COMMON_INCLUDES) $(COMMON_OBJ)
+	$(CXX) $(CXX_FLAGS) -o $@ $< $(COMMON_OBJ) $(CXX_LDFLAGS)
 
-test_tx: test_tx.cpp test_tx_rx.hpp $(COMMON_INCLUDES)
-	$(CXX) $(CXX_FLAGS) -o $@ $< $(COMMON_SRC) $(CXX_LDFLAGS)
+vxsdr_rx: vxsdr_rx.cpp $(COMMON_INCLUDES) $(COMMON_OBJ)
+	$(CXX) $(CXX_FLAGS) -o $@ $< $(COMMON_OBJ) $(CXX_LDFLAGS)
 
-vxsdr_test: vxsdr_test.cpp vxsdr.hpp $(COMMON_INCLUDES)
-	$(CXX) $(CXX_FLAGS) -o $@ $< $(COMMON_SRC) $(CXX_LDFLAGS)
+vxsdr_test_rx: vxsdr_test_rx.cpp $(COMMON_INCLUDES) $(COMMON_OBJ)
+	$(CXX) $(CXX_FLAGS) -o $@ $< $(COMMON_OBJ) $(CXX_LDFLAGS)
+
+vxsdr_test_tx: vxsdr_test_tx.cpp $(COMMON_INCLUDES) $(COMMON_OBJ)
+	$(CXX) $(CXX_FLAGS) -o $@ $< $(COMMON_OBJ) $(CXX_LDFLAGS)
+
+vxsdr_test_atmosense_rx: vxsdr_test_atmosense_rx.cpp $(COMMON_INCLUDES) $(COMMON_OBJ)
+	$(CXX) $(CXX_FLAGS) -o $@ $< $(COMMON_OBJ) $(CXX_LDFLAGS)
+
+vxsdr_test_commands: vxsdr_test_commands.cpp $(COMMON_INCLUDES) $(COMMON_OBJ)
+	$(CXX) $(CXX_FLAGS) $(LIB_CXXFLAGS) -o $@ $< $(COMMON_OBJ) $(CXX_LDFLAGS)
 
 clean:
 	rm -f $(PROGS) *.o *~

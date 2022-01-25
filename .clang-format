@@ -1,0 +1,8 @@
+
+BasedOnStyle: Chromium
+IndentWidth: 4
+AccessModifierOffset: -2
+AlignConsecutiveAssignments: AcrossEmptyLinesAndComments
+AlignConsecutiveMacros: AcrossEmptyLinesAndComments
+UseTab: Never
+ColumnLimit: 132
