@@ -53,8 +53,8 @@ int main(int argc, char* argv[]) {
 
         size_t n_samp        = std::llround(vm["duration"].as<double>() * vm["rate"].as<double>());
 
-        std::vector<std::complex<int16_t>> data(n_samp);
-        for (size_t i = 0; i < n_samp; i++) {
+        std::vector<std::complex<int16_t>> data(std::llround(vm["rate"].as<double>()));
+        for (size_t i = 0; i < data.size(); i++) {
             data[i] = std::complex<int16_t>(10000, 0);
         }
 
@@ -86,15 +86,23 @@ int main(int argc, char* argv[]) {
             LOG_ERROR("tx_start_at_time_for_n_samples() failed");
         }
 
-        double tx_buffer_duration_s = tx_buffer_size_samples / radio->get_tx_rate().value_or(-1);
+        double tx_buffer_duration_s = tx_buffer_size_samples / (10e9 / 8 / 4); // buffer fill time at full 10GbE rate
         // start early enough to fill the tx buffer half full at start
         unsigned pre_start_ms = std::lround(1000 * tx_buffer_duration_s / 2);
         LOG_INFO(fmt::format("pre start: {:d} ms", pre_start_ms));
         std::this_thread::sleep_until(t_start - std::chrono::duration(std::chrono::milliseconds(pre_start_ms)));
 
-        auto n_sent = radio->put_tx_data(data);
-        if (n_sent != n_samp) {
-            LOG_ERROR(fmt::format("{:d} of {:d} samples sent", n_sent, n_samp));
+        size_t n_total = 0;
+
+        while(n_total < n_samp) {
+            if(n_samp - n_total < data.size()) {
+                data.resize(n_samp - n_total);
+            }
+            auto n_sent = radio->put_tx_data(data);
+            if (n_sent != data.size()) {
+                LOG_ERROR(fmt::format("{:d} of {:d} samples sent at sample {:d}", n_sent, data.size(), n_total));
+            }
+            n_total += n_sent;
         }
 
         LOG_INFO("transmit complete");
