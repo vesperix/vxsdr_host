@@ -26,6 +26,15 @@ extern "C" void sig_int_handler(int /* sig_num */) {
     exit(EXIT_USER_TERMINATED);
 }
 
+void add_modulation_options(boost::program_options::options_description& desc) {
+    // clang-format off
+    desc.add_options()
+        ("modulation_amplitude", boost::program_options::value<double>()->default_value(0.1), "modulation amplitude as fraction of full scale")
+        ("modulation_frequency", boost::program_options::value<double>()->default_value(10e6), "modulation frequency in Hz (will be rounded to integer to avoid jumps)")
+        ;
+    // clang-format on
+}
+
 int main(int argc, char* argv[]) {
     LOG_INIT(argv[0]);
     try {
@@ -37,6 +46,7 @@ int main(int argc, char* argv[]) {
         add_common_options(desc);
         add_network_options(desc);
         add_tx_1ch_options(desc);
+        add_modulation_options(desc);
 
         init_vm(desc, vm, argc, argv);
 
@@ -51,11 +61,16 @@ int main(int argc, char* argv[]) {
             return EXIT_CMD_LINE_ERROR;
         }
 
-        size_t n_samp        = std::llround(vm["duration"].as<double>() * vm["rate"].as<double>());
+        double f_s = vm["rate"].as<double>();
+        size_t n_samp = std::llround(vm["duration"].as<double>() * f_s);
 
         std::vector<std::complex<int16_t>> data(std::llround(vm["rate"].as<double>()));
+        double a = 32767. * vm["modulation_ampliitude"].as<double>();
+        double f_mod = std::llround(vm["modulation_frequency"].as<double>());
         for (size_t i = 0; i < data.size(); i++) {
-            data[i] = std::complex<int16_t>(10000, 0);
+            double re = a * cos(M_2_PI * f_mod / f_s);
+            double im = a * sin(M_2_PI * f_mod / f_s);
+            data[i] = std::complex<int16_t>(std::lround(re), std::lround(im));
         }
 
         size_t tx_buffer_size_samples = 0;
