@@ -65,7 +65,7 @@ int main(int argc, char* argv[]) {
         size_t n_samp = std::llround(vm["duration"].as<double>() * f_s);
 
         std::vector<std::complex<int16_t>> data(std::llround(vm["rate"].as<double>()));
-        double a = 32767. * vm["modulation_ampliitude"].as<double>();
+        double a = 32767. * vm["modulation_amplitude"].as<double>();
         double f_mod = std::llround(vm["modulation_frequency"].as<double>());
         for (size_t i = 0; i < data.size(); i++) {
             double re = a * cos(M_2_PI * f_mod / f_s);
