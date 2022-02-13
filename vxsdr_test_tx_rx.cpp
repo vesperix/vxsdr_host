@@ -8,7 +8,7 @@
 #include <limits>
 #include <string>
 #include <thread>
-//#include <future>
+#include <future>
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/program_options.hpp>
@@ -109,8 +109,8 @@ int main(int argc, char* argv[]) {
             LOG_ERROR("rx_start_now_for_n_samples() failed");
         }
 
-        auto checker_thread = std::thread([&] { radio->check_rx_data_sequence_only(n_samp); });
-        //std::future<size_t> checker_future = std::async(std::launch::async, [&] { radio->check_rx_data_sequence_only(n_samp); });
+        //auto checker_thread = std::thread([&] { radio->check_rx_data_sequence_only(n_samp); });
+        auto checker_future = std::async(std::launch::async, [&] { return radio->check_rx_data_sequence_only(n_samp); });
 
         double tx_buffer_duration_s = tx_buffer_size_samples / (10e9 / 8 / 4); // buffer fill time at full 10GbE rate
         // start early enough to fill the tx buffer half full at start
@@ -132,8 +132,8 @@ int main(int argc, char* argv[]) {
         }
 
         LOG_INFO("transmit complete");
-        checker_thread.join();
-        //LOG__INFO(fmt::format("received {:d} samples", checker_future.get()));
+        //checker_thread.join();
+        LOG_INFO(fmt::format("received {:d} samples", checker_future.get()));
         LOG_INFO("receive complete");
     } catch (std::exception& e) {
         LOG_FATAL(fmt::format("exception caught: {:s}", e.what()));

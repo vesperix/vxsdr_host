@@ -11,6 +11,7 @@ vxsdr_rx
 vxsdr_test
 vxsdr_test_rx
 vxsdr_test_tx
+vxsdr_test_tx_rx
 vxsdr_test_commands
 vxsdr_test_atmosense_rx
 .vscode
