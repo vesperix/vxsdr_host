@@ -130,7 +130,7 @@ int main(int argc, char* argv[]) {
             }
             n_total += n_sent;
         }
-
+        LOG_INFO(fmt::format("sent {:d} samples", n_total));
         LOG_INFO("transmit complete");
         //checker_thread.join();
         LOG_INFO(fmt::format("received {:d} samples", checker_future.get()));
