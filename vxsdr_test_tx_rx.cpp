@@ -105,8 +105,8 @@ int main(int argc, char* argv[]) {
             LOG_ERROR("tx_start_at_time_for_n_samples() failed");
         }
 
-        if (not radio->rx_start_now_for_n_samples(n_samp)) {
-            LOG_ERROR("rx_start_now_for_n_samples() failed");
+        if (not radio->rx_start_at_time_for_n_samples(t_start, n_samp)) {
+            LOG_ERROR("rx_start_at_time_for_n_samples() failed");
         }
 
         //auto checker_thread = std::thread([&] { radio->check_rx_data_sequence_only(n_samp); });
