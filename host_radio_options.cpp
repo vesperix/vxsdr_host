@@ -1,6 +1,7 @@
 #include <fstream>
 #include <iostream>
 #include <string>
+#include <thread>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/program_options.hpp>
