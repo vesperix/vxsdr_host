@@ -100,7 +100,7 @@ void test_time(std::unique_ptr<vxsdr>& radio, const double time_tol_sec = 0.01) 
         auto result = radio->device_get_time_now();
         if (result) {
             std::chrono::duration<double> diff = result.value() - tp_set;
-            if (fabs(1.0 - diff.count()) < time_tol_sec) {
+            if (std::abs(1.0 - diff.count()) < time_tol_sec) {
                 LOG_INFO("TESTING:       passed");
             } else {
                 LOG_ERROR(fmt::format("TESTING:     time difference is too large: {:e}", diff.count()));
@@ -144,7 +144,7 @@ void test_rate(std::unique_ptr<vxsdr>& radio, const double rate_tol_hz = 1.0) {
             auto rmx = radio->get_tx_rate();
             if (rmx) {
                 double diff = rmx.value() - rmax;
-                if (abs(diff) < rate_tol_hz) {
+                if (std::abs(diff) < rate_tol_hz) {
                     LOG_INFO("TESTING:       passed");
                 } else {
                     LOG_ERROR("TESTING:       incorrect value returned by get_tx_rate()");
@@ -166,7 +166,7 @@ void test_rate(std::unique_ptr<vxsdr>& radio, const double rate_tol_hz = 1.0) {
             rmx = radio->get_tx_rate();
             if (rmx) {
                 double diff = rmx.value() - rmin;
-                if (abs(diff) < rate_tol_hz) {
+                if (std::abs(diff) < rate_tol_hz) {
                     LOG_INFO("TESTING:       passed");
                 } else {
                     LOG_ERROR("TESTING:       incorrect value returned by get_tx_rate()");
@@ -208,7 +208,7 @@ void test_rate(std::unique_ptr<vxsdr>& radio, const double rate_tol_hz = 1.0) {
             auto rmx = radio->get_rx_rate();
             if (rmx) {
                 double diff = rmx.value() - rmax;
-                if (abs(diff) < rate_tol_hz) {
+                if (std::abs(diff) < rate_tol_hz) {
                     LOG_INFO("TESTING:       passed");
                 } else {
                     LOG_ERROR("TESTING:       incorrect value returned by get_rx_rate()");
@@ -230,7 +230,7 @@ void test_rate(std::unique_ptr<vxsdr>& radio, const double rate_tol_hz = 1.0) {
             rmx = radio->get_rx_rate();
             if (rmx) {
                 double diff = rmx.value() - rmin;
-                if (abs(diff) < rate_tol_hz) {
+                if (std::abs(diff) < rate_tol_hz) {
                     LOG_INFO("TESTING:       passed");
                 } else {
                     LOG_ERROR("TESTING:       incorrect value returned by get_rx_rate()");
@@ -278,7 +278,7 @@ void test_gain(std::unique_ptr<vxsdr>& radio, const double gain_tol_db = 0.1) {
             auto rmx = radio->get_tx_gain();
             if (rmx) {
                 double diff = rmx.value() - rmax;
-                if (abs(diff) < gain_tol_db) {
+                if (std::abs(diff) < gain_tol_db) {
                     LOG_INFO("TESTING:       passed");
                 } else {
                     LOG_ERROR("TESTING:       incorrect value returned by get_tx_gain()");
@@ -300,7 +300,7 @@ void test_gain(std::unique_ptr<vxsdr>& radio, const double gain_tol_db = 0.1) {
             rmx = radio->get_tx_gain();
             if (rmx) {
                 double diff = rmx.value() - rmin;
-                if (abs(diff) < gain_tol_db) {
+                if (std::abs(diff) < gain_tol_db) {
                     LOG_INFO("TESTING:       passed");
                 } else {
                     LOG_ERROR("TESTING:       incorrect value returned by get_tx_gain()");
@@ -342,7 +342,7 @@ void test_gain(std::unique_ptr<vxsdr>& radio, const double gain_tol_db = 0.1) {
             auto rmx = radio->get_rx_gain();
             if (rmx) {
                 double diff = rmx.value() - rmax;
-                if (abs(diff) < gain_tol_db) {
+                if (std::abs(diff) < gain_tol_db) {
                     LOG_INFO("TESTING:       passed");
                 } else {
                     LOG_ERROR("TESTING:       incorrect value returned by get_rx_gain()");
@@ -364,7 +364,7 @@ void test_gain(std::unique_ptr<vxsdr>& radio, const double gain_tol_db = 0.1) {
             rmx = radio->get_rx_gain();
             if (rmx) {
                 double diff = rmx.value() - rmin;
-                if (abs(diff) < gain_tol_db) {
+                if (std::abs(diff) < gain_tol_db) {
                     LOG_INFO("TESTING:       passed");
                 } else {
                     LOG_ERROR("TESTING:       incorrect value returned by get_rx_gain()");
@@ -422,7 +422,7 @@ void test_freq(std::unique_ptr<vxsdr>& radio, const double freq_tol_hz = 1.0) {
             auto rmx = radio->get_tx_freq();
             if (rmx) {
                 double diff = rmx.value() - rmax;
-                if (abs(diff) < freq_tol_hz) {
+                if (std::abs(diff) < freq_tol_hz) {
                     LOG_INFO("TESTING:       passed");
                 } else {
                     LOG_ERROR("TESTING:       incorrect value returned by get_tx_freq()");
@@ -444,7 +444,7 @@ void test_freq(std::unique_ptr<vxsdr>& radio, const double freq_tol_hz = 1.0) {
             rmx = radio->get_tx_freq();
             if (rmx) {
                 double diff = rmx.value() - rmin;
-                if (abs(diff) < freq_tol_hz) {
+                if (std::abs(diff) < freq_tol_hz) {
                     LOG_INFO("TESTING:       passed");
                 } else {
                     LOG_ERROR("TESTING:       incorrect value returned by get_tx_freq()");
@@ -496,7 +496,7 @@ void test_freq(std::unique_ptr<vxsdr>& radio, const double freq_tol_hz = 1.0) {
             auto rmx = radio->get_rx_freq();
             if (rmx) {
                 double diff = rmx.value() - rmax;
-                if (abs(diff) < freq_tol_hz) {
+                if (std::abs(diff) < freq_tol_hz) {
                     LOG_INFO("TESTING:       passed");
                 } else {
                     LOG_ERROR("TESTING:       incorrect value returned by get_rx_freq()");
@@ -518,7 +518,7 @@ void test_freq(std::unique_ptr<vxsdr>& radio, const double freq_tol_hz = 1.0) {
             rmx = radio->get_rx_freq();
             if (rmx) {
                 double diff = rmx.value() - rmin;
-                if (abs(diff) < freq_tol_hz) {
+                if (std::abs(diff) < freq_tol_hz) {
                     LOG_INFO("TESTING:       passed");
                 } else {
                     LOG_ERROR("TESTING:       incorrect value returned by get_rx_freq()");
@@ -561,7 +561,7 @@ void test_iq(std::unique_ptr<vxsdr>& radio) {
         if (res) {
             double i_diff = res->at(0) - i_bias;
             double q_diff = res->at(1) - q_bias;
-            if(fabs(i_diff) < bias_tol and fabs(q_diff) < bias_tol) {
+            if(std::abs(i_diff) < bias_tol and std::abs(q_diff) < bias_tol) {
                 LOG_INFO("TESTING:       passed");
             } else {
                 LOG_ERROR(fmt::format("TESTING:       incorrect values returned by get_tx_iq_bias(): ({:.6f}, {:.6f})",
@@ -601,8 +601,8 @@ void test_iq(std::unique_ptr<vxsdr>& radio) {
             double iq_diff = cres->at(1) - iq_corr_ok;
             double qi_diff = cres->at(2) - qi_corr_ok;
             double qq_diff = cres->at(3) - qq_corr_ok;
-            if(fabs(ii_diff) < corr_tol and fabs(iq_diff) < corr_tol and
-               fabs(qi_diff) < corr_tol and fabs(qq_diff) < corr_tol) {
+            if(std::abs(ii_diff) < corr_tol and std::abs(iq_diff) < corr_tol and
+               std::abs(qi_diff) < corr_tol and std::abs(qq_diff) < corr_tol) {
                 LOG_INFO("TESTING:       passed");
             } else {
                 LOG_ERROR(fmt::format("TESTING:       incorrect values returned by get_tx_iq_corr(): ({:.6f}, {:.6f}, {:.6f}, {:.6f})",
@@ -627,8 +627,8 @@ void test_iq(std::unique_ptr<vxsdr>& radio) {
             double iq_diff = cres->at(1) - iq_corr_ok;
             double qi_diff = cres->at(2) - qi_corr_ok;
             double qq_diff = cres->at(3) - qq_corr_ok;
-            if(fabs(ii_diff) < corr_tol and fabs(iq_diff) < corr_tol and
-               fabs(qi_diff) < corr_tol and fabs(qq_diff) < corr_tol) {
+            if(std::abs(ii_diff) < corr_tol and std::abs(iq_diff) < corr_tol and
+               std::abs(qi_diff) < corr_tol and std::abs(qq_diff) < corr_tol) {
                 LOG_INFO("TESTING:       passed");
             } else {
                 LOG_ERROR(fmt::format("TESTING:       incorrect values returned by get_rx_iq_corr(): ({:.6f}, {:.6f}, {:.6f}, {:.6f})",
