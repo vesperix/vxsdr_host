@@ -27,7 +27,7 @@ void add_tx_1ch_options(boost::program_options::options_description& desc) {
         ("tx_rate", boost::program_options::value<double>(), "TX sample rate in Hz")
         ("tx_freq", boost::program_options::value<double>(), "TX center frequency in Hz")
         ("tx_gain", boost::program_options::value<double>()->default_value(0.0), "TX gain in dB")
-        ("tx_ant", boost::program_options::value<std::string>(), "TX antenna input selection")
+        ("tx_ant", boost::program_options::value<std::string>(), "TX antenna output selection")
         ;
     // clang-format on
 }
