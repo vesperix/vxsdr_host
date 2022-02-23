@@ -117,7 +117,7 @@ int main(int argc, char* argv[]) {
         net::io_context ctx;
         tcp_connection conn(ctx, "192.168.8.41", 1234);
         constexpr unsigned hp_8564_addr = 18;
-        hp_856x_set_ref_level(conn, hp_8564_addr, -20);
+        hp_856x_set_ref_level(conn, hp_8564_addr, 0);
 
         const double f_if = 160e6;
 
@@ -131,8 +131,8 @@ int main(int argc, char* argv[]) {
         }
         auto tx_future = std::async(std::launch::async, [&] { return do_transmit(radio, data); });
 
-        for (double i_bias = -1.0; i_bias <= 1.0; i_bias += 0.2) {
-            for (double q_bias = -1.0; q_bias <= 1.0; q_bias += 0.2) {
+        for (double i_bias = -0.5; i_bias <= 0.5; i_bias += 0.1) {
+            for (double q_bias = -0.5; q_bias <= 0.5; q_bias += 0.1) {
                 std::array<double,2> tx_bias = {i_bias, q_bias};
                 radio->set_tx_iq_bias(tx_bias);
                 auto lo_feedthrough = hp_856x_read_carron(conn, hp_8564_addr, sweep_time);
