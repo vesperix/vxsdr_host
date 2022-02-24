@@ -114,6 +114,8 @@ int main(int argc, char* argv[]) {
         LOG_INFO(fmt::format("using rate      {:.5e}", radio->get_tx_rate().value_or(-1)));
         LOG_INFO(fmt::format("using tx_gain   {:.1f}", radio->get_tx_gain().value_or(-1)));
 
+        double f_c = radio->get_tx_freq().value_or(-1);
+
         net::io_context ctx;
         tcp_connection conn(ctx, "192.168.8.41", 1234);
         constexpr unsigned hp_8564_addr = 18;
@@ -121,7 +123,7 @@ int main(int argc, char* argv[]) {
 
         const double f_if = 160e6;
 
-        hp_856x_set_freq(conn, hp_8564_addr,  radio->get_tx_freq().value_or(-1) - 2 * f_if);
+        hp_856x_set_freq(conn, hp_8564_addr, f_c - 2 * f_if);
         hp_856x_set_span(conn, hp_8564_addr, 0);
         auto sweep_time = hp_856x_read_sweep_time(conn, hp_8564_addr);
 
@@ -134,20 +136,27 @@ int main(int argc, char* argv[]) {
         std::array<double, 2> tx_bias = {0., 0.};
         radio->set_tx_iq_bias(tx_bias);
 
-        double ii_best = 999.99, qi_best = 999.99, qq_best = 999.99, lo_best = 999.99;
+        double ii_best = 999.99, qi_best = 999.99, qq_best = 999.99, rej_best = -999.99;
 
-        for (double ii_corr = 0.8; ii_corr <= 1.2; ii_corr += 0.05) {
-            for (double qq_corr = 0.8; qq_corr <= 1.2; qq_corr += 0.05) {
-                for (double qi_corr = -0.2; qi_corr <= 0.2; qi_corr += 0.05) {
+        for (double ii_corr = 0.2; ii_corr <= 1.2; ii_corr += 0.2) {
+            for (double qq_corr = 0.2; qq_corr <= 1.2; qq_corr += 0.2) {
+                for (double qi_corr = -0.2; qi_corr <= 0.2; qi_corr += 0.2) {
                     std::array<double,4> tx_corr = {ii_corr, 0., qi_corr, qq_corr};
                     radio->set_tx_iq_corr(tx_corr);
-                    std::this_thread::sleep_for(1s);
-                    auto lo_feedthrough = hp_856x_read_carron(conn, hp_8564_addr, sweep_time);
-                    if (lo_feedthrough < lo_best) {
+                    std::this_thread::sleep_for(100ms);
+                    hp_856x_set_freq(conn, hp_8564_addr, f_c);
+                    std::this_thread::sleep_for(100ms);
+                    auto desired = hp_856x_read_carron(conn, hp_8564_addr, sweep_time);
+                    std::this_thread::sleep_for(100ms);
+                    hp_856x_set_freq(conn, hp_8564_addr, f_c - 2 * f_if);
+                    std::this_thread::sleep_for(100ms);
+                    auto image = hp_856x_read_carron(conn, hp_8564_addr, sweep_time);
+                    auto rejection =  desired - image;
+                    if (rejection > rej_best) {
                         ii_best = ii_corr;
                         qi_best = qi_corr;
                         qq_best = qq_corr;
-                        lo_best = lo_feedthrough;
+                        rej_best = rejection;
                     }
                     /*
                     auto tx_corr_read = radio->get_tx_iq_corr();
@@ -156,12 +165,13 @@ int main(int argc, char* argv[]) {
                                                 tx_corr_read->at(0), tx_corr_read->at(1), tx_corr_read->at(2), tx_corr_read->at(3)) << std::endl;
                     }
                     */
-                    std::cout << fmt::format("{:10.3f} {:10.3f} {:10.3f} {:10.2f}", ii_corr, qi_corr, qq_corr, lo_feedthrough) << std::endl;
+                    std::cout << fmt::format("{:10.3f} {:10.3f} {:10.3f} {:10.2f} {10.2f} {:10.2f}",
+                            ii_corr, qi_corr, qq_corr, desired, image, rejection) << std::endl;
                     //std::cout << fmt::format("{:10.3f} {:10.3f} {:10.3f}", ii_corr, qi_corr, qq_corr) << std::endl;
                 }
             }
         }
-        std::cout << fmt::format("{:10.3f} {:10.3f} {:10.3f} {:10.2f}", ii_best, qi_best, qq_best, lo_best) << std::endl;
+        std::cout << fmt::format("{:10.3f} {:10.3f} {:10.3f} {:10.2f}", ii_best, qi_best, qq_best, rej_best) << std::endl;
 
         tx_stop_flag = true;
         radio->tx_stop_now();

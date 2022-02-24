@@ -32,11 +32,14 @@ class tcp_connection {
       sock.close();
     }
     size_t send(const std::string &str) {
+      std::cerr << str;
       return net::write(sock, net::buffer(str, str.size()));
     }
     std::string recv() {
       char s[4096];
       auto len = sock.read_some(net::buffer(s));
+      if (len > 0)
+        std::cerr << std::string(s, len);
       return std::string(s, len);
     }
 };
@@ -133,7 +136,8 @@ double hp_856x_read_mkr_amp(tcp_connection &conn, const unsigned gpib_addr) {
 double hp_856x_read_carron(tcp_connection &conn, const unsigned gpib_addr, double sweep_time) {
   conn.send(fmt::format("++addr {:d}\n", gpib_addr));
   conn.send("++auto 0\n");
-  conn.send("AUNITS DBM;TS;CARRON TRA,?\n");
+  //conn.send("AUNITS DBM;TS;CARRON TRA,?\n");
+  conn.send("TS;CARRON TRA,?\n");
   conn.send("++auto 1\n");
   std::this_thread::sleep_for(std::chrono::milliseconds(std::lround(1100 * sweep_time)));
   auto res = str2double(conn.recv());
