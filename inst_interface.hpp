@@ -13,6 +13,8 @@
 #include <boost/asio/ts/buffer.hpp>
 namespace net = boost::asio;
 
+#define HP856X_CHECK_ERRORS
+
 class tcp_connection {
   private:
     net::ip::tcp::socket sock;
@@ -69,6 +71,12 @@ bool hp_856x_set_freq(tcp_connection &conn, const unsigned gpib_addr, const doub
   conn.send("++auto 1\n");
   conn.send("CF?\n");
   auto setfreq = str2double(conn.recv());
+#ifdef HP856X_CHECK_ERRORS
+  conn.send("ERR?\n");
+  auto eres = conn.recv();
+  if (atoi(eres.c_str()) > 0)
+    std::cerr << "ERROR in hp_856x_set_freq(): " << eres << std::endl;
+#endif
   conn.send("++auto 0\n");
   if (std::abs(freq - setfreq) > 1.0) {
     return false;
@@ -141,6 +149,12 @@ double hp_856x_read_carron(tcp_connection &conn, const unsigned gpib_addr, doubl
   conn.send("++auto 1\n");
   std::this_thread::sleep_for(std::chrono::milliseconds(std::lround(1100 * sweep_time)));
   auto res = str2double(conn.recv());
+#ifdef HP856X_CHECK_ERRORS
+  conn.send("ERR?\n");
+  auto eres = conn.recv();
+  if (atoi(eres.c_str()) > 0)
+    std::cerr << "ERROR in hp_856x_read_carron(): " << eres << std::endl;
+#endif
   conn.send("++auto 0\n");
   return res;
 }
