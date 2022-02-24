@@ -4,9 +4,6 @@
 #include <chrono>
 #include <thread>
 
-#define FMT_HEADER_ONLY
-#include <spdlog/fmt/fmt.h>
-
 #include <boost/asio/ts/io_context.hpp>
 #include <boost/asio/ts/socket.hpp>
 #include <boost/asio/ts/net.hpp>
@@ -14,6 +11,7 @@
 namespace net = boost::asio;
 
 #define HP856X_CHECK_ERRORS
+//#define HP856X_SHOW_TRAFFIC
 
 class tcp_connection {
   private:
@@ -34,14 +32,18 @@ class tcp_connection {
       sock.close();
     }
     size_t send(const std::string &str) {
+#ifdef HP856X_SHOW_TRAFFIC
       std::cerr << str;
+#endif
       return net::write(sock, net::buffer(str, str.size()));
     }
     std::string recv() {
       char s[4096];
       auto len = sock.read_some(net::buffer(s));
+#ifdef HP856X_SHOW_TRAFFIC
       if (len > 0)
         std::cerr << std::string(s, len);
+#endif
       return std::string(s, len);
     }
 };
@@ -53,12 +55,38 @@ double str2double(const std::string s) {
 bool hp_856x_set_ref_level(tcp_connection &conn, const unsigned gpib_addr, const double ref_lvl = 0.0) {
   conn.send(fmt::format("++addr {:d}\n", gpib_addr));
   conn.send("++auto 0\n");
-  conn.send(fmt::format("RL {:d} DBM\n", std::lround(ref_lvl)));
+  conn.send(fmt::format("RL {:.1f} DBM\n", ref_lvl));
   conn.send("++auto 1\n");
   conn.send("RL?\n");
   auto rl = str2double(conn.recv());
+#ifdef HP856X_CHECK_ERRORS
+  conn.send("ERR?\n");
+  auto eres = conn.recv();
+  if (atoi(eres.c_str()) > 0)
+    std::cerr << "ERROR in hp_856x_set_ref_level(): " << eres << std::endl;
+#endif
   conn.send("++auto 0\n");
   if (std::abs(ref_lvl - rl) > 1) {
+    return false;
+  }
+  return true;
+}
+
+bool hp_856x_set_rbw(tcp_connection &conn, const unsigned gpib_addr, const double rbw) {
+  conn.send(fmt::format("++addr {:d}\n", gpib_addr));
+  conn.send("++auto 0\n");
+  conn.send(fmt::format("RB {:E} HZ\n", rbw));
+  conn.send("++auto 1\n");
+  conn.send("RB?\n");
+  auto rb = str2double(conn.recv());
+#ifdef HP856X_CHECK_ERRORS
+  conn.send("ERR?\n");
+  auto eres = conn.recv();
+  if (atoi(eres.c_str()) > 0)
+    std::cerr << "ERROR in hp_856x_set_ref_level(): " << eres << std::endl;
+#endif
+  conn.send("++auto 0\n");
+  if (std::abs(rbw - rb) > 1e-3 * rbw) {
     return false;
   }
   return true;
@@ -67,7 +95,7 @@ bool hp_856x_set_ref_level(tcp_connection &conn, const unsigned gpib_addr, const
 bool hp_856x_set_freq(tcp_connection &conn, const unsigned gpib_addr, const double freq) {
   conn.send(fmt::format("++addr {:d}\n", gpib_addr));
   conn.send("++auto 0\n");
-  conn.send(fmt::format("CF {:e} HZ\n", freq));
+  conn.send(fmt::format("CF {:E} HZ\n", freq));
   conn.send("++auto 1\n");
   conn.send("CF?\n");
   auto setfreq = str2double(conn.recv());
@@ -144,8 +172,7 @@ double hp_856x_read_mkr_amp(tcp_connection &conn, const unsigned gpib_addr) {
 double hp_856x_read_carron(tcp_connection &conn, const unsigned gpib_addr, double sweep_time) {
   conn.send(fmt::format("++addr {:d}\n", gpib_addr));
   conn.send("++auto 0\n");
-  //conn.send("AUNITS DBM;TS;CARRON TRA,?\n");
-  conn.send("TS;CARRON TRA,?\n");
+  conn.send("AUNITS DBM;TS;CARRON TRA,?\n");
   conn.send("++auto 1\n");
   std::this_thread::sleep_for(std::chrono::milliseconds(std::lround(1100 * sweep_time)));
   auto res = str2double(conn.recv());

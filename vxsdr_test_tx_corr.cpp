@@ -84,27 +84,18 @@ int main(int argc, char* argv[]) {
 
         double f_s = vm["rate"].as<double>();
 
-        std::vector<std::complex<int16_t>> data(std::llround(vm["rate"].as<double>()));
+        std::vector<std::complex<int16_t>> data(std::llround(0.1 * vm["rate"].as<double>()));
         double a = 32767. * std::max(0.0, std::min(1.0, vm["modulation_amplitude"].as<double>()));
-        double f_mod = std::llround(vm["modulation_frequency"].as<double>());
+        double f_mod = 10 * std::llround(0.1 * vm["modulation_frequency"].as<double>());
         for (size_t i = 0; i < data.size(); i++) {
             double re = a * cos(M_2_PI * f_mod / f_s);
             double im = a * sin(M_2_PI * f_mod / f_s);
             data[i] = std::complex<int16_t>(std::lround(re), std::lround(im));
         }
 
-        size_t tx_buffer_size_samples = 0;
-        LOG_DEBUG("getting buffer size");
-        auto b1 = radio->device_get_buffer_info();
-        if (b1.has_value()) {
-            tx_buffer_size_samples = b1->at(1) / sizeof(std::complex<int16_t>);
-        } else {
-            LOG_ERROR("unable to get buffer info");
-        }
-
         LOG_DEBUG("getting radio time");
         auto t1 = radio->device_get_time_now();
-        if (t1.has_value()) {
+        if (t1) {
             LOG_INFO(fmt::format("radio time: {:s}", format_time(t1.value())));
         } else {
             LOG_ERROR("unable to get radio time");
@@ -115,16 +106,15 @@ int main(int argc, char* argv[]) {
         LOG_INFO(fmt::format("using tx_gain   {:.1f}", radio->get_tx_gain().value_or(-1)));
 
         double f_c = radio->get_tx_freq().value_or(-1);
+        const double f_if = 160e6;
 
         net::io_context ctx;
         tcp_connection conn(ctx, "192.168.8.41", 1234);
         constexpr unsigned hp_8564_addr = 18;
-        hp_856x_set_ref_level(conn, hp_8564_addr, -20);
-
-        const double f_if = 160e6;
-
-        hp_856x_set_freq(conn, hp_8564_addr, f_c - 2 * f_if);
+        hp_856x_set_ref_level(conn, hp_8564_addr, 0);
+        hp_856x_set_freq(conn, hp_8564_addr, f_c);
         hp_856x_set_span(conn, hp_8564_addr, 0);
+        hp_856x_set_rbw(conn, hp_8564_addr, 1e3);
         auto sweep_time = hp_856x_read_sweep_time(conn, hp_8564_addr);
 
 
@@ -152,28 +142,21 @@ int main(int argc, char* argv[]) {
                     std::this_thread::sleep_for(100ms);
                     auto image = hp_856x_read_carron(conn, hp_8564_addr, sweep_time);
                     auto rejection =  desired - image;
+                    std::cout << tx_corr.at(0) << " " << tx_corr.at(1) << " " << tx_corr.at(2) << " " << tx_corr.at(3) << std::endl;
+                    std::cout << desired << " " << image << " " << rejection << std::endl;
                     if (rejection > rej_best) {
                         ii_best = ii_corr;
                         qi_best = qi_corr;
                         qq_best = qq_corr;
                         rej_best = rejection;
                     }
-                    /*
-                    auto tx_corr_read = radio->get_tx_iq_corr();
-                    if(tx_corr_read) {
-                        std::cout << fmt::format("{:10.3f} {:10.3f} {:10.3f} {:10.3f}",
-                                                tx_corr_read->at(0), tx_corr_read->at(1), tx_corr_read->at(2), tx_corr_read->at(3)) << std::endl;
-                    }
-                    */
-                    std::cout << fmt::format("{:10.3f} {:10.3f} {:10.3f} {:10.2f} {10.2f} {:10.2f}",
-                            ii_corr, qi_corr, qq_corr, desired, image, rejection) << std::endl;
-                    //std::cout << fmt::format("{:10.3f} {:10.3f} {:10.3f}", ii_corr, qi_corr, qq_corr) << std::endl;
                 }
             }
         }
         std::cout << fmt::format("{:10.3f} {:10.3f} {:10.3f} {:10.2f}", ii_best, qi_best, qq_best, rej_best) << std::endl;
 
         tx_stop_flag = true;
+        std::this_thread::sleep_for(110ms);
         radio->tx_stop_now();
     } catch (std::exception& e) {
         LOG_FATAL(fmt::format("exception caught: {:s}", e.what()));
