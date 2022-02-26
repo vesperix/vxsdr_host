@@ -130,7 +130,7 @@ int main(int argc, char* argv[]) {
         double ii_best = 999.99, qi_best = 999.99, qq_best = 999.99, rej_best = -999.99;
 
         // 25 dB image rejection ~= 1 dB amplitude imbalance or 0.1 radian phase imbalance
-        for (double gamma = 0.9; gamma <= 1.1; gamma += 0.01) {
+        for (double gamma = 0.88; gamma <= 1.13; gamma += 0.01) {
             for (double phi = -0.1; phi <= 0.1; phi += 0.01) {
                 double ii_corr = 1. / gamma;
                 double qi corr = tan(phi) / gamma;
