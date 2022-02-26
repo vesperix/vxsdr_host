@@ -43,7 +43,7 @@ std::atomic<bool> tx_stop_flag = false;
 size_t do_transmit(std::unique_ptr<vxsdr> &radio, const std::vector<std::complex<int16_t>> data) {
     size_t n_total = 0;
 
-    while(not tx_stop_flag) {
+    while (not tx_stop_flag) {
         auto n_sent = radio->put_tx_data(data);
         if (n_sent != data.size()) {
             LOG_ERROR(fmt::format("{:d} of {:d} samples sent at sample {:d}", n_sent, data.size(), n_total));
@@ -70,7 +70,8 @@ int main(int argc, char* argv[]) {
 
         init_vm(desc, vm, argc, argv);
 
-        auto radio = std::make_unique<vxsdr>(vm["local_address"].as<std::string>(), vm["destination_address"].as<std::string>(),
+        auto radio = std::make_unique<vxsdr>(vm["local_address"].as<std::string>(),
+                                    vm["destination_address"].as<std::string>(),
                                     vm["set_priority"].as<bool>(), vm["thread_priority"].as<int>());
 
         set_common_options(vm, radio);
@@ -128,9 +129,37 @@ int main(int argc, char* argv[]) {
 
         double ii_best = 999.99, qi_best = 999.99, qq_best = 999.99, rej_best = -999.99;
 
-        for (double ii_corr = 0.2; ii_corr <= 1.2; ii_corr += 0.2) {
-            for (double qq_corr = 0.2; qq_corr <= 1.2; qq_corr += 0.2) {
-                for (double qi_corr = -0.2; qi_corr <= 0.2; qi_corr += 0.2) {
+        // 25 dB image rejection ~= 1 dB amplitude imbalance or 0.1 radian phase imbalance
+        for (double gamma = 0.9; gamma <= 1.1; gamma += 0.01) {
+            for (double phi = -0.1; phi <= 0.1; phi += 0.01) {
+                double ii_corr = 1. / gamma;
+                double qi corr = tan(phi) / gamma;
+                double qq_corr = 1. / cos(phi);
+                std::array<double,4> tx_corr = {ii_corr, 0., qi_corr, qq_corr};
+                radio->set_tx_iq_corr(tx_corr);
+                std::this_thread::sleep_for(100ms);
+                hp_856x_set_freq(conn, hp_8564_addr, f_c);
+                std::this_thread::sleep_for(100ms);
+                auto desired = hp_856x_read_carron(conn, hp_8564_addr, sweep_time);
+                std::this_thread::sleep_for(100ms);
+                hp_856x_set_freq(conn, hp_8564_addr, f_c - 2 * f_if);
+                std::this_thread::sleep_for(100ms);
+                auto image = hp_856x_read_carron(conn, hp_8564_addr, sweep_time);
+                auto rejection =  desired - image;
+                std::cout << tx_corr.at(0) << " " << tx_corr.at(1) << " " << tx_corr.at(2) << " " << tx_corr.at(3) << std::endl;
+                std::cout << desired << " " << image << " " << rejection << std::endl;
+                if (rejection > rej_best) {
+                    ii_best = ii_corr;
+                    qi_best = qi_corr;
+                    qq_best = qq_corr;
+                    rej_best = rejection;
+                }
+            }
+        }
+        /*
+        for (double ii_corr = 0.9; ii_corr <= 1.1; ii_corr += 0.02) {
+            for (double qq_corr = 0.9; qq_corr <= 1.1; qq_corr += 0.02) {
+                for (double qi_corr = -0.1; qi_corr <= 0.1; qi_corr += 0.02) {
                     std::array<double,4> tx_corr = {ii_corr, 0., qi_corr, qq_corr};
                     radio->set_tx_iq_corr(tx_corr);
                     std::this_thread::sleep_for(100ms);
@@ -153,6 +182,7 @@ int main(int argc, char* argv[]) {
                 }
             }
         }
+        */
         std::cout << fmt::format("{:10.3f} {:10.3f} {:10.3f} {:10.2f}", ii_best, qi_best, qq_best, rej_best) << std::endl;
 
         tx_stop_flag = true;
