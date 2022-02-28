@@ -129,8 +129,13 @@ int main(int argc, char* argv[]) {
 
         double ii_best = 999.99, qi_best = 999.99, qq_best = 999.99, rej_best = -999.99;
 
+        auto res = radio->get_tx_iq_corr();
+        if (res) {
+            std::cout << res->at(0) << " " << res->at(1) << " " << res->at(2) << " " << res->at(3) << std::endl;
+        }
+
         // 25 dB image rejection ~= 1 dB amplitude imbalance or 0.1 radian phase imbalance
-        for (double gamma = 0.88; gamma <= 1.13; gamma += 0.01) {
+        for (double gamma = 0.88; gamma <= 1.12; gamma += 0.01) {
             for (double phi = -0.1; phi <= 0.1; phi += 0.01) {
                 double ii_corr = 1. / gamma;
                 double qi_corr = tan(phi) / gamma;
