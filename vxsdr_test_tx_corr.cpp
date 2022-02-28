@@ -127,48 +127,17 @@ int main(int argc, char* argv[]) {
         std::array<double, 2> tx_bias = {0., 0.};
         radio->set_tx_iq_bias(tx_bias);
 
-        double ii_best = 999.99, qi_best = 999.99, qq_best = 999.99, rej_best = -999.99;
-
-        auto res = radio->get_tx_iq_corr();
-        if (res) {
-            std::cout << res->at(0) << " " << res->at(1) << " " << res->at(2) << " " << res->at(3) << std::endl;
-        }
-
         // 25 dB image rejection ~= 1 dB amplitude imbalance or 0.1 radian phase imbalance
-        for (double gamma = 0.88; gamma <= 1.12; gamma += 0.01) {
-            for (double phi = -0.1; phi <= 0.1; phi += 0.01) {
-                double ii_corr = 1. / gamma;
-                double qi_corr = tan(phi) / gamma;
-                double qq_corr = 1. / cos(phi);
-                std::array<double,4> tx_corr = {ii_corr, 0., qi_corr, qq_corr};
-                radio->set_tx_iq_corr(tx_corr);
-                std::this_thread::sleep_for(100ms);
-                hp_856x_set_freq(conn, hp_8564_addr, f_c);
-                std::this_thread::sleep_for(100ms);
-                auto desired = hp_856x_read_carron(conn, hp_8564_addr, sweep_time);
-                std::this_thread::sleep_for(100ms);
-                hp_856x_set_freq(conn, hp_8564_addr, f_c - 2 * f_if);
-                std::this_thread::sleep_for(100ms);
-                auto image = hp_856x_read_carron(conn, hp_8564_addr, sweep_time);
-                auto rejection =  desired - image;
-                //std::cout << tx_corr.at(0) << " " << tx_corr.at(1) << " " << tx_corr.at(2) << " " << tx_corr.at(3) << std::endl;
-                std::cout << gamma << " " << phi << " ";
-                std::cout << desired << " " << image << " " << rejection << std::endl;
-                if (rejection > rej_best) {
-                    ii_best = ii_corr;
-                    qi_best = qi_corr;
-                    qq_best = qq_corr;
-                    rej_best = rejection;
-                }
-            }
-        }
-        /*
-        for (double ii_corr = 0.9; ii_corr <= 1.1; ii_corr += 0.02) {
-            for (double qq_corr = 0.9; qq_corr <= 1.1; qq_corr += 0.02) {
-                for (double qi_corr = -0.1; qi_corr <= 0.1; qi_corr += 0.02) {
-                    std::array<double,4> tx_corr = {ii_corr, 0., qi_corr, qq_corr};
+        for (double A = 0.9; A <= 1.1; A += 0.1) {
+            for (double C = -0.1; C <= 0.1; C += 0.1) {
+                for (double D = 0.9; D <= 1.1; D += 0.1) {
+                    std::array<double,4> tx_corr = {A, 0., C, D};
+                    std::cout << tx_corr.at(0) << " " << tx_corr.at(1) << " " << tx_corr.at(2) << " " << tx_corr.at(3) << std::endl;
                     radio->set_tx_iq_corr(tx_corr);
-                    std::this_thread::sleep_for(100ms);
+                    auto res = radio->get_tx_iq_corr();
+                    if (res) {
+                        std::cout << res->at(0) << " " << res->at(1) << " " << res->at(2) << " " << res->at(3) << std::endl;
+                    }
                     hp_856x_set_freq(conn, hp_8564_addr, f_c);
                     std::this_thread::sleep_for(100ms);
                     auto desired = hp_856x_read_carron(conn, hp_8564_addr, sweep_time);
@@ -177,19 +146,10 @@ int main(int argc, char* argv[]) {
                     std::this_thread::sleep_for(100ms);
                     auto image = hp_856x_read_carron(conn, hp_8564_addr, sweep_time);
                     auto rejection =  desired - image;
-                    std::cout << tx_corr.at(0) << " " << tx_corr.at(1) << " " << tx_corr.at(2) << " " << tx_corr.at(3) << std::endl;
                     std::cout << desired << " " << image << " " << rejection << std::endl;
-                    if (rejection > rej_best) {
-                        ii_best = ii_corr;
-                        qi_best = qi_corr;
-                        qq_best = qq_corr;
-                        rej_best = rejection;
-                    }
                 }
             }
         }
-        */
-        std::cout << fmt::format("{:10.3f} {:10.3f} {:10.3f} {:10.2f}", ii_best, qi_best, qq_best, rej_best) << std::endl;
 
         tx_stop_flag = true;
         std::this_thread::sleep_for(110ms);
