@@ -133,7 +133,7 @@ int main(int argc, char* argv[]) {
         for (double gamma = 0.88; gamma <= 1.13; gamma += 0.01) {
             for (double phi = -0.1; phi <= 0.1; phi += 0.01) {
                 double ii_corr = 1. / gamma;
-                double qi corr = tan(phi) / gamma;
+                double qi_corr = tan(phi) / gamma;
                 double qq_corr = 1. / cos(phi);
                 std::array<double,4> tx_corr = {ii_corr, 0., qi_corr, qq_corr};
                 radio->set_tx_iq_corr(tx_corr);
@@ -146,7 +146,8 @@ int main(int argc, char* argv[]) {
                 std::this_thread::sleep_for(100ms);
                 auto image = hp_856x_read_carron(conn, hp_8564_addr, sweep_time);
                 auto rejection =  desired - image;
-                std::cout << tx_corr.at(0) << " " << tx_corr.at(1) << " " << tx_corr.at(2) << " " << tx_corr.at(3) << std::endl;
+                //std::cout << tx_corr.at(0) << " " << tx_corr.at(1) << " " << tx_corr.at(2) << " " << tx_corr.at(3) << std::endl;
+                std::cout << gamma << " " << phi << " ";
                 std::cout << desired << " " << image << " " << rejection << std::endl;
                 if (rejection > rej_best) {
                     ii_best = ii_corr;
