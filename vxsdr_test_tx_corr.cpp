@@ -88,9 +88,10 @@ int main(int argc, char* argv[]) {
         std::vector<std::complex<int16_t>> data(std::llround(0.1 * vm["rate"].as<double>()));
         double a = 32767. * std::max(0.0, std::min(1.0, vm["modulation_amplitude"].as<double>()));
         double f_mod = 10 * std::llround(0.1 * vm["modulation_frequency"].as<double>());
+
         for (size_t i = 0; i < data.size(); i++) {
-            double re = a * cos(M_2_PI * f_mod / f_s);
-            double im = a * sin(M_2_PI * f_mod / f_s);
+            double re = a * cos(2 * M_PI * f_mod / f_s * i);
+            double im = a * sin(2 * M_PI * f_mod / f_s * i);
             data[i] = std::complex<int16_t>(std::lround(re), std::lround(im));
         }
 
@@ -128,21 +129,22 @@ int main(int argc, char* argv[]) {
         radio->set_tx_iq_bias(tx_bias);
 
         // 25 dB image rejection ~= 1 dB amplitude imbalance or 0.1 radian phase imbalance
-        for (double A = 0.9; A <= 1.1; A += 0.1) {
-            for (double C = -0.1; C <= 0.1; C += 0.1) {
-                for (double D = 0.9; D <= 1.1; D += 0.1) {
+
+        for (double A = 0.8; A <= 1.2; A += 0.2) {
+            for (double C = 0; C <= 0; C += 0.1) {
+                for (double D = 0.8; D <= 1.2; D += 0.2) {
                     std::array<double,4> tx_corr = {A, 0., C, D};
-                    std::cout << tx_corr.at(0) << " " << tx_corr.at(1) << " " << tx_corr.at(2) << " " << tx_corr.at(3) << std::endl;
+                    std::cout << tx_corr.at(0) << " " << tx_corr.at(1) << " " << tx_corr.at(2) << " " << tx_corr.at(3) << ": ";
                     radio->set_tx_iq_corr(tx_corr);
-                    auto res = radio->get_tx_iq_corr();
-                    if (res) {
-                        std::cout << res->at(0) << " " << res->at(1) << " " << res->at(2) << " " << res->at(3) << std::endl;
-                    }
-                    hp_856x_set_freq(conn, hp_8564_addr, f_c);
+                    //auto res = radio->get_tx_iq_corr();
+                    //if (res) {
+                    //    std::cout << res->at(0) << " " << res->at(1) << " " << res->at(2) << " " << res->at(3) << std::endl;
+                    //}
+                    hp_856x_set_freq(conn, hp_8564_addr, f_c + f_mod);
                     std::this_thread::sleep_for(100ms);
                     auto desired = hp_856x_read_carron(conn, hp_8564_addr, sweep_time);
                     std::this_thread::sleep_for(100ms);
-                    hp_856x_set_freq(conn, hp_8564_addr, f_c - 2 * f_if);
+                    hp_856x_set_freq(conn, hp_8564_addr, f_c - 2 * f_if - f_mod);
                     std::this_thread::sleep_for(100ms);
                     auto image = hp_856x_read_carron(conn, hp_8564_addr, sweep_time);
                     auto rejection =  desired - image;
