@@ -55,6 +55,67 @@ size_t do_transmit(std::unique_ptr<vxsdr> &radio, const std::vector<std::complex
     return n_total;
 }
 
+std::array<double, 3> find_optimum_bias(std::unique_ptr<vxsdr> &radio, tcp_connection &conn) {
+    constexpr unsigned hp_8564_addr = 18;
+    const double f_if = 160.e6;
+    hp_856x_set_ref_level(conn, hp_8564_addr, 10);
+    hp_856x_set_freq(conn, hp_8564_addr,  radio->get_tx_freq().value_or(-1) - f_if);
+    hp_856x_set_span(conn, hp_8564_addr, 0);
+    hp_856x_set_rbw(conn, hp_8564_addr, 1e3);
+    auto sweep_time = hp_856x_read_sweep_time(conn, hp_8564_addr);
+
+    int i_best = 999, q_best = 999;
+    double lo_best = 999.99;
+
+    for (int i = -64; i < 64; i++) {
+        double i_bias = i / 64.;
+        double q_bias = 0.;
+        std::array<double,2> tx_bias = {i_bias, q_bias};
+        radio->set_tx_iq_bias(tx_bias);
+        auto lo_feedthrough = hp_856x_read_carron(conn, hp_8564_addr, sweep_time);
+        if (lo_feedthrough < lo_best) {
+            i_best = i;
+            lo_best = lo_feedthrough;
+        }
+        std::cout << fmt::format("{:10.5f} {:10.5f} {:10.2f}", i_bias, q_bias, lo_feedthrough) << std::endl;
+    }
+    std::cout << fmt::format("{:10d} {:10d} {:10.2f}", i_best, 0, lo_best) << std::endl;
+    lo_best = 999.99;
+    for (int q = -64; q < 64; q++)  {
+        double i_bias = 0.;
+        double q_bias = q / 64.;
+        std::array<double,2> tx_bias = {i_bias, q_bias};
+        radio->set_tx_iq_bias(tx_bias);
+        auto lo_feedthrough = hp_856x_read_carron(conn, hp_8564_addr, sweep_time);
+        if (lo_feedthrough < lo_best) {
+            q_best = q;
+            lo_best = lo_feedthrough;
+        }
+        std::cout << fmt::format("{:10.5f} {:10.5f} {:10.2f}", i_bias, q_bias, lo_feedthrough) << std::endl;
+    }
+    std::cout << fmt::format("{:10d} {:10d} {:10.2f}", 0, q_best, lo_best) << std::endl;
+    std::cout << fmt::format("{:10.4f} {:10.4f}", i_best / 64., q_best / 64.) << std::endl;
+    int i_opt = 999, q_opt = 999;
+    lo_best = 999.99;
+    for (int i = -3; i < 4; i++) {
+        for (int q = -3; q < 4; q++) {
+            double i_bias = (i + i_best) / 64.;
+            double q_bias = (q + q_best) / 64.;
+            std::array<double,2> tx_bias = {i_bias, q_bias};
+            radio->set_tx_iq_bias(tx_bias);
+            auto lo_feedthrough = hp_856x_read_carron(conn, hp_8564_addr, sweep_time);
+            if (lo_feedthrough < lo_best) {
+                i_opt = i + i_best;
+                q_opt = q + q_best;
+                lo_best = lo_feedthrough;
+            }
+            std::cout << fmt::format("{:10.5f} {:10.5f} {:10.2f}", i_bias, q_bias, lo_feedthrough) << std::endl;
+        }
+    }
+    std::array<double, 3> result = {i_opt / 64., q_opt / 64., lo_best};
+    return result;
+}
+
 int main(int argc, char* argv[]) {
     LOG_INIT(argv[0]);
     try {
@@ -105,75 +166,38 @@ int main(int argc, char* argv[]) {
         LOG_INFO(fmt::format("using rate      {:.5e}", radio->get_tx_rate().value_or(-1)));
         LOG_INFO(fmt::format("using tx_gain   {:.1f}", radio->get_tx_gain().value_or(-1)));
 
-        const double f_if = 160e6;
-
-        net::io_context ctx;
-        tcp_connection conn(ctx, "192.168.8.41", 1234);
-        constexpr unsigned hp_8564_addr = 18;
-        hp_856x_set_ref_level(conn, hp_8564_addr, 10);
-        hp_856x_set_freq(conn, hp_8564_addr,  radio->get_tx_freq().value_or(-1) - f_if);
-        hp_856x_set_span(conn, hp_8564_addr, 0);
-        hp_856x_set_rbw(conn, hp_8564_addr, 1e3);
-        auto sweep_time = hp_856x_read_sweep_time(conn, hp_8564_addr);
-
 
         if (not radio->tx_start_now_until_stop()) {
             LOG_ERROR("tx_start_now_until_stop() failed");
         }
         auto tx_future = std::async(std::launch::async, [&] { return do_transmit(radio, data); });
 
-        int i_best = 999, q_best = 999;
-        double lo_best = 999.99;
+        net::io_context ctx;
+        tcp_connection conn(ctx, "192.168.8.41", 1234);
 
-        for (int i = -63; i < 64; i++) {
-            double i_bias = i / 63.;
-            double q_bias = 0.;
-            std::array<double,2> tx_bias = {i_bias, q_bias};
-            radio->set_tx_iq_bias(tx_bias);
-            auto lo_feedthrough = hp_856x_read_carron(conn, hp_8564_addr, sweep_time);
-            if (lo_feedthrough < lo_best) {
-                i_best = i;
-                lo_best = lo_feedthrough;
-            }
-            std::cout << fmt::format("{:10.3f} {:10.3f} {:10.2f}", i_bias, q_bias, lo_feedthrough) << std::endl;
-        }
-        std::cout << fmt::format("{:10d} {:10d} {:10.2f}", i_best, 0, lo_best) << std::endl;
-        lo_best = 999.99;
-        for (int q = -63; q < 64; q++)  {
-            double i_bias = 0.;
-            double q_bias = q / 63.;
-            std::array<double,2> tx_bias = {i_bias, q_bias};
-            radio->set_tx_iq_bias(tx_bias);
-            auto lo_feedthrough = hp_856x_read_carron(conn, hp_8564_addr, sweep_time);
-            if (lo_feedthrough < lo_best) {
-                q_best = q;
-                lo_best = lo_feedthrough;
-            }
-            std::cout << fmt::format("{:10.3f} {:10.3f} {:10.2f}", i_bias, q_bias, lo_feedthrough) << std::endl;
-        }
-        std::cout << fmt::format("{:10d} {:10d} {:10.2f}", 0, q_best, lo_best) << std::endl;
-        std::cout << fmt::format("{:10.3f} {:10.3f}", i_best / 63., q_best / 63.) << std::endl;
-        int i_opt = 999, q_opt = 999;
-        lo_best = 999.99;
-        for (int i = -3; i < 4; i++) {
-            for (int q = -3; q < 4; q++) {
-                double i_bias = (i + i_best) / 63.;
-                double q_bias = (q + q_best) / 63.;
-                std::array<double,2> tx_bias = {i_bias, q_bias};
-                radio->set_tx_iq_bias(tx_bias);
-                auto lo_feedthrough = hp_856x_read_carron(conn, hp_8564_addr, sweep_time);
-                if (lo_feedthrough < lo_best) {
-                    i_opt = i + i_best;
-                    q_opt = q + q_best;
-                    lo_best = lo_feedthrough;
-                }
-                std::cout << fmt::format("{:10.3f} {:10.3f} {:10.2f}", i_bias, q_bias, lo_feedthrough) << std::endl;
-            }
+        std::vector<double> freq, i_b, q_b, lof;
+
+        for (double ff = 5e9; ff <= 22e9; ff += 0.5e9) {
+            radio->set_tx_freq(ff);
+
+            auto opt_bias = find_optimum_bias(radio, conn);
+            std::cout << fmt::format("{:10.2e} {:10.5f} {:10.5f} {:10.2f}",
+                    radio->get_tx_freq().value_or(-1), opt_bias[0], opt_bias[1], opt_bias[2]) << std::endl;
+
+            freq.push_back(radio->get_tx_freq().value_or(-1));
+            i_b.push_back(opt_bias[0]);
+            q_b.push_back(opt_bias[1]);
+            lof.push_back(opt_bias[2]);
         }
         tx_stop_flag = true;
         std::this_thread::sleep_for(110ms);
         radio->tx_stop_now();
-        std::cout << fmt::format("{:10.3f} {:10.3f} {:10.2f}", i_opt / 63., q_opt / 63., lo_best) << std::endl;
+
+        std::cout << std::endl;
+        for (unsigned i = 0; i < freq.size(); i++) {
+            std::cout << fmt::format("{:10.2e} {:10.6f} {:10.6f} {:10.2f}", freq[i], i_b[i], q_b[i], lof[i]) << std::endl;
+        }
+
     } catch (std::exception& e) {
         LOG_FATAL(fmt::format("exception caught: {:s}", e.what()));
         return EXIT_INTERNAL_ERROR;
