@@ -90,8 +90,8 @@ int main(int argc, char* argv[]) {
         double f_mod = 10 * std::llround(0.1 * vm["modulation_frequency"].as<double>());
 
         for (size_t i = 0; i < data.size(); i++) {
-            double re = a * cos(2 * M_PI * f_mod / f_s * i);
-            double im = a * sin(2 * M_PI * f_mod / f_s * i);
+            double re =  a * cos(2 * M_PI * f_mod / f_s * i);
+            double im = -a * sin(2 * M_PI * f_mod / f_s * i);
             data[i] = std::complex<int16_t>(std::lround(re), std::lround(im));
         }
 
@@ -110,6 +110,9 @@ int main(int argc, char* argv[]) {
         double f_c = radio->get_tx_freq().value_or(-1);
         const double f_if = 160e6;
 
+#define DO_MEASUREMENTS
+
+#ifdef DO_MEASUREMENTS
         net::io_context ctx;
         tcp_connection conn(ctx, "192.168.8.41", 1234);
         constexpr unsigned hp_8564_addr = 18;
@@ -118,38 +121,49 @@ int main(int argc, char* argv[]) {
         hp_856x_set_span(conn, hp_8564_addr, 0);
         hp_856x_set_rbw(conn, hp_8564_addr, 1e3);
         auto sweep_time = hp_856x_read_sweep_time(conn, hp_8564_addr);
-
+#endif // DO_MEASUREMENTS
 
         if (not radio->tx_start_now_until_stop()) {
             LOG_ERROR("tx_start_now_until_stop() failed");
         }
         auto tx_future = std::async(std::launch::async, [&] { return do_transmit(radio, data); });
 
-        std::array<double, 2> tx_bias = {0., 0.};
+        std::array<double,2> tx_bias = {0.0, 0.0};
         radio->set_tx_iq_bias(tx_bias);
 
         // 25 dB image rejection ~= 1 dB amplitude imbalance or 0.1 radian phase imbalance
 
-        for (double A = 0.8; A <= 1.2; A += 0.2) {
-            for (double C = 0; C <= 0; C += 0.1) {
-                for (double D = 0.8; D <= 1.2; D += 0.2) {
-                    std::array<double,4> tx_corr = {A, 0., C, D};
-                    std::cout << tx_corr.at(0) << " " << tx_corr.at(1) << " " << tx_corr.at(2) << " " << tx_corr.at(3) << ": ";
-                    radio->set_tx_iq_corr(tx_corr);
-                    //auto res = radio->get_tx_iq_corr();
-                    //if (res) {
-                    //    std::cout << res->at(0) << " " << res->at(1) << " " << res->at(2) << " " << res->at(3) << std::endl;
-                    //}
-                    hp_856x_set_freq(conn, hp_8564_addr, f_c + f_mod);
-                    std::this_thread::sleep_for(100ms);
-                    auto desired = hp_856x_read_carron(conn, hp_8564_addr, sweep_time);
-                    std::this_thread::sleep_for(100ms);
-                    hp_856x_set_freq(conn, hp_8564_addr, f_c - 2 * f_if - f_mod);
-                    std::this_thread::sleep_for(100ms);
-                    auto image = hp_856x_read_carron(conn, hp_8564_addr, sweep_time);
-                    auto rejection =  desired - image;
-                    std::cout << desired << " " << image << " " << rejection << std::endl;
+        for (double alpha = 0.800; alpha <= 1.251; alpha += 0.005) {
+            for (double psi = -0.300; psi <= 0.301; psi += 0.005) {
+                double A = 1. / alpha;
+                double C = -sin(psi) / (alpha * cos(psi));
+                double D = 1. / cos(psi);
+                std::array<double,4> tx_corr = {A, 0., C, D};
+                //std::cout << fmt::format("{:8.3f} {:8.3f} {:10.5f} {:10.5f} {:10.5f} {:10.5f}",
+                //        alpha, psi, tx_corr.at(0), tx_corr.at(1), tx_corr.at(2), tx_corr.at(3)) << std::endl;;
+                radio->set_tx_iq_corr(tx_corr);
+                auto res = radio->get_tx_iq_corr();
+                if (res) {
+                    std::cout << fmt::format("{:8.3f} {:8.3f} {:10.5f} {:10.5f} {:10.5f} {:10.5f}",
+                            alpha, psi, res->at(0), res->at(1), res->at(2), res->at(3));
+                } else {
+                    std::cerr << "ERROR! no readback" << std::endl;
+                    return EXIT_INTERNAL_ERROR;
                 }
+#ifdef DO_MEASUREMENTS
+                hp_856x_set_freq(conn, hp_8564_addr, f_c + f_mod);
+                std::this_thread::sleep_for(100ms);
+                auto desired = hp_856x_read_carron(conn, hp_8564_addr, sweep_time);
+                std::this_thread::sleep_for(100ms);
+                hp_856x_set_freq(conn, hp_8564_addr, f_c - 2 * f_if - f_mod);
+                std::this_thread::sleep_for(100ms);
+                auto image = hp_856x_read_carron(conn, hp_8564_addr, sweep_time);
+                auto rejection =  desired - image;
+                std::cout << fmt::format("{:10.2f} {:10.2f} {:10.2f}", desired, image, rejection);
+#else
+                std::this_thread::sleep_for(1s);
+#endif // DO_MEASUREMENTS
+                std::cout << std::endl;
             }
         }
 

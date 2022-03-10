@@ -67,7 +67,7 @@ std::array<double, 3> find_optimum_bias(std::unique_ptr<vxsdr> &radio, tcp_conne
     int i_best = 999, q_best = 999;
     double lo_best = 999.99;
 
-    for (int i = -64; i < 64; i++) {
+    for (int i = -64; i < 64; i+=2) {
         double i_bias = i / 64.;
         double q_bias = 0.;
         std::array<double,2> tx_bias = {i_bias, q_bias};
@@ -81,7 +81,7 @@ std::array<double, 3> find_optimum_bias(std::unique_ptr<vxsdr> &radio, tcp_conne
     }
     std::cout << fmt::format("{:10d} {:10d} {:10.2f}", i_best, 0, lo_best) << std::endl;
     lo_best = 999.99;
-    for (int q = -64; q < 64; q++)  {
+    for (int q = -64; q < 64; q+=2)  {
         double i_bias = 0.;
         double q_bias = q / 64.;
         std::array<double,2> tx_bias = {i_bias, q_bias};
@@ -177,7 +177,7 @@ int main(int argc, char* argv[]) {
 
         std::vector<double> freq, i_b, q_b, lof;
 
-        for (double ff = 5e9; ff <= 22e9; ff += 0.5e9) {
+        for (double ff = 5e9; ff <= 22e9; ff += 0.2e9) {
             radio->set_tx_freq(ff);
 
             auto opt_bias = find_optimum_bias(radio, conn);
