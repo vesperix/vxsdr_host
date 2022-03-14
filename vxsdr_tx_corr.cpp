@@ -55,6 +55,21 @@ size_t do_transmit(std::unique_ptr<vxsdr> &radio, std::vector<std::complex<int16
     return n_total;
 }
 
+double radio_rx_measure(std::unique_ptr<vxsdr> &radio, const double freq, const double gain = 0.0) {
+    constexpr size_t n_samps = 1'600'000;
+    std::vector<std::complex<int16_t>> data(n_samps);
+    radio->set_rx_rate(1e6);
+    radio->set_rx_gain(gain);
+    radio->set_rx_freq(freq);
+    radio->rx_start_now_for_n_samples(data.size());
+    radio->get_rx_data(data, data.size());
+    double sum = 0.0;
+    for (auto d : data) {
+        sum += pow(std::abs(d), 2.0);
+    }
+    return 10 * log10(sum / data.size());
+}
+
 int main(int argc, char* argv[]) {
     LOG_INIT(argv[0]);
     try {
@@ -108,6 +123,7 @@ int main(int argc, char* argv[]) {
 
         const double f_if = 160e6;
 
+#ifdef USE_8564
         net::io_context ctx;
         tcp_connection conn(ctx, "192.168.8.41", 1234);
         constexpr unsigned hp_8564_addr = 18;
@@ -116,6 +132,7 @@ int main(int argc, char* argv[]) {
         hp_856x_set_span(conn, hp_8564_addr, 0);
         hp_856x_set_rbw(conn, hp_8564_addr, 1e3);
         auto sweep_time = hp_856x_read_sweep_time(conn, hp_8564_addr);
+#endif
 
         if (not radio->tx_start_now_until_stop()) {
             LOG_ERROR("tx_start_now_until_stop() failed");
@@ -153,6 +170,7 @@ int main(int argc, char* argv[]) {
                             std::cout << fmt::format("{:8.3f} {:8.3f} {:10.5f} {:10.5f} {:10.5f} {:10.5f}",
                                    alpha, psi, tx_set->at(0), tx_set->at(1), tx_set->at(2), tx_set->at(3));
                         }
+#ifdef USE_8564
                         hp_856x_set_freq(conn, hp_8564_addr, f_c + f_mod);
                         std::this_thread::sleep_for(100ms);
                         auto desired = hp_856x_read_carron(conn, hp_8564_addr, sweep_time);
@@ -160,6 +178,10 @@ int main(int argc, char* argv[]) {
                         hp_856x_set_freq(conn, hp_8564_addr, f_c - 2 * f_if - f_mod);
                         std::this_thread::sleep_for(100ms);
                         auto image = hp_856x_read_carron(conn, hp_8564_addr, sweep_time);
+#else
+                        auto desired = radio_rx_measure(radio, f_c + f_mod);
+                        auto image = radio_rx_measure(radio, f_c - 2 * f_if - f_mod);
+#endif
                         auto rejection =  desired - image;
                         std::cout << fmt::format(" {:10.2f} {:10.2f} {:10.2f}", desired, image, rejection) << std::endl;
                         if (rejection > rbest) {
