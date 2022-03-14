@@ -147,9 +147,12 @@ int main(int argc, char* argv[]) {
                         double C = -sin(psi) / (alpha * cos(psi));
                         double D = 1. / cos(psi);
                         std::array<double,4> tx_corr = {A, 0., C, D};
-                        //std::cout << fmt::format("{:8.3f} {:8.3f} {:10.5f} {:10.5f} {:10.5f} {:10.5f}",
-                        //        alpha, psi, tx_corr.at(0), tx_corr.at(1), tx_corr.at(2), tx_corr.at(3)) << std::endl;;
                         radio->set_tx_iq_corr(tx_corr);
+                        auto tx_set = radio->get_tx_iq_corr();
+                        if (tx_set) {
+                            std::cout << fmt::format("{:8.3f} {:8.3f} {:10.5f} {:10.5f} {:10.5f} {:10.5f}",
+                                   alpha, psi, tx_set->at(0), tx_set->at(1), tx_set->at(2), tx_set->at(3));
+                        }
                         hp_856x_set_freq(conn, hp_8564_addr, f_c + f_mod);
                         std::this_thread::sleep_for(100ms);
                         auto desired = hp_856x_read_carron(conn, hp_8564_addr, sweep_time);
@@ -158,7 +161,7 @@ int main(int argc, char* argv[]) {
                         std::this_thread::sleep_for(100ms);
                         auto image = hp_856x_read_carron(conn, hp_8564_addr, sweep_time);
                         auto rejection =  desired - image;
-                        std::cout << fmt::format("{:10.5f} {:10.5f} {:10.2f} {:10.2f} {:10.2f}", alpha, psi, desired, image, rejection) << std::endl;
+                        std::cout << fmt::format(" {:10.2f} {:10.2f} {:10.2f}", desired, image, rejection) << std::endl;
                         if (rejection > rbest) {
                             abest = alpha;
                             pbest = psi;
