@@ -136,7 +136,7 @@ int main(int argc, char* argv[]) {
             radio->set_tx_freq(f_c);
 
             double amin = 0.8, amax = 1.25, astep = (amax - amin) / 8;
-            double pmin = -0.3, pmax = 0.3, pstep = (pmax - pmin) / 8;
+            double pmin = -0.4, pmax = 0.4, pstep = (pmax - pmin) / 8;
 
             double abest = 999.99, pbest = 999.99, rbest = -999.99;
 
@@ -158,7 +158,7 @@ int main(int argc, char* argv[]) {
                         std::this_thread::sleep_for(100ms);
                         auto image = hp_856x_read_carron(conn, hp_8564_addr, sweep_time);
                         auto rejection =  desired - image;
-                        std::cout << fmt::format("{{:10.5f} {:10.5f} {:10.2f} {:10.2f} {:10.2f}", alpha, psi, desired, image, rejection);
+                        std::cout << fmt::format("{:10.5f} {:10.5f} {:10.2f} {:10.2f} {:10.2f}", alpha, psi, desired, image, rejection) << std::endl;
                         if (rejection > rbest) {
                             abest = alpha;
                             pbest = psi;
