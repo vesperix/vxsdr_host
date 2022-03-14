@@ -55,19 +55,18 @@ size_t do_transmit(std::unique_ptr<vxsdr> &radio, std::vector<std::complex<int16
     return n_total;
 }
 
-double radio_rx_measure(std::unique_ptr<vxsdr> &radio, const double freq, const double gain = 0.0) {
+double radio_rx_measure(std::unique_ptr<vxsdr> &radio, const double freq,
+            const double f_s = 1e6, const double gain = 0.0) {
     constexpr size_t n_samps = 1'600'000;
     std::vector<std::complex<int16_t>> data(n_samps);
-    radio->set_rx_rate(1e6);
-    radio->set_rx_gain(gain);
     radio->set_rx_freq(freq);
     radio->rx_start_now_for_n_samples(data.size());
     radio->get_rx_data(data, data.size());
     double sum = 0.0;
-    for (auto d : data) {
-        sum += pow(std::abs(d), 2.0);
+    for (unsigned i = 0; i < data.size(); i++) {
+        sum += std::abs(std::complex<double>(data[i].real(), data[i].imag()));
     }
-    return 10 * log10(sum / data.size());
+    return 20 * log10(sum / data.size());
 }
 
 int main(int argc, char* argv[]) {
@@ -122,7 +121,7 @@ int main(int argc, char* argv[]) {
         LOG_INFO(fmt::format("using tx_gain   {:.1f}", radio->get_tx_gain().value_or(-1)));
 
         const double f_if = 160e6;
-
+#define USE_8564
 #ifdef USE_8564
         net::io_context ctx;
         tcp_connection conn(ctx, "192.168.8.41", 1234);
@@ -132,6 +131,8 @@ int main(int argc, char* argv[]) {
         hp_856x_set_span(conn, hp_8564_addr, 0);
         hp_856x_set_rbw(conn, hp_8564_addr, 1e3);
         auto sweep_time = hp_856x_read_sweep_time(conn, hp_8564_addr);
+#else
+        radio->set_rx_rate(1e6);
 #endif
 
         if (not radio->tx_start_now_until_stop()) {
@@ -149,7 +150,7 @@ int main(int argc, char* argv[]) {
         std::vector<double> pp;
         std::vector<double> rr;
 
-        for (double f_c = 5e9; f_c <= 22e9; f_c += 1e9) {
+        for (double f_c = 5e9; f_c <= 22.001e9; f_c += 2.5e8) {
             radio->set_tx_freq(f_c);
 
             double amin = 0.8, amax = 1.25, astep = (amax - amin) / 8;
@@ -157,7 +158,7 @@ int main(int argc, char* argv[]) {
 
             double abest = 999.99, pbest = 999.99, rbest = -999.99;
 
-            for (int k = 0; k < 3; k++) {
+            for (int k = 0; k < 5; k++) {
                 for (double alpha = amin; alpha <= amax + 0.5 * astep; alpha += astep) {
                     for (double psi = pmin; psi <= pmax + 0.5 * pstep; psi += pstep) {
                         double A = 1. / alpha;
@@ -167,7 +168,7 @@ int main(int argc, char* argv[]) {
                         radio->set_tx_iq_corr(tx_corr);
                         auto tx_set = radio->get_tx_iq_corr();
                         if (tx_set) {
-                            std::cout << fmt::format("{:8.3f} {:8.3f} {:10.5f} {:10.5f} {:10.5f} {:10.5f}",
+                            std::cout << fmt::format("{:8.4f} {:8.4f} {:10.5f} {:10.5f} {:10.5f} {:10.5f}",
                                    alpha, psi, tx_set->at(0), tx_set->at(1), tx_set->at(2), tx_set->at(3));
                         }
 #ifdef USE_8564
@@ -202,6 +203,7 @@ int main(int argc, char* argv[]) {
             aa.push_back(abest);
             pp.push_back(pbest);
             rr.push_back(rbest);
+            std::cout << fmt::format(" {:10.3e} {:10.4f} {:10.4f} {:10.2f}", f_c, abest, pbest, rbest) << std::endl;
         }
         tx_stop_flag = true;
         std::this_thread::sleep_for(110ms);
