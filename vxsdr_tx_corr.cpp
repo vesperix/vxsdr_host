@@ -56,9 +56,10 @@ size_t do_transmit(std::unique_ptr<vxsdr> &radio, std::vector<std::complex<int16
 }
 
 double radio_rx_measure(std::unique_ptr<vxsdr> &radio, const double freq,
-            const double f_s = 1e6, const double gain = 0.0) {
-    constexpr size_t n_samps = 1'600'000;
-    std::vector<std::complex<int16_t>> data(n_samps);
+            const double f_s = 1.e6, const double gain = 0.0) {
+    const size_t n_samps = 16'384;
+    std::vector<std::complex<int16_t>> data;
+    data.resize(n_samps);
     if (not radio->set_rx_freq(freq)) {
         return -999.;
     }
@@ -77,10 +78,10 @@ double radio_rx_measure(std::unique_ptr<vxsdr> &radio, const double freq,
     if (std::abs(gain - radio->get_rx_gain().value_or(-1)) > 1.0) {
         return -994;
     }
-    radio->rx_start_now_for_n_samples(data.size());
-    radio->get_rx_data(data, data.size());
+    radio->rx_start_now_for_n_samples(n_samps);
+    radio->get_rx_data(data, n_samps);
     double sum = 0.0;
-    for (unsigned i = 0; i < data.size(); i++) {
+    for (unsigned i = 0; i < n_samps; i++) {
         double dr = data[i].real();
         double di = data[i].imag();
         sum += dr * dr + di * di;
@@ -99,6 +100,7 @@ int main(int argc, char* argv[]) {
         add_common_options(desc);
         add_network_options(desc);
         add_tx_1ch_options(desc);
+        add_rx_1ch_options(desc);
         add_modulation_options(desc);
 
         init_vm(desc, vm, argc, argv);
@@ -167,7 +169,7 @@ int main(int argc, char* argv[]) {
         std::vector<double> pp;
         std::vector<double> rr;
 
-        for (double f_c = 5e9; f_c <= 22.001e9; f_c += 2.5e8) {
+        for (double f_c = 5.5e9; f_c <= 22.001e9; f_c += 2.5e8) {
             radio->set_tx_freq(f_c);
 
             double amin = 0.8, amax = 1.25, astep = (amax - amin) / 8;
