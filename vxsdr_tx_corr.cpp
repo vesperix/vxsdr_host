@@ -86,7 +86,7 @@ double radio_rx_measure(std::unique_ptr<vxsdr> &radio, const double freq,
         double di = data[i].imag();
         sum += dr * dr + di * di;
     }
-    return 10 * log10(sum / data.size());
+    return 10 * log10(sum / n_samps);
 }
 
 std::array<double, 3> find_optimum_bias(std::unique_ptr<vxsdr> &radio, const double f_c, const double f_if) {
@@ -281,7 +281,7 @@ int main(int argc, char* argv[]) {
         std::vector<double> bq;
         std::vector<double> br;
 
-        for (double f_c = 5.0e9 + 2 * f_if + f_mod; f_c <= 22.0e9 - f_mod; f_c += 2.5e8) {
+        for (double f_c = 5.5e9; f_c <= 22.0e9 - f_mod; f_c += 2.5e8) {
             radio->set_tx_freq(f_c);
 
 #ifdef USE_8564
@@ -293,7 +293,7 @@ int main(int argc, char* argv[]) {
             std::array<double,2> tx_bias = { txb[0], txb[1] };
             radio->set_tx_iq_bias(tx_bias);
 
-            std::cout << fmt::format("{:10.5f} {:10.5f} {:8.2f}", txb[0], txb[1], txb[2]) << std::endl;
+            std::cout << fmt::format("{:10.3e} {:10.5f} {:10.5f} {:8.2f} ", f_c, txb[0], txb[1], txb[2]);
 
             bi.push_back(txb[0]);
             bq.push_back(txb[1]);
@@ -312,11 +312,13 @@ int main(int argc, char* argv[]) {
                         double D = 1. / cos(psi);
                         std::array<double,4> tx_corr = {A, 0., C, D};
                         radio->set_tx_iq_corr(tx_corr);
+                        /*
                         auto tx_set = radio->get_tx_iq_corr();
                         if (tx_set) {
                             std::cout << fmt::format("{:8.4f} {:8.4f} {:10.5f} {:10.5f} {:10.5f} {:10.5f}",
                                    alpha, psi, tx_set->at(0), tx_set->at(1), tx_set->at(2), tx_set->at(3));
                         }
+                        */
 #ifdef USE_8564
                         hp_856x_set_freq(conn, hp_8564_addr, f_c + f_mod);
                         std::this_thread::sleep_for(100ms);
@@ -330,7 +332,7 @@ int main(int argc, char* argv[]) {
                         auto image = radio_rx_measure(radio, f_c - 2 * f_if - f_mod);
 #endif
                         auto rejection =  desired - image;
-                        std::cout << fmt::format(" {:10.2f} {:10.2f} {:10.2f}", desired, image, rejection) << std::endl;
+                        //std::cout << fmt::format(" {:10.2f} {:10.2f} {:10.2f}", desired, image, rejection) << std::endl;
                         if (rejection > rbest) {
                             abest = alpha;
                             pbest = psi;
@@ -349,7 +351,7 @@ int main(int argc, char* argv[]) {
             aa.push_back(abest);
             pp.push_back(pbest);
             rr.push_back(rbest);
-            std::cout << fmt::format(" {:10.3e} {:10.4f} {:10.4f} {:10.2f}", f_c, abest, pbest, rbest) << std::endl;
+            std::cout << fmt::format("{:10.5f} {:10.5f} {:10.2f}", abest, pbest, rbest) << std::endl;
         }
         tx_stop_flag = true;
         std::this_thread::sleep_for(110ms);
