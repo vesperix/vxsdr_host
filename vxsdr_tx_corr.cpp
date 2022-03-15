@@ -89,6 +89,60 @@ double radio_rx_measure(std::unique_ptr<vxsdr> &radio, const double freq,
     return 10 * log10(sum / data.size());
 }
 
+std::array<double, 3> find_optimum_bias(std::unique_ptr<vxsdr> &radio, const double f_c, const double f_if) {
+
+    int i_best = 999, q_best = 999;
+    double lo_best = 999.99;
+
+    for (int i = -64; i < 64; i+=2) {
+        double i_bias = i / 64.;
+        double q_bias = 0.;
+        std::array<double,2> tx_bias = {i_bias, q_bias};
+        radio->set_tx_iq_bias(tx_bias);
+        auto lo_feedthrough = radio_rx_measure(radio, f_c - f_if);
+        if (lo_feedthrough < lo_best) {
+            i_best = i;
+            lo_best = lo_feedthrough;
+        }
+        //std::cout << fmt::format("{:10.5f} {:10.5f} {:10.2f}", i_bias, q_bias, lo_feedthrough) << std::endl;
+    }
+    //std::cout << fmt::format("{:10d} {:10d} {:10.2f}", i_best, 0, lo_best) << std::endl;
+    lo_best = 999.99;
+    for (int q = -64; q < 64; q+=2)  {
+        double i_bias = 0.;
+        double q_bias = q / 64.;
+        std::array<double,2> tx_bias = {i_bias, q_bias};
+        radio->set_tx_iq_bias(tx_bias);
+        auto lo_feedthrough = radio_rx_measure(radio, f_c - f_if);
+        if (lo_feedthrough < lo_best) {
+            q_best = q;
+            lo_best = lo_feedthrough;
+        }
+        //std::cout << fmt::format("{:10.5f} {:10.5f} {:10.2f}", i_bias, q_bias, lo_feedthrough) << std::endl;
+    }
+    //std::cout << fmt::format("{:10d} {:10d} {:10.2f}", 0, q_best, lo_best) << std::endl;
+    //std::cout << fmt::format("{:10.4f} {:10.4f}", i_best / 64., q_best / 64.) << std::endl;
+    int i_opt = 999, q_opt = 999;
+    lo_best = 999.99;
+    for (int i = -3; i < 4; i++) {
+        for (int q = -3; q < 4; q++) {
+            double i_bias = (i + i_best) / 64.;
+            double q_bias = (q + q_best) / 64.;
+            std::array<double,2> tx_bias = {i_bias, q_bias};
+            radio->set_tx_iq_bias(tx_bias);
+            auto lo_feedthrough = radio_rx_measure(radio, f_c - f_if);
+            if (lo_feedthrough < lo_best) {
+                i_opt = i + i_best;
+                q_opt = q + q_best;
+                lo_best = lo_feedthrough;
+            }
+            //std::cout << fmt::format("{:10.5f} {:10.5f} {:10.2f}", i_bias, q_bias, lo_feedthrough) << std::endl;
+        }
+    }
+    std::array<double, 3> result = {i_opt / 64., q_opt / 64., lo_best};
+    return result;
+}
+
 int main(int argc, char* argv[]) {
     LOG_INIT(argv[0]);
     try {
@@ -159,25 +213,34 @@ int main(int argc, char* argv[]) {
         }
         auto tx_future = std::async(std::launch::async, [&] { return do_transmit(radio, data); });
 
-        std::array<double,2> tx_bias = {0.0, 0.0};
-        radio->set_tx_iq_bias(tx_bias);
-
-        // 25 dB image rejection ~= 1 dB amplitude imbalance or 0.1 radian phase imbalance
-
         std::vector<double> ff;
         std::vector<double> aa;
         std::vector<double> pp;
         std::vector<double> rr;
+        std::vector<double> bi;
+        std::vector<double> bq;
+        std::vector<double> br;
 
-        for (double f_c = 5.5e9; f_c <= 22.001e9; f_c += 2.5e8) {
+        for (double f_c = 5.0e9 + 2 * f_if + f_mod; f_c <= 22.0e9 - f_mod; f_c += 2.5e8) {
             radio->set_tx_freq(f_c);
+
+            auto txb = find_optimum_bias(radio, f_c, f_if);
+
+            std::array<double,2> tx_bias = { txb[0], txb[1] };
+            radio->set_tx_iq_bias(tx_bias);
+
+            std::cout << fmt::format("{:10.5f} {:10.5f} {:8.2f}", txb[0], txb[1], txb[2]) << std::endl;
+
+            bi.push_back(txb[0]);
+            bq.push_back(txb[1]);
+            br.push_back(txb[2]);
 
             double amin = 0.8, amax = 1.25, astep = (amax - amin) / 8;
             double pmin = -0.4, pmax = 0.4, pstep = (pmax - pmin) / 8;
 
             double abest = 999.99, pbest = 999.99, rbest = -999.99;
 
-            for (int k = 0; k < 5; k++) {
+            for (int k = 0; k < 6; k++) {
                 for (double alpha = amin; alpha <= amax + 0.5 * astep; alpha += astep) {
                     for (double psi = pmin; psi <= pmax + 0.5 * pstep; psi += pstep) {
                         double A = 1. / alpha;
@@ -229,7 +292,8 @@ int main(int argc, char* argv[]) {
         radio->tx_stop_now();
 
         for (unsigned i = 0; i < ff.size(); i++) {
-            std::cout << fmt::format("{:10.2e} {:10.5f} {:10.5f} {:10.2f}", ff[i], aa[i], pp[i], rr[i]) << std::endl;
+            std::cout << fmt::format("{:10.2e} {:10.5f} {:10.5f} {:10.2f} {:10.5f} {:10.5f} {:10.2f}",
+                    ff[i], bi[i], bq[i], br[i], aa[i], pp[i], rr[i]) << std::endl;
         }
 
 
