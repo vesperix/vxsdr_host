@@ -59,14 +59,33 @@ double radio_rx_measure(std::unique_ptr<vxsdr> &radio, const double freq,
             const double f_s = 1e6, const double gain = 0.0) {
     constexpr size_t n_samps = 1'600'000;
     std::vector<std::complex<int16_t>> data(n_samps);
-    radio->set_rx_freq(freq);
+    if (not radio->set_rx_freq(freq)) {
+        return -999.;
+    }
+    if (std::abs(freq - radio->get_rx_freq().value_or(-1)) > 1.0) {
+        return -998;
+    }
+    if (not radio->set_rx_rate(f_s)) {
+        return -997.;
+    }
+    if (std::abs(f_s - radio->get_rx_rate().value_or(-1)) > 1.0) {
+        return -996;
+    }
+    if (not radio->set_rx_gain(gain)) {
+        return -995.;
+    }
+    if (std::abs(gain - radio->get_rx_gain().value_or(-1)) > 1.0) {
+        return -994;
+    }
     radio->rx_start_now_for_n_samples(data.size());
     radio->get_rx_data(data, data.size());
     double sum = 0.0;
     for (unsigned i = 0; i < data.size(); i++) {
-        sum += std::abs(std::complex<double>(data[i].real(), data[i].imag()));
+        double dr = data[i].real();
+        double di = data[i].imag();
+        sum += dr * dr + di * di;
     }
-    return 20 * log10(sum / data.size());
+    return 10 * log10(sum / data.size());
 }
 
 int main(int argc, char* argv[]) {
@@ -121,7 +140,7 @@ int main(int argc, char* argv[]) {
         LOG_INFO(fmt::format("using tx_gain   {:.1f}", radio->get_tx_gain().value_or(-1)));
 
         const double f_if = 160e6;
-#define USE_8564
+//#define USE_8564
 #ifdef USE_8564
         net::io_context ctx;
         tcp_connection conn(ctx, "192.168.8.41", 1234);
@@ -131,8 +150,6 @@ int main(int argc, char* argv[]) {
         hp_856x_set_span(conn, hp_8564_addr, 0);
         hp_856x_set_rbw(conn, hp_8564_addr, 1e3);
         auto sweep_time = hp_856x_read_sweep_time(conn, hp_8564_addr);
-#else
-        radio->set_rx_rate(1e6);
 #endif
 
         if (not radio->tx_start_now_until_stop()) {
