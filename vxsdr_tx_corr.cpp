@@ -64,19 +64,19 @@ double radio_rx_measure(std::unique_ptr<vxsdr> &radio, const double freq,
         return -999.;
     }
     if (std::abs(freq - radio->get_rx_freq().value_or(-1)) > 1.0) {
-        return -998;
+        return -998.;
     }
     if (not radio->set_rx_rate(f_s)) {
         return -997.;
     }
     if (std::abs(f_s - radio->get_rx_rate().value_or(-1)) > 1.0) {
-        return -996;
+        return -996.;
     }
     if (not radio->set_rx_gain(gain)) {
         return -995.;
     }
     if (std::abs(gain - radio->get_rx_gain().value_or(-1)) > 1.0) {
-        return -994;
+        return -994.;
     }
     radio->rx_start_now_for_n_samples(n_samps);
     radio->get_rx_data(data, n_samps);
@@ -281,7 +281,7 @@ int main(int argc, char* argv[]) {
         std::vector<double> bq;
         std::vector<double> br;
 
-        for (double f_c = 5.5e9; f_c <= 22.0e9 - f_mod; f_c += 2.5e8) {
+        for (double f_c = 5.5e9; f_c <= 22.0e9 - f_mod; f_c += 1e8) {
             radio->set_tx_freq(f_c);
 
 #ifdef USE_8564
