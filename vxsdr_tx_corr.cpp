@@ -143,6 +143,66 @@ std::array<double, 3> find_optimum_bias(std::unique_ptr<vxsdr> &radio, const dou
     return result;
 }
 
+std::array<double, 3> find_optimum_bias_8564(std::unique_ptr<vxsdr> &radio, tcp_connection &conn, const unsigned hp_8564_addr,
+        const double f_c, const double f_if) {
+    hp_856x_set_ref_level(conn, hp_8564_addr, 10);
+    hp_856x_set_freq(conn, hp_8564_addr,  f_c - f_if);
+    hp_856x_set_span(conn, hp_8564_addr, 0);
+    hp_856x_set_rbw(conn, hp_8564_addr, 1e3);
+    auto sweep_time = hp_856x_read_sweep_time(conn, hp_8564_addr);
+
+    int i_best = 999, q_best = 999;
+    double lo_best = 999.99;
+
+    for (int i = -64; i < 64; i+=2) {
+        double i_bias = i / 64.;
+        double q_bias = 0.;
+        std::array<double,2> tx_bias = {i_bias, q_bias};
+        radio->set_tx_iq_bias(tx_bias);
+        auto lo_feedthrough = hp_856x_read_carron(conn, hp_8564_addr, sweep_time);
+        if (lo_feedthrough < lo_best) {
+            i_best = i;
+            lo_best = lo_feedthrough;
+        }
+        //std::cout << fmt::format("{:10.5f} {:10.5f} {:10.2f}", i_bias, q_bias, lo_feedthrough) << std::endl;
+    }
+    //std::cout << fmt::format("{:10d} {:10d} {:10.2f}", i_best, 0, lo_best) << std::endl;
+    lo_best = 999.99;
+    for (int q = -64; q < 64; q+=2)  {
+        double i_bias = 0.;
+        double q_bias = q / 64.;
+        std::array<double,2> tx_bias = {i_bias, q_bias};
+        radio->set_tx_iq_bias(tx_bias);
+        auto lo_feedthrough = hp_856x_read_carron(conn, hp_8564_addr, sweep_time);
+        if (lo_feedthrough < lo_best) {
+            q_best = q;
+            lo_best = lo_feedthrough;
+        }
+        //std::cout << fmt::format("{:10.5f} {:10.5f} {:10.2f}", i_bias, q_bias, lo_feedthrough) << std::endl;
+    }
+    //std::cout << fmt::format("{:10d} {:10d} {:10.2f}", 0, q_best, lo_best) << std::endl;
+    //std::cout << fmt::format("{:10.4f} {:10.4f}", i_best / 64., q_best / 64.) << std::endl;
+    int i_opt = 999, q_opt = 999;
+    lo_best = 999.99;
+    for (int i = -3; i < 4; i++) {
+        for (int q = -3; q < 4; q++) {
+            double i_bias = (i + i_best) / 64.;
+            double q_bias = (q + q_best) / 64.;
+            std::array<double,2> tx_bias = {i_bias, q_bias};
+            radio->set_tx_iq_bias(tx_bias);
+            auto lo_feedthrough = hp_856x_read_carron(conn, hp_8564_addr, sweep_time);
+            if (lo_feedthrough < lo_best) {
+                i_opt = i + i_best;
+                q_opt = q + q_best;
+                lo_best = lo_feedthrough;
+            }
+            //std::cout << fmt::format("{:10.5f} {:10.5f} {:10.2f}", i_bias, q_bias, lo_feedthrough) << std::endl;
+        }
+    }
+    std::array<double, 3> result = {i_opt / 64., q_opt / 64., lo_best};
+    return result;
+}
+
 int main(int argc, char* argv[]) {
     LOG_INIT(argv[0]);
     try {
@@ -224,7 +284,11 @@ int main(int argc, char* argv[]) {
         for (double f_c = 5.0e9 + 2 * f_if + f_mod; f_c <= 22.0e9 - f_mod; f_c += 2.5e8) {
             radio->set_tx_freq(f_c);
 
+#ifdef USE_8564
+            auto txb = find_optimum_bias_8564(radio, conn, hp_8664_addr, f_c, f_if);
+#else
             auto txb = find_optimum_bias(radio, f_c, f_if);
+#endif
 
             std::array<double,2> tx_bias = { txb[0], txb[1] };
             radio->set_tx_iq_bias(tx_bias);
