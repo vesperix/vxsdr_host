@@ -23,7 +23,7 @@ int nelmin(std::function<double(std::vector<double>& x)> fn,
 //
 //    This routine seeks the minimum value of a user-specified function.
 //
-//    Simplex function minimisation procedure due to Nelder+Mead(1965),
+//    Simplex function minimization procedure due to Nelder+Mead(1965),
 //    as implemented by O'Neill(1971, Appl.Statist. 20, 338-45), with
 //    subsequent comments by Chambers+Ertel(1974, 23, 250-1), Benyon(1976,
 //    25, 97) and Hill(1978, 27, 380-2)
@@ -31,9 +31,7 @@ int nelmin(std::function<double(std::vector<double>& x)> fn,
 //    The function to be minimized must be defined by a function of
 //    the form
 //
-//      function fn ( x, f )
-//      double fn
-//      double x(*)
+//      std::function<double(std::vector<double>& x)>
 //
 //    and the name of this subroutine must be declared EXTERNAL in the
 //    calling routine and passed as the argument FN.
@@ -47,7 +45,7 @@ int nelmin(std::function<double(std::vector<double>& x)> fn,
 //
 //  Modified:
 //
-//    27 February 2008
+//    16 March 2022
 //
 //  Author:
 //
