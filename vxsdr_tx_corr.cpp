@@ -90,32 +90,29 @@ double radio_rx_measure(std::unique_ptr<vxsdr> &radio, const double freq,
     return 10 * log10(sum / n_samps);
 }
 
-std::array<double, 3> find_optimum_bias_nm(std::unique_ptr<vxsdr> &radio, const double f_c, const double f_if) {
+std::array<double, 3> find_optimum_tx_bias_nm(std::unique_ptr<vxsdr> &radio, const double f_c, const double f_if) {
     std::vector<double> xmin(2), x0 {0., 0.}, step {0.05,0.05};
     double reqmin = 1e-3, ymin;
     int icount, numres;
 
-    double f_meas = f_c - f_if;
-
-    auto res = nelmin([&, f_meas] (std::vector<double> &x) -> double {
+    auto res = nelmin([&radio, f_c, f_if] (std::vector<double> &x) -> double {
                 radio->set_tx_iq_bias({x[0], x[1]});
-                return radio_rx_measure(radio, f_meas);
+                return radio_rx_measure(radio, f_c - f_if);
              },
              2, x0, xmin, ymin, reqmin, step, 10, 300, icount, numres);
+    std::cout << fmt::format("{:6d} {:10.5f} {:10.5f} {:10.2f} {:10d}", res, xmin[0], xmin[1], ymin, icount) << std::endl;
     if (res != 0) {
         return { 0.0, 0.0, 999.99 };
     }
     return { xmin[0], xmin[1], ymin };
 }
 
-std::array<double, 3> find_optimum_corr_nm(std::unique_ptr<vxsdr> &radio, const double f_c, const double f_if, const double f_mod) {
+std::array<double, 3> find_optimum_tx_corr_nm(std::unique_ptr<vxsdr> &radio, const double f_c, const double f_if, const double f_mod) {
     std::vector<double> xmin(2), x0 {1., 0.}, step {0.05,0.05};
     double reqmin = 1e-3, ymin;
     int icount, numres;
 
-    double f_image = f_c - 2 * f_if - f_mod, f_desired = f_c + f_mod;
-
-    auto res = nelmin([&radio, f_image, f_desired] (std::vector<double> &x) -> double {
+    auto res = nelmin([&radio, f_c, f_if, f_mod] (std::vector<double> &x) -> double {
                 double alpha = x[0];
                 double psi = x[1];
                 double A = 1. / alpha;
@@ -123,11 +120,12 @@ std::array<double, 3> find_optimum_corr_nm(std::unique_ptr<vxsdr> &radio, const 
                 double D = 1. / cos(psi);
                 std::array<double,4> tx_corr = {A, 0., C, D};
                 radio->set_tx_iq_corr(tx_corr);
-                auto desired = radio_rx_measure(radio, f_desired);
-                auto image = radio_rx_measure(radio, f_image);
+                auto desired = radio_rx_measure(radio, f_c + f_mod);
+                auto image = radio_rx_measure(radio, f_c - 2 * f_if - f_mod);
                 return image - desired; // negative of rejection since we're minimizing
             },
              2, x0, xmin, ymin, reqmin, step, 10, 300, icount, numres);
+    std::cout << fmt::format("{:6d} {:10.5f} {:10.5f} {:10.2f} {:10d}", res, xmin[0], xmin[1], ymin, icount) << std::endl;
     if (res != 0) {
         return { x0[0], x0[1], -999.99 };
     }
@@ -385,7 +383,7 @@ int main(int argc, char* argv[]) {
 #ifdef USE_8564
             auto txb = find_optimum_bias_8564(radio, conn, hp_8664_addr, f_c, f_if);
 #else
-            auto txb = find_optimum_bias(radio, f_c, f_if);
+            auto txb = find_optimum_tx_bias_nm(radio, f_c, f_if);
 #endif
 
             std::array<double,2> tx_bias = { txb[0], txb[1] };
@@ -398,7 +396,7 @@ int main(int argc, char* argv[]) {
             bq.push_back(txb[1]);
             br.push_back(txb[2]);
 
-            auto txc = find_optimum_corr(radio, f_c, f_if, f_mod);
+            auto txc = find_optimum_tx_corr_nm(radio, f_c, f_if, f_mod);
 
             std::cout << fmt::format("{:10.5f} {:10.5f} {:10.2f}", txc[0], txc[1], txc[2]) << std::endl;
 

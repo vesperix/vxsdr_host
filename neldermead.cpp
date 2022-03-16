@@ -1,19 +1,18 @@
 #include <cmath>
-#include <cstdlib>
 #include <vector>
 #include <functional>
 
-int nelmin(std::function<double(std::vector<double> &x)> fn,
+int nelmin(std::function<double(std::vector<double>& x)> fn,
            const int n,
-           std::vector<double> &start,
-           std::vector<double> &xmin,
+           std::vector<double>& start,
+           std::vector<double>& xmin,
            double& ynewlo,
            const double reqmin,
-           const std::vector<double> &step,
+           const std::vector<double>& step,
            const int konvge,
            const int kcount,
-           int &icount,
-           int &numres)
+           int& icount,
+           int& numres)
 
 //
 //  Purpose:
@@ -53,7 +52,7 @@ int nelmin(std::function<double(std::vector<double> &x)> fn,
 //  Author:
 //
 //    Original FORTRAN77 version by R ONeill.
-//    C++ version by John Burkardt.
+//    C++ version by John Burkardt; modernized to C++11 by Tom Wallace.
 //
 //  Reference:
 //
@@ -70,44 +69,43 @@ int nelmin(std::function<double(std::vector<double> &x)> fn,
 //
 //  Parameters:
 //
-//    Input, double FN ( double x[] ), the name of the routine which evaluates
-//    the function to be minimized.
+//    Input, std::function<double(std::vector<double>& x)>, the function or lambda
+//    which evaluates the function to be minimized.
 //
-//    Input, int N, the number of variables.
+//    Input, const int n, the number of variables.
 //
-//    Input/output, double START[N].  On input, a starting point
+//    Input/output, std::vector<double>& start(n).  On input, a starting point
 //    for the iteration.  On output, this data may have been overwritten.
 //
-//    Output, double XMIN[N], the coordinates of the point which
+//    Output, std::vector<double>& xmin(n), the coordinates of the point which
 //    is estimated to minimize the function.
 //
-//    Output, double YNEWLO, the minimum value of the function.
+//    Output, double& ynewlo, the minimum value of the function.
 //
-//    Input, double REQMIN, the terminating limit for the variance
+//    Input, const double reqmin, the terminating limit for the variance
 //    of function values.
 //
-//    Input, double STEP[N], determines the size and shape of the
+//    Input, const std::vector<double>& step(n), determines the size and shape of the
 //    initial simplex.  The relative magnitudes of its elements should reflect
 //    the units of the variables.
 //
-//    Input, int KONVGE, the convergence check is carried out
-//    every KONVGE iterations.
+//    Input, const int konvge, the convergence check is carried out
+//    every konvge iterations.
 //
-//    Input, int KCOUNT, the maximum number of function
+//    Input, const int kcount, the maximum number of function
 //    evaluations.
 //
-//    Output, int ICOUNT, the number of function evaluations
-//    used.
+//    Output, int& icount, the number of function evaluations used.
 //
-//    Output, int NUMRES, the number of restarts.
+//    Output, int& numres, the number of restarts.
 //
-//    Return value, error indicator.
+//    Return value, int error indicator.
 //    0, no errors detected.
-//    1, REQMIN, N, or KONVGE has an illegal value.
-//    2, iteration terminated because KCOUNT was exceeded without convergence.
+//    1, reqmin, n, or konvge has an illegal value.
+//    2, iteration terminated because kcount was exceeded without convergence.
 //
 {
-    constexpr double ccoeff = 0.9; // increased from 0.5
+    constexpr double ccoeff = 0.9; // increased from 0.5 for robustness with stochastic inputs
     constexpr double ecoeff = 2.0;
     constexpr double rcoeff = 1.0;
     constexpr double eps = 0.001;
@@ -366,7 +364,7 @@ int nelmin(std::function<double(std::vector<double> &x)> fn,
 
                 z = 0.0;
                 for (i = 0; i < nn; i++) {
-                    z = z + pow(y[i] - x, 2);
+                    z = z + std::pow(y[i] - x, 2);
                 }
 
                 if (z <= rq) {
