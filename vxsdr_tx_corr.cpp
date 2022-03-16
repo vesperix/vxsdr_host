@@ -108,11 +108,57 @@ std::array<double, 3> find_optimum_tx_bias_nm(std::unique_ptr<vxsdr> &radio, con
 }
 
 std::array<double, 3> find_optimum_tx_corr_nm(std::unique_ptr<vxsdr> &radio, const double f_c, const double f_if, const double f_mod) {
-    std::vector<double> xmin(2), x0 {1., 0.}, step {0.05,0.05};
+
+    double amin = 0.8, amax = 1.25, astep = (amax - amin) / 8;
+    double pmin = -0.4, pmax = 0.4, pstep = (pmax - pmin) / 8;
+
+    double abest = 999.99, pbest = 999.99, rbest = -999.99;
+
+    std::vector<double> a, p, r;
+
+    for (double alpha = amin; alpha <= amax + 0.5 * astep; alpha += astep) {
+        for (double psi = pmin; psi <= pmax + 0.5 * pstep; psi += pstep) {
+            double A = 1. / alpha;
+            double C = -sin(psi) / (alpha * cos(psi));
+            double D = 1. / cos(psi);
+            std::array<double,4> tx_corr = {A, 0., C, D};
+            radio->set_tx_iq_corr(tx_corr);
+            auto desired = radio_rx_measure(radio, f_c + f_mod);
+            auto image = radio_rx_measure(radio, f_c - 2 * f_if - f_mod);
+            auto rejection =  desired - image;
+            a.push_back(alpha);
+            p.push_back(psi);
+            r.push_back(rejection);
+            if (rejection > rbest) {
+                abest = alpha;
+                pbest = psi;
+                rbest = rejection;
+            }
+        }
+    }
+
+    std::vector<double> xmin(2), x0 {abest, pbest}, step {0.05,0.05};
     double reqmin = 1e-3, ymin;
     int icount, numres;
 
-    auto res = nelmin([&radio, f_c, f_if, f_mod] (std::vector<double> &x) -> double {
+    auto res1 = nelmin([&a, &p, &r] (std::vector<double> &x) -> double {
+                double e = 0.0;
+                for (unsigned i = 0; i < r.size(); i++) {
+                    double gamma = 1 + a[i] - x[0];
+                    double phi = p[i] - x[1];
+                    double rest = 10 * log10((pow(gamma, 2) + 1 + 2 * gamma * cos(phi)) / (pow(gamma, 2) + 1 - 2 * gamma * cos(phi)));
+                    e += fabs(rest - r[i]);
+                }
+                return e;
+            },
+            2, x0, xmin, ymin, reqmin, step, 10, 200, icount, numres);
+    std::cout << fmt::format("{:6d} {:10.5f} {:10.5f} {:10.2f} {:10d} {:10d}", res1, xmin[0], xmin[1], ymin, icount, numres) << std::endl;
+
+    icount = 0;
+    numres = 0;
+    x0 = xmin;
+
+    auto res2 = nelmin([&radio, f_c, f_if, f_mod] (std::vector<double> &x) -> double {
                 double alpha = x[0];
                 double psi = x[1];
                 double A = 1. / alpha;
@@ -124,9 +170,9 @@ std::array<double, 3> find_optimum_tx_corr_nm(std::unique_ptr<vxsdr> &radio, con
                 auto image = radio_rx_measure(radio, f_c - 2 * f_if - f_mod);
                 return image - desired; // negative of rejection since we're minimizing
             },
-             2, x0, xmin, ymin, reqmin, step, 10, 600, icount, numres);
-    std::cout << fmt::format("{:6d} {:10.5f} {:10.5f} {:10.2f} {:10d}", res, xmin[0], xmin[1], ymin, icount) << std::endl;
-    if (res != 0) {
+            2, x0, xmin, ymin, reqmin, step, 10, 200, icount, numres);
+    std::cout << fmt::format("{:6d} {:10.5f} {:10.5f} {:10.2f} {:10d} {:10d}", res2, xmin[0], xmin[1], ymin, icount, numres) << std::endl;
+    if (res2 != 0) {
         return { x0[0], x0[1], -999.99 };
     }
     return { xmin[0], xmin[1], -ymin };
