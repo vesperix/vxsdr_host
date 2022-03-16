@@ -21,6 +21,7 @@
 #include "utility.hpp"
 
 #include "inst_interface.hpp"
+#include "neldermead.hpp"
 
 using namespace std::chrono_literals;
 
@@ -87,6 +88,50 @@ double radio_rx_measure(std::unique_ptr<vxsdr> &radio, const double freq,
         sum += dr * dr + di * di;
     }
     return 10 * log10(sum / n_samps);
+}
+
+std::array<double, 3> find_optimum_bias_nm(std::unique_ptr<vxsdr> &radio, const double f_c, const double f_if) {
+    std::vector<double> xmin(2), x0 {0., 0.}, step {0.05,0.05};
+    double reqmin = 1e-3, ymin;
+    int icount, numres;
+
+    double f_meas = f_c - f_if;
+
+    auto res = nelmin([&, f_meas] (std::vector<double> &x) -> double {
+                radio->set_tx_iq_bias({x[0], x[1]});
+                return radio_rx_measure(radio, f_meas);
+             },
+             2, x0, xmin, ymin, reqmin, step, 10, 300, icount, numres);
+    if (res != 0) {
+        return { 0.0, 0.0, 999.99 };
+    }
+    return { xmin[0], xmin[1], ymin };
+}
+
+std::array<double, 3> find_optimum_corr_nm(std::unique_ptr<vxsdr> &radio, const double f_c, const double f_if, const double f_mod) {
+    std::vector<double> xmin(2), x0 {1., 0.}, step {0.05,0.05};
+    double reqmin = 1e-3, ymin;
+    int icount, numres;
+
+    double f_image = f_c - 2 * f_if - f_mod, f_desired = f_c + f_mod;
+
+    auto res = nelmin([&radio, f_image, f_desired] (std::vector<double> &x) -> double {
+                double alpha = x[0];
+                double psi = x[1];
+                double A = 1. / alpha;
+                double C = -sin(psi) / (alpha * cos(psi));
+                double D = 1. / cos(psi);
+                std::array<double,4> tx_corr = {A, 0., C, D};
+                radio->set_tx_iq_corr(tx_corr);
+                auto desired = radio_rx_measure(radio, f_desired);
+                auto image = radio_rx_measure(radio, f_image);
+                return image - desired; // negative of rejection since we're minimizing
+            },
+             2, x0, xmin, ymin, reqmin, step, 10, 300, icount, numres);
+    if (res != 0) {
+        return { x0[0], x0[1], -999.99 };
+    }
+    return { xmin[0], xmin[1], ymin };
 }
 
 std::array<double, 3> find_optimum_bias(std::unique_ptr<vxsdr> &radio, const double f_c, const double f_if) {
@@ -203,6 +248,59 @@ std::array<double, 3> find_optimum_bias_8564(std::unique_ptr<vxsdr> &radio, tcp_
     return result;
 }
 
+std::vector<double> find_optimum_corr(std::unique_ptr<vxsdr> &radio, const double f_c, const double f_if, const double f_mod) {
+    double amin = 0.8, amax = 1.25, astep = (amax - amin) / 8;
+    double pmin = -0.4, pmax = 0.4, pstep = (pmax - pmin) / 8;
+
+    double abest = 999.99, pbest = 999.99, rbest = -999.99;
+
+    for (int k = 0; k < 6; k++) {
+        for (double alpha = amin; alpha <= amax + 0.5 * astep; alpha += astep) {
+            for (double psi = pmin; psi <= pmax + 0.5 * pstep; psi += pstep) {
+                double A = 1. / alpha;
+                double C = -sin(psi) / (alpha * cos(psi));
+                double D = 1. / cos(psi);
+                std::array<double,4> tx_corr = {A, 0., C, D};
+                radio->set_tx_iq_corr(tx_corr);
+                /*
+                auto tx_set = radio->get_tx_iq_corr();
+                if (tx_set) {
+                    std::cout << fmt::format("{:8.4f} {:8.4f} {:10.5f} {:10.5f} {:10.5f} {:10.5f}",
+                            alpha, psi, tx_set->at(0), tx_set->at(1), tx_set->at(2), tx_set->at(3));
+                }
+                */
+#ifdef USE_8564
+                hp_856x_set_freq(conn, hp_8564_addr, f_c + f_mod);
+                std::this_thread::sleep_for(100ms);
+                auto desired = hp_856x_read_carron(conn, hp_8564_addr, sweep_time);
+                std::this_thread::sleep_for(100ms);
+                hp_856x_set_freq(conn, hp_8564_addr, f_c - 2 * f_if - f_mod);
+                std::this_thread::sleep_for(100ms);
+                auto image = hp_856x_read_carron(conn, hp_8564_addr, sweep_time);
+#else
+                auto desired = radio_rx_measure(radio, f_c + f_mod);
+                auto image = radio_rx_measure(radio, f_c - 2 * f_if - f_mod);
+#endif
+                auto rejection =  desired - image;
+                //std::cout << fmt::format(" {:10.2f} {:10.2f} {:10.2f}", desired, image, rejection) << std::endl;
+                if (rejection > rbest) {
+                    abest = alpha;
+                    pbest = psi;
+                    rbest = rejection;
+                }
+            }
+        }
+        amin = abest - astep;
+        amax = abest + astep;
+        astep = astep / 4;
+        pmin = pbest - pstep;
+        pmax = pbest + pstep;
+        pstep = pstep / 4;
+    }
+    std::vector<double> result = { abest, pbest, rbest };
+    return result;
+}
+
 int main(int argc, char* argv[]) {
     LOG_INIT(argv[0]);
     try {
@@ -295,63 +393,18 @@ int main(int argc, char* argv[]) {
 
             std::cout << fmt::format("{:10.3e} {:10.5f} {:10.5f} {:8.2f} ", f_c, txb[0], txb[1], txb[2]);
 
+            ff.push_back(f_c);
             bi.push_back(txb[0]);
             bq.push_back(txb[1]);
             br.push_back(txb[2]);
 
-            double amin = 0.8, amax = 1.25, astep = (amax - amin) / 8;
-            double pmin = -0.4, pmax = 0.4, pstep = (pmax - pmin) / 8;
+            auto txc = find_optimum_corr(radio, f_c, f_if, f_mod);
 
-            double abest = 999.99, pbest = 999.99, rbest = -999.99;
+            std::cout << fmt::format("{:10.5f} {:10.5f} {:10.2f}", txc[0], txc[1], txc[2]) << std::endl;
 
-            for (int k = 0; k < 6; k++) {
-                for (double alpha = amin; alpha <= amax + 0.5 * astep; alpha += astep) {
-                    for (double psi = pmin; psi <= pmax + 0.5 * pstep; psi += pstep) {
-                        double A = 1. / alpha;
-                        double C = -sin(psi) / (alpha * cos(psi));
-                        double D = 1. / cos(psi);
-                        std::array<double,4> tx_corr = {A, 0., C, D};
-                        radio->set_tx_iq_corr(tx_corr);
-                        /*
-                        auto tx_set = radio->get_tx_iq_corr();
-                        if (tx_set) {
-                            std::cout << fmt::format("{:8.4f} {:8.4f} {:10.5f} {:10.5f} {:10.5f} {:10.5f}",
-                                   alpha, psi, tx_set->at(0), tx_set->at(1), tx_set->at(2), tx_set->at(3));
-                        }
-                        */
-#ifdef USE_8564
-                        hp_856x_set_freq(conn, hp_8564_addr, f_c + f_mod);
-                        std::this_thread::sleep_for(100ms);
-                        auto desired = hp_856x_read_carron(conn, hp_8564_addr, sweep_time);
-                        std::this_thread::sleep_for(100ms);
-                        hp_856x_set_freq(conn, hp_8564_addr, f_c - 2 * f_if - f_mod);
-                        std::this_thread::sleep_for(100ms);
-                        auto image = hp_856x_read_carron(conn, hp_8564_addr, sweep_time);
-#else
-                        auto desired = radio_rx_measure(radio, f_c + f_mod);
-                        auto image = radio_rx_measure(radio, f_c - 2 * f_if - f_mod);
-#endif
-                        auto rejection =  desired - image;
-                        //std::cout << fmt::format(" {:10.2f} {:10.2f} {:10.2f}", desired, image, rejection) << std::endl;
-                        if (rejection > rbest) {
-                            abest = alpha;
-                            pbest = psi;
-                            rbest = rejection;
-                        }
-                    }
-                }
-                amin = abest - astep;
-                amax = abest + astep;
-                astep = astep / 4;
-                pmin = pbest - pstep;
-                pmax = pbest + pstep;
-                pstep = pstep / 4;
-            }
-            ff.push_back(f_c);
-            aa.push_back(abest);
-            pp.push_back(pbest);
-            rr.push_back(rbest);
-            std::cout << fmt::format("{:10.5f} {:10.5f} {:10.2f}", abest, pbest, rbest) << std::endl;
+            aa.push_back(txc[0]);
+            pp.push_back(txc[1]);
+            rr.push_back(txc[2]);
         }
         tx_stop_flag = true;
         std::this_thread::sleep_for(110ms);
