@@ -124,12 +124,12 @@ std::array<double, 3> find_optimum_tx_corr_nm(std::unique_ptr<vxsdr> &radio, con
                 auto image = radio_rx_measure(radio, f_c - 2 * f_if - f_mod);
                 return image - desired; // negative of rejection since we're minimizing
             },
-             2, x0, xmin, ymin, reqmin, step, 10, 300, icount, numres);
+             2, x0, xmin, ymin, reqmin, step, 10, 600, icount, numres);
     std::cout << fmt::format("{:6d} {:10.5f} {:10.5f} {:10.2f} {:10d}", res, xmin[0], xmin[1], ymin, icount) << std::endl;
     if (res != 0) {
         return { x0[0], x0[1], -999.99 };
     }
-    return { xmin[0], xmin[1], ymin };
+    return { xmin[0], xmin[1], -ymin };
 }
 
 std::array<double, 3> find_optimum_bias(std::unique_ptr<vxsdr> &radio, const double f_c, const double f_if) {
@@ -389,7 +389,7 @@ int main(int argc, char* argv[]) {
             std::array<double,2> tx_bias = { txb[0], txb[1] };
             radio->set_tx_iq_bias(tx_bias);
 
-            std::cout << fmt::format("{:10.3e} {:10.5f} {:10.5f} {:8.2f} ", f_c, txb[0], txb[1], txb[2]);
+
 
             ff.push_back(f_c);
             bi.push_back(txb[0]);
@@ -398,6 +398,7 @@ int main(int argc, char* argv[]) {
 
             auto txc = find_optimum_tx_corr_nm(radio, f_c, f_if, f_mod);
 
+            std::cout << fmt::format("{:10.3e} {:10.5f} {:10.5f} {:8.2f} ", f_c, txb[0], txb[1], txb[2]);
             std::cout << fmt::format("{:10.5f} {:10.5f} {:10.2f}", txc[0], txc[1], txc[2]) << std::endl;
 
             aa.push_back(txc[0]);
