@@ -57,8 +57,8 @@ size_t do_transmit(std::unique_ptr<vxsdr> &radio, std::vector<std::complex<int16
 }
 
 double radio_rx_measure(std::unique_ptr<vxsdr> &radio, const double freq,
-            const double f_s = 1.e6, const double gain = 0.0) {
-    const size_t n_samps = 16'384;
+            const double gain = 0.0, const double f_s = 1.e6) {
+    constexpr size_t n_samps = 16'384;
     std::vector<std::complex<int16_t>> data;
     data.resize(n_samps);
     if (not radio->set_rx_freq(freq)) {
@@ -85,6 +85,9 @@ double radio_rx_measure(std::unique_ptr<vxsdr> &radio, const double freq,
     for (unsigned i = 0; i < n_samps; i++) {
         double dr = data[i].real();
         double di = data[i].imag();
+        if (fabs(dr) > 32000. or fabs(di) > 32000.) {
+            return -993.;
+        }
         sum += dr * dr + di * di;
     }
     return 10 * log10(sum / n_samps);
@@ -109,6 +112,8 @@ std::array<double, 3> find_optimum_tx_bias_nm(std::unique_ptr<vxsdr> &radio, con
 
 std::array<double, 3> find_optimum_tx_corr_nm(std::unique_ptr<vxsdr> &radio, const double f_c, const double f_if, const double f_mod) {
 
+    const double gain_base = 0.0, gain_change = 20.0;
+
     double amin = 0.8, amax = 1.25, astep = (amax - amin) / 8;
     double pmin = -0.4, pmax = 0.4, pstep = (pmax - pmin) / 8;
 
@@ -118,7 +123,7 @@ std::array<double, 3> find_optimum_tx_corr_nm(std::unique_ptr<vxsdr> &radio, con
     double reqmin = 1e-3, ymin;
     int icount, numres;
 
-    for (int k = 0; k < 4; k++) {
+    for (int k = 0; k < 1; k++) {
         std::vector<double> a, p, r;
 
         for (double alpha = amin; alpha <= amax + 0.5 * astep; alpha += astep) {
@@ -127,9 +132,9 @@ std::array<double, 3> find_optimum_tx_corr_nm(std::unique_ptr<vxsdr> &radio, con
                 double C = -sin(psi) / (alpha * cos(psi));
                 double D = 1. / cos(psi);
                 radio->set_tx_iq_corr({A, 0., C, D});
-                auto desired = radio_rx_measure(radio, f_c + f_mod);
-                auto image = radio_rx_measure(radio, f_c - 2 * f_if - f_mod);
-                auto rejection =  desired - image;
+                auto desired = radio_rx_measure(radio, f_c + f_mod, gain_base);
+                auto image = radio_rx_measure(radio, f_c - 2 * f_if - f_mod, gain_base + gain_change);
+                auto rejection =  desired - image + gain_change;
                 //std::cout << fmt::format("{:10.5f} {:10.5f} {:10.2f}", alpha, psi, rejection) << std::endl;
                 a.push_back(alpha);
                 p.push_back(psi);
