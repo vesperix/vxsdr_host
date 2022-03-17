@@ -6,6 +6,7 @@
 *.json
 *.so
 *.a
+*.txt
 docs
 vxsdr_rx
 vxsdr_test
