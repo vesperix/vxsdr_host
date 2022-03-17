@@ -158,18 +158,25 @@ std::array<double, 3> find_optimum_tx_corr_nm(std::unique_ptr<vxsdr> &radio, con
                     return e;
                 },
                 2, x0, xmin, ymin, reqmin, step, 10, 1000, icount, numres);
-            //std::cout << fmt::format("{:6d} {:10.5f} {:10.5f} {:10.2f} {:10d} {:10d}", res1, xmin[0], xmin[1], ymin, icount, numres) << std::endl;
-            if (res1 == 0) {
-                amin = xmin[0] - astep;
-                amax = xmin[0] + astep;
-                pmin = xmin[1] - pstep;
-                pmax = xmin[1] + pstep;
-            } else {
-                amin = abest - astep;
-                amax = abest + astep;
-                pmin = pbest - pstep;
-                pmax = pbest + pstep;
+            double alpha = xmin[0];
+            double psi = xmin[1];
+            double A = 1. / alpha;
+            double C = -sin(psi) / (alpha * cos(psi));
+            double D = 1. / cos(psi);
+            radio->set_tx_iq_corr({A, 0., C, D});
+            auto desired = radio_rx_measure(radio, f_c + f_mod);
+            auto image = radio_rx_measure(radio, f_c - 2 * f_if - f_mod);
+            auto rejection =  desired - image;
+            if (rejection > rbest) {
+                abest = alpha;
+                pbest = psi;
+                rbest = rejection;
             }
+            //std::cout << fmt::format("{:6d} {:10.5f} {:10.5f} {:10.2f} {:10d} {:10d}", res1, xmin[0], xmin[1], ymin, icount, numres) << std::endl;
+            amin = abest - astep;
+            amax = abest + astep;
+            pmin = pbest - pstep;
+            pmax = pbest + pstep;
         } else {
             amin = abest - astep;
             amax = abest + astep;
