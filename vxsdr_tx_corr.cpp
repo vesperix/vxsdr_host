@@ -485,7 +485,7 @@ int main(int argc, char* argv[]) {
             auto txc = find_optimum_tx_corr_search(radio, f_c, f_if, f_mod);
 
             std::cout << fmt::format("{:10.3e} {:10.5f} {:10.5f} {:8.2f} ", f_c, txb[0], txb[1], txb[2]);
-            std::cout << fmt::format("{:10.5f} {:10.5f} {:10.2f}", txc[0], txc[1], txc[2]) << std::endl;
+            std::cout << fmt::format("{:10.6f} {:10.6f} {:10.2f}", txc[0], txc[1], txc[2]) << std::endl;
 
             aa.push_back(txc[0]);
             pp.push_back(txc[1]);
@@ -496,7 +496,7 @@ int main(int argc, char* argv[]) {
         radio->tx_stop_now();
 
         for (unsigned i = 0; i < ff.size(); i++) {
-            std::cout << fmt::format("{:10.2e} {:10.5f} {:10.5f} {:10.2f} {:10.5f} {:10.5f} {:10.2f}",
+            std::cout << fmt::format("{:10.3e} {:10.5f} {:10.5f} {:8.2f} {:10.6f} {:10.6f} {:10.2f}",
                     ff[i], bi[i], bq[i], br[i], aa[i], pp[i], rr[i]) << std::endl;
         }
 
