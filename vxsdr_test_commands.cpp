@@ -589,7 +589,7 @@ void test_iq(std::unique_ptr<vxsdr>& radio) {
 
     const double ii_corr    = 0.9,      iq_corr    = -0.1, qi_corr    = 0.2,      qq_corr    = 1.1;
     const double ii_corr_ok = 0.905539, iq_corr_ok =  0.0, qi_corr_ok = 0.077302, qq_corr_ok = 1.115358; // values after rotation
-    const double  corr_tol = 0.0002;
+    const double  corr_tol = 0.001;
     LOG_INFO("TESTING:    testing set tx correction");
 
     const std::array<double, 4> corr_test = {ii_corr, iq_corr, qi_corr, qq_corr};
@@ -607,6 +607,7 @@ void test_iq(std::unique_ptr<vxsdr>& radio) {
             } else {
                 LOG_ERROR(fmt::format("TESTING:       incorrect values returned by get_tx_iq_corr(): ({:.6f}, {:.6f}, {:.6f}, {:.6f})",
                         cres->at(0), cres->at(1), cres->at(2), cres->at(3)));
+                LOG_ERROR(fmt::format("({:.6f}, {:.6f}, {:.6f}, {:.6f})", ii_diff, iq_diff, qi_diff, qq_diff));
                 total_errors++;
             }
         } else {
