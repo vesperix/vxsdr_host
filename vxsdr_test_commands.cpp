@@ -607,7 +607,6 @@ void test_iq(std::unique_ptr<vxsdr>& radio) {
             } else {
                 LOG_ERROR(fmt::format("TESTING:       incorrect values returned by get_tx_iq_corr(): ({:.6f}, {:.6f}, {:.6f}, {:.6f})",
                         cres->at(0), cres->at(1), cres->at(2), cres->at(3)));
-                LOG_ERROR(fmt::format("({:.6f}, {:.6f}, {:.6f}, {:.6f})", ii_diff, iq_diff, qi_diff, qq_diff));
                 total_errors++;
             }
         } else {
