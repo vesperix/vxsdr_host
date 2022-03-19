@@ -127,7 +127,7 @@ std::array<double, 3> find_optimum_tx_corr_search(std::unique_ptr<vxsdr> &radio,
         for (double alpha = amin; alpha <= amax + 0.5 * astep; alpha += astep) {
             for (double psi = pmin; psi <= pmax + 0.5 * pstep; psi += pstep) {
                 double A = 1. / alpha;
-                double C = -sin(psi) / (alpha * cos(psi));
+                double C = -tan(psi) / alpha;
                 double D = 1. / cos(psi);
                 radio->set_tx_iq_corr({A, 0., C, D});
                 auto desired = radio_rx_measure(radio, f_c + f_mod, gain_base);
@@ -174,7 +174,7 @@ std::array<double, 3> find_optimum_tx_corr_search_8564(std::unique_ptr<vxsdr> &r
         for (double alpha = amin; alpha <= amax + 0.5 * astep; alpha += astep) {
             for (double psi = pmin; psi <= pmax + 0.5 * pstep; psi += pstep) {
                 double A = 1. / alpha;
-                double C = -sin(psi) / (alpha * cos(psi));
+                double C = -tan(psi) / alpha;
                 double D = 1. / cos(psi);
                 radio->set_tx_iq_corr({A, 0., C, D});
                 hp_856x_set_freq(conn, hp_8564_addr, f_c + f_mod);
@@ -224,7 +224,7 @@ std::array<double, 3> find_optimum_tx_corr_nm(std::unique_ptr<vxsdr> &radio, con
         for (double alpha = amin; alpha <= amax + 0.5 * astep; alpha += astep) {
             for (double psi = pmin; psi <= pmax + 0.5 * pstep; psi += pstep) {
                 double A = 1. / alpha;
-                double C = -sin(psi) / (alpha * cos(psi));
+                double C = -tan(psi) / alpha;
                 double D = 1. / cos(psi);
                 radio->set_tx_iq_corr({A, 0., C, D});
                 auto desired = radio_rx_measure(radio, f_c + f_mod, gain_base);
@@ -256,7 +256,7 @@ std::array<double, 3> find_optimum_tx_corr_nm(std::unique_ptr<vxsdr> &radio, con
                 double alpha = x[0];
                 double psi = x[1];
                 double A = 1. / alpha;
-                double C = -sin(psi) / (alpha * cos(psi));
+                double C = -tan(psi) / alpha;
                 double D = 1. / cos(psi);
                 std::array<double,4> tx_corr = {A, 0., C, D};
                 radio->set_tx_iq_corr(tx_corr);
