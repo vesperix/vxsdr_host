@@ -136,7 +136,7 @@ double radio_rx_measure(std::unique_ptr<vxsdr> &radio, const double f_c,
     hann(w, n_fft);
     pwelch(data, w, S, F);
 
-    return 10 * log10(S.at(n_fft / 2 + n_fft / 8));
+    return 10 * log10(S.at(F.size() / 2 + std::lround(f_off / f_s * n_fft)));
 }
 
 void tx_bias_grid(std::ofstream& os, std::unique_ptr<vxsdr> &radio, const double f_c, const double f_if) {
