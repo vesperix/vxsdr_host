@@ -486,6 +486,7 @@ int main(int argc, char* argv[]) {
             radio->set_tx_freq(f_c);
             double half_lo_c = -99.99, half_lo_u = -99.99;
             if (f_c - f_if >= 15e9) {
+                radio->set_tx_iq_bias({ 0., 0. });
                 half_lo_u = radio_rx_measure(radio, 0.5 * (f_c - f_if));
             }
 #ifdef USE_8564
@@ -494,8 +495,7 @@ int main(int argc, char* argv[]) {
             auto txb = find_optimum_tx_bias(radio, f_c, f_if);
 #endif
 
-            std::array<double,2> tx_bias = { txb[0], txb[1] };
-            radio->set_tx_iq_bias(tx_bias);
+            radio->set_tx_iq_bias({ txb[0], txb[1] });
             if (f_c - f_if >= 15e9) {
                 half_lo_c = radio_rx_measure(radio, 0.5 * (f_c - f_if));
             }
