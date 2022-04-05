@@ -68,8 +68,8 @@ template <class T> void hann(std::vector<T> &w, size_t len = 0)
     w[N] = 0.0;
 }
 
-template <class T, class U> void pwelch(const std::vector<std::complex<T> > &x, std::vector<U> &w, std::vector<U> &S, fft<U> &fft, const double step = 0.5)
-{
+template <class T, class U> void pwelch(const std::vector<std::complex<T> > &x, std::vector<U> &w, std::vector<U> &S,
+            fft<U> &fft, const double step = 0.5) {
     unsigned nstep = std::round(fft.size() * step);
     S.resize(fft.size());
     std::fill(S.begin(), S.end(), 0.0);
@@ -80,9 +80,10 @@ template <class T, class U> void pwelch(const std::vector<std::complex<T> > &x, 
     // N is the number of spectra
     unsigned N = ceil((double)(x.size() - fft.size()) / nstep);
     for (unsigned n = 0; n < N; n++) {
-        std::vector<std::complex<T>> tmp = std::vector<std::complex<T> >(x.begin() + n * nstep, x.begin() + n * nstep + fft.size());
-        for(unsigned j = 0; j < tmp.size(); j++)
-            tmp[j] *= w[j];
+        std::vector<std::complex<U>> tmp(fft.size());
+        for(unsigned j = 0; j < tmp.size(); j++) {
+            tmp[j] = w[j] * std::complex<U>(x[n * nstep + j].real(), x[n * nstep + j].imag());
+        }
         std::vector<std::complex<U>> xform;
         fft.forward(tmp, xform);
         for(unsigned j = 0; j < fft.size() / 2; j++) {
@@ -135,16 +136,16 @@ double radio_rx_measure(std::unique_ptr<vxsdr> &radio, const double f_c,
     std::vector<float> w, S;
     hann(w, n_fft);
     pwelch(data, w, S, F);
-
     return 10 * log10(S.at(F.size() / 2 + std::lround(f_off / f_s * n_fft)));
 }
 
 void tx_bias_grid(std::ofstream& os, std::unique_ptr<vxsdr> &radio, const double f_c, const double f_if) {
-    for (int i = -64; i < 64; i++) {
-        for (int q = -64; q < 64; q++)  {
+    for (int i = -64; i < 64; i+=4) {
+        for (int q = -64; q < 64; q+=4)  {
             radio->set_tx_iq_bias({i / 64., q / 64.});
             auto lo_feedthrough = radio_rx_measure(radio, f_c - f_if);
             os << fmt::format("{:10.3e} {:10.6f} {:10.6f} {:8.2f}", f_c, i / 64., q / 64., lo_feedthrough) << std::endl;
+            std::cout << fmt::format("bias {:10.3e} {:10.6f} {:10.6f} {:8.2f}", f_c, i / 64., q / 64., lo_feedthrough) << std::endl;
         }
     }
     radio->set_tx_iq_bias({0., 0.});
@@ -153,7 +154,7 @@ void tx_bias_grid(std::ofstream& os, std::unique_ptr<vxsdr> &radio, const double
 void tx_corr_grid(std::ofstream& os, std::unique_ptr<vxsdr> &radio, const double f_c, const double f_if, const double f_mod) {
     constexpr double gain_base = 0.0, gain_change = 20.0;
     constexpr double amin = 0.8, amax = 1.25, astep = 0.05;
-    constexpr double pmin = -0.4, pmax = 0.4, pstep = 0.05;
+    constexpr double pmin = -0.4, pmax = 0.4, pstep = 0.1;
 
     for (double alpha = amin; alpha <= amax + 0.5 * astep; alpha += astep) {
         for (double psi = pmin; psi <= pmax + 0.5 * pstep; psi += pstep) {
@@ -165,6 +166,7 @@ void tx_corr_grid(std::ofstream& os, std::unique_ptr<vxsdr> &radio, const double
             auto image = radio_rx_measure(radio, f_c - 2 * f_if - f_mod, gain_base + gain_change);
             auto rejection =  desired - image + gain_change;
             os << fmt::format("{:10.3e} {:10.6f} {:10.6f} {:8.2f}", f_c, alpha, psi, rejection) << std::endl;
+            std::cout << fmt::format("corr {:10.3e} {:10.6f} {:10.6f} {:8.2f}", f_c, alpha, psi, rejection) << std::endl;
         }
     }
     radio->set_tx_iq_corr({1., 0., 0., 1.});
