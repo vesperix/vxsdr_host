@@ -48,7 +48,7 @@ vxsdr_tx_corr: vxsdr_tx_corr.cpp inst_interface.hpp $(COMMON_INCLUDES) $(COMMON_
 	$(CXX) $(CXX_FLAGS) -o $@ $< $(COMMON_OBJ) neldermead.cpp $(CXX_LDFLAGS)
 
 vxsdr_tx_corr_2: vxsdr_tx_corr_2.cpp inst_interface.hpp $(COMMON_INCLUDES) $(COMMON_OBJ)
-	$(CXX) $(CXX_FLAGS) -o $@ $< $(COMMON_OBJ) neldermead.cpp $(CXX_LDFLAGS)
+	$(CXX) $(CXX_FLAGS) -o $@ $< $(COMMON_OBJ) neldermead.cpp $(CXX_LDFLAGS) -lfftw3f
 
 vxsdr_test_tx_rx: vxsdr_test_tx_rx.cpp $(COMMON_INCLUDES) $(COMMON_OBJ)
 	$(CXX) $(CXX_FLAGS) -o $@ $< $(COMMON_OBJ) $(CXX_LDFLAGS)
