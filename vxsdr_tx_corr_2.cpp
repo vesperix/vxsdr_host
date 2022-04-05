@@ -172,6 +172,106 @@ void tx_corr_grid(std::ofstream& os, std::unique_ptr<vxsdr> &radio, const double
     radio->set_tx_iq_corr({1., 0., 0., 1.});
 }
 
+std::array<double, 4> find_optimum_tx_bias(std::unique_ptr<vxsdr> &radio, const double f_c, const double f_if) {
+
+    int i_best = 999, q_best = 999;
+    double lo_best = 999.99, lo_uncorr = 999.99;
+
+    radio->set_tx_iq_bias({ 0., 0.});
+    lo_uncorr = radio_rx_measure(radio, f_c - f_if);
+
+    for (int i = -64; i < 64; i+=2) {
+        double i_bias = i / 64.;
+        double q_bias = 0.;
+        std::array<double,2> tx_bias = {i_bias, q_bias};
+        radio->set_tx_iq_bias(tx_bias);
+        auto lo_feedthrough = radio_rx_measure(radio, f_c - f_if);
+        if (lo_feedthrough < lo_best) {
+            i_best = i;
+            lo_best = lo_feedthrough;
+        }
+    }
+    lo_best = 999.99;
+    for (int q = -64; q < 64; q+=2)  {
+        double i_bias = 0.;
+        double q_bias = q / 64.;
+        std::array<double,2> tx_bias = {i_bias, q_bias};
+        radio->set_tx_iq_bias(tx_bias);
+        auto lo_feedthrough = radio_rx_measure(radio, f_c - f_if);
+        if (lo_feedthrough < lo_best) {
+            q_best = q;
+            lo_best = lo_feedthrough;
+        }
+    }
+    int i_opt = 999, q_opt = 999;
+    lo_best = 999.99;
+    for (int i = -3; i < 4; i++) {
+        for (int q = -3; q < 4; q++) {
+            double i_bias = (i + i_best) / 64.;
+            double q_bias = (q + q_best) / 64.;
+            std::array<double,2> tx_bias = {i_bias, q_bias};
+            radio->set_tx_iq_bias(tx_bias);
+            auto lo_feedthrough = radio_rx_measure(radio, f_c - f_if);
+            if (lo_feedthrough < lo_best) {
+                i_opt = i + i_best;
+                q_opt = q + q_best;
+                lo_best = lo_feedthrough;
+            }
+        }
+    }
+    std::array<double, 4> result = {i_opt / 64., q_opt / 64., lo_best, lo_uncorr};
+    return result;
+}
+
+
+std::array<double, 4> find_optimum_tx_corr_search(std::unique_ptr<vxsdr> &radio, const double f_c, const double f_if, const double f_mod) {
+    constexpr double rtarget = 70.0;
+    const double gain_base = 0.0, gain_change = 20.0;
+    double nstep = 8.;
+
+    double amin = 0.8, amax = 1.25, astep;
+    double pmin = -0.4, pmax = 0.4, pstep;
+
+    double abest = 999.99, pbest = 999.99, rbest = -999.99, runcorr = -999.99;
+
+    radio->set_tx_iq_corr({1., 0., 0., 1.});
+    runcorr = radio_rx_measure(radio, f_c + f_mod, gain_base)
+                - radio_rx_measure(radio, f_c - 2 * f_if - f_mod, gain_base + gain_change) + gain_change;
+
+    for (int k = 0; k < 5; k++) {
+        std::vector<double> a, p, r;
+        astep = (amax - amin) / nstep;
+        pstep = (pmax - pmin) / nstep;
+        for (double alpha = amin; alpha <= amax + 0.5 * astep; alpha += astep) {
+            for (double psi = pmin; psi <= pmax + 0.5 * pstep; psi += pstep) {
+                double A = 1. / alpha;
+                double C = -tan(psi) / alpha;
+                double D = 1. / cos(psi);
+                radio->set_tx_iq_corr({A, 0., C, D});
+                auto desired = radio_rx_measure(radio, f_c + f_mod, gain_base);
+                auto image = radio_rx_measure(radio, f_c - 2 * f_if - f_mod, gain_base + gain_change);
+                auto rejection =  desired - image + gain_change;
+                //std::cout << fmt::format("{:10.5f} {:10.5f} {:10.2f}", alpha, psi, rejection) << std::endl;
+                if (rejection > rbest) {
+                    abest = alpha;
+                    pbest = psi;
+                    rbest = rejection;
+                }
+            }
+        }
+        amin = abest - astep;
+        amax = abest + astep;
+        pmin = pbest - pstep;
+        pmax = pbest + pstep;
+
+        //std::cout << fmt::format("{:6d} {:10.5f} {:10.5f} {:10.2f}", k, abest, pbest, rbest) << std::endl;
+        if (rbest > rtarget) {
+            break;
+        }
+    }
+    return {abest, pbest, rbest, runcorr};
+}
+
 int main(int argc, char* argv[]) {
     LOG_INIT(argv[0]);
     try {
@@ -224,14 +324,24 @@ int main(int argc, char* argv[]) {
 
         for (double f_c = 5.0e9; f_c <= 22.0e9 - f_mod; f_c += 1e9) {
             radio->set_tx_freq(f_c);
+            /*
             std::ofstream ob(fmt::format("bias-{:.3f}-ghz.txt", f_c / 1e9), std::ofstream::out);
             tx_bias_grid(ob, radio, f_c, f_if);
             ob.close();
             std::ofstream oc(fmt::format("corr-{:.3f}-ghz.txt", f_c / 1e9), std::ofstream::out);
             tx_corr_grid(oc, radio, f_c, f_if, f_mod);
             oc.close();
+            */
+            auto txb = find_optimum_tx_bias(radio, f_c, f_if);
+            radio->set_tx_iq_bias({ txb[0], txb[1] });
+            auto txc = find_optimum_tx_corr_search(radio, f_c, f_if, f_mod);
+            std::cout << fmt::format("{:10.3e} {:10.5f} {:10.5f} {:8.2f} {:8.2f} ", f_c, txb[0], txb[1], txb[2], txb[3]);
+            std::cout << fmt::format("{:10.6f} {:10.6f} {:8.2f} {:8.2f}", txc[0], txc[1], txc[2], txc[3]) << std::endl;
         }
 
+        if (not radio->tx_stop_now()) {
+            LOG_ERROR("tx_stop_now() failed");
+        }
 
     } catch (std::exception& e) {
         LOG_FATAL(fmt::format("exception caught: {:s}", e.what()));
