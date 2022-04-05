@@ -110,7 +110,7 @@ std::array<double, 3> find_optimum_tx_bias_nm(std::unique_ptr<vxsdr> &radio, con
     return { xmin[0], xmin[1], ymin };
 }
 
-std::array<double, 3> find_optimum_tx_corr_search(std::unique_ptr<vxsdr> &radio, const double f_c, const double f_if, const double f_mod) {
+std::array<double, 4> find_optimum_tx_corr_search(std::unique_ptr<vxsdr> &radio, const double f_c, const double f_if, const double f_mod) {
     constexpr double rtarget = 70.0;
     const double gain_base = 0.0, gain_change = 20.0;
     double nstep = 8.;
@@ -118,7 +118,11 @@ std::array<double, 3> find_optimum_tx_corr_search(std::unique_ptr<vxsdr> &radio,
     double amin = 0.8, amax = 1.25, astep;
     double pmin = -0.4, pmax = 0.4, pstep;
 
-    double abest = 999.99, pbest = 999.99, rbest = -999.99;
+    double abest = 999.99, pbest = 999.99, rbest = -999.99, runcorr = -999.99;
+
+    radio->set_tx_iq_corr({1., 0., 0., 1.});
+    runcorr = radio_rx_measure(radio, f_c + f_mod, gain_base)
+                - radio_rx_measure(radio, f_c - 2 * f_if - f_mod, gain_base + gain_change) + gain_change;
 
     for (int k = 0; k < 5; k++) {
         std::vector<double> a, p, r;
@@ -151,11 +155,11 @@ std::array<double, 3> find_optimum_tx_corr_search(std::unique_ptr<vxsdr> &radio,
             break;
         }
     }
-    return {abest, pbest, rbest};
+    return {abest, pbest, rbest, runcorr};
 }
 
 
-std::array<double, 3> find_optimum_tx_corr_search_8564(std::unique_ptr<vxsdr> &radio,  tcp_connection &conn, const unsigned hp_8564_addr,
+std::array<double, 4> find_optimum_tx_corr_search_8564(std::unique_ptr<vxsdr> &radio,  tcp_connection &conn, const unsigned hp_8564_addr,
             const double sweep_time, const double f_c, const double f_if, const double f_mod) {
     constexpr double rtarget = 70.0;
     double nstep = 8.;
@@ -163,9 +167,21 @@ std::array<double, 3> find_optimum_tx_corr_search_8564(std::unique_ptr<vxsdr> &r
     double amin = 0.8, amax = 1.25, astep;
     double pmin = -0.4, pmax = 0.4, pstep;
 
-    double abest = 999.99, pbest = 999.99, rbest = -999.99;
+    double abest = 999.99, pbest = 999.99, rbest = -999.99, runcorr = -999.99;
 
     hp_856x_set_ref_level(conn, hp_8564_addr, 0);
+
+    {
+        radio->set_tx_iq_corr({1., 0., 0., 1.});
+        hp_856x_set_freq(conn, hp_8564_addr, f_c + f_mod);
+        std::this_thread::sleep_for(100ms);
+        auto desired = hp_856x_read_carron(conn, hp_8564_addr, sweep_time);
+        std::this_thread::sleep_for(100ms);
+        hp_856x_set_freq(conn, hp_8564_addr, f_c - 2 * f_if - f_mod);
+        std::this_thread::sleep_for(100ms);
+        auto image = hp_856x_read_carron(conn, hp_8564_addr, sweep_time);
+        runcorr =  desired - image;
+    }
 
     for (int k = 0; k < 5; k++) {
         std::vector<double> a, p, r;
@@ -203,7 +219,7 @@ std::array<double, 3> find_optimum_tx_corr_search_8564(std::unique_ptr<vxsdr> &r
             break;
         }
     }
-    return {abest, pbest, rbest};
+    return {abest, pbest, rbest, runcorr};
 }
 
 
@@ -273,10 +289,13 @@ std::array<double, 3> find_optimum_tx_corr_nm(std::unique_ptr<vxsdr> &radio, con
 
 }
 
-std::array<double, 3> find_optimum_tx_bias(std::unique_ptr<vxsdr> &radio, const double f_c, const double f_if) {
+std::array<double, 4> find_optimum_tx_bias(std::unique_ptr<vxsdr> &radio, const double f_c, const double f_if) {
 
     int i_best = 999, q_best = 999;
-    double lo_best = 999.99;
+    double lo_best = 999.99, lo_uncorr = 999.99;
+
+    radio->set_tx_iq_bias({ 0., 0.});
+    lo_uncorr = radio_rx_measure(radio, f_c - f_if);
 
     for (int i = -64; i < 64; i+=2) {
         double i_bias = i / 64.;
@@ -317,18 +336,21 @@ std::array<double, 3> find_optimum_tx_bias(std::unique_ptr<vxsdr> &radio, const 
             }
         }
     }
-    std::array<double, 3> result = {i_opt / 64., q_opt / 64., lo_best};
+    std::array<double, 4> result = {i_opt / 64., q_opt / 64., lo_best, lo_uncorr};
     return result;
 }
 
-std::array<double, 3> find_optimum_tx_bias_8564(std::unique_ptr<vxsdr> &radio,
+std::array<double, 4> find_optimum_tx_bias_8564(std::unique_ptr<vxsdr> &radio,
         tcp_connection &conn, const unsigned hp_8564_addr, const double sweep_time,
         const double f_c, const double f_if) {
     hp_856x_set_ref_level(conn, hp_8564_addr, 10);
     hp_856x_set_freq(conn, hp_8564_addr,  f_c - f_if);
 
     int i_best = 999, q_best = 999;
-    double lo_best = 999.99;
+    double lo_best = 999.99, lo_uncorr = 999.99;
+
+    radio->set_tx_iq_bias({ 0., 0.});
+    lo_uncorr =  hp_856x_read_carron(conn, hp_8564_addr, sweep_time);
 
     for (int i = -64; i < 64; i+=2) {
         double i_bias = i / 64.;
@@ -369,7 +391,7 @@ std::array<double, 3> find_optimum_tx_bias_8564(std::unique_ptr<vxsdr> &radio,
             }
         }
     }
-    std::array<double, 3> result = {i_opt / 64., q_opt / 64., lo_best};
+    std::array<double, 4> result = {i_opt / 64., q_opt / 64., lo_best, lo_uncorr};
     return result;
 }
 
@@ -447,9 +469,11 @@ int main(int argc, char* argv[]) {
         std::vector<double> aa;
         std::vector<double> pp;
         std::vector<double> rr;
+        std::vector<double> ru;
         std::vector<double> bi;
         std::vector<double> bq;
         std::vector<double> br;
+        std::vector<double> bu;
 
         for (double f_c = 5.5e9; f_c <= 22.0e9 - f_mod; f_c += 1e8) {
             radio->set_tx_freq(f_c);
@@ -467,26 +491,28 @@ int main(int argc, char* argv[]) {
             bi.push_back(txb[0]);
             bq.push_back(txb[1]);
             br.push_back(txb[2]);
+            bu.push_back(txb[3]);
 
 #ifdef USE_8564
             auto txc = find_optimum_tx_corr_search_8564(radio, conn, hp_8564_addr, sweep_time, f_c, f_if, f_mod);
 #else
             auto txc = find_optimum_tx_corr_search(radio, f_c, f_if, f_mod);
 #endif
-            std::cout << fmt::format("{:10.3e} {:10.5f} {:10.5f} {:8.2f} ", f_c, txb[0], txb[1], txb[2]);
-            std::cout << fmt::format("{:10.6f} {:10.6f} {:10.2f}", txc[0], txc[1], txc[2]) << std::endl;
+            std::cout << fmt::format("{:10.3e} {:10.5f} {:10.5f} {:8.2f} {:8.2f} ", f_c, txb[0], txb[1], txb[2], txb[3]);
+            std::cout << fmt::format("{:10.6f} {:10.6f} {:8.2f} {:8.2f}", txc[0], txc[1], txc[2], txc[3]) << std::endl;
 
             aa.push_back(txc[0]);
             pp.push_back(txc[1]);
             rr.push_back(txc[2]);
+            ru.push_back(txc[3]);
         }
         tx_stop_flag = true;
         std::this_thread::sleep_for(110ms);
         radio->tx_stop_now();
 
         for (unsigned i = 0; i < ff.size(); i++) {
-            std::cout << fmt::format("{:10.3e} {:10.5f} {:10.5f} {:8.2f} {:10.6f} {:10.6f} {:10.2f}",
-                    ff[i], bi[i], bq[i], br[i], aa[i], pp[i], rr[i]) << std::endl;
+            std::cout << fmt::format("{:10.3e} {:10.5f} {:10.5f} {:8.2f} {:8.2f} {:10.6f} {:10.6f} {:8.2f} {:8.2f}",
+                    ff[i], bi[i], bq[i], br[i], bu[i], aa[i], pp[i], rr[i], ru[i]) << std::endl;
         }
 
 
