@@ -93,10 +93,13 @@ double radio_rx_measure(std::unique_ptr<vxsdr> &radio, const double freq,
     return 10 * log10(sum / n_samps);
 }
 
-std::array<double, 3> find_optimum_tx_bias_nm(std::unique_ptr<vxsdr> &radio, const double f_c, const double f_if) {
+std::array<double, 4> find_optimum_tx_bias_nm(std::unique_ptr<vxsdr> &radio, const double f_c, const double f_if) {
     std::vector<double> xmin(2), x0 {0., 0.}, step {0.05,0.05};
     double reqmin = 1e-1, ymin;
     int icount, numres;
+
+    radio->set_tx_iq_bias({0., 0.});
+    double runcorr = radio_rx_measure(radio, f_c - f_if);
 
     auto res = nelmin([&radio, f_c, f_if] (std::vector<double> &x) -> double {
                 radio->set_tx_iq_bias({x[0], x[1]});
@@ -104,10 +107,10 @@ std::array<double, 3> find_optimum_tx_bias_nm(std::unique_ptr<vxsdr> &radio, con
              },
              2, x0, xmin, ymin, reqmin, step, 10, 300, icount, numres);
     //std::cout << fmt::format("{:6d} {:10.5f} {:10.5f} {:10.2f} {:10d}", res, xmin[0], xmin[1], ymin, icount) << std::endl;
-    //if (res != 0) {
-    //    return { 0.0, 0.0, 999.99 };
-    //}
-    return { xmin[0], xmin[1], ymin };
+    if (res != 0) {
+        return { 0.0, 0.0, 999.99, runcorr };
+    }
+    return { xmin[0], xmin[1], ymin, runcorr };
 }
 
 std::array<double, 4> find_optimum_tx_corr_search(std::unique_ptr<vxsdr> &radio, const double f_c, const double f_if, const double f_mod) {
@@ -223,7 +226,7 @@ std::array<double, 4> find_optimum_tx_corr_search_8564(std::unique_ptr<vxsdr> &r
 }
 
 
-std::array<double, 3> find_optimum_tx_corr_nm(std::unique_ptr<vxsdr> &radio, const double f_c, const double f_if, const double f_mod) {
+std::array<double, 4> find_optimum_tx_corr_nm(std::unique_ptr<vxsdr> &radio, const double f_c, const double f_if, const double f_mod) {
     const double gain_base = 0.0, gain_change = 20.0;
     double nstep = 8.;
 
@@ -231,6 +234,10 @@ std::array<double, 3> find_optimum_tx_corr_nm(std::unique_ptr<vxsdr> &radio, con
     double pmin = -0.4, pmax = 0.4, pstep;
 
     double abest = 999.99, pbest = 999.99, rbest = -999.99;
+
+    radio->set_tx_iq_corr({1., 0., 0., 1.});
+    double runcorr = radio_rx_measure(radio, f_c + f_mod, gain_base)
+                     - radio_rx_measure(radio, f_c - 2 * f_if - f_mod, gain_base + gain_change) + gain_change;
 
     constexpr int kmax = 2;
 
@@ -283,9 +290,9 @@ std::array<double, 3> find_optimum_tx_corr_nm(std::unique_ptr<vxsdr> &radio, con
             2, x0, xmin, ymin, reqmin, step, 1, lround(nstep * nstep * (8 - kmax)), icount, numres);
     std::cout << fmt::format("{:6d} {:10.5f} {:10.5f} {:10.2f} {:10d} {:10d}", res2, xmin[0], xmin[1], -ymin, icount, numres) << std::endl;
     if (res2 != 0 and rbest > -ymin) {
-        return { x0[0], x0[1], rbest };
+        return { x0[0], x0[1], rbest, runcorr };
     }
-    return { xmin[0], xmin[1], -ymin };
+    return { xmin[0], xmin[1], -ymin, runcorr };
 
 }
 
