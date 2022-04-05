@@ -455,7 +455,7 @@ int main(int argc, char* argv[]) {
         LOG_INFO(fmt::format("using tx_gain   {:.1f}", radio->get_tx_gain().value_or(-1)));
 
         const double f_if = 160e6;
-#define USE_8564
+//#define USE_8564
 #ifdef USE_8564
         net::io_context ctx;
         tcp_connection conn(ctx, "192.168.8.41", 1234);
@@ -482,9 +482,8 @@ int main(int argc, char* argv[]) {
         std::vector<double> br;
         std::vector<double> bu;
 
-        for (double f_c = 5.5e9; f_c <= 22.0e9 - f_mod; f_c += 1e8) {
+        for (double f_c = 5.0e9; f_c <= 22.0e9 - f_mod; f_c += 1e8) {
             radio->set_tx_freq(f_c);
-
 #ifdef USE_8564
             auto txb = find_optimum_tx_bias_8564(radio, conn, hp_8564_addr, sweep_time, f_c, f_if);
 #else
