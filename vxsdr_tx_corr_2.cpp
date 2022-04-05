@@ -97,36 +97,37 @@ template <class T, class U> void pwelch(const std::vector<std::complex<T> > &x, 
       S[i] /= (N * W);
 }
 
-double radio_rx_measure(std::unique_ptr<vxsdr> &radio, const double freq,
+double radio_rx_measure(std::unique_ptr<vxsdr> &radio, const double f_c,
             const double gain = 0.0, const double f_s = 1.e6) {
-    constexpr size_t n_fft = 16'384;
-    constexpr size_t n_samps = 10 * n_fft;
+    constexpr size_t n_fft = 1'024;
+    constexpr size_t n_samps = 16 * n_fft;
+    double f_off = 0.125 * f_s;
     std::vector<std::complex<int16_t>> data;
     data.resize(n_samps);
-    if (not radio->set_rx_freq(freq)) {
-        return -999.;
-    }
-    if (std::abs(freq - radio->get_rx_freq().value_or(-1)) > 1.0) {
+    if (not radio->set_rx_freq(f_c - f_off)) {
         return -998.;
     }
-    if (not radio->set_rx_rate(f_s)) {
+    if (std::abs(f_c - f_off - radio->get_rx_freq().value_or(-1)) > 1.0) {
         return -997.;
     }
-    if (std::abs(f_s - radio->get_rx_rate().value_or(-1)) > 1.0) {
+    if (not radio->set_rx_rate(f_s)) {
         return -996.;
     }
-    if (not radio->set_rx_gain(gain)) {
+    if (std::abs(f_s - radio->get_rx_rate().value_or(-1)) > 1.0) {
         return -995.;
     }
-    if (std::abs(gain - radio->get_rx_gain().value_or(-1)) > 1.0) {
+    if (not radio->set_rx_gain(gain)) {
         return -994.;
+    }
+    if (std::abs(gain - radio->get_rx_gain().value_or(-1)) > 1.0) {
+        return -993.;
     }
     radio->rx_start_now_for_n_samples(n_samps);
     radio->get_rx_data(data, n_samps);
     for (unsigned i = 0; i < n_samps; i++) {
         constexpr unsigned max_val = 30000;
         if (std::abs(data[i].real()) > max_val or std::abs(data[i].imag()) > max_val) {
-            return -993.;
+            return -992.;
         }
     }
 
@@ -135,7 +136,7 @@ double radio_rx_measure(std::unique_ptr<vxsdr> &radio, const double freq,
     hann(w, n_fft);
     pwelch(data, w, S, F);
 
-    return 10 * log10(S[F.size() / 2]);
+    return 10 * log10(S.at(n_fft / 2 + n_fft / 8));
 }
 
 void tx_bias_grid(std::ofstream& os, std::unique_ptr<vxsdr> &radio, const double f_c, const double f_if) {
@@ -150,8 +151,7 @@ void tx_bias_grid(std::ofstream& os, std::unique_ptr<vxsdr> &radio, const double
 }
 
 void tx_corr_grid(std::ofstream& os, std::unique_ptr<vxsdr> &radio, const double f_c, const double f_if, const double f_mod) {
-    const double gain_base = 0.0, gain_change = 20.0;
-
+    constexpr double gain_base = 0.0, gain_change = 20.0;
     constexpr double amin = 0.8, amax = 1.25, astep = 0.05;
     constexpr double pmin = -0.4, pmax = 0.4, pstep = 0.05;
 
