@@ -153,8 +153,8 @@ void tx_bias_grid(std::ofstream& os, std::unique_ptr<vxsdr> &radio, const double
 
 void tx_corr_grid(std::ofstream& os, std::unique_ptr<vxsdr> &radio, const double f_c, const double f_if, const double f_mod) {
     constexpr double gain_base = 0.0, gain_change = 20.0;
-    constexpr double amin = 0.8, amax = 1.25, astep = 0.05;
-    constexpr double pmin = -0.4, pmax = 0.4, pstep = 0.1;
+    constexpr double amin = 0.8, amax = 1.25, astep = 0.01;
+    constexpr double pmin = -0.4, pmax = 0.4, pstep = 0.05;
 
     for (double alpha = amin; alpha <= amax + 0.5 * astep; alpha += astep) {
         for (double psi = pmin; psi <= pmax + 0.5 * pstep; psi += pstep) {
