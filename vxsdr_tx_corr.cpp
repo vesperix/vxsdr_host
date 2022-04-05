@@ -484,6 +484,10 @@ int main(int argc, char* argv[]) {
 
         for (double f_c = 5.0e9; f_c <= 22.0e9 - f_mod; f_c += 1e8) {
             radio->set_tx_freq(f_c);
+            double half_lo_c = -99.99, half_lo_u = -99.99;
+            if (f_c - f_if >= 15e9) {
+                half_lo_u = radio_rx_measure(radio, 0.5 * (f_c - f_if));
+            }
 #ifdef USE_8564
             auto txb = find_optimum_tx_bias_8564(radio, conn, hp_8564_addr, sweep_time, f_c, f_if);
 #else
@@ -492,7 +496,9 @@ int main(int argc, char* argv[]) {
 
             std::array<double,2> tx_bias = { txb[0], txb[1] };
             radio->set_tx_iq_bias(tx_bias);
-
+            if (f_c - f_if >= 15e9) {
+                half_lo_c = radio_rx_measure(radio, 0.5 * (f_c - f_if));
+            }
             ff.push_back(f_c);
             bi.push_back(txb[0]);
             bq.push_back(txb[1]);
@@ -504,7 +510,8 @@ int main(int argc, char* argv[]) {
 #else
             auto txc = find_optimum_tx_corr_search(radio, f_c, f_if, f_mod);
 #endif
-            std::cout << fmt::format("{:10.3e} {:10.5f} {:10.5f} {:8.2f} {:8.2f} ", f_c, txb[0], txb[1], txb[2], txb[3]);
+            std::cout << fmt::format("{:10.3e} {:10.5f} {:10.5f} {:8.2f} {:8.2f} {:8.2f} {:8.2f} ",
+                        f_c, txb[0], txb[1], txb[2], txb[3], half_lo_c, half_lo_u);
             std::cout << fmt::format("{:10.6f} {:10.6f} {:8.2f} {:8.2f}", txc[0], txc[1], txc[2], txc[3]) << std::endl;
 
             aa.push_back(txc[0]);
