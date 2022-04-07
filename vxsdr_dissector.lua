@@ -220,7 +220,7 @@ local pf_radio_command_err  = ProtoField.uint8("vxsdr.radio_command_err", "Radio
 local pf_radio_command_rsp  = ProtoField.uint8("vxsdr.radio_command_rsp", "Radio Command Response", base.HEX, radio_cmds)
 local pf_device_error       = ProtoField.uint32("vxsdr.device_error", "Device Error Reason", base.HEX, device_cmd_errs)
 local pf_radio_error        = ProtoField.uint32("vxsdr.radio_error", "Radio Error Reason", base.HEX, radio_cmd_errs)
-local pf_async_msg          = ProtoField.uint8("vxsdr.async_msg", "Async Mesaage", base.HEX, async_msgs)
+local pf_async_msg          = ProtoField.uint8("vxsdr.async_msg", "Async Message", base.HEX, async_msgs)
 
 local pf_uint16_data        = ProtoField.uint16("vxsdr.data", "UInt16 Data", base.DEC)
 local pf_uint32_data        = ProtoField.uint32("vxsdr.data", "UInt32 Data", base.DEC)
