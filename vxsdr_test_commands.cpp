@@ -966,19 +966,19 @@ void test_ports(std::unique_ptr<vxsdr>& radio) {
 void test_capabilities(std::unique_ptr<vxsdr>& radio) {
     LOG_INFO("TESTING: starting capabilities tests");
 
-    auto txcap = radio->get_tx_capabilities(0);
+    auto txcap = radio->get_tx_capabilities();
     if (txcap) {
         LOG_INFO("TESTING:    passed");
     } else {
-        LOG_ERROR("TESTING:   incorrect value returned by device_get_tx_capabilities()");
+        LOG_ERROR("TESTING:   no value returned by device_get_tx_capabilities()");
         total_errors++;
     }
 
-    auto rxcap = radio->get_rx_capabilities(0);
+    auto rxcap = radio->get_rx_capabilities();
     if (rxcap) {
         LOG_INFO("TESTING:    passed");
     } else {
-        LOG_ERROR("TESTING:   incorrect value returned by device_get_rx_capabilities()");
+        LOG_ERROR("TESTING:   no value returned by device_get_rx_capabilities()");
         total_errors++;
     }
 
