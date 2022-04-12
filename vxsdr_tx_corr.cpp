@@ -444,7 +444,7 @@ int main(int argc, char* argv[]) {
         }
 
         LOG_DEBUG("getting radio time");
-        auto t1 = radio->device_get_time_now();
+        auto t1 = radio->get_time_now();
         if (t1) {
             LOG_INFO(fmt::format("radio time: {:s}", format_time(t1.value())));
         } else {

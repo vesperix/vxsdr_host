@@ -65,7 +65,7 @@ int main(int argc, char* argv[]) {
         set_rx_1ch_options(vm, radio);
         set_tx_1ch_options(vm, radio);
 
-        auto tnow = radio->device_get_time_now();
+        auto tnow = radio->get_time_now();
         if (tnow) {
             LOG_INFO(fmt::format("current FPGA time: {:s}", format_time(tnow.value())));
         } else {
@@ -76,9 +76,9 @@ int main(int argc, char* argv[]) {
 
         LOG_INFO(fmt::format("setting FPGA time to: {:s}", format_time(tset)));
 
-        if (radio->device_set_time_now(tset)) {
+        if (radio->set_time_now(tset)) {
             std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-            tnow = radio->device_get_time_now();
+            tnow = radio->get_time_now();
             if (tnow) {
                 LOG_INFO(fmt::format("current FPGA time: {:s}", format_time(tnow.value())));
             } else {
@@ -99,9 +99,9 @@ int main(int argc, char* argv[]) {
         }
 
         LOG_INFO("getting status...");
-        auto status = radio->device_get_status();
+        auto status = radio->get_status();
         LOG_INFO("clearing status...");
-        radio->device_clear_status();
+        radio->clear_status();
 
         LOG_INFO("sending data...");
 
@@ -120,9 +120,9 @@ int main(int argc, char* argv[]) {
         LOG_INFO("send complete");
 
         LOG_INFO("getting status...");
-        status = radio->device_get_status();
+        status = radio->get_status();
         LOG_INFO("clearing status...");
-        radio->device_clear_status();
+        radio->clear_status();
 
         std::string filename = vm["prefix"].as<std::string>();
         if (vm.count("no_filename_time") > 0) {
@@ -156,9 +156,9 @@ int main(int argc, char* argv[]) {
         //LOG_INFO(fmt::format("{:d} samples written", n_written));
 
         LOG_INFO("getting status...");
-        status = radio->device_get_status();
+        status = radio->get_status();
         LOG_INFO("clearing status...");
-        radio->device_clear_status();
+        radio->clear_status();
 
     } catch (std::exception& e) {
         LOG_FATAL(fmt::format("exception caught: {:s}", e.what()));

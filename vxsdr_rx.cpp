@@ -60,7 +60,7 @@ int main(int argc, char* argv[]) {
 
         size_t n_samp        = std::llround(vm["duration"].as<double>() * vm["rate"].as<double>());
 
-        auto t1 = radio->device_get_time_now();
+        auto t1 = radio->get_time_now();
         if (t1.has_value()) {
             LOG_INFO(fmt::format("radio time: {:s}", format_time(t1.value())));
         } else {

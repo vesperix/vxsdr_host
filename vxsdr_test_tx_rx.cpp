@@ -78,7 +78,7 @@ int main(int argc, char* argv[]) {
 
         size_t tx_buffer_size_samples = 0;
         LOG_DEBUG("getting buffer size");
-        auto b1 = radio->device_get_buffer_info();
+        auto b1 = radio->get_buffer_info();
         if (b1.has_value()) {
             tx_buffer_size_samples = b1->at(1) / sizeof(std::complex<int16_t>);
         } else {
@@ -86,7 +86,7 @@ int main(int argc, char* argv[]) {
         }
 
         LOG_DEBUG("getting radio time");
-        auto t1 = radio->device_get_time_now();
+        auto t1 = radio->get_time_now();
         if (t1.has_value()) {
             LOG_INFO(fmt::format("radio time: {:s}", format_time(t1.value())));
         } else {
