@@ -963,28 +963,6 @@ void test_ports(std::unique_ptr<vxsdr>& radio) {
     LOG_INFO("TESTING: completed port tests");
 }
 
-void test_capabilities(std::unique_ptr<vxsdr>& radio) {
-    LOG_INFO("TESTING: starting capabilities tests");
-
-    auto txcap = radio->get_tx_capabilities(0);
-    if (txcap) {
-        LOG_INFO("TESTING:    passed");
-    } else {
-        LOG_ERROR("TESTING:   incorrect value returned by get_tx_capabilities()");
-        total_errors++;
-    }
-
-    auto rxcap = radio->get_rx_capabilities(0);
-    if (rxcap) {
-        LOG_INFO("TESTING:    passed");
-    } else {
-        LOG_ERROR("TESTING:   incorrect value returned by get_rx_capabilities()");
-        total_errors++;
-    }
-
-    LOG_INFO("TESTING: completed capabilities tests");
-}
-
 void test_status(std::unique_ptr<vxsdr>& radio) {
     LOG_INFO("TESTING: starting status tests");
     LOG_INFO("TESTING:    getting status");
@@ -1091,7 +1069,6 @@ int main(int argc, char* argv[]) {
         //test_repeated_commands(radio, 100);
         test_status(radio);
         test_ports(radio);
-        test_capabilities(radio);
         test_iq(radio);
     } catch (std::exception& e) {
         LOG_ERROR(fmt::format("TESTING: testing exception caught: {:s}", e.what()));
