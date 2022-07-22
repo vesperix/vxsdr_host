@@ -32,7 +32,7 @@ void add_modulation_options(boost::program_options::options_description& desc) {
         ("modulation_amplitude", boost::program_options::value<double>()->default_value(0.1), "modulation amplitude as fraction of full scale")
         ("modulation_frequency", boost::program_options::value<double>()->default_value(10e6), "modulation frequency in Hz (will be rounded to integer to avoid jumps)")
         ("t_repeat", boost::program_options::value<double>()->default_value(1.0), "repeat time in seconds")
-        ("n_repeat", boost::program_options::value<uint32_t>()->default_value(0), "number of repetitions (zero for repeat until stop)")
+        ("n_repeat", boost::program_options::value<uint32_t>()->default_value(10), "number of repetitions (zero for repeat until stop)")
         ;
     // clang-format on
 }
@@ -127,6 +127,8 @@ int main(int argc, char* argv[]) {
             }
             n_total += n_sent;
         }
+
+        std::this_thread::sleep_until(t_start + std::chrono::duration<double>(vm["n_repeat"].as<uint32_t>() + vm["t_repeat"].as<double>()));
 
         LOG_INFO("transmit complete");
     } catch (std::exception& e) {
