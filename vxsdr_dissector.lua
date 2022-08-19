@@ -10,18 +10,17 @@ local packet_types = {
     [0x03] = "TX_RADIO_CMD",
     [0x04] = "RX_RADIO_CMD",
     [0x05] = "ASYNC_MSG",
-    [0x42] = "DEVICE_CMD_ERR",
-    [0x43] = "TX_RADIO_CMD_ERR",
-    [0x44] = "RX_RADIO_CMD_ERR",
-    [0x62] = "DEVICE_CMD_RSP",
-    [0x63] = "TX_RADIO_CMD_RSP",
-    [0x64] = "RX_RADIO_CMD_RSP",
-    [0x80] = "TX_SIGNAL_DATA_ACK",
-    [0x81] = "RX_SIGNAL_DATA_ACK",
-    [0x82] = "DEVICE_CMD_ACK",
-    [0x83] = "TX_RADIO_CMD_ACK",
-    [0x84] = "RX_RADIO_CMD_ACK",
-    [0xFF] = "INVALID_PACKET"
+    [0x22] = "DEVICE_CMD_ERR",
+    [0x23] = "TX_RADIO_CMD_ERR",
+    [0x24] = "RX_RADIO_CMD_ERR",
+    [0x12] = "DEVICE_CMD_RSP",
+    [0x13] = "TX_RADIO_CMD_RSP",
+    [0x34] = "RX_RADIO_CMD_RSP",
+    [0x30] = "TX_SIGNAL_DATA_ACK",
+    [0x31] = "RX_SIGNAL_DATA_ACK",
+    [0x32] = "DEVICE_CMD_ACK",
+    [0x33] = "TX_RADIO_CMD_ACK",
+    [0x34] = "RX_RADIO_CMD_ACK",
 }
 
 local packet_types_index = {}
@@ -38,60 +37,42 @@ local device_cmds = {
     [0x05] = "CLEAR_STATUS",
     [0x06] = "GET_BUFFER_INFO",
     [0x07] = "GET_BUFFER_USE",
-    -- 0x0A-0x0F reserved
-    [0x10] = "GET_TRANSPORT_INFO", -- unimplemented
-    [0x11] = "GET_TRANSPORT_ADDR",
-    [0x12] = "GET_MAX_PAYLOAD",
-    [0x13] = "CLEAR_DATA_BUFFER",
-    -- 0x14-0x1F reserved
-    [0x20] = "DISCOVER",
-    [0x21] = "SET_TRANSPORT_ADDR",
-    [0x22] = "SET_MAX_PAYLOAD",
-    [0x23] = "SAVE_TRANSPORT_ADDR",
-    -- 0x22-0x2F reserved
-    [0x30] = "GET_CHANNEL_INFO",  -- unimplemented
-    -- 0x31-0x4F reserved
-    [0x50] = "GET_TIMING_INFO",   -- unimplemented
-    [0x51] = "GET_TIMING_STATUS",
-    [0x52] = "GET_TIMING_REF",  -- unimplemented
-    [0x53] = "SET_TIMING_REF",  -- unimplemented
-    [0x60] = "READ_DAC_REG",
-    [0x61] = "WRITE_DAC_REG",
-    [0x62] = "READ_ADC_REG",
-    [0x63] = "WRITE_ADC_REG",
-    -- 0x64-0x9F reserved
-    [0xA0] = "APP_UPDATE_MODE_SET",
-    [0xA1] = "APP_UPDATE_DATA",
-    [0xA2] = "APP_UPDATE_DONE",
-    [0xFE] = "STOP",  -- unimplemented
-    [0xFF] = "RESET"  -- unimplemented
+    [0x08] = "GET_STREAM_STATE",
+    [0x09] = "STOP",
+    [0x0A] = "GET_TRANSPORT_INFO", -- unimplemented
+    [0x0B] = "GET_TRANSPORT_ADDR",
+    [0x0C] = "GET_MAX_PAYLOAD",
+    [0x0D] = "CLEAR_DATA_BUFFER",
+    [0x0E] = "DISCOVER",
+    [0x0F] = "SET_TRANSPORT_ADDR",
+    [0x10] = "SET_MAX_PAYLOAD",
+    [0x11] = "SAVE_TRANSPORT_ADDR",
+    [0x12] = "GET_CHANNEL_INFO",  -- unimplemented
+    [0x13] = "GET_TIMING_INFO",   -- unimplemented
+    [0x14] = "GET_TIMING_STATUS",
+    [0x15] = "GET_TIMING_REF",  -- unimplemented
+    [0x16] = "SET_TIMING_REF",  -- unimplemented
+    [0x17] = "GET_TIMING_RESOLUTION",
+    [0x18] = "GET_NUM_SENSORS",
+    [0x19] = "GET_SENSOR",
+    [0x20] = "GET_SENSOR_NAME"
+    -- 0x21-0x2F reserved
+    [0x30] = "READ_DAC_REG",
+    [0x31] = "WRITE_DAC_REG",
+    [0x32] = "READ_ADC_REG",
+    [0x33] = "WRITE_ADC_REG",
+    [0x3C] = "APP_UPDATE_MODE_SET",
+    [0x3D] = "APP_UPDATE_DATA",
+    [0x3E] = "APP_UPDATE_DONE",
+    [0x3F] = "RESET"  -- unimplemented
 }
+
+local device_cmd_rsps = device_cmds
 
 local device_cmds_index = {}
 for k, v in pairs(device_cmds) do
     device_cmds_index[v] = k
 end
-
-local device_cmd_rsps = {
-    [0x00] = "HELLO",
-    [0x03] = "GET_TIME",
-    [0x04] = "GET_STATUS",
-    [0x06] = "GET_BUFFER_INFO",
-    [0x07] = "GET_BUFFER_USE",
-    [0x08] = "OPEN_SESSION",  -- unimplemented
-    [0x09] = "CLOSE_SESSION", --unimplemented
-    -- 0x0A-0x0F reserved
-    [0x10] = "GET_TRANSPORT_INFO", -- unimplemented
-    [0x11] = "GET_TRANSPORT_ADDR",
-    [0x12] = "GET_MAX_PAYLOAD",
-    [0x30] = "GET_CHANNEL_INFO",  -- unimplemented
-    -- 0x31-0x4F reserved
-    [0x50] = "GET_TIMING_INFO",   -- unimplemented
-    [0x51] = "GET_TIMING_STATUS",
-    [0x52] = "GET_TIMING_REF",  -- unimplemented
-    [0x60] = "READ_DAC_REG",
-    [0x62] = "READ_ADC_REG"
-}
 
 local device_cmd_rsps_index = {}
 for k, v in pairs(device_cmd_rsps) do
@@ -99,13 +80,18 @@ for k, v in pairs(device_cmd_rsps) do
 end
 
 local device_cmd_errs = {
+    [0x00] = "NO_ERROR",
     [0x01] = "BAD_CMD",
     [0x02] = "BUSY",
     [0x03] = "NO_SUCH_SUBDEVICE",
-    [0x04] = "TIMEOUT",
-    [0x05] = "BAD_PARAMETER",
-    [0x06] = "NOT_SUPPORTED",
-    [0x07] = "BAD_PKT_SIZE",
+    [0x04] = "NO_SUCH_CHANNEL",
+    [0x05] = "TIMEOUT",
+    [0x06] = "BAD_HEADER_SIZE",
+    [0x07] = "BAD_HEADER_FLAGS",
+    [0x08] = "BAD_PARAMETER",
+    [0x09] = "NOT_SUPPORTED",
+    [0x0A] = "BAD_PKT_SIZE",
+    [0x0B] = "FAILED"
 }
 
 local async_msgs = {
@@ -126,40 +112,39 @@ local radio_cmds = {
     [0x03] = "STOP_NOW",
     [0x04] = "START_NOW_FOR_N_SAMPLES",
     [0x05] = "START_AT_TIME_FOR_N_SAMPLES",
-    -- 0x06-0x0F reserved
-    [0x11] = "GET_RF_FREQ",
-    [0x12] = "GET_RF_GAIN",
-    [0x13] = "GET_SAMPLE_RATE",
-    [0x14] = "GET_RF_BW",  -- unimplemented
-    [0x15] = "GET_RF_ENABLED",
-    [0x16] = "GET_RF_PORT",
-    [0x17] = "GET_NUM_RF_PORTS",
-    [0x18] = "GET_RF_PORT_NAME",
-    [0x19] = "GET_LO_INPUT", --unimplemented
-    [0x1A] = "GET_LOCK_STATUS",
-    -- 0x1B-0x1F reserved
-    [0x20] = "GET_MASTER_CLK",
-    [0x21] = "SET_RF_FREQ",
-    [0x22] = "SET_RF_GAIN",
-    [0x23] = "SET_SAMPLE_RATE",
-    [0x24] = "SET_RF_BW",  -- unimplemented
-    [0x25] = "SET_RF_ENABLED",
-    [0x26] = "SET_RF_PORT",
-    [0x29] = "SET_LO_INPUT", -- unimplemented
-    -- 0x2A-0x2F reserved
-    [0x30] = "SET_MASTER_CLK", --unimplemented
-    [0x31] = "GET_NUM_SUBDEVS",
-    [0x32] = "GET_CAPABILITIES",
-    [0x33] = "GET_RF_FREQ_RANGE",
-    [0x34] = "GET_RF_GAIN_RANGE",
-    [0x35] = "GET_SAMPLE_RATE_RANGE",
-    -- 0x36-0x3F reserved
-    [0x40] = "SET_ADC_TEST_PATTERN",
-    [0x41] = "GET_IQ_BIAS",
-    [0x42] = "GET_IQ_CORR",
-    -- 0x43 - 0x50 reserved
-    [0x51] = "SET_IQ_BIAS",
-    [0x52] = "SET_IQ_CORR"
+    [0x06] = "LOOP_AT_TIME_FOR_N_SAMPLES",
+    [0x07] = "GET_RF_FREQ",
+    [0x08] = "GET_RF_GAIN",
+    [0x09] = "GET_SAMPLE_RATE",
+    [0x0A] = "GET_RF_BW",  -- unimplemented
+    [0x0B] = "GET_RF_ENABLED",
+    [0x0C] = "GET_RF_PORT",
+    [0x0D] = "GET_NUM_RF_PORTS",
+    -- skipped 0x0E
+    [0x0F] = "GET_RF_PORT_NAME",
+    [0x10] = "GET_LO_INPUT", --unimplemented
+    [0x11] = "GET_LOCK_STATUS",
+    [0x12] = "GET_MASTER_CLK",
+    [0x13] = "SET_RF_FREQ",
+    [0x14] = "SET_RF_GAIN",
+    [0x15] = "SET_SAMPLE_RATE",
+    [0x16] = "SET_RF_BW",  -- unimplemented
+    [0x17] = "SET_RF_ENABLED",
+    [0x18] = "SET_RF_PORT",
+    [0x19] = "SET_RF_PORT_BY_NAME",
+    [0x1A] = "SET_LO_INPUT", -- unimplemented
+    [0x1B] = "SET_MASTER_CLK", --unimplemented
+    [0x1C] = "GET_NUM_SUBDEVS",
+    [0x1D] = "GET_RF_FREQ_RANGE",
+    [0x1E] = "GET_RF_GAIN_RANGE",
+    [0x1F] = "GET_SAMPLE_RATE_RANGE",
+    [0x20] = "GET_NUM_CHANNELS",
+    [0x21] = "SET_ADC_TEST_PATTERN",
+    [0x22] = "GET_IQ_BIAS",
+    [0x23] = "GET_IQ_CORR",
+    [0x24] = "SET_IQ_BIAS",
+    [0x25] = "SET_IQ_CORR",
+    [0x26] = "DATA_LOOP"
     -- 0x53 - 0xFF reserved
 }
 
@@ -168,27 +153,7 @@ for k, v in pairs(radio_cmds) do
     radio_cmds_index[v] = k
 end
 
-local radio_cmd_rsps = {
-    [0x11] = "GET_RF_FREQ",
-    [0x12] = "GET_RF_GAIN",
-    [0x13] = "GET_SAMPLE_RATE",
-    [0x14] = "GET_RF_BW",  -- unimplemented
-    [0x15] = "GET_RF_ENABLED",
-    [0x16] = "GET_RF_PORT",
-    [0x17] = "GET_NUM_RF_PORTS",
-    [0x18] = "GET_RF_PORT_NAME",
-    [0x19] = "GET_LO_INPUT", -- unimplemented
-    [0x1A] = "GET_LOCK_STATUS", -- unimplemented
-    -- 0x1B-0x1F reserved
-    [0x20] = "GET_MASTER_CLK",
-    [0x31] = "GET_NUM_SUBDEVS",
-    [0x32] = "GET_CAPABILITIES",
-    [0x33] = "GET_RF_FREQ_RANGE",
-    [0x34] = "GET_GAIN_RANGE",
-    [0x35] = "GET_RATE_RANGE",
-    [0x41] = "GET_IQ_BIAS",
-    [0x42] = "GET_IQ_CORR"
-}
+local radio_cmd_rsps = radio_cmds
 
 local radio_cmd_rsps_index = {}
 for k, v in pairs(radio_cmd_rsps) do
