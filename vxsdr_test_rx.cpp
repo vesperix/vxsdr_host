@@ -91,8 +91,7 @@ int main(int argc, char* argv[]) {
 
         LOG_INFO("receive complete");
         // outfile.close();
-        // LOG_INFO(fmt::format("{:d} samples written", n_written));
-        LOG_INFO(fmt::format("{:d} samples checked", n_written));
+        LOG_INFO(fmt::format("{:d} samples written", n_written));
 
     } catch (std::exception& e) {
         LOG_FATAL(fmt::format("exception caught: {:s}", e.what()));
