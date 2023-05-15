@@ -75,11 +75,18 @@ int main(int argc, char* argv[]) {
             LOG_ERROR("rx_start() failed");
         }
 
-        std::ofstream outfile(filename, std::ios::binary);
+        size_t n_written = 0;
+        int n_tries = 0;
 
-        size_t n_written = radio->write_rx_data(outfile, n_samp);
-        if (not radio->rx_stop_now()) {
-            LOG_ERROR("rx_stop_now() failed");
+        while (n_written != n_samp and n_tries < 10) {
+            std::ofstream outfile(filename, std::ios::binary);
+            n_written = radio->write_rx_data(outfile, n_samp);
+            if (not radio->rx_stop_now()) {
+                LOG_ERROR("rx_stop_now() failed");
+            }
+            outfile.close();
+            n_tries++;
+            LOG_INFO(fmt::format("try {:d} complete", n_tries));
         }
 
         LOG_INFO("receive complete");
