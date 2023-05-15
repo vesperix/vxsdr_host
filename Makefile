@@ -16,7 +16,7 @@ endif
 COMMON_INCLUDES = host_radio_options.hpp utility.hpp logging.hpp
 COMMON_OBJ = host_radio_options.o utility.o logging.o
 
-PROGS = vxsdr_rx vxsdr_test vxsdr_test_rx vxsdr_test_tx vxsdr_test_commands vxsdr_test_atmosense_rx
+PROGS = vxsdr_rx vxsdr_test vxsdr_test_rx vxsdr_test_tx
 
 all: $(PROGS) Makefile
 
@@ -37,11 +37,8 @@ vxsdr_test_rx: vxsdr_test_rx.cpp $(COMMON_INCLUDES) $(COMMON_OBJ)
 vxsdr_test_tx: vxsdr_test_tx.cpp $(COMMON_INCLUDES) $(COMMON_OBJ)
 	$(CXX) $(CXX_FLAGS) -o $@ $< $(COMMON_OBJ) $(CXX_LDFLAGS)
 
-vxsdr_test_atmosense_rx: vxsdr_test_atmosense_rx.cpp $(COMMON_INCLUDES) $(COMMON_OBJ)
-	$(CXX) $(CXX_FLAGS) -o $@ $< $(COMMON_OBJ) $(CXX_LDFLAGS)
-
-vxsdr_test_commands: vxsdr_test_commands.cpp $(COMMON_INCLUDES) $(COMMON_OBJ)
-	$(CXX) $(CXX_FLAGS) $(LIB_CXXFLAGS) -o $@ $< $(COMMON_OBJ) $(CXX_LDFLAGS)
+#vxsdr_test_atmosense_rx: vxsdr_test_atmosense_rx.cpp $(COMMON_INCLUDES) $(COMMON_OBJ)
+#	$(CXX) $(CXX_FLAGS) -o $@ $< $(COMMON_OBJ) $(CXX_LDFLAGS)
 
 clean:
 	rm -f $(PROGS) *.o *~
