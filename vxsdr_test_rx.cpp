@@ -74,7 +74,10 @@ int main(int argc, char* argv[]) {
         if (not radio->rx_start(t1.value(), n_samp)) {
             LOG_ERROR("rx_start() failed");
         }
-        size_t n_written = radio->check_rx_data_sequence_only(n_samp);
+
+        std::ofstream outfile(filename, std::ios::binary);
+
+        size_t n_written = radio->write_rx_data(outfile, n_samp);
         if (not radio->rx_stop_now()) {
             LOG_ERROR("rx_stop_now() failed");
         }
