@@ -71,26 +71,30 @@ int main(int argc, char* argv[]) {
         LOG_INFO(fmt::format("using rate      {:.5e}", radio->get_rx_rate().value_or(-1)));
         LOG_INFO(fmt::format("using rx_gain   {:.1f}", radio->get_rx_gain().value_or(-1)));
 
-        if (not radio->rx_start(t1.value(), n_samp)) {
-            LOG_ERROR("rx_start() failed");
-        }
+
 
         size_t n_written = 0;
         int n_tries = 0;
 
         while (n_written != n_samp and n_tries < 10) {
+            if (not radio->rx_start(t1.value(), n_samp)) {
+                LOG_ERROR("rx_start() failed");
+            }
+
             std::ofstream outfile(filename, std::ios::binary);
             n_written = radio->write_rx_data(outfile, n_samp);
-            if (not radio->rx_stop_now()) {
-                LOG_ERROR("rx_stop_now() failed");
-            }
             outfile.close();
             n_tries++;
             LOG_INFO(fmt::format("try {:d} complete", n_tries));
+
+            if (not radio->rx_stop_now()) {
+                LOG_ERROR("rx_stop_now() failed");
+            }
+
         }
 
+
         LOG_INFO("receive complete");
-        // outfile.close();
         LOG_INFO(fmt::format("{:d} samples written", n_written));
 
     } catch (std::exception& e) {
