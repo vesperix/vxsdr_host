@@ -85,7 +85,11 @@ int main(int argc, char* argv[]) {
             n_written = radio->write_rx_data(outfile, n_samp);
             outfile.close();
             n_tries++;
-            LOG_INFO(fmt::format("try {:d} complete", n_tries));
+            if (n_written == n_samp) {
+                LOG_INFO(fmt::format("try {:d} complete", n_tries));
+            } else {
+                LOG_INFO(fmt::format("try {:d} failed ({:d},{:d}); retrying", n_tries, n_written, n_samp));
+            }
 
             if (not radio->rx_stop_now()) {
                 LOG_ERROR("rx_stop_now() failed");
