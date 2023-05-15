@@ -60,7 +60,7 @@ int main(int argc, char* argv[]) {
 
         size_t tx_buffer_size_samples = 0;
         LOG_DEBUG("getting buffer size");
-        auto b1 = radio->device_get_buffer_info();
+        auto b1 = radio->get_buffer_info();
         if (b1.has_value()) {
             tx_buffer_size_samples = b1->at(1) / sizeof(std::complex<int16_t>);
         } else {
@@ -68,7 +68,7 @@ int main(int argc, char* argv[]) {
         }
 
         LOG_DEBUG("getting radio time");
-        auto t1 = radio->device_get_time_now();
+        auto t1 = radio->get_time_now();
         if (t1.has_value()) {
             LOG_INFO(fmt::format("radio time: {:s}", format_time(t1.value())));
         } else {
@@ -82,8 +82,8 @@ int main(int argc, char* argv[]) {
         auto t_start = std::chrono::ceil<std::chrono::seconds>(std::chrono::system_clock::now()) + std::chrono::duration(1s);
         LOG_INFO(fmt::format("start time: {:s}", format_time(t_start)));
 
-        if (not radio->tx_start_at_time_for_n_samples(t_start, n_samp)) {
-            LOG_ERROR("tx_start_at_time_for_n_samples() failed");
+        if (not radio->tx_start(t_start, n_samp)) {
+            LOG_ERROR("tx_start() failed");
         }
 
         double tx_buffer_duration_s = tx_buffer_size_samples / radio->get_tx_rate().value_or(-1);

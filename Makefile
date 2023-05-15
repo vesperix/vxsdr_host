@@ -1,5 +1,5 @@
 
-CXX = clang++-10
+CXX = g++
 
 CXX_DEFINES =
 CXX_BASEFLAGS = -Wall -pedantic -std=c++17 $(CXX_EXTRA_FLAGS)

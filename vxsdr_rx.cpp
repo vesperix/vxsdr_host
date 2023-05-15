@@ -60,7 +60,7 @@ int main(int argc, char* argv[]) {
 
         size_t n_samp        = std::llround(vm["duration"].as<double>() * vm["rate"].as<double>());
 
-        auto t1 = radio->device_get_time_now();
+        auto t1 = radio->get_time_now();
         if (t1.has_value()) {
             LOG_INFO(fmt::format("radio time: {:s}", format_time(t1.value())));
         } else {
@@ -86,8 +86,8 @@ int main(int argc, char* argv[]) {
         LOG_INFO(fmt::format("using rx_gain   {:.1f}", radio->get_rx_gain().value_or(-1)));
 
         std::ofstream outfile(filename, std::ios_base::binary | std::ios_base::out);
-        if (not radio->rx_start_at_time_for_n_samples(t_start, n_samp)) {
-            LOG_ERROR("rx_start_at_time_for_n_samples() failed");
+        if (not radio->rx_start(t_start, n_samp)) {
+            LOG_ERROR("rx_start() failed");
         }
         size_t n_written = radio->write_rx_data(outfile, n_samp);
         outfile.close();
