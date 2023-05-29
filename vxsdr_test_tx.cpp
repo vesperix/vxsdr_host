@@ -50,7 +50,7 @@ int main(int argc, char* argv[]) {
 
         init_vm(desc, vm, argc, argv);
 
-        auto radio = std::make_unique<vxsdr>(vm["local_address"].as<std::string>(), vm["destination_address"].as<std::string>(),
+        auto radio = std::make_unique<vxsdr>(vm["local_address"].as<std::string>(), vm["device_address"].as<std::string>(),
                                     vm["set_priority"].as<bool>(), vm["thread_priority"].as<int>());
 
         set_common_options(vm, radio);
@@ -75,7 +75,7 @@ int main(int argc, char* argv[]) {
 
         size_t tx_buffer_size_samples = 0;
         LOG_DEBUG("getting buffer size");
-        auto b1 = radio->device_get_buffer_info();
+        auto b1 = radio->get_buffer_info();
         if (b1.has_value()) {
             tx_buffer_size_samples = b1->at(1) / sizeof(std::complex<int16_t>);
         } else {
@@ -83,7 +83,7 @@ int main(int argc, char* argv[]) {
         }
 
         LOG_DEBUG("getting radio time");
-        auto t1 = radio->device_get_time_now();
+        auto t1 = radio->get_time_now();
         if (t1.has_value()) {
             LOG_INFO(fmt::format("radio time: {:s}", format_time(t1.value())));
         } else {
@@ -97,8 +97,8 @@ int main(int argc, char* argv[]) {
         auto t_start = std::chrono::ceil<std::chrono::seconds>(std::chrono::system_clock::now()) + std::chrono::duration(1s);
         LOG_INFO(fmt::format("start time: {:s}", format_time(t_start)));
 
-        if (not radio->tx_start_at_time_for_n_samples(t_start, n_samp)) {
-            LOG_ERROR("tx_start_at_time_for_n_samples() failed");
+        if (not radio->tx_start(t_start, n_samp)) {
+            LOG_ERROR("tx_start() failed");
         }
 
         double tx_buffer_duration_s = tx_buffer_size_samples / (10e9 / 8 / 4); // buffer fill time at full 10GbE rate

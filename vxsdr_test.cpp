@@ -42,7 +42,7 @@ int main(int argc, char* argv[]) {
 
         std::unique_ptr<vxsdr> radio;
         try {
-            radio = std::make_unique<vxsdr>(vm["local_address"].as<std::string>(), vm["destination_address"].as<std::string>());
+            radio = std::make_unique<vxsdr>(vm["local_address"].as<std::string>(), vm["device_address"].as<std::string>());
         } catch (std::runtime_error& e) {
             LOG_FATAL(fmt::format("exception caught during vxsdr initialization: {:s}", e.what()));
             LOG_FATAL(fmt::format("{:s} finished with exception", argv[0]));
@@ -65,7 +65,7 @@ int main(int argc, char* argv[]) {
         set_rx_1ch_options(vm, radio);
         set_tx_1ch_options(vm, radio);
 
-        auto tnow = radio->device_get_time_now();
+        auto tnow = radio->get_time_now();
         if (tnow) {
             LOG_INFO(fmt::format("current FPGA time: {:s}", format_time(tnow.value())));
         } else {
@@ -76,9 +76,9 @@ int main(int argc, char* argv[]) {
 
         LOG_INFO(fmt::format("setting FPGA time to: {:s}", format_time(tset)));
 
-        if (radio->device_set_time_now(tset)) {
+        if (radio->set_time_now(tset)) {
             std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-            tnow = radio->device_get_time_now();
+            tnow = radio->get_time_now();
             if (tnow) {
                 LOG_INFO(fmt::format("current FPGA time: {:s}", format_time(tnow.value())));
             } else {
@@ -99,9 +99,9 @@ int main(int argc, char* argv[]) {
         }
 
         LOG_INFO("getting status...");
-        auto status = radio->device_get_status();
+        auto status = radio->get_status();
         LOG_INFO("clearing status...");
-        radio->device_clear_status();
+        radio->clear_status();
 
         LOG_INFO("sending data...");
 
@@ -109,8 +109,8 @@ int main(int argc, char* argv[]) {
         auto secs  = std::chrono::time_point_cast<std::chrono::seconds>(t);
         auto t_start = secs + std::chrono::seconds(2);
 
-        if (not radio->tx_start_at_time_for_n_samples(t_start, n_samp)) {
-            LOG_ERROR("error in tx_start_at_time_for_n_samples");
+        if (not radio->tx_start(t_start, n_samp)) {
+            LOG_ERROR("error in tx_start");
         }
         size_t n_sent = radio->put_tx_data(data, 0, 3.0);
         if (n_sent != n_samp) {
@@ -120,9 +120,9 @@ int main(int argc, char* argv[]) {
         LOG_INFO("send complete");
 
         LOG_INFO("getting status...");
-        status = radio->device_get_status();
+        status = radio->get_status();
         LOG_INFO("clearing status...");
-        radio->device_clear_status();
+        radio->clear_status();
 
         std::string filename = vm["prefix"].as<std::string>();
         if (vm.count("no_filename_time") > 0) {
@@ -138,8 +138,8 @@ int main(int argc, char* argv[]) {
         secs  = std::chrono::time_point_cast<std::chrono::seconds>(t);
         t_start = secs + std::chrono::seconds(2);
 
-        if (not radio->rx_start_at_time_for_n_samples(t_start, n_samp)) {
-            LOG_ERROR("error in rx_start_at_time_for_n_samples");
+        if (not radio->rx_start(t_start, n_samp)) {
+            LOG_ERROR("error in rx_start");
         }
         //size_t n_rec = radio->get_rx_data(data, n_samp);
         size_t n_rec = radio->check_rx_data_sequence_only(n_samp);
@@ -156,9 +156,9 @@ int main(int argc, char* argv[]) {
         //LOG_INFO(fmt::format("{:d} samples written", n_written));
 
         LOG_INFO("getting status...");
-        status = radio->device_get_status();
+        status = radio->get_status();
         LOG_INFO("clearing status...");
-        radio->device_clear_status();
+        radio->clear_status();
 
     } catch (std::exception& e) {
         LOG_FATAL(fmt::format("exception caught: {:s}", e.what()));

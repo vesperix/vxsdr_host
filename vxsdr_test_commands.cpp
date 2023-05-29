@@ -21,7 +21,7 @@ using namespace std::chrono_literals;
 #include "host_radio_options.hpp"
 #include "utility.hpp"
 
-std::string stream_state_to_string(const vxsdr::stream_state_t state) {
+std::string stream_state_to_string(const vxsdr::stream_state state) {
     switch (state) {
         case vxsdr::STREAM_WAITING_FOR_START:
             return "WAITING_FOR_START";
@@ -44,12 +44,12 @@ void test_hello(std::unique_ptr<vxsdr>& radio) {
 
     LOG_INFO("TESTING:    testing return with default arguments");
     {
-        auto result = radio->device_hello();
+        auto result = radio->hello();
 
         if (result) {
             LOG_INFO("TESTING:       passed");
         } else {
-            LOG_ERROR("TESTING:      no value returned by device_hello()");
+            LOG_ERROR("TESTING:      no value returned by hello()");
             total_errors++;
         }
     }
@@ -57,10 +57,10 @@ void test_hello(std::unique_ptr<vxsdr>& radio) {
 #ifdef TEST_INCORRECT_SUBDEVICE
     LOG_INFO("TESTING:    testing return with incorrect subdevice");
     {
-        auto result = radio->device_hello(99);
+        auto result = radio->hello(99);
 
         if (result) {
-            LOG_ERROR("TESTING:       value returned by device_hello(99)");
+            LOG_ERROR("TESTING:       value returned by hello(99)");
             total_errors++;
         } else {
             LOG_INFO("TESTING:       passed");
@@ -75,12 +75,12 @@ void test_time(std::unique_ptr<vxsdr>& radio, const double time_tol_sec = 0.01) 
 
     LOG_INFO("TESTING:    testing get_time_now() with default arguments");
     {
-        auto result = radio->device_get_time_now();
+        auto result = radio->get_time_now();
 
         if (result) {
             LOG_INFO("TESTING:       passed");
         } else {
-            LOG_ERROR("TESTING:      no value returned by device_get_time_now()");
+            LOG_ERROR("TESTING:      no value returned by get_time_now()");
             total_errors++;
         }
     }
@@ -88,16 +88,16 @@ void test_time(std::unique_ptr<vxsdr>& radio, const double time_tol_sec = 0.01) 
     LOG_INFO("TESTING:    testing set_time_now() and get_time_now()");
     {
         auto tp_set = std::chrono::system_clock::now();
-        bool sent   = radio->device_set_time_now(tp_set);
+        bool sent   = radio->set_time_now(tp_set);
 
         if (not sent) {
-            LOG_ERROR("TESTING:      false returned by device_set_time_now()");
+            LOG_ERROR("TESTING:      false returned by set_time_now()");
             total_errors++;
         }
 
         std::this_thread::sleep_for(1s);
 
-        auto result = radio->device_get_time_now();
+        auto result = radio->get_time_now();
         if (result) {
             std::chrono::duration<double> diff = result.value() - tp_set;
             if (std::abs(1.0 - diff.count()) < time_tol_sec) {
@@ -107,7 +107,7 @@ void test_time(std::unique_ptr<vxsdr>& radio, const double time_tol_sec = 0.01) 
                 total_errors++;
             }
         } else {
-            LOG_ERROR("TESTING:      no value returned by device_get_time_now()");
+            LOG_ERROR("TESTING:      no value returned by get_time_now()");
             total_errors++;
         }
     }
@@ -673,8 +673,8 @@ void test_stream_state(std::unique_ptr<vxsdr>& radio) {
 
     LOG_INFO("TESTING:    testing tx start now until stop");
 
-    if (not radio->tx_start_now_until_stop()) {
-        LOG_ERROR("TESTING:       error starting tx with tx_start_now_until_stop()");
+    if (not radio->tx_start(radio->get_time_now().value())) {
+        LOG_ERROR("TESTING:       error starting tx with tx_start()");
         total_errors++;
     }
 
@@ -700,8 +700,8 @@ void test_stream_state(std::unique_ptr<vxsdr>& radio) {
 
     auto t_start = std::chrono::system_clock::now() + std::chrono::minutes(1);
 
-    if (not radio->tx_start_at_time_until_stop(t_start)) {
-        LOG_ERROR("TESTING:       error starting tx with tx_start_at_time_until_stop()");
+    if (not radio->tx_start(t_start)) {
+        LOG_ERROR("TESTING:       error starting tx with tx_start()");
         total_errors++;
     }
 
@@ -745,8 +745,8 @@ void test_stream_state(std::unique_ptr<vxsdr>& radio) {
 
     LOG_INFO("TESTING:    testing rx start now until stop");
 
-    if (not radio->rx_start_now_until_stop()) {
-        LOG_ERROR("TESTING:       error starting rx with rx_start_now_until_stop()");
+    if (not radio->rx_start(radio->get_time_now().value())) {
+        LOG_ERROR("TESTING:       error starting rx with rx_start()");
         total_errors++;
     }
 
@@ -772,8 +772,8 @@ void test_stream_state(std::unique_ptr<vxsdr>& radio) {
 
     t_start = std::chrono::system_clock::now() + std::chrono::minutes(1);
 
-    if (not radio->rx_start_at_time_until_stop(t_start)) {
-        LOG_ERROR("TESTING:       error starting rx with rx_start_at_time_until_stop()");
+    if (not radio->rx_start(t_start)) {
+        LOG_ERROR("TESTING:       error starting rx with rx_start()");
         total_errors++;
     }
 
@@ -806,7 +806,7 @@ void test_repeated_commands(std::unique_ptr<vxsdr>& radio, const unsigned iterat
 
         LOG_INFO("TESTING:       setting rx enabled");
 
-        bool sent = radio->set_rx_enable(1);
+        bool sent = radio->set_rx_enabled(true);
 
         if (sent) {
             LOG_INFO("TESTING:       passed");
@@ -816,7 +816,7 @@ void test_repeated_commands(std::unique_ptr<vxsdr>& radio, const unsigned iterat
         }
 
         LOG_INFO("TESTING:       setting rx disabled");
-        sent = radio->set_rx_enable(0);
+        sent = radio->set_rx_enabled(false);
 
         if (sent) {
             LOG_INFO("TESTING:       passed");
@@ -853,7 +853,7 @@ void test_ports(std::unique_ptr<vxsdr>& radio) {
                         total_errors++;
                     }
                 } else {
-                    LOG_ERROR("TESTING:      no value returned by device_get_tx_port()");
+                    LOG_ERROR("TESTING:      no value returned by get_tx_port()");
                     total_errors++;
                 }
 
@@ -861,7 +861,7 @@ void test_ports(std::unique_ptr<vxsdr>& radio) {
                 auto pname = radio->get_tx_port_name(i);
                 if (pname) {
                     LOG_INFO(fmt::format("TESTING:       passed ({:s})", pname.value()));
-/* FIXME: set by name not yet implemented
+
                     LOG_INFO(fmt::format("TESTING:       setting tx port by name ({:s})", pname.value()));
                     if (radio->set_tx_port_by_name(pname.value())) {
                         LOG_INFO("TESTING:       passed");
@@ -881,19 +881,18 @@ void test_ports(std::unique_ptr<vxsdr>& radio) {
                             total_errors++;
                         }
                     } else {
-                        LOG_ERROR("TESTING:      no value returned by device_get_tx_port_name()");
+                        LOG_ERROR("TESTING:      no value returned by get_tx_port_name()");
                         total_errors++;
                     }
-*/
 
                 } else {
-                    LOG_ERROR("TESTING:      no value returned by device_get_tx_port_name()");
+                    LOG_ERROR("TESTING:      no value returned by get_tx_port_name()");
                     total_errors++;
                 }
 
             }
     } else {
-        LOG_ERROR("TESTING:   no value returned by device_get_num_tx_ports()");
+        LOG_ERROR("TESTING:   no value returned by get_num_tx_ports()");
         total_errors++;
     }
 
@@ -920,7 +919,7 @@ void test_ports(std::unique_ptr<vxsdr>& radio) {
                     total_errors++;
                 }
             } else {
-                LOG_ERROR("TESTING:      no value returned by device_get_rx_port()");
+                LOG_ERROR("TESTING:      no value returned by get_rx_port()");
                 total_errors++;
             }
 
@@ -947,22 +946,22 @@ void test_ports(std::unique_ptr<vxsdr>& radio) {
                         total_errors++;
                     }
                 } else {
-                    LOG_ERROR("TESTING:      no value returned by device_get_rx_port_name()");
+                    LOG_ERROR("TESTING:      no value returned by get_rx_port_name()");
                     total_errors++;
                 }
             } else {
-                LOG_ERROR("TESTING:      no value returned by device_get_rx_port_name()");
+                LOG_ERROR("TESTING:      no value returned by get_rx_port_name()");
                 total_errors++;
             }
         }
     } else {
-        LOG_ERROR("TESTING:   no value returned by device_get_num_rx_ports()");
+        LOG_ERROR("TESTING:   no value returned by get_num_rx_ports()");
         total_errors++;
     }
 
     LOG_INFO("TESTING: completed port tests");
 }
-
+/*
 void test_capabilities(std::unique_ptr<vxsdr>& radio) {
     LOG_INFO("TESTING: starting capabilities tests");
 
@@ -970,7 +969,7 @@ void test_capabilities(std::unique_ptr<vxsdr>& radio) {
     if (txcap) {
         LOG_INFO("TESTING:    passed");
     } else {
-        LOG_ERROR("TESTING:   no value returned by device_get_tx_capabilities()");
+        LOG_ERROR("TESTING:   no value returned by get_tx_capabilities()");
         total_errors++;
     }
 
@@ -978,75 +977,75 @@ void test_capabilities(std::unique_ptr<vxsdr>& radio) {
     if (rxcap) {
         LOG_INFO("TESTING:    passed");
     } else {
-        LOG_ERROR("TESTING:   no value returned by device_get_rx_capabilities()");
+        LOG_ERROR("TESTING:   no value returned by get_rx_capabilities()");
         total_errors++;
     }
 
     LOG_INFO("TESTING: completed capabilities tests");
 }
-
+*/
 void test_status(std::unique_ptr<vxsdr>& radio) {
     LOG_INFO("TESTING: starting status tests");
     LOG_INFO("TESTING:    getting status");
 
-    auto sta = radio->device_get_status();
+    auto sta = radio->get_status();
     if (sta) {
         LOG_INFO("TESTING:    passed");
     } else {
-        LOG_ERROR("TESTING:   no value returned by device_get_status()");
+        LOG_ERROR("TESTING:   no value returned by get_status()");
         total_errors++;
     }
 
     LOG_INFO("TESTING:    clearing status");
-    auto sent = radio->device_clear_status();
+    auto sent = radio->clear_status();
     if (sent) {
         LOG_INFO("TESTING:    passed");
     } else {
-        LOG_ERROR("TESTING:   no value returned by device_clear_status()");
+        LOG_ERROR("TESTING:   no value returned by clear_status()");
         total_errors++;
     }
 
-    auto sta2 = radio->device_get_status();
+    auto sta2 = radio->get_status();
     if (sta2) {
         LOG_INFO("TESTING:    passed");
     } else {
-        LOG_ERROR("TESTING:   no value returned by device_get_status()");
+        LOG_ERROR("TESTING:   no value returned by get_status()");
         total_errors++;
     }
 
     LOG_INFO("TESTING:    getting timing status");
-    auto tsta = radio->device_get_timing_status();
+    auto tsta = radio->get_timing_status();
     if (tsta) {
         LOG_INFO("TESTING:    passed");
     } else {
-        LOG_ERROR("TESTING:   no value returned by device_get_timing_status()");
+        LOG_ERROR("TESTING:   no value returned by get_timing_status()");
         total_errors++;
     }
 
     LOG_INFO("TESTING:    getting timing resolution");
-    auto tres = radio->device_get_timing_resolution();
+    auto tres = radio->get_timing_resolution();
     if (tres) {
         LOG_INFO("TESTING:    passed");
     } else {
-        LOG_ERROR("TESTING:   no value returned by device_get_timing_resolution()");
+        LOG_ERROR("TESTING:   no value returned by get_timing_resolution()");
         total_errors++;
     }
 
     LOG_INFO("TESTING:    getting buffer info");
-    auto binfo = radio->device_get_buffer_info();
+    auto binfo = radio->get_buffer_info();
     if (binfo) {
         LOG_INFO("TESTING:    passed");
     } else {
-        LOG_ERROR("TESTING:   no value returned by device_get_buffer_info()");
+        LOG_ERROR("TESTING:   no value returned by get_buffer_info()");
         total_errors++;
     }
 
     LOG_INFO("TESTING:    getting buffer use");
-    auto buse = radio->device_get_buffer_use();
+    auto buse = radio->get_buffer_use();
     if (buse) {
         LOG_INFO("TESTING:    passed");
     } else {
-        LOG_ERROR("TESTING:   no value returned by device_get_buffer_use()");
+        LOG_ERROR("TESTING:   no value returned by get_buffer_use()");
         total_errors++;
     }
 
@@ -1072,7 +1071,7 @@ int main(int argc, char* argv[]) {
 
         init_vm(desc, vm, argc, argv);
 
-        radio = std::make_unique<vxsdr>(vm["local_address"].as<std::string>(), vm["destination_address"].as<std::string>());
+        radio = std::make_unique<vxsdr>(vm["local_address"].as<std::string>(), vm["device_address"].as<std::string>());
 
         set_common_options(vm, radio);
     } catch (std::exception& e) {
@@ -1088,10 +1087,10 @@ int main(int argc, char* argv[]) {
         test_time(radio);
         test_gain(radio);
         test_stream_state(radio);
-        //test_repeated_commands(radio, 100);
+        test_repeated_commands(radio, 100);
         test_status(radio);
         test_ports(radio);
-        test_capabilities(radio);
+        //test_capabilities(radio);
         test_iq(radio);
     } catch (std::exception& e) {
         LOG_ERROR(fmt::format("TESTING: testing exception caught: {:s}", e.what()));

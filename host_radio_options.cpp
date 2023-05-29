@@ -61,8 +61,8 @@ void add_network_options(boost::program_options::options_description& desc) {
     // clang-format off
     desc.add_options()
         ("local_address", boost::program_options::value<std::string>()->required(), "IPv4 address of local interface")
-        ("destination_address", boost::program_options::value<std::string>()->required(),
-                "IPv4 address of destination (including broadcast/multicast)")
+        ("device_address", boost::program_options::value<std::string>()->required(),
+                "IPv4 address of device (including broadcast/multicast)")
         ("netmask", boost::program_options::value<std::string>()->default_value("255.255.255.0"), "IPv4 netmask of local interface")
         ("payload_size", boost::program_options::value<size_t>()->default_value(8192), "maximum data packet payload size in bytes")
         ;
@@ -113,8 +113,8 @@ int set_common_options(boost::program_options::variables_map& vm, std::unique_pt
         std::string ts_str = vm["time_source"].as<std::string>();
         boost::algorithm::to_lower(ts_str);
         if (ts_str.compare("host") == 0) {
-            if (not radio->device_set_time_now(std::chrono::system_clock::now())) {
-                LOG_ERROR("error in set_common_options: device_set_time_now");
+            if (not radio->set_time_now(std::chrono::system_clock::now())) {
+                LOG_ERROR("error in set_common_options: set_time_now");
             }
         } else if (ts_str.compare("pps") == 0) {
             constexpr unsigned max_host_clock_error_ms = 200; // cannot be 500 or more!
@@ -131,8 +131,8 @@ int set_common_options(boost::program_options::variables_map& vm, std::unique_pt
             }
             // wait until nearly t_set, then send the command
             std::this_thread::sleep_until(t_set - std::chrono::milliseconds(max_host_clock_error_ms));
-            if (not radio->device_set_time_next_pps(t_set)) {
-                LOG_ERROR("error in set_common_options: device_set_time_next_pps");
+            if (not radio->set_time_next_pps(t_set)) {
+                LOG_ERROR("error in set_common_options: set_time_next_pps");
             }
         } else {
             LOG_FATAL(fmt::format("Error: unknown option value for --time_source: {:s} (allowed values are host or pps)",

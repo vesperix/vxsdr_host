@@ -38,7 +38,7 @@ int main(int argc, char* argv[]) {
 
         init_vm(desc, vm, argc, argv);
 
-        auto radio = std::make_unique<vxsdr>(vm["local_address"].as<std::string>(), vm["destination_address"].as<std::string>(),
+        auto radio = std::make_unique<vxsdr>(vm["local_address"].as<std::string>(), vm["device_address"].as<std::string>(),
                                     vm["set_priority"].as<bool>(), vm["thread_priority"].as<int>());
 
         set_common_options(vm, radio);
@@ -60,7 +60,7 @@ int main(int argc, char* argv[]) {
         filename.append(vm["suffix"].as<std::string>());
 
         LOG_DEBUG("getting radio time");
-        auto t1 = radio->device_get_time_now();
+        auto t1 = radio->get_time_now();
         if (t1.has_value()) {
             LOG_INFO(fmt::format("radio time: {:s}", format_time(t1.value())));
         } else {
@@ -71,8 +71,8 @@ int main(int argc, char* argv[]) {
         LOG_INFO(fmt::format("using rate      {:.5e}", radio->get_rx_rate().value_or(-1)));
         LOG_INFO(fmt::format("using rx_gain   {:.1f}", radio->get_rx_gain().value_or(-1)));
 
-        if (not radio->rx_start_now_for_n_samples(n_samp)) {
-            LOG_ERROR("rx_start_now_for_n_samples() failed");
+        if (not radio->rx_start(t1.value() + std::chrono::milliseconds(100), n_samp)) {
+            LOG_ERROR("rx_start() failed");
         }
         size_t n_written = radio->check_rx_data_sequence_only(n_samp);
         if (not radio->rx_stop_now()) {

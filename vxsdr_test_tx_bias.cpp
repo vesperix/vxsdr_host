@@ -131,7 +131,7 @@ int main(int argc, char* argv[]) {
 
         init_vm(desc, vm, argc, argv);
 
-        auto radio = std::make_unique<vxsdr>(vm["local_address"].as<std::string>(), vm["destination_address"].as<std::string>(),
+        auto radio = std::make_unique<vxsdr>(vm["local_address"].as<std::string>(), vm["device_address"].as<std::string>(),
                                     vm["set_priority"].as<bool>(), vm["thread_priority"].as<int>());
 
         set_common_options(vm, radio);
@@ -155,7 +155,7 @@ int main(int argc, char* argv[]) {
         }
 
         LOG_DEBUG("getting radio time");
-        auto t1 = radio->device_get_time_now();
+        auto t1 = radio->get_time_now();
         if (t1) {
             LOG_INFO(fmt::format("radio time: {:s}", format_time(t1.value())));
         } else {
@@ -167,8 +167,8 @@ int main(int argc, char* argv[]) {
         LOG_INFO(fmt::format("using tx_gain   {:.1f}", radio->get_tx_gain().value_or(-1)));
 
 
-        if (not radio->tx_start_now_until_stop()) {
-            LOG_ERROR("tx_start_now_until_stop() failed");
+        if (not radio->tx_start(t1.value() + std::chrono::milliseconds(100))) {
+            LOG_ERROR("tx_start() failed");
         }
         auto tx_future = std::async(std::launch::async, [&] { return do_transmit(radio, data); });
 
