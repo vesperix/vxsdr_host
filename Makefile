@@ -7,6 +7,8 @@ CXX_OPTFLAGS = -O3
 CXX_DBGFLAGS = -g -Og -fsanitize=address
 CXX_LDFLAGS = -lpthread -lboost_program_options -lboost_system -lspdlog -lvxsdr
 
+VXSDR_DEBUG=1
+
 ifdef VXSDR_DEBUG
 	CXX_FLAGS = $(CXX_BASEFLAGS) $(CXX_DBGFLAGS) $(CXX_DEFINES)
 else

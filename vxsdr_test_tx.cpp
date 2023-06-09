@@ -40,7 +40,7 @@ int main(int argc, char* argv[]) {
 
         init_vm(desc, vm, argc, argv);
 
-        auto radio = std::make_unique<vxsdr>(vm["local_address"].as<std::string>(), vm["destination_address"].as<std::string>(),
+        auto radio = std::make_unique<vxsdr>(vm["local_address"].as<std::string>(), vm["device_address"].as<std::string>(),
                                     vm["set_priority"].as<bool>(), vm["thread_priority"].as<int>());
 
         set_common_options(vm, radio);

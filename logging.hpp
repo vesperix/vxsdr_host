@@ -7,10 +7,9 @@
 
 // disable exceptions in logging
 #define SPDLOG_NO_EXCEPTIONS
-// use the compiled library
-#ifndef SPDLOG_COMPILED_LIB
-#define SPDLOG_COMPILED_LIB
-#endif
+// force header only
+#define SPDLOG_HEADER_ONLY
+#define FMT_HEADER_ONLY
 
 #ifndef SPDLOG_ACTIVE_LEVEL
 #define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_TRACE

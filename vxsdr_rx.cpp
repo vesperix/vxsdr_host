@@ -40,7 +40,7 @@ int main(int argc, char* argv[]) {
 
         std::unique_ptr<vxsdr> radio;
         try {
-            radio = std::make_unique<vxsdr>(vm["local_address"].as<std::string>(), vm["destination_address"].as<std::string>(),
+            radio = std::make_unique<vxsdr>(vm["local_address"].as<std::string>(), vm["device_address"].as<std::string>(),
                                     vm["set_priority"].as<bool>(), vm["thread_priority"].as<int>());
         } catch (std::runtime_error& e) {
             LOG_FATAL(fmt::format("exception caught during vxsdr initialization: {:s}", e.what()));
