@@ -37,9 +37,6 @@ vxsdr_test_rx: vxsdr_test_rx.cpp $(COMMON_INCLUDES) $(COMMON_OBJ)
 vxsdr_test_tx: vxsdr_test_tx.cpp $(COMMON_INCLUDES) $(COMMON_OBJ)
 	$(CXX) $(CXX_FLAGS) -o $@ $< $(COMMON_OBJ) $(CXX_LDFLAGS)
 
-#vxsdr_test_atmosense_rx: vxsdr_test_atmosense_rx.cpp $(COMMON_INCLUDES) $(COMMON_OBJ)
-#	$(CXX) $(CXX_FLAGS) -o $@ $< $(COMMON_OBJ) $(CXX_LDFLAGS)
-
 clean:
 	rm -f $(PROGS) *.o *~
 

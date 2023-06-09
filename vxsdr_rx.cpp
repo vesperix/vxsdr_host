@@ -45,7 +45,6 @@ int main(int argc, char* argv[]) {
         } catch (std::runtime_error& e) {
             LOG_FATAL(fmt::format("exception caught during vxsdr initialization: {:s}", e.what()));
             LOG_FATAL(fmt::format("{:s} finished with exception", argv[0]));
-            LOG_CLOSE();
             return EXIT_INTERNAL_ERROR;
         }
         // let radio complete initialization

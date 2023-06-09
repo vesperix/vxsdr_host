@@ -61,8 +61,8 @@ void add_network_options(boost::program_options::options_description& desc) {
     // clang-format off
     desc.add_options()
         ("local_address", boost::program_options::value<std::string>()->required(), "IPv4 address of local interface")
-        ("destination_address", boost::program_options::value<std::string>()->required(),
-                "IPv4 address of destination (including broadcast/multicast)")
+        ("device_address", boost::program_options::value<std::string>()->required(),
+                "IPv4 address of VXSDR device (including broadcast/multicast)")
         ("netmask", boost::program_options::value<std::string>()->default_value("255.255.255.0"), "IPv4 netmask of local interface")
         ("payload_size", boost::program_options::value<size_t>()->default_value(8192), "maximum data packet payload size in bytes")
         ;
