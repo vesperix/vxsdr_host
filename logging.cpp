@@ -1,14 +1,28 @@
 #include "logging.hpp"
 
-void log_init(const std::string& logfilename) {
+void log_init(const std::string& logfile_name) {
     // console logger and its settings
     auto clog = std::make_shared<spdlog::sinks::stdout_sink_mt>();
 
+#ifdef MAKE_LOG_FILE
     // file logger and its settings
-    auto flog = std::make_shared<spdlog::sinks::basic_file_sink_mt>(logfilename + ".log");
+#ifdef TIME_IN_LOG_FILE_NAME
+    std::stringstream timestr;
+    std::time_t t = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+    timestr << std::put_time(std::localtime(&t), "%Y-%m-%d-%H.%M.%S");
+    std::string logfile_full_name = logfile_name + "-" + timestr.str() + ".log";
+    auto flog = std::make_shared<spdlog::sinks::basic_file_sink_mt>(logfile_full_name);
+#else // ifdef TIME_IN_LOG_FILE_NAME
+    auto flog = std::make_shared<spdlog::sinks::basic_file_sink_mt>(logfile_name + ".log");
+#endif // ifdef TIME_IN_LOG_FILE_NAME
 
     spdlog::sinks_init_list sink_list = {flog, clog};
     auto multi_logger = std::make_shared<spdlog::logger>(APPLICATION_LOGGER_NAME, sink_list.begin(), sink_list.end());
+#else // ifdef MAKE_LOG_FILE
+    spdlog::sinks_init_list sink_list = {clog};
+    auto multi_logger = std::make_shared<spdlog::logger>(APPLICATION_LOGGER_NAME, sink_list.begin(), sink_list.end());
+#endif // ifdef MAKE_LOG_FILE
+
     multi_logger->set_pattern("[%Y-%m-%d %T.%f] [%t] [%L] %v");
     spdlog::register_logger(multi_logger);
     // auto-flush on errors or more severe events

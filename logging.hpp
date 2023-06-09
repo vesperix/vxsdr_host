@@ -2,8 +2,13 @@
 #define LOGGING_HPP
 
 #include <string>
+#include <chrono>
+#include <iomanip>
+#include <sstream>
 
 #define APPLICATION_LOGGER_NAME     "applog"
+//#define MAKE_LOG_FILE
+//#define TIME_IN_LOG_FILE_NAME
 
 // disable exceptions in logging
 #define SPDLOG_NO_EXCEPTIONS
