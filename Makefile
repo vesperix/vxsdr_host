@@ -5,7 +5,7 @@ CXX_DEFINES =
 CXX_BASEFLAGS = -Wall -pedantic -std=c++17 $(CXX_EXTRA_FLAGS)
 CXX_OPTFLAGS = -O3
 CXX_DBGFLAGS = -g -Og -fsanitize=address
-CXX_LDFLAGS = -lpthread -lboost_program_options -lboost_system -lspdlog -lvxsdr
+CXX_LDFLAGS = -lpthread -lboost_program_options -lboost_system -lvxsdr
 
 # VXSDR_DEBUG=1
 

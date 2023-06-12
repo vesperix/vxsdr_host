@@ -38,6 +38,12 @@ int main(int argc, char* argv[]) {
         add_network_options(desc);
         add_tx_1ch_options(desc);
 
+        desc.add_options()
+        ("amplitude", boost::program_options::value<double>()->default_value(10'000.0), "signal amplitude in digital counts")
+        ("samples", boost::program_options::value<size_t>()->default_value(2'048), "number of samples in loop")
+        ("cycles", boost::program_options::value<double>()->default_value(0.0), "number of cycles in loop")
+        ;
+
         init_vm(desc, vm, argc, argv);
 
         auto radio = std::make_unique<vxsdr>(vm["local_address"].as<std::string>(), vm["device_address"].as<std::string>(),
@@ -51,11 +57,16 @@ int main(int argc, char* argv[]) {
             return EXIT_CMD_LINE_ERROR;
         }
 
-        size_t n_samp = 2048;
+        size_t n_samp = vm["samples"].as<size_t>();
+        double n_cycles = vm["cycles"].as<double>();
+        double a = vm["amplitude"].as<double>();
 
         std::vector<std::complex<int16_t>> data(n_samp);
         for (size_t i = 0; i < n_samp; i++) {
-            data[i] = std::complex<int16_t>(10000, 0);
+            double v = 2 * M_PI * n_cycles * i / double(n_samp);
+            double re = a * cos(v);
+            double im = a * sin(v);
+            data[i] = std::complex<int16_t>(std::lround(re), std::lround(im));
         }
 
         LOG_DEBUG("getting radio time");
