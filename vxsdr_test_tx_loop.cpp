@@ -87,11 +87,7 @@ int main(int argc, char* argv[]) {
         auto t_start = std::chrono::ceil<std::chrono::seconds>(std::chrono::system_clock::now()) + std::chrono::duration(1s);
         LOG_INFO(fmt::format("start time: {:s}", format_time(t_start)));
 
-        uint32_t n_loop = std::llround(vm["duration"].as<double>() * radio->get_tx_rate().value_or(0) / n_samp);
-
-        vxsdr::duration zero = 0ns;
-
-        if (not radio->tx_loop(t_start, n_samp, zero, n_loop)) {
+        if (not radio->tx_loop(t_start, n_samp)) {
             LOG_ERROR("tx_start() failed");
         }
 
@@ -104,6 +100,7 @@ int main(int argc, char* argv[]) {
         }
 
         std::this_thread::sleep_until(t_start + std::chrono::duration(std::chrono::milliseconds(std::llround(1000 * vm["duration"].as<double>()))));
+        radio->tx_stop_now();
 
         LOG_INFO("transmit complete");
     } catch (std::exception& e) {
