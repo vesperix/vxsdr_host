@@ -8,6 +8,7 @@
 #include <limits>
 #include <string>
 #include <thread>
+#include <cmath>
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/program_options.hpp>
@@ -20,6 +21,10 @@
 #include "utility.hpp"
 
 using namespace std::chrono_literals;
+
+#ifndef M_PI
+#define M_PI (3.141592653589793238462643383279502884)
+#endif
 
 extern "C" void sig_int_handler(int /* sig_num */) {
     LOG_FATAL("terminated by SIGINT (ctrl-C)");
@@ -40,8 +45,6 @@ int main(int argc, char* argv[]) {
 
         desc.add_options()
         ("amplitude", boost::program_options::value<double>()->default_value(10'000.0), "signal amplitude in digital counts")
-        ("phase", boost::program_options::value<double>()->default_value(90.0), "IQ phase difference in degrees")
-        ("ratio", boost::program_options::value<double>()->default_value(1.0), "IQ amplitude ratio")
         ("samples", boost::program_options::value<size_t>()->default_value(2'048), "number of samples in loop")
         ("cycles", boost::program_options::value<double>()->default_value(0.0), "number of cycles in loop")
         ;
@@ -66,8 +69,8 @@ int main(int argc, char* argv[]) {
         std::vector<std::complex<int16_t>> data(n_samp);
         for (size_t i = 0; i < n_samp; i++) {
             double v = 2 * M_PI * n_cycles * i / double(n_samp);
-            double re = a * cos(v);
-            double im = a * cos(v + M_PI / 180.0 * vm["phase"].as<double>()) / vm["ratio"].as<double>();
+            double re =  a * cos(v);
+            double im = -a * sin(v);
             data[i] = std::complex<int16_t>(std::lround(re), std::lround(im));
         }
 

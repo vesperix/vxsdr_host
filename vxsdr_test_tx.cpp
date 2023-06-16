@@ -8,6 +8,7 @@
 #include <limits>
 #include <string>
 #include <thread>
+#include <cmath>
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/program_options.hpp>
@@ -38,6 +39,11 @@ int main(int argc, char* argv[]) {
         add_network_options(desc);
         add_tx_1ch_options(desc);
 
+        desc.add_options()
+        ("amplitude", boost::program_options::value<double>()->default_value(10'000.0), "signal amplitude in digital counts")
+        ("cycles", boost::program_options::value<double>()->default_value(0.0), "number of cycles in byffer")
+        ;
+
         init_vm(desc, vm, argc, argv);
 
         auto radio = std::make_unique<vxsdr>(vm["local_address"].as<std::string>(), vm["device_address"].as<std::string>(),
@@ -52,10 +58,23 @@ int main(int argc, char* argv[]) {
         }
 
         size_t n_samp        = std::llround(vm["duration"].as<double>() * vm["rate"].as<double>());
+        double n_cycles = vm["cycles"].as<double>();
+        double a = vm["amplitude"].as<double>();
 
         std::vector<std::complex<int16_t>> data(n_samp);
-        for (size_t i = 0; i < n_samp; i++) {
-            data[i] = std::complex<int16_t>(10000, 0);
+
+        if (n_cycles != 0.0) {
+            for (size_t i = 0; i < n_samp; i++) {
+                double v = 2 * M_PI * n_cycles * i / double(n_samp);
+                double re =  a * cos(v);
+                double im = -a * sin(v);
+                data[i] = std::complex<int16_t>(std::lround(re), std::lround(im));
+            }
+        } else {
+            const int16_t ra = std::llround(a);
+            for (size_t i = 0; i < n_samp; i++) {
+                data[i] = std::complex<int16_t>(ra, 0);
+            }
         }
 
         size_t tx_buffer_size_samples = 0;
