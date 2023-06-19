@@ -45,7 +45,7 @@ int main(int argc, char* argv[]) {
         ("cycles", boost::program_options::value<double>()->default_value(0.0), "number of cycles in tx signal")
         ("tx_delay", boost::program_options::value<double>()->default_value(0.001), "delay between start of rx and start of tx in seconds")
         ("tx_duration", boost::program_options::value<double>()->default_value(0.001), "duration of tx in seconds")
-        ("rx_duration", boost::program_options::value<double>()->default_value(0.005), "duration of rx in seconds")
+        ("rx_duration", boost::program_options::value<double>()->default_value(0.003), "duration of rx in seconds")
         ;
 
         init_vm(desc, vm, argc, argv);
@@ -62,7 +62,7 @@ int main(int argc, char* argv[]) {
             return EXIT_CMD_LINE_ERROR;
         }
 
-        size_t n_samp_tx = 2048 * std::llround(vm["tx_duration"].as<double>() * vm["rate"].as<double>() / 2048.);
+        size_t n_samp_tx = 2048; // * std::llround(vm["tx_duration"].as<double>() * vm["rate"].as<double>() / 2048.);
         size_t n_samp_rx = std::llround(vm["rx_duration"].as<double>() * vm["rate"].as<double>());
         double n_cycles = vm["cycles"].as<double>();
         double a = vm["amplitude"].as<double>();
@@ -72,9 +72,9 @@ int main(int argc, char* argv[]) {
         if (n_cycles != 0.0) {
             for (size_t i = 0; i < n_samp_tx; i++) {
                 //double aa = a * sin(M_PI * double(i) / double(n_samp_tx));
-                double v = 2. * M_PI * n_cycles * double(i) / double(n_samp_tx);
-                double re =  a * cos(v);
-                double im = -a * sin(v);
+                double v =  double(i) / n_samp_tx;
+                double re =  a * cos(2. * M_PI * n_cycles * v);
+                double im = -a * sin(2. * M_PI * n_cycles * v);
                 tx_data[i] = std::complex<int16_t>(std::lround(re), std::lround(im));
             }
         } else {
@@ -108,7 +108,12 @@ int main(int argc, char* argv[]) {
         auto t_start = std::chrono::ceil<std::chrono::seconds>(std::chrono::system_clock::now()) + std::chrono::duration(1s);
         LOG_INFO(fmt::format("start time: {:s}", format_time(t_start)));
 
+        std::ofstream tx_file ("tx_data.dat", std::ofstream::out | std::ofstream::binary);
         std::ofstream rx_file ("rx_data.dat", std::ofstream::out | std::ofstream::binary);
+
+        for (size_t i = 0; i < tx_data.size(); i++) {
+            tx_file.write(reinterpret_cast<char *>(&tx_data[i]), sizeof(tx_data[i]));
+        }
 
         vxsdr::duration tx_del = std::llround(vm["tx_delay"].as<double>() * 1e9) * std::chrono::duration(1ns);
         vxsdr::time_point t_start_tx = t_start + tx_del;
@@ -118,7 +123,7 @@ int main(int argc, char* argv[]) {
         }
 */
 
-        if (not radio->tx_loop(t_start_tx, n_samp_tx, vxsdr::duration::zero(), 3)) {
+        if (not radio->tx_loop(t_start_tx, n_samp_tx, vxsdr::duration::zero(), 50)) {
             LOG_ERROR("tx_loop() failed");
         }
 
