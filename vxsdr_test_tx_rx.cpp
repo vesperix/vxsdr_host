@@ -122,8 +122,8 @@ int main(int argc, char* argv[]) {
             LOG_ERROR("tx_start() failed");
         }
 */
-        if (not radio->tx_loop(t_start_tx, n_samp_tx, vxsdr::duration::zero(), 50)) {
-//        if (not radio->tx_loop(t_start_tx, 0)) {
+//        if (not radio->tx_loop(t_start_tx, n_samp_tx, vxsdr::duration::zero(), 50)) {
+        if (not radio->tx_loop(t_start_tx, 0)) {
             LOG_ERROR("tx_loop() failed");
         }
 
