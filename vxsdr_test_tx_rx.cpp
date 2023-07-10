@@ -62,7 +62,7 @@ int main(int argc, char* argv[]) {
             return EXIT_CMD_LINE_ERROR;
         }
 
-        size_t n_samp_tx = 2048; // * std::llround(vm["tx_duration"].as<double>() * vm["rate"].as<double>() / 2048.);
+        size_t n_samp_tx = 2048 * 78; // * std::llround(vm["tx_duration"].as<double>() * vm["rate"].as<double>() / 2048.);
         size_t n_samp_rx = std::llround(vm["rx_duration"].as<double>() * vm["rate"].as<double>());
         double n_cycles = vm["cycles"].as<double>();
         double a = vm["amplitude"].as<double>();
@@ -122,8 +122,8 @@ int main(int argc, char* argv[]) {
             LOG_ERROR("tx_start() failed");
         }
 */
-
         if (not radio->tx_loop(t_start_tx, n_samp_tx, vxsdr::duration::zero(), 50)) {
+//        if (not radio->tx_loop(t_start_tx, 0)) {
             LOG_ERROR("tx_loop() failed");
         }
 
