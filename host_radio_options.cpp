@@ -85,13 +85,6 @@ void init_vm(boost::program_options::options_description& desc, boost::program_o
         exit(EXIT_SUCCESS);
     }
 
-    try {
-        boost::program_options::notify(vm);
-    } catch (std::exception& e) {
-        LOG_FATAL(fmt::format("error parsing command line options (notify): {:s}", e.what()));
-        exit(EXIT_CMD_LINE_ERROR);
-    }
-
     if (vm.count("config_file") > 0) {
         std::ifstream ifs(vm["config_file"].as<std::string>().c_str());
         if (!ifs) {
@@ -100,11 +93,19 @@ void init_vm(boost::program_options::options_description& desc, boost::program_o
         }
         try {
             boost::program_options::store(boost::program_options::parse_config_file(ifs, desc), vm);
-            boost::program_options::notify(vm);
+            // command line options take precedence over config file
+            boost::program_options::store(boost::program_options::parse_command_line(argc, argv, desc), vm);
         } catch (std::exception& e) {
             LOG_FATAL(fmt::format("error parsing command line options (config file): {:s}", e.what()));
             exit(EXIT_CMD_LINE_ERROR);
         }
+    }
+
+    try {
+        boost::program_options::notify(vm);
+    } catch (std::exception& e) {
+        LOG_FATAL(fmt::format("error parsing command line options (notify): {:s}", e.what()));
+        exit(EXIT_CMD_LINE_ERROR);
     }
 }
 
