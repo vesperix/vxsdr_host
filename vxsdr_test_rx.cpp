@@ -24,6 +24,8 @@ extern "C" void sig_int_handler(int /* sig_num */) {
     exit(EXIT_USER_TERMINATED);
 }
 
+#define JUST_CHECK_SEQUENCE
+
 int main(int argc, char* argv[]) {
     LOG_INIT(argv[0]);
     try {
@@ -50,7 +52,7 @@ int main(int argc, char* argv[]) {
         }
 
         size_t n_samp        = std::llround(vm["duration"].as<double>() * vm["rate"].as<double>());
-
+#ifndef JUST_CHECK_SEQUENCE
         std::string filename = vm["prefix"].as<std::string>();
         if (vm.count("no_filename_time") > 0) {
             filename.append(make_filename_no_time(vm["freq"].as<double>(), vm["rate"].as<double>()));
@@ -58,7 +60,7 @@ int main(int argc, char* argv[]) {
             filename.append(make_filename_time(std::chrono::system_clock::now(), vm["freq"].as<double>(), vm["rate"].as<double>()));
         }
         filename.append(vm["suffix"].as<std::string>());
-
+#endif
         LOG_DEBUG("getting radio time");
         auto t1 = radio->get_time_now();
         if (t1.has_value()) {
@@ -71,36 +73,29 @@ int main(int argc, char* argv[]) {
         LOG_INFO(fmt::format("using rate      {:.5e}", radio->get_rx_rate().value_or(-1)));
         LOG_INFO(fmt::format("using rx_gain   {:.1f}", radio->get_rx_gain().value_or(-1)));
 
-
-
         size_t n_written = 0;
-        int n_tries = 0;
 
-        while (n_written != n_samp and n_tries < 10) {
-            if (not radio->rx_start(t1.value(), n_samp)) {
-                LOG_ERROR("rx_start() failed");
-            }
+        if (not radio->rx_start(t1.value(), n_samp)) {
+            LOG_ERROR("rx_start() failed");
+        }
+#ifndef JUST_CHECK_SEQUENCE
+        std::ofstream outfile(filename, std::ios::binary);
+        n_written = radio->write_rx_data(outfile, n_samp);
+        outfile.close();
+#else
+        n_written = radio->check_rx_data_sequence_only(n_samp);
+#endif
 
-            std::ofstream outfile(filename, std::ios::binary);
-            n_written = radio->write_rx_data(outfile, n_samp);
-            outfile.close();
-            n_tries++;
-            if (n_written == n_samp) {
-                LOG_INFO(fmt::format("try {:d} complete", n_tries));
-            } else {
-                LOG_INFO(fmt::format("try {:d} failed ({:d},{:d}); retrying", n_tries, n_written, n_samp));
-            }
-
-            if (not radio->rx_stop_now()) {
-                LOG_ERROR("rx_stop_now() failed");
-            }
-
+        if (not radio->rx_stop_now()) {
+            LOG_ERROR("rx_stop_now() failed");
         }
 
-
         LOG_INFO("receive complete");
+#ifndef JUST_CHECK_SEQUENCE
         LOG_INFO(fmt::format("{:d} samples written", n_written));
-
+#else
+        LOG_INFO(fmt::format("{:d} samples checked", n_written));
+#endif
     } catch (std::exception& e) {
         LOG_FATAL(fmt::format("exception caught: {:s}", e.what()));
         return EXIT_INTERNAL_ERROR;
