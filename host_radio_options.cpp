@@ -50,7 +50,7 @@ void add_common_options(boost::program_options::options_description& desc) {
                 "log level (6 = trace, 5 = debug, 4 = info, 3 = warning, 2 = error, 1 = fatal, 0 = none)")
         ("quit_on_error", boost::program_options::value<bool>()->default_value(true), "quit on errors")
         ("thread_priority", boost::program_options::value<int>()->default_value(5),
-                "priority to use for UDP handler threads when affinity is used")
+                "priority to use for UDP handler threads when realtime priority is used (set to a negative number to not use realtime priority)")
         ;
     // clang-format on
 }
