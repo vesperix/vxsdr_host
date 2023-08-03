@@ -49,8 +49,6 @@ void add_common_options(boost::program_options::options_description& desc) {
         ("verbose_level", boost::program_options::value<int>(),
                 "log level (6 = trace, 5 = debug, 4 = info, 3 = warning, 2 = error, 1 = fatal, 0 = none)")
         ("quit_on_error", boost::program_options::value<bool>()->default_value(true), "quit on errors")
-        ("set_priority", boost::program_options::value<bool>()->default_value(true),
-                "set realtime priority for UDP handler threads")
         ("thread_priority", boost::program_options::value<int>()->default_value(5),
                 "priority to use for UDP handler threads when affinity is used")
         ;
@@ -64,7 +62,9 @@ void add_network_options(boost::program_options::options_description& desc) {
         ("device_address", boost::program_options::value<std::string>()->required(),
                 "IPv4 address of VXSDR device (including broadcast/multicast)")
         ("netmask", boost::program_options::value<std::string>()->default_value("255.255.255.0"), "IPv4 netmask of local interface")
-        ("payload_size", boost::program_options::value<size_t>()->default_value(8192), "maximum data packet payload size in bytes")
+        ("payload_size", boost::program_options::value<unsigned>()->default_value(8192), "maximum data packet payload size in bytes")
+        ("transmit_buffer_size", boost::program_options::value<unsigned>()->default_value(1048576), "network transmit buffer size in bytes")
+        ("receive_buffer_size", boost::program_options::value<unsigned>()->default_value( 16777216), "network receive buffer size in bytes")
         ;
     // clang-format on
 }
