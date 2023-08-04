@@ -41,6 +41,7 @@ int main(int argc, char* argv[]) {
         init_vm(desc, vm, argc, argv);
 
         auto radio = std::make_unique<vxsdr>(vm["local_address"].as<std::string>(), vm["device_address"].as<std::string>(),
+                                             vm["transmit_packet_queue_size"].as<unsigned>(), vm["receive_packet_queue_size"].as<unsigned>(),
                                              vm["transmit_buffer_size"].as<unsigned>(), vm["receive_buffer_size"].as<unsigned>(),
                                              vm["thread_priority"].as<int>());
 
