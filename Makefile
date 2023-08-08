@@ -18,7 +18,7 @@ endif
 COMMON_INCLUDES = host_radio_options.hpp utility.hpp logging.hpp
 COMMON_OBJ = host_radio_options.o utility.o logging.o
 
-PROGS = vxsdr_rx vxsdr_test vxsdr_test_rx vxsdr_test_tx vxsdr_test_tx_loop vxsdr_test_tx_rx
+PROGS = vxsdr_rx vxsdr_test vxsdr_test_rx vxsdr_test_tx vxsdr_test_tx_loop vxsdr_test_tx_rx vxsdr_test_simul
 
 all: $(PROGS) Makefile
 
@@ -43,6 +43,9 @@ vxsdr_test_tx_loop: vxsdr_test_tx_loop.cpp $(COMMON_INCLUDES) $(COMMON_OBJ)
 	$(CXX) $(CXX_FLAGS) -o $@ $< $(COMMON_OBJ) $(CXX_LDFLAGS)
 
 vxsdr_test_tx_rx: vxsdr_test_tx_rx.cpp $(COMMON_INCLUDES) $(COMMON_OBJ)
+	$(CXX) $(CXX_FLAGS) -o $@ $< $(COMMON_OBJ) $(CXX_LDFLAGS)
+
+vxsdr_test_simul: vxsdr_test_simul.cpp $(COMMON_INCLUDES) $(COMMON_OBJ)
 	$(CXX) $(CXX_FLAGS) -o $@ $< $(COMMON_OBJ) $(CXX_LDFLAGS)
 
 clean:
