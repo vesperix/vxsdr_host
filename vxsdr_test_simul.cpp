@@ -83,8 +83,6 @@ int main(int argc, char* argv[]) {
         // how many seconds of data does the tx buffer hold at the current rate?
         double tx_buffer_size_sec = (double)tx_buffer_bytes / sizeof(std::complex<int16_t>) / radio->get_rx_rate().value_or(0.0);
         LOG_INFO("tx buffer will hold {:.6f} seconds of data at current rate", tx_buffer_size_sec);
-        // start early so the tx buffer will be half full when tx starts
-        vxsdr::duration head_start = std::chrono::duration_cast<vxsdr::duration>(std::chrono::duration<double>(0.5 * tx_buffer_size_sec));
 
         if (not radio->rx_start(start_time, n_samp)) {
             LOG_ERROR("rx_start() failed");
@@ -94,20 +92,27 @@ int main(int argc, char* argv[]) {
             LOG_ERROR("tx_start() failed");
         }
 
+        // start early so the tx buffer will be half full when tx starts
+        vxsdr::duration head_start = std::chrono::duration_cast<vxsdr::duration>(std::chrono::duration<double>(0.5 * tx_buffer_size_sec));
         std::this_thread::sleep_until(start_time - head_start);
 
-        size_t n_sent = 0;
-        std::thread tx_thread([&] { n_sent = 0;
-                                    while (n_sent < n_samp) {
-                                        auto n = radio->put_tx_data(tx_data);
-                                        n_sent += n;
-                                        if (n != tx_data.size()) {
-                                            break;
-                                        }
-                                    }
-                                    });
+        size_t n_checked = 0;
+        std::thread rx_thread([&] { n_checked = radio->check_rx_data_sequence_only(n_samp); });
 
-        auto n_checked = radio->check_rx_data_sequence_only(n_samp);
+        size_t n_sent = 0;
+        while (n_sent < n_samp) {
+            auto n_to_send = std::min(n_samp - n_sent, tx_data.size());
+            auto n = radio->put_tx_data(tx_data, n_to_send);
+            n_sent += n;
+            if (n != n_to_send) {
+                break;
+            }
+        }
+
+        std::this_thread::sleep_until(start_time + std::chrono::duration<double>(vm["duration"].as<double>()));
+
+        LOG_INFO("joining rx thread");
+        rx_thread.join();
 
         if (not radio->rx_stop_now()) {
             LOG_ERROR("rx_stop_now() failed");
@@ -116,16 +121,12 @@ int main(int argc, char* argv[]) {
         LOG_INFO("receive complete");
         LOG_INFO(fmt::format("{:d} samples checked", n_checked));
 
-        LOG_INFO("joining tx thread");
-        tx_thread.join();
-
         if (not radio->tx_stop_now()) {
             LOG_ERROR("tx_stop_now() failed");
         }
 
         LOG_INFO("transmit complete");
         LOG_INFO(fmt::format("{:d} samples sent", n_sent));
-
 
     } catch (std::exception& e) {
         LOG_FATAL(fmt::format("exception caught: {:s}", e.what()));
