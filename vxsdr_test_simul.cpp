@@ -72,6 +72,20 @@ int main(int argc, char* argv[]) {
         LOG_INFO(fmt::format("using rate      {:.5e}", radio->get_rx_rate().value_or(-1)));
         LOG_INFO(fmt::format("using rx_gain   {:.1f}", radio->get_rx_gain().value_or(-1)));
 
+        LOG_DEBUG("getting buffer info");
+        auto buf_info = radio->get_buffer_info();
+        if (not buf_info) {
+             LOG_ERROR("unable to get buffer info");
+            return EXIT_FAILURE;
+        }
+
+        auto tx_buffer_bytes = buf_info->at(1);
+        // how many seconds of data does the tx buffer hold at the current rate?
+        double tx_buffer_size_sec = (double)tx_buffer_bytes / sizeof(std::complex<int16_t>) / radio->get_rx_rate().value_or(0.0);
+        LOG_INFO("tx buffer will hold {:.6f} seconds of data at current rate", tx_buffer_size_sec);
+        // start early so the tx buffer will be half full when tx starts
+        vxsdr::duration head_start = std::chrono::duration_cast<vxsdr::duration>(std::chrono::duration<double>(0.5 * tx_buffer_size_sec));
+
         if (not radio->rx_start(start_time, n_samp)) {
             LOG_ERROR("rx_start() failed");
         }
@@ -80,7 +94,7 @@ int main(int argc, char* argv[]) {
             LOG_ERROR("tx_start() failed");
         }
 
-        std::this_thread::sleep_until(start_time - std::chrono::duration(10ms));
+        std::this_thread::sleep_until(start_time - head_start);
 
         size_t n_sent = 0;
         std::thread tx_thread([&] { n_sent = 0;
