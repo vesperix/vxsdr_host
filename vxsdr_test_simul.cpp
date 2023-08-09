@@ -100,14 +100,17 @@ int main(int argc, char* argv[]) {
         std::thread rx_thread([&] { n_checked = radio->check_rx_data_sequence_only(n_samp); });
 
         size_t n_sent = 0;
-        while (n_sent < n_samp) {
-            auto n_to_send = std::min(n_samp - n_sent, tx_data.size());
-            auto n = radio->put_tx_data(tx_data, n_to_send);
-            n_sent += n;
-            if (n != n_to_send) {
-                break;
-            }
-        }
+        std::thread tx_thread([&]
+                                {
+                                    while (n_sent < n_samp) {
+                                        auto n_to_send = std::min(n_samp - n_sent, tx_data.size());
+                                        auto n = radio->put_tx_data(tx_data, n_to_send);
+                                        n_sent += n;
+                                        if (n != n_to_send) {
+                                            break;
+                                        }
+                                    }
+                                });
 
         std::this_thread::sleep_until(start_time + std::chrono::duration<double>(vm["duration"].as<double>()));
 
@@ -120,6 +123,9 @@ int main(int argc, char* argv[]) {
 
         LOG_INFO("receive complete");
         LOG_INFO(fmt::format("{:d} samples checked", n_checked));
+
+        LOG_INFO("joining tx thread");
+        tx_thread.join();
 
         if (not radio->tx_stop_now()) {
             LOG_ERROR("tx_stop_now() failed");
