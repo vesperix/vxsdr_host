@@ -17,10 +17,9 @@
 #define SPDLOG_HEADER_ONLY
 #define FMT_HEADER_ONLY
 
-#ifndef SPDLOG_ACTIVE_LEVEL
 #include <spdlog/common.h>
+#undef SPDLOG_ACTIVE_LEVEL
 #define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_TRACE
-#endif
 
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/basic_file_sink.h>
