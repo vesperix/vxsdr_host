@@ -12,17 +12,19 @@
 
 // disable exceptions in logging
 #define SPDLOG_NO_EXCEPTIONS
+#define FMT_EXCEPTIONS              (0)
 // force header only
 #define SPDLOG_HEADER_ONLY
 #define FMT_HEADER_ONLY
 
 #ifndef SPDLOG_ACTIVE_LEVEL
+#include <spdlog/common.h>
 #define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_TRACE
 #endif
 
+#include <spdlog/spdlog.h>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/sinks/stdout_sinks.h>
-#include <spdlog/spdlog.h>
 
 #define LOG_INIT(x)     log_init(x)
 
