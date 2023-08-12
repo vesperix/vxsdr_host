@@ -66,7 +66,7 @@ void add_network_options(boost::program_options::options_description& desc) {
         ("netmask", boost::program_options::value<std::string>()->default_value("255.255.255.0"), "IPv4 netmask of local interface")
         ("payload_size", boost::program_options::value<unsigned>()->default_value(8192), "maximum data packet payload size in bytes")
         ("transmit_buffer_size", boost::program_options::value<unsigned>()->default_value(1048576), "network transmit buffer size in bytes")
-        ("receive_buffer_size", boost::program_options::value<unsigned>()->default_value(16777216), "network receive buffer size in bytes")
+        ("receive_buffer_size", boost::program_options::value<unsigned>()->default_value(8388608), "network receive buffer size in bytes")
         ;
     // clang-format on
 }
