@@ -40,12 +40,15 @@ int main(int argc, char* argv[]) {
 
         init_vm(desc, vm, argc, argv);
 
+        std::vector<int> thread_priority = { 1, 1, 1 };
+        std::vector<int> thread_affinity = { 1, 2, 3 };
+
         std::unique_ptr<vxsdr> radio;
         try {
-            radio = std::make_unique<vxsdr>(vm["local_address"].as<std::string>(), vm["device_address"].as<std::string>(),
-                                            vm["transmit_packet_queue_size"].as<unsigned>(), vm["receive_packet_queue_size"].as<unsigned>(),
-                                            vm["transmit_buffer_size"].as<unsigned>(), vm["receive_buffer_size"].as<unsigned>(),
-                                            vm["thread_priority"].as<int>());
+            auto radio = std::make_unique<vxsdr>(vm["local_address"].as<std::string>(), vm["device_address"].as<std::string>(),
+                                                 vm["transmit_packet_queue_size"].as<unsigned>(), vm["receive_packet_queue_size"].as<unsigned>(),
+                                                 vm["transmit_buffer_size"].as<unsigned>(), vm["receive_buffer_size"].as<unsigned>(),
+                                                 thread_priority, thread_affinity);
         } catch (std::runtime_error& e) {
             LOG_FATAL(fmt::format("exception caught during vxsdr initialization: {:s}", e.what()));
             LOG_FATAL(fmt::format("{:s} finished with exception", argv[0]));
