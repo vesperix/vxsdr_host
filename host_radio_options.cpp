@@ -49,10 +49,6 @@ void add_common_options(boost::program_options::options_description& desc) {
         ("verbose_level", boost::program_options::value<int>(),
                 "log level (6 = trace, 5 = debug, 4 = info, 3 = warning, 2 = error, 1 = fatal, 0 = none)")
         ("quit_on_error", boost::program_options::value<bool>()->default_value(true), "quit on errors")
-        ("transmit_packet_queue_size", boost::program_options::value<unsigned>()->default_value(512), "number of packets in the transmit packet queue")
-        ("receive_packet_queue_size", boost::program_options::value<unsigned>()->default_value(262144), "number of packets in the receive packet queue")
-        ("thread_priority", boost::program_options::value<int>()->default_value(5),
-                "priority to use for UDP handler threads when realtime priority is used (set to a negative number to not use realtime priority)")
         ;
     // clang-format on
 }
@@ -65,8 +61,14 @@ void add_network_options(boost::program_options::options_description& desc) {
                 "IPv4 address of VXSDR device (including broadcast/multicast)")
         ("netmask", boost::program_options::value<std::string>()->default_value("255.255.255.0"), "IPv4 netmask of local interface")
         ("payload_size", boost::program_options::value<unsigned>()->default_value(8192), "maximum data packet payload size in bytes")
-        ("transmit_buffer_size", boost::program_options::value<unsigned>()->default_value(262144), "network transmit buffer size in bytes")
-        ("receive_buffer_size", boost::program_options::value<unsigned>()->default_value(8388608), "network receive buffer size in bytes")
+        ("network_send_buffer_bytes", boost::program_options::value<unsigned>()->default_value(262144), "network transmit buffer size in bytes")
+        ("network_receive_buffer_bytes", boost::program_options::value<unsigned>()->default_value(8388608), "network receive buffer size in bytes")
+        ("tx_data_queue_packets", boost::program_options::value<unsigned>()->default_value(512), "number of packets in the transmit packet queue")
+        ("rx_data_queue_packets", boost::program_options::value<unsigned>()->default_value(262144), "number of packets in the receive packet queue")
+        ("net_thread_priority", boost::program_options::value<int>()->default_value(1),
+                "priority to use for UDP handler threads when realtime priority is used (set to a negative number to not use realtime priority)")
+        ("thread_affinity_offset", boost::program_options::value<int>()->default_value(0),
+                "offset in CPU number for UDP handler threads when CPU affinity is used (set to a negative number to not use CPU affinity)")
         ;
     // clang-format on
 }
