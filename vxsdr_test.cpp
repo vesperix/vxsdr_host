@@ -75,7 +75,8 @@ int main(int argc, char* argv[]) {
 
         auto tnow = radio->get_time_now();
         if (tnow) {
-            LOG_INFO(fmt::format("current FPGA time: {:s}", format_time(tnow.value())));
+            LOG_INFO(fmt::format("current FPGA time: {:s}",
+                    format_time(std::chrono::round<std::chrono::system_clock::duration>(tnow.value()))));
         } else {
             LOG_ERROR("failed to read FPGA time");
         }
@@ -88,7 +89,8 @@ int main(int argc, char* argv[]) {
             std::this_thread::sleep_for(std::chrono::milliseconds(1000));
             tnow = radio->get_time_now();
             if (tnow) {
-                LOG_INFO(fmt::format("current FPGA time: {:s}", format_time(tnow.value())));
+                LOG_INFO(fmt::format("current FPGA time: {:s}",
+                        format_time(std::chrono::round<std::chrono::system_clock::duration>(tnow.value()))));
             } else {
                 LOG_ERROR("failed to read FPGA time after set");
             }

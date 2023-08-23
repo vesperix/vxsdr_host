@@ -136,7 +136,7 @@ int set_common_options(boost::program_options::variables_map& vm, std::unique_pt
             }
             // wait until nearly t_set, then send the command
             std::this_thread::sleep_until(t_set - std::chrono::milliseconds(max_host_clock_error_ms));
-            if (not radio->set_time_next_pps(t_set)) {
+            if (not radio->set_time_next_pps(std::chrono::time_point_cast<vxsdr::duration>(t_set))) {
                 LOG_ERROR("error in set_common_options: set_time_next_pps");
             }
         } else {

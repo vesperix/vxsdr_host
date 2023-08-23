@@ -74,7 +74,8 @@ int main(int argc, char* argv[]) {
 
         auto t1 = radio->get_time_now();
         if (t1.has_value()) {
-            LOG_INFO(fmt::format("radio time: {:s}", format_time(t1.value())));
+            LOG_INFO(fmt::format("radio time: {:s}", 
+                    format_time(std::chrono::round<std::chrono::system_clock::duration>(t1.value()))));
         } else {
             LOG_ERROR("unable to get radio time");
         }

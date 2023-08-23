@@ -104,7 +104,8 @@ int main(int argc, char* argv[]) {
         LOG_DEBUG("getting radio time");
         auto t1 = radio->get_time_now();
         if (t1.has_value()) {
-            LOG_INFO(fmt::format("radio time: {:s}", format_time(t1.value())));
+            LOG_INFO(fmt::format("radio time: {:s}", 
+                    format_time(std::chrono::round<std::chrono::system_clock::duration>(t1.value()))));
         } else {
             LOG_ERROR("unable to get radio time");
         }
@@ -123,7 +124,7 @@ int main(int argc, char* argv[]) {
             tx_file.write(reinterpret_cast<char *>(&tx_data[i]), sizeof(tx_data[i]));
         }
 
-        vxsdr::duration tx_del = std::llround(vm["tx_delay"].as<double>() * 1e9) * std::chrono::duration(1ns);
+        vxsdr::duration tx_del = std::chrono::nanoseconds(std::llround(vm["tx_delay"].as<double>() * 1e9));
         vxsdr::time_point t_start_tx = t_start + tx_del;
 /*
         if (not radio->tx_start(t_start_tx, n_samp_tx)) {
