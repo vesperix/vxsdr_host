@@ -8,6 +8,7 @@
 #include <limits>
 #include <string>
 #include <thread>
+#include <cmath>
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/program_options.hpp>
@@ -48,10 +49,23 @@ int main(int argc, char* argv[]) {
         add_tx_1ch_options(desc);
         add_modulation_options(desc);
 
+        desc.add_options()
+        ("amplitude", boost::program_options::value<double>()->default_value(10'000.0), "signal amplitude in digital counts")
+        ("cycles", boost::program_options::value<double>()->default_value(0.0), "number of cycles in byffer")
+        ;
+
         init_vm(desc, vm, argc, argv);
 
-        auto radio = std::make_unique<vxsdr>(vm["local_address"].as<std::string>(), vm["device_address"].as<std::string>(),
-                                    vm["set_priority"].as<bool>(), vm["thread_priority"].as<int>());
+        std::map<std::string, int64_t> settings = {
+            {"tx_data_queue_packets",        vm["tx_data_queue_packets"].as<unsigned>()},
+            {"rx_data_queue_packets",        vm["rx_data_queue_packets"].as<unsigned>()},
+            {"network_send_buffer_bytes",    vm["network_send_buffer_bytes"].as<unsigned>()},
+            {"network_receive_buffer_bytes", vm["network_receive_buffer_bytes"].as<unsigned>()},
+            {"net_thread_priority",          vm["net_thread_priority"].as<int>()},
+            {"thread_affinity_offset",       vm["thread_affinity_offset"].as<int>()}
+        };
+
+        auto radio = std::make_unique<vxsdr>(vm["local_address"].as<std::string>(), vm["device_address"].as<std::string>(), settings);
 
         set_common_options(vm, radio);
         set_tx_1ch_options(vm, radio);
@@ -61,16 +75,24 @@ int main(int argc, char* argv[]) {
             return EXIT_CMD_LINE_ERROR;
         }
 
-        double f_s = vm["rate"].as<double>();
-        size_t n_samp = std::llround(vm["duration"].as<double>() * f_s);
+        size_t n_samp        = std::llround(vm["duration"].as<double>() * vm["rate"].as<double>());
+        double n_cycles = vm["cycles"].as<double>();
+        double a = vm["amplitude"].as<double>();
 
-        std::vector<std::complex<int16_t>> data(std::llround(vm["rate"].as<double>()));
-        double a = 32767. * std::max(0.0, std::min(1.0, vm["modulation_amplitude"].as<double>()));
-        double f_mod = std::llround(vm["modulation_frequency"].as<double>());
-        for (size_t i = 0; i < data.size(); i++) {
-            double re = a * cos(M_2_PI * f_mod / f_s);
-            double im = a * sin(M_2_PI * f_mod / f_s);
-            data[i] = std::complex<int16_t>(std::lround(re), std::lround(im));
+        std::vector<std::complex<int16_t>> data(n_samp);
+
+        if (n_cycles != 0.0) {
+            for (size_t i = 0; i < n_samp; i++) {
+                double v = 2 * M_PI * n_cycles * i / double(n_samp);
+                double re =  a * cos(v);
+                double im = -a * sin(v);
+                data[i] = std::complex<int16_t>(std::lround(re), std::lround(im));
+            }
+        } else {
+            const int16_t ra = std::llround(a);
+            for (size_t i = 0; i < n_samp; i++) {
+                data[i] = std::complex<int16_t>(ra, 0);
+            }
         }
 
         size_t tx_buffer_size_samples = 0;
@@ -85,7 +107,8 @@ int main(int argc, char* argv[]) {
         LOG_DEBUG("getting radio time");
         auto t1 = radio->get_time_now();
         if (t1.has_value()) {
-            LOG_INFO(fmt::format("radio time: {:s}", format_time(t1.value())));
+            LOG_INFO(fmt::format("radio time: {:s}",
+                    format_time(std::chrono::round<std::chrono::system_clock::duration>(t1.value()))));
         } else {
             LOG_ERROR("unable to get radio time");
         }

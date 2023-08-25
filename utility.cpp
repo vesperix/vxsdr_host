@@ -6,6 +6,8 @@
 #include <iomanip>
 #include <sstream>
 
+#define SPDLOG_HEADER_ONLY
+#define FMT_HEADER_ONLY
 #include <spdlog/spdlog.h>
 
 std::string format_time(const std::chrono::time_point<std::chrono::system_clock> t,

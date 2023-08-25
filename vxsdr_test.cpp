@@ -40,13 +40,21 @@ int main(int argc, char* argv[]) {
 
         init_vm(desc, vm, argc, argv);
 
+        std::map<std::string, int64_t> settings = {
+            {"tx_data_queue_packets",        vm["tx_data_queue_packets"].as<unsigned>()},
+            {"rx_data_queue_packets",        vm["rx_data_queue_packets"].as<unsigned>()},
+            {"network_send_buffer_bytes",    vm["network_send_buffer_bytes"].as<unsigned>()},
+            {"network_receive_buffer_bytes", vm["network_receive_buffer_bytes"].as<unsigned>()},
+            {"net_thread_priority",          vm["net_thread_priority"].as<int>()},
+            {"thread_affinity_offset",       vm["thread_affinity_offset"].as<int>()}
+        };
+
         std::unique_ptr<vxsdr> radio;
         try {
-            radio = std::make_unique<vxsdr>(vm["local_address"].as<std::string>(), vm["device_address"].as<std::string>());
+            auto radio = std::make_unique<vxsdr>(vm["local_address"].as<std::string>(), vm["device_address"].as<std::string>(), settings);
         } catch (std::runtime_error& e) {
             LOG_FATAL(fmt::format("exception caught during vxsdr initialization: {:s}", e.what()));
             LOG_FATAL(fmt::format("{:s} finished with exception", argv[0]));
-            LOG_CLOSE();
             return EXIT_INTERNAL_ERROR;
         }
 
@@ -67,7 +75,8 @@ int main(int argc, char* argv[]) {
 
         auto tnow = radio->get_time_now();
         if (tnow) {
-            LOG_INFO(fmt::format("current FPGA time: {:s}", format_time(tnow.value())));
+            LOG_INFO(fmt::format("current FPGA time: {:s}",
+                    format_time(std::chrono::round<std::chrono::system_clock::duration>(tnow.value()))));
         } else {
             LOG_ERROR("failed to read FPGA time");
         }
@@ -80,7 +89,8 @@ int main(int argc, char* argv[]) {
             std::this_thread::sleep_for(std::chrono::milliseconds(1000));
             tnow = radio->get_time_now();
             if (tnow) {
-                LOG_INFO(fmt::format("current FPGA time: {:s}", format_time(tnow.value())));
+                LOG_INFO(fmt::format("current FPGA time: {:s}",
+                        format_time(std::chrono::round<std::chrono::system_clock::duration>(tnow.value()))));
             } else {
                 LOG_ERROR("failed to read FPGA time after set");
             }

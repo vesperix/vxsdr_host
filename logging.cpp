@@ -1,60 +1,61 @@
 #include "logging.hpp"
 
-#ifndef VXSDR_DISABLE_LOGGING
-
-void log_init(const std::string& logfilename) {
+void log_init(const std::string& logfile_name) {
     // console logger and its settings
     auto clog = std::make_shared<spdlog::sinks::stdout_sink_mt>();
 
+#ifdef MAKE_LOG_FILE
     // file logger and its settings
-    auto flog = std::make_shared<spdlog::sinks::basic_file_sink_mt>(logfilename + ".log");
+#ifdef TIME_IN_LOG_FILE_NAME
+    std::stringstream timestr;
+    std::time_t t = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+    timestr << std::put_time(std::localtime(&t), "%Y-%m-%d-%H.%M.%S");
+    std::string logfile_full_name = logfile_name + "-" + timestr.str() + ".log";
+    auto flog = std::make_shared<spdlog::sinks::basic_file_sink_mt>(logfile_full_name);
+#else // ifdef TIME_IN_LOG_FILE_NAME
+    auto flog = std::make_shared<spdlog::sinks::basic_file_sink_mt>(logfile_name + ".log");
+#endif // ifdef TIME_IN_LOG_FILE_NAME
 
     spdlog::sinks_init_list sink_list = {flog, clog};
-    auto multi_logger = std::make_shared<spdlog::logger>("multi", sink_list.begin(), sink_list.end());
+    auto multi_logger = std::make_shared<spdlog::logger>(APPLICATION_LOGGER_NAME, sink_list.begin(), sink_list.end());
+#else // ifdef MAKE_LOG_FILE
+    spdlog::sinks_init_list sink_list = {clog};
+    auto multi_logger = std::make_shared<spdlog::logger>(APPLICATION_LOGGER_NAME, sink_list.begin(), sink_list.end());
+#endif // ifdef MAKE_LOG_FILE
+
     multi_logger->set_pattern("[%Y-%m-%d %T.%f] [%t] [%L] %v");
     spdlog::register_logger(multi_logger);
     // auto-flush on errors or more severe events
     multi_logger->flush_on(spdlog::level::err);
     // set the default level here
-    spdlog::get("multi")->set_level(spdlog::level::info);
+    spdlog::get(APPLICATION_LOGGER_NAME)->set_level(spdlog::level::info);
 }
 
-void log_close() {
-    spdlog::shutdown();
-}
 
 void log_set_level(const int verbose) {
     switch (verbose) {
         case 6:
-            spdlog::get("multi")->set_level(spdlog::level::trace);
+            spdlog::get(APPLICATION_LOGGER_NAME)->set_level(spdlog::level::trace);
             break;
         case 5:
-            spdlog::get("multi")->set_level(spdlog::level::debug);
+            spdlog::get(APPLICATION_LOGGER_NAME)->set_level(spdlog::level::debug);
             break;
         case 4:
-            spdlog::get("multi")->set_level(spdlog::level::info);
+            spdlog::get(APPLICATION_LOGGER_NAME)->set_level(spdlog::level::info);
             break;
         case 3:
-            spdlog::get("multi")->set_level(spdlog::level::warn);
+            spdlog::get(APPLICATION_LOGGER_NAME)->set_level(spdlog::level::warn);
             break;
         case 2:
-            spdlog::get("multi")->set_level(spdlog::level::err);
+            spdlog::get(APPLICATION_LOGGER_NAME)->set_level(spdlog::level::err);
             break;
         case 1:
-            spdlog::get("multi")->set_level(spdlog::level::critical);
+            spdlog::get(APPLICATION_LOGGER_NAME)->set_level(spdlog::level::critical);
             break;
         case 0:
-            spdlog::get("multi")->set_level(spdlog::level::off);
+            spdlog::get(APPLICATION_LOGGER_NAME)->set_level(spdlog::level::off);
             break;
         default:
             LOG_ERROR("unknown log level requested");
     }
 }
-
-#else
-
-void log_init(const std::string& logfilename) {};
-void log_close() {};
-void log_set_level(const int level) {};
-
-#endif //  VXSDR_DISABLE_LOGGING

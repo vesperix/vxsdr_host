@@ -49,10 +49,6 @@ void add_common_options(boost::program_options::options_description& desc) {
         ("verbose_level", boost::program_options::value<int>(),
                 "log level (6 = trace, 5 = debug, 4 = info, 3 = warning, 2 = error, 1 = fatal, 0 = none)")
         ("quit_on_error", boost::program_options::value<bool>()->default_value(true), "quit on errors")
-        ("set_priority", boost::program_options::value<bool>()->default_value(true),
-                "set realtime priority for UDP handler threads")
-        ("thread_priority", boost::program_options::value<int>()->default_value(5),
-                "priority to use for UDP handler threads when affinity is used")
         ;
     // clang-format on
 }
@@ -64,7 +60,15 @@ void add_network_options(boost::program_options::options_description& desc) {
         ("device_address", boost::program_options::value<std::string>()->required(),
                 "IPv4 address of device (including broadcast/multicast)")
         ("netmask", boost::program_options::value<std::string>()->default_value("255.255.255.0"), "IPv4 netmask of local interface")
-        ("payload_size", boost::program_options::value<size_t>()->default_value(8192), "maximum data packet payload size in bytes")
+        ("payload_size", boost::program_options::value<unsigned>()->default_value(8192), "maximum data packet payload size in bytes")
+        ("network_send_buffer_bytes", boost::program_options::value<unsigned>()->default_value(262144), "network transmit buffer size in bytes")
+        ("network_receive_buffer_bytes", boost::program_options::value<unsigned>()->default_value(8388608), "network receive buffer size in bytes")
+        ("tx_data_queue_packets", boost::program_options::value<unsigned>()->default_value(512), "number of packets in the transmit packet queue")
+        ("rx_data_queue_packets", boost::program_options::value<unsigned>()->default_value(262144), "number of packets in the receive packet queue")
+        ("net_thread_priority", boost::program_options::value<int>()->default_value(1),
+                "priority to use for UDP handler threads when realtime priority is used (set to a negative number to not use realtime priority)")
+        ("thread_affinity_offset", boost::program_options::value<int>()->default_value(0),
+                "offset in CPU number for UDP handler threads when CPU affinity is used (set to a negative number to not use CPU affinity)")
         ;
     // clang-format on
 }
@@ -85,13 +89,6 @@ void init_vm(boost::program_options::options_description& desc, boost::program_o
         exit(EXIT_SUCCESS);
     }
 
-    try {
-        boost::program_options::notify(vm);
-    } catch (std::exception& e) {
-        LOG_FATAL(fmt::format("error parsing command line options (notify): {:s}", e.what()));
-        exit(EXIT_CMD_LINE_ERROR);
-    }
-
     if (vm.count("config_file") > 0) {
         std::ifstream ifs(vm["config_file"].as<std::string>().c_str());
         if (!ifs) {
@@ -100,11 +97,19 @@ void init_vm(boost::program_options::options_description& desc, boost::program_o
         }
         try {
             boost::program_options::store(boost::program_options::parse_config_file(ifs, desc), vm);
-            boost::program_options::notify(vm);
+            // command line options take precedence over config file
+            boost::program_options::store(boost::program_options::parse_command_line(argc, argv, desc), vm);
         } catch (std::exception& e) {
             LOG_FATAL(fmt::format("error parsing command line options (config file): {:s}", e.what()));
             exit(EXIT_CMD_LINE_ERROR);
         }
+    }
+
+    try {
+        boost::program_options::notify(vm);
+    } catch (std::exception& e) {
+        LOG_FATAL(fmt::format("error parsing command line options (notify): {:s}", e.what()));
+        exit(EXIT_CMD_LINE_ERROR);
     }
 }
 
@@ -131,7 +136,7 @@ int set_common_options(boost::program_options::variables_map& vm, std::unique_pt
             }
             // wait until nearly t_set, then send the command
             std::this_thread::sleep_until(t_set - std::chrono::milliseconds(max_host_clock_error_ms));
-            if (not radio->set_time_next_pps(t_set)) {
+            if (not radio->set_time_next_pps(std::chrono::time_point_cast<vxsdr::duration>(t_set))) {
                 LOG_ERROR("error in set_common_options: set_time_next_pps");
             }
         } else {

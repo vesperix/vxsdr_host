@@ -24,6 +24,8 @@ extern "C" void sig_int_handler(int /* sig_num */) {
     exit(EXIT_USER_TERMINATED);
 }
 
+#define JUST_CHECK_SEQUENCE
+
 int main(int argc, char* argv[]) {
     LOG_INIT(argv[0]);
     try {
@@ -38,8 +40,16 @@ int main(int argc, char* argv[]) {
 
         init_vm(desc, vm, argc, argv);
 
-        auto radio = std::make_unique<vxsdr>(vm["local_address"].as<std::string>(), vm["device_address"].as<std::string>(),
-                                    vm["set_priority"].as<bool>(), vm["thread_priority"].as<int>());
+        std::map<std::string, int64_t> settings = {
+            {"tx_data_queue_packets",        vm["tx_data_queue_packets"].as<unsigned>()},
+            {"rx_data_queue_packets",        vm["rx_data_queue_packets"].as<unsigned>()},
+            {"network_send_buffer_bytes",    vm["network_send_buffer_bytes"].as<unsigned>()},
+            {"network_receive_buffer_bytes", vm["network_receive_buffer_bytes"].as<unsigned>()},
+            {"net_thread_priority",          vm["net_thread_priority"].as<int>()},
+            {"thread_affinity_offset",       vm["thread_affinity_offset"].as<int>()}
+        };
+
+        auto radio = std::make_unique<vxsdr>(vm["local_address"].as<std::string>(), vm["device_address"].as<std::string>(), settings);
 
         set_common_options(vm, radio);
         set_rx_1ch_options(vm, radio);
@@ -50,7 +60,7 @@ int main(int argc, char* argv[]) {
         }
 
         size_t n_samp        = std::llround(vm["duration"].as<double>() * vm["rate"].as<double>());
-
+#ifndef JUST_CHECK_SEQUENCE
         std::string filename = vm["prefix"].as<std::string>();
         if (vm.count("no_filename_time") > 0) {
             filename.append(make_filename_no_time(vm["freq"].as<double>(), vm["rate"].as<double>()));
@@ -58,11 +68,12 @@ int main(int argc, char* argv[]) {
             filename.append(make_filename_time(std::chrono::system_clock::now(), vm["freq"].as<double>(), vm["rate"].as<double>()));
         }
         filename.append(vm["suffix"].as<std::string>());
-
+#endif
         LOG_DEBUG("getting radio time");
         auto t1 = radio->get_time_now();
         if (t1.has_value()) {
-            LOG_INFO(fmt::format("radio time: {:s}", format_time(t1.value())));
+            LOG_INFO(fmt::format("radio time: {:s}",
+                    format_time(std::chrono::round<std::chrono::system_clock::duration>(t1.value()))));
         } else {
             LOG_ERROR("unable to get radio time");
         }
@@ -71,19 +82,29 @@ int main(int argc, char* argv[]) {
         LOG_INFO(fmt::format("using rate      {:.5e}", radio->get_rx_rate().value_or(-1)));
         LOG_INFO(fmt::format("using rx_gain   {:.1f}", radio->get_rx_gain().value_or(-1)));
 
-        if (not radio->rx_start(t1.value() + std::chrono::milliseconds(100), n_samp)) {
+        size_t n_written = 0;
+
+        if (not radio->rx_start(t1.value(), n_samp)) {
             LOG_ERROR("rx_start() failed");
         }
-        size_t n_written = radio->check_rx_data_sequence_only(n_samp);
+#ifndef JUST_CHECK_SEQUENCE
+        std::ofstream outfile(filename, std::ios::binary);
+        n_written = radio->write_rx_data(outfile, n_samp);
+        outfile.close();
+#else
+        n_written = radio->check_rx_data_sequence_only(n_samp);
+#endif
+
         if (not radio->rx_stop_now()) {
             LOG_ERROR("rx_stop_now() failed");
         }
 
         LOG_INFO("receive complete");
-        // outfile.close();
-        // LOG_INFO(fmt::format("{:d} samples written", n_written));
+#ifndef JUST_CHECK_SEQUENCE
+        LOG_INFO(fmt::format("{:d} samples written", n_written));
+#else
         LOG_INFO(fmt::format("{:d} samples checked", n_written));
-
+#endif
     } catch (std::exception& e) {
         LOG_FATAL(fmt::format("exception caught: {:s}", e.what()));
         return EXIT_INTERNAL_ERROR;

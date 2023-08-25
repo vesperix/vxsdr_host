@@ -8,6 +8,7 @@
 #include <limits>
 #include <string>
 #include <thread>
+#include <map>
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/program_options.hpp>
@@ -38,14 +39,25 @@ int main(int argc, char* argv[]) {
 
         init_vm(desc, vm, argc, argv);
 
+        std::vector<int> thread_priority = { 1, 1, 1 };
+        std::vector<int> thread_affinity = { 1, 2, 3 };
+
         std::unique_ptr<vxsdr> radio;
+
+        std::map<std::string, int64_t> settings = {
+            {"tx_data_queue_packets",        vm["tx_data_queue_packets"].as<unsigned>()},
+            {"rx_data_queue_packets",        vm["rx_data_queue_packets"].as<unsigned>()},
+            {"network_send_buffer_bytes",    vm["network_send_buffer_bytes"].as<unsigned>()},
+            {"network_receive_buffer_bytes", vm["network_receive_buffer_bytes"].as<unsigned>()},
+            {"net_thread_priority",          vm["net_thread_priority"].as<int>()},
+            {"thread_affinity_offset",       vm["thread_affinity_offset"].as<int>()}
+        };
+
         try {
-            radio = std::make_unique<vxsdr>(vm["local_address"].as<std::string>(), vm["device_address"].as<std::string>(),
-                                    vm["set_priority"].as<bool>(), vm["thread_priority"].as<int>());
+            radio = std::make_unique<vxsdr>(vm["local_address"].as<std::string>(), vm["device_address"].as<std::string>(), settings);
         } catch (std::runtime_error& e) {
             LOG_FATAL(fmt::format("exception caught during vxsdr initialization: {:s}", e.what()));
             LOG_FATAL(fmt::format("{:s} finished with exception", argv[0]));
-            LOG_CLOSE();
             return EXIT_INTERNAL_ERROR;
         }
         // let radio complete initialization
@@ -62,7 +74,8 @@ int main(int argc, char* argv[]) {
 
         auto t1 = radio->get_time_now();
         if (t1.has_value()) {
-            LOG_INFO(fmt::format("radio time: {:s}", format_time(t1.value())));
+            LOG_INFO(fmt::format("radio time: {:s}",
+                    format_time(std::chrono::round<std::chrono::system_clock::duration>(t1.value()))));
         } else {
             LOG_ERROR("unable to get radio time");
         }

@@ -418,9 +418,16 @@ int main(int argc, char* argv[]) {
 
         init_vm(desc, vm, argc, argv);
 
-        auto radio = std::make_unique<vxsdr>(vm["local_address"].as<std::string>(),
-                                    vm["device_address"].as<std::string>(),
-                                    vm["set_priority"].as<bool>(), vm["thread_priority"].as<int>());
+        std::map<std::string, int64_t> settings = {
+            {"tx_data_queue_packets",        vm["tx_data_queue_packets"].as<unsigned>()},
+            {"rx_data_queue_packets",        vm["rx_data_queue_packets"].as<unsigned>()},
+            {"network_send_buffer_bytes",    vm["network_send_buffer_bytes"].as<unsigned>()},
+            {"network_receive_buffer_bytes", vm["network_receive_buffer_bytes"].as<unsigned>()},
+            {"net_thread_priority",          vm["net_thread_priority"].as<int>()},
+            {"thread_affinity_offset",       vm["thread_affinity_offset"].as<int>()}
+        };
+
+        auto radio = std::make_unique<vxsdr>(vm["local_address"].as<std::string>(), vm["device_address"].as<std::string>(), settings);
 
         set_common_options(vm, radio);
         set_tx_1ch_options(vm, radio);

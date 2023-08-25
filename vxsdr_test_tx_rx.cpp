@@ -8,7 +8,7 @@
 #include <limits>
 #include <string>
 #include <thread>
-#include <future>
+#include <cmath>
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/program_options.hpp>
@@ -27,15 +27,6 @@ extern "C" void sig_int_handler(int /* sig_num */) {
     exit(EXIT_USER_TERMINATED);
 }
 
-void add_modulation_options(boost::program_options::options_description& desc) {
-    // clang-format off
-    desc.add_options()
-        ("modulation_amplitude", boost::program_options::value<double>()->default_value(0.1), "modulation amplitude as fraction of full scale")
-        ("modulation_frequency", boost::program_options::value<double>()->default_value(10e6), "modulation frequency in Hz (will be rounded to integer to avoid jumps)")
-        ;
-    // clang-format on
-}
-
 int main(int argc, char* argv[]) {
     LOG_INIT(argv[0]);
     try {
@@ -48,12 +39,27 @@ int main(int argc, char* argv[]) {
         add_network_options(desc);
         add_tx_1ch_options(desc);
         add_rx_1ch_options(desc);
-        add_modulation_options(desc);
+
+        desc.add_options()
+        ("amplitude", boost::program_options::value<double>()->default_value(10'000.0), "signal amplitude in digital counts")
+        ("cycles", boost::program_options::value<double>()->default_value(0.0), "number of cycles in tx signal")
+        ("tx_delay", boost::program_options::value<double>()->default_value(0.001), "delay between start of rx and start of tx in seconds")
+        ("tx_duration", boost::program_options::value<double>()->default_value(0.001), "duration of tx in seconds")
+        ("rx_duration", boost::program_options::value<double>()->default_value(0.003), "duration of rx in seconds")
+        ;
 
         init_vm(desc, vm, argc, argv);
 
-        auto radio = std::make_unique<vxsdr>(vm["local_address"].as<std::string>(), vm["device_address"].as<std::string>(),
-                                    vm["set_priority"].as<bool>(), vm["thread_priority"].as<int>());
+        std::map<std::string, int64_t> settings = {
+            {"tx_data_queue_packets",        vm["tx_data_queue_packets"].as<unsigned>()},
+            {"rx_data_queue_packets",        vm["rx_data_queue_packets"].as<unsigned>()},
+            {"network_send_buffer_bytes",    vm["network_send_buffer_bytes"].as<unsigned>()},
+            {"network_receive_buffer_bytes", vm["network_receive_buffer_bytes"].as<unsigned>()},
+            {"net_thread_priority",          vm["net_thread_priority"].as<int>()},
+            {"thread_affinity_offset",       vm["thread_affinity_offset"].as<int>()}
+        };
+
+        auto radio = std::make_unique<vxsdr>(vm["local_address"].as<std::string>(), vm["device_address"].as<std::string>(), settings);
 
         set_common_options(vm, radio);
         set_tx_1ch_options(vm, radio);
@@ -64,16 +70,26 @@ int main(int argc, char* argv[]) {
             return EXIT_CMD_LINE_ERROR;
         }
 
-        double f_s = vm["rate"].as<double>();
-        size_t n_samp = std::llround(vm["duration"].as<double>() * f_s);
+        size_t n_samp_tx = 2048 * 78; // * std::llround(vm["tx_duration"].as<double>() * vm["rate"].as<double>() / 2048.);
+        size_t n_samp_rx = std::llround(vm["rx_duration"].as<double>() * vm["rate"].as<double>());
+        double n_cycles = vm["cycles"].as<double>();
+        double a = vm["amplitude"].as<double>();
 
-        std::vector<std::complex<int16_t>> data(std::llround(vm["rate"].as<double>()));
-        double a = 32767. * std::max(0.0, std::min(1.0, vm["modulation_amplitude"].as<double>()));
-        double f_mod = std::llround(vm["modulation_frequency"].as<double>());
-        for (size_t i = 0; i < data.size(); i++) {
-            double re = a * cos(M_2_PI * f_mod / f_s);
-            double im = a * sin(M_2_PI * f_mod / f_s);
-            data[i] = std::complex<int16_t>(std::lround(re), std::lround(im));
+        std::vector<std::complex<int16_t>> tx_data(n_samp_tx), rx_data(n_samp_rx);
+
+        if (n_cycles != 0.0) {
+            for (size_t i = 0; i < n_samp_tx; i++) {
+                //double aa = a * sin(M_PI * double(i) / double(n_samp_tx));
+                double v =  double(i) / n_samp_tx;
+                double re =  a * cos(2. * M_PI * n_cycles * v);
+                double im = -a * sin(2. * M_PI * n_cycles * v);
+                tx_data[i] = std::complex<int16_t>(std::lround(re), std::lround(im));
+            }
+        } else {
+            const int16_t ra = std::llround(a);
+            for (size_t i = 0; i < n_samp_tx; i++) {
+                tx_data[i] = std::complex<int16_t>(ra, 0);
+            }
         }
 
         size_t tx_buffer_size_samples = 0;
@@ -88,7 +104,8 @@ int main(int argc, char* argv[]) {
         LOG_DEBUG("getting radio time");
         auto t1 = radio->get_time_now();
         if (t1.has_value()) {
-            LOG_INFO(fmt::format("radio time: {:s}", format_time(t1.value())));
+            LOG_INFO(fmt::format("radio time: {:s}",
+                    format_time(std::chrono::round<std::chrono::system_clock::duration>(t1.value()))));
         } else {
             LOG_ERROR("unable to get radio time");
         }
@@ -101,40 +118,51 @@ int main(int argc, char* argv[]) {
         auto t_start = std::chrono::ceil<std::chrono::seconds>(std::chrono::system_clock::now()) + std::chrono::duration(1s);
         LOG_INFO(fmt::format("start time: {:s}", format_time(t_start)));
 
-        if (not radio->tx_start(t_start, n_samp)) {
-            LOG_ERROR("tx_start() failed");
+        std::ofstream tx_file ("tx_data.dat", std::ofstream::out | std::ofstream::binary);
+        std::ofstream rx_file ("rx_data.dat", std::ofstream::out | std::ofstream::binary);
+
+        for (size_t i = 0; i < tx_data.size(); i++) {
+            tx_file.write(reinterpret_cast<char *>(&tx_data[i]), sizeof(tx_data[i]));
         }
 
-        if (not radio->rx_start(t_start, n_samp)) {
+        vxsdr::duration tx_del = std::chrono::nanoseconds(std::llround(vm["tx_delay"].as<double>() * 1e9));
+        vxsdr::time_point t_start_tx = t_start + tx_del;
+/*
+        if (not radio->tx_start(t_start_tx, n_samp_tx)) {
+            LOG_ERROR("tx_start() failed");
+        }
+*/
+//        if (not radio->tx_loop(t_start_tx, n_samp_tx, vxsdr::duration::zero(), 50)) {
+        if (not radio->tx_loop(t_start_tx, 0)) {
+            LOG_ERROR("tx_loop() failed");
+        }
+
+        if (not radio->rx_start(t_start, n_samp_rx)) {
             LOG_ERROR("rx_start() failed");
         }
 
-        //auto checker_thread = std::thread([&] { radio->check_rx_data_sequence_only(n_samp); });
-        auto checker_future = std::async(std::launch::async, [&] { return radio->check_rx_data_sequence_only(n_samp); });
-
-        double tx_buffer_duration_s = tx_buffer_size_samples / (10e9 / 8 / 4); // buffer fill time at full 10GbE rate
+        double tx_buffer_duration_s = tx_buffer_size_samples / radio->get_tx_rate().value_or(-1);
         // start early enough to fill the tx buffer half full at start
         unsigned pre_start_ms = std::lround(1000 * tx_buffer_duration_s / 2);
         LOG_INFO(fmt::format("pre start: {:d} ms", pre_start_ms));
         std::this_thread::sleep_until(t_start - std::chrono::duration(std::chrono::milliseconds(pre_start_ms)));
 
-        size_t n_total = 0;
-
-        while(n_total < n_samp) {
-            if(n_samp - n_total < data.size()) {
-                data.resize(n_samp - n_total);
-            }
-            auto n_sent = radio->put_tx_data(data);
-            if (n_sent != data.size()) {
-                LOG_ERROR(fmt::format("{:d} of {:d} samples sent at sample {:d}", n_sent, data.size(), n_total));
-            }
-            n_total += n_sent;
+        auto n_sent = radio->put_tx_data(tx_data);
+        if (n_sent != n_samp_tx) {
+            LOG_ERROR(fmt::format("{:d} of {:d} samples sent", n_sent, n_samp_tx));
         }
-        LOG_INFO(fmt::format("sent {:d} samples", n_total));
+
         LOG_INFO("transmit complete");
-        //checker_thread.join();
-        LOG_INFO(fmt::format("received {:d} samples", checker_future.get()));
+
+        auto n_recd = radio->write_rx_data(rx_file, n_samp_rx);
+        if (n_recd != n_samp_rx) {
+            LOG_ERROR(fmt::format("{:d} of {:d} samples received", n_recd, n_samp_rx));
+        }
+
         LOG_INFO("receive complete");
+
+
+
     } catch (std::exception& e) {
         LOG_FATAL(fmt::format("exception caught: {:s}", e.what()));
         return EXIT_INTERNAL_ERROR;
