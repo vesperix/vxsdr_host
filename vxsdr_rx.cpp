@@ -70,7 +70,9 @@ int main(int argc, char* argv[]) {
             return EXIT_CMD_LINE_ERROR;
         }
 
-        size_t n_samp        = std::llround(vm["duration"].as<double>() * vm["rate"].as<double>());
+        size_t n_samp  = std::llround(vm["duration"].as<double>() * vm["rate"].as<double>());
+        size_t n_block = std::min((int)n_samp, 65'536);
+        std::vector<std::complex<int16_t>> data(n_block);
 
         auto t1 = radio->get_time_now();
         if (t1.has_value()) {
@@ -102,7 +104,19 @@ int main(int argc, char* argv[]) {
         if (not radio->rx_start(t_start, n_samp)) {
             LOG_ERROR("rx_start() failed");
         }
-        size_t n_written = radio->write_rx_data(outfile, n_samp);
+
+        size_t n_written = 0;
+
+        while (n_written < n_samp) {
+            auto n_to_get = std::min(n_samp - n_written, n_block);
+            auto n_rec = radio->get_rx_data(data, n_to_get);
+            n_written += n_rec;
+            outfile.write(reinterpret_cast<char *>(&data[0]), sizeof(data));
+            if (n_rec != n_to_get) {
+                break;
+            }
+        }
+
         outfile.close();
         LOG_INFO(fmt::format("{:d} samples written", n_written));
         LOG_INFO("receive complete");

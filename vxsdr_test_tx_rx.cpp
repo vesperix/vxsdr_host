@@ -121,9 +121,8 @@ int main(int argc, char* argv[]) {
         std::ofstream tx_file ("tx_data.dat", std::ofstream::out | std::ofstream::binary);
         std::ofstream rx_file ("rx_data.dat", std::ofstream::out | std::ofstream::binary);
 
-        for (size_t i = 0; i < tx_data.size(); i++) {
-            tx_file.write(reinterpret_cast<char *>(&tx_data[i]), sizeof(tx_data[i]));
-        }
+        tx_file.write(reinterpret_cast<char *>(&tx_data[0]), sizeof(tx_data));
+        tx_file.close();
 
         vxsdr::duration tx_del = std::chrono::nanoseconds(std::llround(vm["tx_delay"].as<double>() * 1e9));
         vxsdr::time_point t_start_tx = t_start + tx_del;
@@ -161,9 +160,7 @@ int main(int argc, char* argv[]) {
 
         LOG_INFO("receive complete");
 
-        for (size_t i = 0; i < tx_data.size(); i++) {
-            rx_file.write(reinterpret_cast<char *>(&rx_data[i]), sizeof(rx_data[i]));
-        }
+        rx_file.write(reinterpret_cast<char *>(&rx_data[0]), sizeof(rx_data));
 
 
     } catch (std::exception& e) {

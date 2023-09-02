@@ -151,8 +151,8 @@ int main(int argc, char* argv[]) {
         if (not radio->rx_start(t_start, n_samp)) {
             LOG_ERROR("error in rx_start");
         }
-        //size_t n_rec = radio->get_rx_data(data, n_samp);
-        size_t n_rec = radio->check_rx_data_sequence_only(n_samp);
+        
+        size_t n_rec = radio->get_rx_data(data, n_samp);
         if (n_rec != n_samp) {
             LOG_ERROR(fmt::format("error in get_rx_data ({:d} of {:d} received)", n_rec, n_samp));
         }
@@ -162,8 +162,8 @@ int main(int argc, char* argv[]) {
 
         LOG_INFO("receive complete");
 
-        //size_t n_written = write_cplx_16(filename, data);
-        //LOG_INFO(fmt::format("{:d} samples written", n_written));
+        size_t n_written = write_cplx_16(filename, data);
+        LOG_INFO(fmt::format("{:d} samples written", n_written));
 
         LOG_INFO("getting status...");
         status = radio->get_status();
