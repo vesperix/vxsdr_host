@@ -59,16 +59,10 @@ int main(int argc, char* argv[]) {
             return EXIT_CMD_LINE_ERROR;
         }
 
-        size_t n_samp        = std::llround(vm["duration"].as<double>() * vm["rate"].as<double>());
-#ifndef JUST_CHECK_SEQUENCE
-        std::string filename = vm["prefix"].as<std::string>();
-        if (vm.count("no_filename_time") > 0) {
-            filename.append(make_filename_no_time(vm["freq"].as<double>(), vm["rate"].as<double>()));
-        } else {
-            filename.append(make_filename_time(std::chrono::system_clock::now(), vm["freq"].as<double>(), vm["rate"].as<double>()));
-        }
-        filename.append(vm["suffix"].as<std::string>());
-#endif
+        size_t n_samp  = std::llround(vm["duration"].as<double>() * vm["rate"].as<double>());
+        size_t n_block = std::min((long long)n_samp, std::llround(vm["rate"].as<double>()));
+        std::vector<std::complex<int16_t>> data(n_block);
+
         LOG_DEBUG("getting radio time");
         auto t1 = radio->get_time_now();
         if (t1.has_value()) {
@@ -82,29 +76,29 @@ int main(int argc, char* argv[]) {
         LOG_INFO(fmt::format("using rate      {:.5e}", radio->get_rx_rate().value_or(-1)));
         LOG_INFO(fmt::format("using rx_gain   {:.1f}", radio->get_rx_gain().value_or(-1)));
 
-        size_t n_written = 0;
+        size_t n_checked = 0;
 
         if (not radio->rx_start(t1.value(), n_samp)) {
             LOG_ERROR("rx_start() failed");
         }
-#ifndef JUST_CHECK_SEQUENCE
-        std::ofstream outfile(filename, std::ios::binary);
-        n_written = radio->write_rx_data(outfile, n_samp);
-        outfile.close();
-#else
-        n_written = radio->check_rx_data_sequence_only(n_samp);
-#endif
+
+        while (n_checked < n_samp) {
+            size_t n_get = std::min(n_samp - n_checked, n_block);
+            size_t n_rec = radio->get_rx_data(data, n_get);
+            n_checked += n_rec;
+            if (n_rec != n_get) {
+                break;
+            }
+        }
 
         if (not radio->rx_stop_now()) {
             LOG_ERROR("rx_stop_now() failed");
         }
 
         LOG_INFO("receive complete");
-#ifndef JUST_CHECK_SEQUENCE
-        LOG_INFO(fmt::format("{:d} samples written", n_written));
-#else
-        LOG_INFO(fmt::format("{:d} samples checked", n_written));
-#endif
+
+        LOG_INFO(fmt::format("{:d} samples checked", n_checked));
+
     } catch (std::exception& e) {
         LOG_FATAL(fmt::format("exception caught: {:s}", e.what()));
         return EXIT_INTERNAL_ERROR;

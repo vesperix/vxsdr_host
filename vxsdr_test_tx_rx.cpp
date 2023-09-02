@@ -154,13 +154,16 @@ int main(int argc, char* argv[]) {
 
         LOG_INFO("transmit complete");
 
-        auto n_recd = radio->write_rx_data(rx_file, n_samp_rx);
+        auto n_recd = radio->get_rx_data(rx_data, n_samp_rx);
         if (n_recd != n_samp_rx) {
             LOG_ERROR(fmt::format("{:d} of {:d} samples received", n_recd, n_samp_rx));
         }
 
         LOG_INFO("receive complete");
 
+        for (size_t i = 0; i < tx_data.size(); i++) {
+            rx_file.write(reinterpret_cast<char *>(&rx_data[i]), sizeof(rx_data[i]));
+        }
 
 
     } catch (std::exception& e) {

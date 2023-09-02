@@ -58,9 +58,11 @@ int main(int argc, char* argv[]) {
             return EXIT_CMD_LINE_ERROR;
         }
 
-        size_t n_samp        = std::llround(vm["duration"].as<double>() * vm["rate"].as<double>());
+        size_t n_samp  = std::llround(vm["duration"].as<double>() * vm["rate"].as<double>());
+        size_t n_block = std::min((long long)n_samp, std::llround(vm["rate"].as<double>()));
 
         std::vector<std::complex<int16_t>> tx_data(std::llround(vm["rate"].as<double>()));
+        std::vector<std::complex<int16_t>> rx_data(std::llround(vm["rate"].as<double>()));
 
         LOG_DEBUG("getting radio time");
         auto t1 = radio->get_time_now();
@@ -104,13 +106,23 @@ int main(int argc, char* argv[]) {
         std::this_thread::sleep_until(start_time - head_start);
 
         size_t n_checked = 0;
-        std::thread rx_thread([&] { n_checked = radio->check_rx_data_sequence_only(n_samp); });
+        std::thread rx_thread([&] 
+                                { 
+                                    while (n_checked < n_samp) {
+                                        auto n_to_get = std::min(n_samp - n_checked, n_block);
+                                        auto n_rec = radio->get_rx_data(rx_data, n_to_get);
+                                        n_checked += n_rec;
+                                        if (n_rec != n_to_get) {
+                                            break;
+                                        }
+                                    }
+                                });
 
         size_t n_sent = 0;
         std::thread tx_thread([&]
                                 {
                                     while (n_sent < n_samp) {
-                                        auto n_to_send = std::min(n_samp - n_sent, tx_data.size());
+                                        auto n_to_send = std::min(n_samp - n_sent, n_block);
                                         auto n = radio->put_tx_data(tx_data, n_to_send);
                                         n_sent += n;
                                         if (n != n_to_send) {
