@@ -1,6 +1,13 @@
+#include <filesystem>
+
 #include "logging.hpp"
 
-void log_init(const std::string& logfile_name) {
+void log_init(const std::string& argv_0) {
+    std::filesystem::path p(argv_0);
+    std::string logfile_name = p.filename();
+
+    spdlog::set_level(spdlog::level::debug);
+
     // console logger and its settings
     auto clog = std::make_shared<spdlog::sinks::stdout_sink_mt>();
 
@@ -28,9 +35,8 @@ void log_init(const std::string& logfile_name) {
     // auto-flush on errors or more severe events
     multi_logger->flush_on(spdlog::level::err);
     // set the default level here
-    spdlog::get(APPLICATION_LOGGER_NAME)->set_level(spdlog::level::info);
+    spdlog::get(APPLICATION_LOGGER_NAME)->set_level(spdlog::level::debug);
 }
-
 
 void log_set_level(const int verbose) {
     switch (verbose) {

@@ -7,8 +7,8 @@
 #include <sstream>
 
 #define APPLICATION_LOGGER_NAME     "applog"
-//#define MAKE_LOG_FILE
-//#define TIME_IN_LOG_FILE_NAME
+#define MAKE_LOG_FILE
+#define TIME_IN_LOG_FILE_NAME
 
 // disable exceptions in logging
 #define SPDLOG_NO_EXCEPTIONS
@@ -17,9 +17,7 @@
 #define SPDLOG_HEADER_ONLY
 #define FMT_HEADER_ONLY
 
-#include <spdlog/common.h>
-#undef SPDLOG_ACTIVE_LEVEL
-#define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_TRACE
+#define SPDLOG_ACTIVE_LEVEL         (1)  # 0 = trace, 1 = debug, 2 = info, 3 = warn, 4 = error 5 = critical
 
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/basic_file_sink.h>
