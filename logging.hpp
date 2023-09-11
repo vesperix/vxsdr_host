@@ -17,7 +17,7 @@
 #define SPDLOG_HEADER_ONLY
 #define FMT_HEADER_ONLY
 
-#define SPDLOG_ACTIVE_LEVEL         (1)  # 0 = trace, 1 = debug, 2 = info, 3 = warn, 4 = error 5 = critical
+#define SPDLOG_ACTIVE_LEVEL         (1)  // 0 = trace, 1 = debug, 2 = info, 3 = warn, 4 = error 5 = critical
 
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/basic_file_sink.h>
