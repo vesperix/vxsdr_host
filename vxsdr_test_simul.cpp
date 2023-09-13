@@ -90,8 +90,7 @@ int main(int argc, char* argv[]) {
 
         auto tx_buffer_bytes = buf_info->at(1);
         // how many seconds of data does the tx buffer hold at the current rate?
-        double tx_buffer_size_sec = (double)tx_buffer_bytes / sizeof(std::complex<int16_t>) / radio->get_rx_rate().value_or(0.0);
-        LOG_INFO("tx buffer will hold {:.6f} seconds of data at current rate", tx_buffer_size_sec);
+        double tx_buffer_duration_s = tx_buffer_bytes / (vm["network_bit_rate"].as<double>() / 8);
 
         if (not radio->rx_start(start_time, n_samp)) {
             LOG_ERROR("rx_start() failed");
@@ -102,12 +101,12 @@ int main(int argc, char* argv[]) {
         }
 
         // start early so the tx buffer will be half full when tx starts
-        vxsdr::duration head_start = std::chrono::duration_cast<vxsdr::duration>(std::chrono::duration<double>(0.5 * tx_buffer_size_sec));
+        vxsdr::duration head_start = std::chrono::duration_cast<vxsdr::duration>(std::chrono::duration<double>(0.5 * tx_buffer_duration_s));
         std::this_thread::sleep_until(start_time - head_start);
 
         size_t n_checked = 0;
-        std::thread rx_thread([&] 
-                                { 
+        std::thread rx_thread([&]
+                                {
                                     while (n_checked < n_samp) {
                                         auto n_to_get = std::min(n_samp - n_checked, n_block);
                                         auto n_rec = radio->get_rx_data(rx_data, n_to_get);

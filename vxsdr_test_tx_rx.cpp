@@ -70,8 +70,10 @@ int main(int argc, char* argv[]) {
             return EXIT_CMD_LINE_ERROR;
         }
 
-        size_t n_samp_tx = 2048 * 78; // * std::llround(vm["tx_duration"].as<double>() * vm["rate"].as<double>() / 2048.);
-        size_t n_samp_rx = std::llround(vm["rx_duration"].as<double>() * vm["rate"].as<double>());
+        constexpr unsigned granularity = 2048;
+
+        size_t n_samp_tx = granularity * std::llround(vm["tx_duration"].as<double>() * vm["rate"].as<double>() / granularity);
+        size_t n_samp_rx = granularity * std::llround(vm["rx_duration"].as<double>() * vm["rate"].as<double>() / granularity);
         double n_cycles = vm["cycles"].as<double>();
         double a = vm["amplitude"].as<double>();
 
@@ -92,11 +94,11 @@ int main(int argc, char* argv[]) {
             }
         }
 
-        size_t tx_buffer_size_samples = 0;
+        size_t tx_buffer_size_bytes = 0;
         LOG_DEBUG("getting buffer size");
         auto b1 = radio->get_buffer_info();
         if (b1.has_value()) {
-            tx_buffer_size_samples = b1->at(1) / sizeof(std::complex<int16_t>);
+            tx_buffer_size_bytes = b1->at(1);
         } else {
             LOG_ERROR("unable to get buffer info");
         }
@@ -121,28 +123,24 @@ int main(int argc, char* argv[]) {
         std::ofstream tx_file ("tx_data.dat", std::ofstream::out | std::ofstream::binary);
         std::ofstream rx_file ("rx_data.dat", std::ofstream::out | std::ofstream::binary);
 
-        tx_file.write(reinterpret_cast<char *>(&tx_data[0]), sizeof(tx_data));
+        tx_file.write(reinterpret_cast<char *>(tx_data.data()), rx_data.size() * sizeof(std::complex<int16_t>));
         tx_file.close();
 
         vxsdr::duration tx_del = std::chrono::nanoseconds(std::llround(vm["tx_delay"].as<double>() * 1e9));
         vxsdr::time_point t_start_tx = t_start + tx_del;
-/*
+
         if (not radio->tx_start(t_start_tx, n_samp_tx)) {
             LOG_ERROR("tx_start() failed");
-        }
-*/
-//        if (not radio->tx_loop(t_start_tx, n_samp_tx, vxsdr::duration::zero(), 50)) {
-        if (not radio->tx_loop(t_start_tx, 0)) {
-            LOG_ERROR("tx_loop() failed");
         }
 
         if (not radio->rx_start(t_start, n_samp_rx)) {
             LOG_ERROR("rx_start() failed");
         }
 
-        double tx_buffer_duration_s = tx_buffer_size_samples / radio->get_tx_rate().value_or(-1);
+        double tx_buffer_duration_s = tx_buffer_size_bytes / (vm["network_bit_rate"].as<double>() / 8);
         // start early enough to fill the tx buffer half full at start
         unsigned pre_start_ms = std::lround(1000 * tx_buffer_duration_s / 2);
+
         LOG_INFO(fmt::format("pre start: {:d} ms", pre_start_ms));
         std::this_thread::sleep_until(t_start - std::chrono::duration(std::chrono::milliseconds(pre_start_ms)));
 
@@ -160,7 +158,8 @@ int main(int argc, char* argv[]) {
 
         LOG_INFO("receive complete");
 
-        rx_file.write(reinterpret_cast<char *>(&rx_data[0]), sizeof(rx_data));
+        rx_file.write(reinterpret_cast<char *>(rx_data.data()), rx_data.size() * sizeof(std::complex<int16_t>));
+        rx_file.close();
 
 
     } catch (std::exception& e) {

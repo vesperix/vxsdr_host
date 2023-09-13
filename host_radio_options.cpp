@@ -69,6 +69,7 @@ void add_network_options(boost::program_options::options_description& desc) {
                 "priority to use for UDP handler threads when realtime priority is used (set to a negative number to not use realtime priority)")
         ("thread_affinity_offset", boost::program_options::value<int>()->default_value(0),
                 "offset in CPU number for UDP handler threads when CPU affinity is used (set to a negative number to not use CPU affinity)")
+        ("network_bit_rate", boost::program_options::value<double>()->default_value(10e9), "the bit rate of the network interface")
         ;
     // clang-format on
 }
