@@ -83,8 +83,8 @@ int main(int argc, char* argv[]) {
         if (n_cycles != 0.0) {
             for (size_t i = 0; i < n_samp_tx; i++) {
                 double v =  double(i) / n_samp_tx;
-                double re = a * cos(2. * std::numbers::pi_v<double> * n_cycles * v);
-                double im = a * sin(2. * std::numbers::pi_v<double> * n_cycles * v);
+                double re =  a * cos(2. * std::numbers::pi_v<double> * n_cycles * v);
+                double im = -a * sin(2. * std::numbers::pi_v<double> * n_cycles * v);
                 tx_data[i] = std::complex<int16_t>(std::lround(re), std::lround(im));
             }
         } else {
