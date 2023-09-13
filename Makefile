@@ -2,14 +2,14 @@
 CXX = g++
 
 CXX_DEFINES =
-CXX_BASEFLAGS = -Wall -pedantic -std=c++17 $(CXX_EXTRA_FLAGS)
+CXX_BASEFLAGS = -Wall -pedantic -std=c++20 $(CXX_EXTRA_FLAGS)
 CXX_OPTFLAGS = -O3
 CXX_DBGFLAGS = -g -Og -fsanitize=address
 CXX_LDFLAGS = -lpthread -lboost_program_options -lboost_system -lvxsdr
 
-# VXSDR_DEBUG=1
+#DEBUG=1
 
-ifdef VXSDR_DEBUG
+ifdef DEBUG
 	CXX_FLAGS = $(CXX_BASEFLAGS) $(CXX_DBGFLAGS) $(CXX_DEFINES)
 else
 	CXX_FLAGS = $(CXX_BASEFLAGS) $(CXX_OPTFLAGS) $(CXX_DEFINES)

@@ -9,6 +9,7 @@
 #include <string>
 #include <thread>
 #include <cmath>
+#include <numbers>
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/program_options.hpp>
@@ -81,10 +82,9 @@ int main(int argc, char* argv[]) {
 
         if (n_cycles != 0.0) {
             for (size_t i = 0; i < n_samp_tx; i++) {
-                //double aa = a * sin(M_PI * double(i) / double(n_samp_tx));
                 double v =  double(i) / n_samp_tx;
-                double re =  a * cos(2. * M_PI * n_cycles * v);
-                double im = -a * sin(2. * M_PI * n_cycles * v);
+                double re = a * cos(2. * std::numbers::pi_v<double> * n_cycles * v);
+                double im = a * sin(2. * std::numbers::pi_v<double> * n_cycles * v);
                 tx_data[i] = std::complex<int16_t>(std::lround(re), std::lround(im));
             }
         } else {

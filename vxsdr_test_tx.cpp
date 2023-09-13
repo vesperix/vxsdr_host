@@ -9,6 +9,7 @@
 #include <string>
 #include <thread>
 #include <cmath>
+#include <numbers>
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/program_options.hpp>
@@ -75,31 +76,33 @@ int main(int argc, char* argv[]) {
             return EXIT_CMD_LINE_ERROR;
         }
 
-        size_t n_samp        = std::llround(vm["duration"].as<double>() * vm["rate"].as<double>());
-        double n_cycles = vm["cycles"].as<double>();
+        size_t n_samp    = std::llround(vm["duration"].as<double>() * vm["rate"].as<double>());
+        size_t n_sec     = (size_t)std::llround(vm["rate"].as<double>());
+        size_t n_block   = std::min(n_sec, n_samp);
+        int64_t n_cycles = std::llround(vm["cycles"].as<double>());
         double a = vm["amplitude"].as<double>();
 
-        std::vector<std::complex<int16_t>> data(n_samp);
+        std::vector<std::complex<int16_t>> data(n_block);
 
         if (n_cycles != 0.0) {
-            for (size_t i = 0; i < n_samp; i++) {
-                double v = 2 * M_PI * n_cycles * i / double(n_samp);
-                double re =  a * cos(v);
-                double im = -a * sin(v);
+            for (size_t i = 0; i < n_block; i++) {
+                double v =  double(i) / n_block;
+                double re = a * cos(2. * std::numbers::pi_v<double> * n_cycles * v);
+                double im = a * sin(2. * std::numbers::pi_v<double> * n_cycles * v);
                 data[i] = std::complex<int16_t>(std::lround(re), std::lround(im));
             }
         } else {
             const int16_t ra = std::llround(a);
-            for (size_t i = 0; i < n_samp; i++) {
+            for (size_t i = 0; i < n_block; i++) {
                 data[i] = std::complex<int16_t>(ra, 0);
             }
         }
 
-        size_t tx_buffer_size_samples = 0;
+        size_t tx_buffer_size_bytes = 0;
         LOG_DEBUG("getting buffer size");
         auto b1 = radio->get_buffer_info();
         if (b1.has_value()) {
-            tx_buffer_size_samples = b1->at(1) / sizeof(std::complex<int16_t>);
+            tx_buffer_size_bytes = b1->at(1);
         } else {
             LOG_ERROR("unable to get buffer info");
         }
@@ -124,7 +127,7 @@ int main(int argc, char* argv[]) {
             LOG_ERROR("tx_start() failed");
         }
 
-        double tx_buffer_duration_s = tx_buffer_size_samples / (10e9 / 8 / 4); // buffer fill time at full 10GbE rate
+        double tx_buffer_duration_s = tx_buffer_size_bytes / (vm["network_bit_rate"].as<double>() / 8);
         // start early enough to fill the tx buffer half full at start
         unsigned pre_start_ms = std::lround(1000 * tx_buffer_duration_s / 2);
         LOG_INFO(fmt::format("pre start: {:d} ms", pre_start_ms));

@@ -33,7 +33,7 @@ void log_init(const std::string& argv_0) {
     multi_logger->set_pattern("[%Y-%m-%d %T.%f] [%t] [%L] %v");
     spdlog::register_logger(multi_logger);
     // auto-flush on errors or more severe events
-    multi_logger->flush_on(spdlog::level::err);
+    multi_logger->flush_on(spdlog::level::info);
     // set the default level here
     spdlog::get(APPLICATION_LOGGER_NAME)->set_level(spdlog::level::debug);
 }
