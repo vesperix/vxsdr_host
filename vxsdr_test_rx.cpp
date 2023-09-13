@@ -59,8 +59,10 @@ int main(int argc, char* argv[]) {
             return EXIT_CMD_LINE_ERROR;
         }
 
-        size_t n_samp  = std::llround(vm["duration"].as<double>() * vm["rate"].as<double>());
-        size_t n_block = std::min((long long)n_samp, std::llround(vm["rate"].as<double>()));
+        constexpr unsigned granularity = 2048;
+
+        size_t n_samp  = granularity * std::ceil(vm["duration"].as<double>() * vm["rate"].as<double>() / granularity);
+        size_t n_block = granularity * std::ceil(std::min((long long)n_samp, std::llround(vm["rate"].as<double>())) / granularity);
         std::vector<std::complex<int16_t>> data(n_block);
 
         LOG_DEBUG("getting radio time");
@@ -69,25 +71,44 @@ int main(int argc, char* argv[]) {
             LOG_INFO(fmt::format("radio time: {:s}",
                     format_time(std::chrono::round<std::chrono::system_clock::duration>(t1.value()))));
         } else {
-            LOG_ERROR("unable to get radio time");
+            LOG_FATAL("unable to get radio time");
+            return EXIT_INTERNAL_ERROR;
         }
+
+        auto start_time = std::chrono::floor<std::chrono::seconds>(t1.value() + vxsdr::duration(2s));
+        LOG_INFO(fmt::format("start time: {:s}", format_time(start_time)));
 
         LOG_INFO(fmt::format("using frequency {:.5e}", radio->get_rx_freq().value_or(-1)));
         LOG_INFO(fmt::format("using rate      {:.5e}", radio->get_rx_rate().value_or(-1)));
         LOG_INFO(fmt::format("using rx_gain   {:.1f}", radio->get_rx_gain().value_or(-1)));
 
-        size_t n_checked = 0;
+        size_t n_received = 0;
 
-        if (not radio->rx_start(t1.value(), n_samp)) {
+        if (not radio->rx_start(start_time, n_samp)) {
             LOG_ERROR("rx_start() failed");
         }
 
-        while (n_checked < n_samp) {
-            size_t n_get = std::min(n_samp - n_checked, n_block);
-            size_t n_rec = radio->get_rx_data(data, n_get);
-            n_checked += n_rec;
-            if (n_rec != n_get) {
-                break;
+        constexpr bool write_file{true};
+
+        if (write_file) {
+            std::ofstream rx_file ("test_rx_data.dat", std::ofstream::out | std::ofstream::binary);
+            while (n_received < n_samp) {
+                size_t n_get = std::min(n_samp - n_received, n_block);
+                size_t n_rec = radio->get_rx_data(data, n_get);
+                n_received += n_rec;
+                rx_file.write(reinterpret_cast<char *>(data.data()), n_rec * sizeof(std::complex<int16_t>));
+                if (n_rec != n_get) {
+                    break;
+                }
+            }
+        } else {
+            while (n_received < n_samp) {
+                size_t n_get = std::min(n_samp - n_received, n_block);
+                size_t n_rec = radio->get_rx_data(data, n_get);
+                n_received += n_rec;
+                if (n_rec != n_get) {
+                    break;
+                }
             }
         }
 
@@ -97,7 +118,7 @@ int main(int argc, char* argv[]) {
 
         LOG_INFO("receive complete");
 
-        LOG_INFO(fmt::format("{:d} samples checked", n_checked));
+        LOG_INFO(fmt::format("{:d} samples received", n_received));
 
     } catch (std::exception& e) {
         LOG_FATAL(fmt::format("exception caught: {:s}", e.what()));
