@@ -9,6 +9,7 @@
 #include <string>
 #include <thread>
 #include <future>
+#include <numbers>
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/program_options.hpp>
@@ -97,8 +98,8 @@ int main(int argc, char* argv[]) {
         double f_mod = 10 * std::llround(0.1 * vm["modulation_frequency"].as<double>());
 
         for (size_t i = 0; i < data.size(); i++) {
-            double re =  a * cos(2 * M_PI * f_mod / f_s * i);
-            double im = -a * sin(2 * M_PI * f_mod / f_s * i);
+            double re =  a * cos(2 * std::numbers::pi_v<double> * f_mod / f_s * i);
+            double im = -a * sin(2 * std::numbers::pi_v<double> * f_mod / f_s * i);
             data[i] = std::complex<int16_t>(std::lround(re), std::lround(im));
         }
 

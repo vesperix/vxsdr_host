@@ -9,6 +9,7 @@
 #include <string>
 #include <thread>
 #include <cmath>
+#include <numbers>
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/program_options.hpp>
@@ -21,10 +22,6 @@
 #include "utility.hpp"
 
 using namespace std::chrono_literals;
-
-#ifndef M_PI
-#define M_PI (3.141592653589793238462643383279502884)
-#endif
 
 extern "C" void sig_int_handler(int /* sig_num */) {
     LOG_FATAL("terminated by SIGINT (ctrl-C)");
@@ -76,7 +73,7 @@ int main(int argc, char* argv[]) {
 
         std::vector<std::complex<int16_t>> data(n_samp);
         for (size_t i = 0; i < n_samp; i++) {
-            double v = 2 * M_PI * n_cycles * i / double(n_samp);
+            double v = 2 * std::numbers::pi_v<double> * n_cycles * i / double(n_samp);
             double re =  a * cos(v);
             double im = -a * sin(v);
             data[i] = std::complex<int16_t>(std::lround(re), std::lround(im));
