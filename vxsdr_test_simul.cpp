@@ -61,8 +61,8 @@ int main(int argc, char* argv[]) {
         size_t n_samp  = std::llround(vm["duration"].as<double>() * vm["rate"].as<double>());
         size_t n_block = std::min((long long)n_samp, std::llround(vm["rate"].as<double>()));
 
-        std::vector<std::complex<int16_t>> tx_data(std::llround(vm["rate"].as<double>()));
-        std::vector<std::complex<int16_t>> rx_data(std::llround(vm["rate"].as<double>()));
+        std::vector<std::complex<int16_t>> tx_data(n_block);
+        std::vector<std::complex<int16_t>> rx_data(n_block);
 
         LOG_DEBUG("getting radio time");
         auto t1 = radio->get_time_now();
@@ -100,8 +100,8 @@ int main(int argc, char* argv[]) {
             LOG_ERROR("tx_start() failed");
         }
 
-        // start early so the tx buffer will be half full when tx starts
-        vxsdr::duration head_start = std::chrono::duration_cast<vxsdr::duration>(std::chrono::duration<double>(0.5 * tx_buffer_duration_s));
+        // start early so the tx buffer will be 1/4 full when tx starts
+        vxsdr::duration head_start = std::chrono::duration_cast<vxsdr::duration>(std::chrono::duration<double>(0.25 * tx_buffer_duration_s));
         std::this_thread::sleep_until(start_time - head_start);
 
         size_t n_checked = 0;
