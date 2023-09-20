@@ -52,6 +52,7 @@ int main(int argc, char* argv[]) {
 
         set_common_options(vm, radio);
         set_rx_1ch_options(vm, radio);
+        set_tx_1ch_options(vm, radio);
 
         if (vm["duration"].as<double>() <= 0.0) {
             LOG_FATAL("duration must be positive");
