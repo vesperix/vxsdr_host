@@ -51,6 +51,7 @@ int main(int argc, char* argv[]) {
         auto radio = std::make_unique<vxsdr>(vm["local_address"].as<std::string>(), vm["device_address"].as<std::string>(), settings);
 
         set_common_options(vm, radio);
+        set_tx_1ch_options(vm, radio);
         set_rx_1ch_options(vm, radio);
         set_tx_1ch_options(vm, radio);
 
