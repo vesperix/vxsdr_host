@@ -84,6 +84,7 @@ int main(int argc, char* argv[]) {
         data_file.read(reinterpret_cast<char *>(data.data()), n_samp * sizeof(std::complex<int16_t>));
         data_file.close();
 
+        LOG_INFO(fmt::format("using {:d} samples", n_samp));
 
         LOG_DEBUG("getting radio time");
         auto t1 = radio->get_time_now();
