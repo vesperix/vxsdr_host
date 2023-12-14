@@ -96,15 +96,14 @@ int main(int argc, char* argv[]) {
         auto t_start = std::chrono::ceil<std::chrono::seconds>(std::chrono::system_clock::now()) + std::chrono::duration(1s);
         LOG_INFO(fmt::format("start time: {:s}", format_time(t_start)));
 
-        // FIXME: using the nsamp = 0 workaround for now
-        if (not radio->tx_loop(t_start, 0)) {
+        if (not radio->tx_loop(t_start, n_samp)) {
             LOG_ERROR("tx_loop() failed");
         }
 
         unsigned pre_start_ms = 10;
         std::this_thread::sleep_until(t_start - std::chrono::duration(std::chrono::milliseconds(pre_start_ms)));
 
-        auto n_sent = radio->put_tx_data(data);
+        auto n_sent = radio->put_tx_data(data, n_samp);
         if (n_sent != n_samp) {
             LOG_ERROR(fmt::format("{:d} of {:d} samples sent", n_sent, n_samp));
         }

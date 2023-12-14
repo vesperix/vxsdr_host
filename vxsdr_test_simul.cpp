@@ -7,7 +7,8 @@
 #include <iostream>
 #include <limits>
 #include <string>
-#include <thread>
+//#include <thread>
+#include <future>
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/program_options.hpp>
@@ -53,7 +54,6 @@ int main(int argc, char* argv[]) {
         set_common_options(vm, radio);
         set_tx_1ch_options(vm, radio);
         set_rx_1ch_options(vm, radio);
-        set_tx_1ch_options(vm, radio);
 
         if (vm["duration"].as<double>() <= 0.0) {
             LOG_FATAL("duration must be positive");
@@ -106,9 +106,9 @@ int main(int argc, char* argv[]) {
         // start early so the tx buffer will be 1/4 full when tx starts
         vxsdr::duration head_start = std::chrono::duration_cast<vxsdr::duration>(std::chrono::duration<double>(0.25 * tx_buffer_duration_s));
         std::this_thread::sleep_until(start_time - head_start);
-
+/*
         size_t n_checked = 0;
-        std::thread rx_thread([&n_checked, n_samp, n_block, &rx_data, &radio]
+        std::thread rx_thread([&n_checked, n_samp, n_block, &rx_data, &radio] ()
                                 {
                                     while (n_checked < n_samp) {
                                         auto n_to_get = std::min(n_samp - n_checked, n_block);
@@ -121,7 +121,7 @@ int main(int argc, char* argv[]) {
                                 });
 
         size_t n_sent = 0;
-        std::thread tx_thread([&n_sent, n_samp, n_block, &tx_data, &radio]
+        std::thread tx_thread([&n_sent, n_samp, n_block, &tx_data, &radio] ()
                                 {
                                     while (n_sent < n_samp) {
                                         auto n_to_send = std::min(n_samp - n_sent, n_block);
@@ -132,9 +132,41 @@ int main(int argc, char* argv[]) {
                                         }
                                     }
                                 });
+*/
+
+
+        auto rx_future = std::async(std::launch::async, [n_samp, n_block, &rx_data, &radio] ()
+                                    {
+                                        size_t n_checked = 0;
+                                        while (n_checked < n_samp) {
+                                            auto n_to_get = std::min(n_samp - n_checked, n_block);
+                                            auto n_rec = radio->get_rx_data(rx_data, n_to_get);
+                                            n_checked += n_rec;
+                                            if (n_rec != n_to_get) {
+                                                break;
+                                            }
+                                        }
+                                        return n_checked;
+                                    });
+
+
+        auto tx_future = std::async(std::launch::async, [n_samp, n_block, &tx_data, &radio] ()
+                                    {
+                                        size_t n_sent = 0;
+                                        while (n_sent < n_samp) {
+                                            auto n_to_send = std::min(n_samp - n_sent, n_block);
+                                            auto n_put = radio->put_tx_data(tx_data, n_to_send);
+                                            n_sent += n_put;
+                                            if (n_put != n_to_send) {
+                                                break;
+                                            }
+                                        }
+                                        return n_sent;
+                                    });
 
         std::this_thread::sleep_until(start_time + std::chrono::duration<double>(vm["duration"].as<double>()));
 
+/*
         LOG_INFO("joining rx thread");
         rx_thread.join();
 
@@ -151,9 +183,13 @@ int main(int argc, char* argv[]) {
         if (not radio->tx_stop_now()) {
             LOG_ERROR("tx_stop_now() failed");
         }
+*/
+
+        LOG_INFO("receive complete");
+        LOG_INFO(fmt::format("{:d} samples checked", rx_future.get()));
 
         LOG_INFO("transmit complete");
-        LOG_INFO(fmt::format("{:d} samples sent", n_sent));
+        LOG_INFO(fmt::format("{:d} samples sent", tx_future.get()));
 
     } catch (std::exception& e) {
         LOG_FATAL(fmt::format("exception caught: {:s}", e.what()));
