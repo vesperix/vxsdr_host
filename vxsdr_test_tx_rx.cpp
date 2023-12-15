@@ -71,7 +71,7 @@ int main(int argc, char* argv[]) {
             return EXIT_CMD_LINE_ERROR;
         }
 
-        constexpr unsigned granularity = 2048;
+        constexpr unsigned granularity = 8;
 
         size_t n_samp_tx = granularity * std::llround(vm["tx_duration"].as<double>() * vm["rate"].as<double>() / granularity);
         size_t n_samp_rx = granularity * std::llround(vm["rx_duration"].as<double>() * vm["rate"].as<double>() / granularity);
@@ -95,7 +95,6 @@ int main(int argc, char* argv[]) {
         }
 
         size_t tx_buffer_size_bytes = 0;
-        LOG_DEBUG("getting buffer size");
         auto b1 = radio->get_buffer_info();
         if (b1.has_value()) {
             tx_buffer_size_bytes = b1->at(1);
@@ -103,7 +102,6 @@ int main(int argc, char* argv[]) {
             LOG_ERROR("unable to get buffer info");
         }
 
-        LOG_DEBUG("getting radio time");
         auto t1 = radio->get_time_now();
         if (t1.has_value()) {
             LOG_INFO(fmt::format("radio time: {:s}",
@@ -113,9 +111,12 @@ int main(int argc, char* argv[]) {
         }
 
         LOG_INFO(fmt::format("using frequency {:.5e}", radio->get_tx_freq().value_or(-1)));
-        LOG_INFO(fmt::format("using rate      {:.5e}", radio->get_tx_rate().value_or(-1)));
+        LOG_INFO(fmt::format("using tx rate   {:.5e}", radio->get_tx_rate().value_or(-1)));
+        LOG_INFO(fmt::format("using rx rate   {:.5e}", radio->get_rx_rate().value_or(-1)));
         LOG_INFO(fmt::format("using tx_gain   {:.1f}", radio->get_tx_gain().value_or(-1)));
         LOG_INFO(fmt::format("using rx_gain   {:.1f}", radio->get_rx_gain().value_or(-1)));
+        LOG_INFO(fmt::format("sending         {:d} samples", n_samp_tx));
+        LOG_INFO(fmt::format("receiving       {:d} samples", n_samp_rx));
 
         auto t_start = std::chrono::ceil<std::chrono::seconds>(std::chrono::system_clock::now()) + std::chrono::duration(1s);
         LOG_INFO(fmt::format("start time: {:s}", format_time(t_start)));
@@ -123,7 +124,7 @@ int main(int argc, char* argv[]) {
         std::ofstream tx_file ("tx_data.dat", std::ofstream::out | std::ofstream::binary);
         std::ofstream rx_file ("rx_data.dat", std::ofstream::out | std::ofstream::binary);
 
-        tx_file.write(reinterpret_cast<char *>(tx_data.data()), rx_data.size() * sizeof(std::complex<int16_t>));
+        tx_file.write(reinterpret_cast<char *>(tx_data.data()), tx_data.size() * sizeof(std::complex<int16_t>));
         tx_file.close();
 
         vxsdr::duration tx_del = std::chrono::nanoseconds(std::llround(vm["tx_delay"].as<double>() * 1e9));
