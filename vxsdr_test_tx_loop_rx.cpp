@@ -39,6 +39,7 @@ int main(int argc, char* argv[]) {
         add_common_options(desc);
         add_network_options(desc);
         add_tx_1ch_options(desc);
+        add_rx_1ch_options(desc);
 
         desc.add_options()
             ("tx_file_name", boost::program_options::value<std::string>()->required(), "TX data file name")
@@ -115,7 +116,7 @@ int main(int argc, char* argv[]) {
 
         auto tx_start = std::chrono::ceil<std::chrono::seconds>(std::chrono::system_clock::now()) + std::chrono::duration(1s);
         unsigned rx_pre_start_ms = 1;
-        auto rx_start = tx_start - std::chrono::duration(std::chrono::milliseconds(rx_pre_start_ms + 1));
+        auto rx_start = tx_start - std::chrono::duration(std::chrono::milliseconds(rx_pre_start_ms));
         LOG_INFO(fmt::format("tx start time: {:s}", format_time(tx_start)));
         LOG_INFO(fmt::format("rx start time: {:s}", format_time(rx_start)));
 
