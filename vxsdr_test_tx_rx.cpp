@@ -82,10 +82,13 @@ int main(int argc, char* argv[]) {
 
         if (n_cycles != 0.0) {
             for (size_t i = 0; i < n_samp_tx; i++) {
+
                 double v =  double(i) / n_samp_tx;
                 double re = a * cos(2. * std::numbers::pi_v<double> * n_cycles * v);
                 double im = a * sin(2. * std::numbers::pi_v<double> * n_cycles * v);
                 tx_data[i] = std::complex<int16_t>(std::lround(re), std::lround(im));
+
+                //tx_data[i] = std::complex<int16_t>((i % 65535) - 32768, ((-i + 32768) % 65535) - 32768);
             }
         } else {
             const int16_t ra = std::llround(a);
@@ -126,6 +129,14 @@ int main(int argc, char* argv[]) {
 
         tx_file.write(reinterpret_cast<char *>(tx_data.data()), tx_data.size() * sizeof(std::complex<int16_t>));
         tx_file.close();
+
+        auto stat = radio->get_status();
+        if (stat) {
+            const double temp = stat->at(0);
+            LOG_INFO(fmt::format("fpga temperature {:.1f}", temp));
+        } else {
+            LOG_ERROR("failed to get status");
+        }
 
         vxsdr::duration tx_del = std::chrono::nanoseconds(std::llround(vm["tx_delay"].as<double>() * 1e9));
         vxsdr::time_point t_start_tx = t_start + tx_del;
