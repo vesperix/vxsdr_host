@@ -10,6 +10,7 @@
 #include <thread>
 #include <cmath>
 #include <numbers>
+#include <arpa/inet.h>
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/program_options.hpp>
@@ -49,7 +50,12 @@ int main(int argc, char* argv[]) {
 
         init_vm(desc, vm, argc, argv);
 
+        uint32_t local_addr = ntohl(inet_addr(vm["local_address"].as<std::string>().c_str()));
+        uint32_t device_addr = ntohl(inet_addr(vm["device_address"].as<std::string>().c_str()));
+
         std::map<std::string, int64_t> settings = {
+            {"udp_transport:local_address",  local_addr},
+            {"udp_transport:device_address", device_addr},
             {"tx_data_queue_packets",        vm["tx_data_queue_packets"].as<unsigned>()},
             {"rx_data_queue_packets",        vm["rx_data_queue_packets"].as<unsigned>()},
             {"network_send_buffer_bytes",    vm["network_send_buffer_bytes"].as<unsigned>()},
@@ -58,7 +64,7 @@ int main(int argc, char* argv[]) {
             {"thread_affinity_offset",       vm["thread_affinity_offset"].as<int>()}
         };
 
-        auto radio = std::make_unique<vxsdr>(vm["local_address"].as<std::string>(), vm["device_address"].as<std::string>(), settings);
+        auto radio = std::make_unique<vxsdr>(settings);
 
         set_common_options(vm, radio);
         set_tx_1ch_options(vm, radio);

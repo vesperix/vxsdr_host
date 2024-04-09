@@ -51,7 +51,7 @@ int main(int argc, char* argv[]) {
 
         std::unique_ptr<vxsdr> radio;
         try {
-            auto radio = std::make_unique<vxsdr>(vm["local_address"].as<std::string>(), vm["device_address"].as<std::string>(), settings);
+            auto radio = std::make_unique<vxsdr>(settings);
         } catch (std::runtime_error& e) {
             LOG_FATAL(fmt::format("exception caught during vxsdr initialization: {:s}", e.what()));
             LOG_FATAL(fmt::format("{:s} finished with exception", argv[0]));
@@ -151,13 +151,13 @@ int main(int argc, char* argv[]) {
         if (not radio->rx_start(t_start, n_samp)) {
             LOG_ERROR("error in rx_start");
         }
-        
+
         size_t n_rec = radio->get_rx_data(data, n_samp);
         if (n_rec != n_samp) {
             LOG_ERROR(fmt::format("error in get_rx_data ({:d} of {:d} received)", n_rec, n_samp));
         }
-        if (not radio->tx_stop_now()) {
-            LOG_ERROR("error in rx_stop_now");
+        if (not radio->rx_stop()) {
+            LOG_ERROR("error in rx_stop");
         }
 
         LOG_INFO("receive complete");

@@ -186,7 +186,16 @@ int set_rx_1ch_options(boost::program_options::variables_map& vm, std::unique_pt
     }
 
     if (vm.count("rx_ant") > 0) {
-        if (not radio->set_rx_port_by_name(vm["rx_ant"].as<std::string>())) {
+        bool port_set = false;
+        for (unsigned n = 0; n < radio->get_rx_num_ports().value_or(-1); n++) {
+            if (radio->get_rx_port_name(n).value_or("") == vm["rx_ant"].as<std::string>()) {
+                if (radio->set_rx_port(n)) {
+                    port_set = true;
+                    break;
+                }
+            }
+        }
+        if (not port_set) {
             LOG_ERROR("error in set_rx_1ch_options: set_rx_port");
         }
     }
@@ -234,7 +243,16 @@ int set_tx_1ch_options(boost::program_options::variables_map& vm, std::unique_pt
     }
 
     if (vm.count("tx_ant") > 0) {
-        if (not radio->set_tx_port_by_name(vm["tx_ant"].as<std::string>())) {
+        bool port_set = false;
+        for (unsigned n = 0; n < radio->get_tx_num_ports().value_or(-1); n++) {
+            if (radio->get_tx_port_name(n).value_or("") == vm["tx_ant"].as<std::string>()) {
+                if (radio->set_tx_port(n)) {
+                    port_set = true;
+                    break;
+                }
+            }
+        }
+        if (not port_set) {
             LOG_ERROR("error in set_tx_1ch_options: set_tx_port");
         }
     }

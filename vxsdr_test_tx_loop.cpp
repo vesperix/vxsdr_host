@@ -10,6 +10,7 @@
 #include <thread>
 #include <cmath>
 #include <numbers>
+#include <arpa/inet.h>
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/program_options.hpp>

@@ -10,6 +10,7 @@
 #include <thread>
 #include <future>
 #include <numbers>
+#include <arpa/inet.h>
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/program_options.hpp>
@@ -348,8 +349,8 @@ int main(int argc, char* argv[]) {
             std::cout << fmt::format("{:10.6f} {:10.6f} {:8.2f} {:8.2f}", txc[0], txc[1], txc[2], txc[3]) << std::endl;
         }
 
-        if (not radio->tx_stop_now()) {
-            LOG_ERROR("tx_stop_now() failed");
+        if (not radio->tx_stop()) {
+            LOG_ERROR("tx_stop() failed");
         }
 
     } catch (std::exception& e) {

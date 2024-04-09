@@ -9,6 +9,7 @@
 #include <string>
 #include <thread>
 #include <map>
+#include <arpa/inet.h>
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/program_options.hpp>
@@ -44,7 +45,12 @@ int main(int argc, char* argv[]) {
 
         std::unique_ptr<vxsdr> radio;
 
+        uint32_t local_addr = ntohl(inet_addr(vm["local_address"].as<std::string>().c_str()));
+        uint32_t device_addr = ntohl(inet_addr(vm["device_address"].as<std::string>().c_str()));
+
         std::map<std::string, int64_t> settings = {
+            {"udp_transport:local_address",  local_addr},
+            {"udp_transport:device_address", device_addr},
             {"tx_data_queue_packets",        vm["tx_data_queue_packets"].as<unsigned>()},
             {"rx_data_queue_packets",        vm["rx_data_queue_packets"].as<unsigned>()},
             {"network_send_buffer_bytes",    vm["network_send_buffer_bytes"].as<unsigned>()},
@@ -54,7 +60,7 @@ int main(int argc, char* argv[]) {
         };
 
         try {
-            radio = std::make_unique<vxsdr>(vm["local_address"].as<std::string>(), vm["device_address"].as<std::string>(), settings);
+            radio = std::make_unique<vxsdr>(settings);
         } catch (std::runtime_error& e) {
             LOG_FATAL(fmt::format("exception caught during vxsdr initialization: {:s}", e.what()));
             LOG_FATAL(fmt::format("{:s} finished with exception", argv[0]));
