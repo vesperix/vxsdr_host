@@ -104,6 +104,7 @@ int main(int argc, char* argv[]) {
                 n_received += n_rec;
                 rx_file.write(reinterpret_cast<char *>(data.data()), n_rec * sizeof(std::complex<int16_t>));
                 if (n_rec != n_get) {
+                    LOG_ERROR("incorrect number of samples received");
                     break;
                 }
             }
@@ -113,6 +114,7 @@ int main(int argc, char* argv[]) {
                 size_t n_rec = radio->get_rx_data(data, n_get);
                 n_received += n_rec;
                 if (n_rec != n_get) {
+                    LOG_ERROR("incorrect number of samples received");
                     break;
                 }
             }

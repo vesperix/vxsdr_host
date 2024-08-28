@@ -39,6 +39,9 @@ vxsdr_test_tx_rx: vxsdr_test_tx_rx.cpp $(COMMON_INCLUDES) $(COMMON_OBJ)
 vxsdr_test_simul: vxsdr_test_simul.cpp $(COMMON_INCLUDES) $(COMMON_OBJ)
 	$(CXX) $(CXX_FLAGS) -o $@ $< $(COMMON_OBJ) $(CXX_LDFLAGS)
 
+vxsdr_test_save: vxsdr_test_save.cpp $(COMMON_INCLUDES) $(COMMON_OBJ)
+	$(CXX) $(CXX_FLAGS) -o $@ $< $(COMMON_OBJ) $(CXX_LDFLAGS)
+
 clean:
 	rm -f $(PROGS) *.o *~
 
