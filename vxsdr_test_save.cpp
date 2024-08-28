@@ -25,8 +25,6 @@ extern "C" void sig_int_handler(int /* sig_num */) {
     exit(EXIT_USER_TERMINATED);
 }
 
-#define JUST_CHECK_SEQUENCE
-
 int main(int argc, char* argv[]) {
     LOG_INIT(argv[0]);
     try {
@@ -69,7 +67,7 @@ int main(int argc, char* argv[]) {
 
         constexpr unsigned granularity = 32;
 
-        size_t n_loop  = 4096;
+        unsigned n_loop  = 4096;
         unsigned n_repeat = 100;
         size_t n_samp  = granularity * std::ceil(vm["duration"].as<double>() * vm["rate"].as<double>() / granularity);
         size_t n_block = granularity * std::ceil(std::min((long long)n_samp, std::llround(vm["rate"].as<double>())) / granularity);
@@ -77,7 +75,7 @@ int main(int argc, char* argv[]) {
         std::vector<std::complex<int16_t>> tx_data(n_loop);
         std::vector<std::complex<int16_t>> rx_data(n_block);
 
-        for (int i = 0; i < n_loop; i++) {
+        for (unsigned i = 0; i < n_loop; i++) {
             tx_data[i] = std::complex<int16_t>(0, 0);
         }
 

@@ -18,7 +18,7 @@ endif
 COMMON_INCLUDES = host_radio_options.hpp utility.hpp logging.hpp
 COMMON_OBJ = host_radio_options.o utility.o logging.o
 
-PROGS = vxsdr_test_tx vxsdr_test_rx vxsdr_test_tx_rx vxsdr_test_simul
+PROGS = vxsdr_test_tx vxsdr_test_rx vxsdr_test_tx_rx vxsdr_test_simul vxsdr_test_save
 
 all: $(PROGS) Makefile
 
