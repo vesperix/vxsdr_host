@@ -101,6 +101,11 @@ int main(int argc, char* argv[]) {
         // how many seconds of data does the tx buffer hold at the current rate?
         double tx_buffer_duration_s = tx_buffer_bytes / (vm["network_bit_rate"].as<double>() / 8);
 
+        LOG_INFO(fmt::format("buffer size     {:d} bytes", tx_buffer_bytes));
+        LOG_INFO(fmt::format("buffer size     {:d} samples", tx_buffer_bytes / sizeof(vxsdr::wire_sample)));
+        LOG_INFO(fmt::format("network rate    {:.2e} bytes/s", vm["network_bit_rate"].as<double>() / 8));
+        LOG_INFO(fmt::format("buffer duration {:.2e} s", tx_buffer_duration_s));
+
         if (not radio->rx_start(start_time, n_samp)) {
             LOG_ERROR("rx_start() failed");
         }
@@ -110,7 +115,8 @@ int main(int argc, char* argv[]) {
         }
 
         // start early so the tx buffer will be 1/4 full when tx starts
-        vxsdr::duration head_start = std::chrono::duration_cast<vxsdr::duration>(std::chrono::duration<double>(0.25 * tx_buffer_duration_s));
+        vxsdr::duration head_start = std::chrono::microseconds(std::llround(2.5e5 * tx_buffer_duration_s));
+        //vxsdr::duration head_start = std::chrono::duration_cast<vxsdr::duration>(std::chrono::duration<double>(0.25 * tx_buffer_duration_s));
         std::this_thread::sleep_until(start_time - head_start);
 /*
         size_t n_checked = 0;
