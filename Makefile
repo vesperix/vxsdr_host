@@ -5,7 +5,7 @@ CXX_DEFINES =
 CXX_BASEFLAGS = -Wall -pedantic -std=c++20 $(CXX_EXTRA_FLAGS)
 CXX_OPTFLAGS = -O3
 CXX_DBGFLAGS = -g -Og -fsanitize=address
-CXX_LDFLAGS = -lpthread -lboost_program_options -lboost_system -lvxsdr
+CXX_LDFLAGS = -lpthread -lvxsdr
 
 #DEBUG=1
 
@@ -15,10 +15,10 @@ else
 	CXX_FLAGS = $(CXX_BASEFLAGS) $(CXX_OPTFLAGS) $(CXX_DEFINES)
 endif
 
-COMMON_INCLUDES = host_radio_options.hpp utility.hpp logging.hpp
+COMMON_INCLUDES = host_radio_options.hpp utility.hpp logging.hpp option_utils.hpp
 COMMON_OBJ = host_radio_options.o utility.o logging.o
 
-PROGS = vxsdr_test_tx vxsdr_test_rx vxsdr_test_tx_rx vxsdr_test_simul vxsdr_test_save
+PROGS = vxsdr_test_tx vxsdr_test_rx vxsdr_test_simul vxsdr_test_save
 
 all: $(PROGS) Makefile
 
@@ -31,9 +31,6 @@ vxsdr_test_rx: vxsdr_test_rx.cpp $(COMMON_INCLUDES) $(COMMON_OBJ)
 	$(CXX) $(CXX_FLAGS) -o $@ $< $(COMMON_OBJ) $(CXX_LDFLAGS)
 
 vxsdr_test_tx: vxsdr_test_tx.cpp $(COMMON_INCLUDES) $(COMMON_OBJ)
-	$(CXX) $(CXX_FLAGS) -o $@ $< $(COMMON_OBJ) $(CXX_LDFLAGS)
-
-vxsdr_test_tx_rx: vxsdr_test_tx_rx.cpp $(COMMON_INCLUDES) $(COMMON_OBJ)
 	$(CXX) $(CXX_FLAGS) -o $@ $< $(COMMON_OBJ) $(CXX_LDFLAGS)
 
 vxsdr_test_simul: vxsdr_test_simul.cpp $(COMMON_INCLUDES) $(COMMON_OBJ)

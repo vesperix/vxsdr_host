@@ -13,8 +13,6 @@
 #include <arpa/inet.h>
 
 #include <boost/date_time/posix_time/posix_time.hpp>
-#include <boost/program_options.hpp>
-#include <boost/version.hpp>
 #include <vxsdr.hpp>
 
 #include "errors.hpp"
@@ -29,12 +27,15 @@ extern "C" void sig_int_handler(int /* sig_num */) {
     exit(EXIT_USER_TERMINATED);
 }
 
-void add_modulation_options(boost::program_options::options_description& desc) {
+void add_modulation_options(option_utils::program_options& desc) {
     // clang-format off
-    desc.add_options()
-        ("modulation_amplitude", boost::program_options::value<double>()->default_value(0.1), "modulation amplitude as fraction of full scale")
-        ("modulation_frequency", boost::program_options::value<double>()->default_value(10e6), "modulation frequency in Hz (will be rounded to integer to avoid jumps)")
-        ;
+    desc.add_option("modulation_amplitude", "modulation amplitude as fraction of full scale",
+            option_utils::supported_types::INTEGER, false, "0.1");
+    desc.add_option("modulation_frequency", "modulation frequency in Hz (will be rounded to integer to avoid jumps)",
+            option_utils::supported_types::INTEGER, false, "10e6");
+    desc.add_option("amplitude", "signal amplitude in digital counts",
+            option_utils::supported_types::INTEGER, false, "10000");
+    desc.add_option("cycles", "number of cycles in byffer", option_utils::supported_types::INTEGER, false, "0.0");
     // clang-format on
 }
 
@@ -43,20 +44,14 @@ int main(int argc, char* argv[]) {
     try {
         LOG_INFO(fmt::format("{:s} started", argv[0]));
         signal(SIGINT, &sig_int_handler);
-        boost::program_options::options_description desc("Command line options");
-        boost::program_options::variables_map vm;
+        option_utils::program_options desc("vxsdr_test_tx", "test transmit");
 
         add_common_options(desc);
         add_network_options(desc);
         add_tx_1ch_options(desc);
         add_modulation_options(desc);
 
-        desc.add_options()
-        ("amplitude", boost::program_options::value<double>()->default_value(10'000.0), "signal amplitude in digital counts")
-        ("cycles", boost::program_options::value<double>()->default_value(0.0), "number of cycles in byffer")
-        ;
-
-        init_vm(desc, vm, argc, argv);
+        auto vm = desc.parse(argc, argv);
 
         uint32_t local_addr = ntohl(inet_addr(vm["local_address"].as<std::string>().c_str()));
         uint32_t device_addr = ntohl(inet_addr(vm["device_address"].as<std::string>().c_str()));

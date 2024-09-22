@@ -12,12 +12,11 @@
 #include <arpa/inet.h>
 
 #include <boost/date_time/posix_time/posix_time.hpp>
-#include <boost/program_options.hpp>
-#include <boost/version.hpp>
 #include <vxsdr.hpp>
 
 #include "errors.hpp"
 #include "logging.hpp"
+#include "option_utils.hpp"
 #include "host_radio_options.hpp"
 #include "utility.hpp"
 
@@ -31,15 +30,19 @@ int main(int argc, char* argv[]) {
     try {
         LOG_INFO(fmt::format("{:s} started", argv[0]));
         signal(SIGINT, &sig_int_handler);
-        boost::program_options::options_description desc("Command line options");
-        boost::program_options::variables_map vm;
+        option_utils::program_options desc("vxsdr_test_simul", "test simultaneous transmit and receive");
 
         add_common_options(desc);
         add_network_options(desc);
         add_rx_1ch_options(desc);
         add_tx_1ch_options(desc);
 
-        init_vm(desc, vm, argc, argv);
+        auto vm = desc.parse(argc, argv);
+
+        if (vm.help_requested()) {
+            std::cout << desc.help() << std::endl;
+            exit(0);
+        }
 
         uint32_t local_addr = ntohl(inet_addr(vm["local_address"].as<std::string>().c_str()));
         uint32_t device_addr = ntohl(inet_addr(vm["device_address"].as<std::string>().c_str()));
