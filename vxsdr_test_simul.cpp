@@ -39,11 +39,6 @@ int main(int argc, char* argv[]) {
 
         auto vm = desc.parse(argc, argv);
 
-        if (vm.help_requested()) {
-            std::cout << desc.help() << std::endl;
-            exit(0);
-        }
-
         uint32_t local_addr = ntohl(inet_addr(vm["local_address"].as<std::string>().c_str()));
         uint32_t device_addr = ntohl(inet_addr(vm["device_address"].as<std::string>().c_str()));
 

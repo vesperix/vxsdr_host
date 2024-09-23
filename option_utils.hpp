@@ -7,6 +7,8 @@
 #include <cstring>
 #include <iostream>
 #include <map>
+#include <fstream>
+#include <iterator>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -124,21 +126,14 @@ struct parsed_options {
             exit(1);
         }
     }
-    bool help_requested() {
-        if (values.count("help") > 0) {
-            if (types["help"] == supported_types::BOOLEAN) {
-                return std::toupper(values["help"].c_str()[0]) == 'T';
-            }
-        }
-        return false;
-    }
 };
 class program_options {
   private:
     std::string program_name;
     std::string program_function;
     bool throw_on_error = false;
-    std::map<std::string, std::string> values;
+    std::string config_file_option = "";
+    std::map<std::string, std::string> allowed_values;
     std::map<std::string, supported_types> types;
     std::map<std::string, bool> is_required;
     std::map<std::string, std::string> help_msg;
@@ -153,36 +148,69 @@ class program_options {
     };
     ~program_options() = default;
     parsed_options parse(const int argc, char* argv[]) {
-        std::map<std::string, std::string> set_values;
+        std::map<std::string, std::string> values;
         // set any variables with default values first
-        for (auto& [key, val] : values) {
+        for (auto& [key, val] : allowed_values) {
             if (not val.empty()) {
-                set_values[key] = val;
+                values[key] = val;
             }
         }
-        int i = 1;
-        while (i < argc) {
-            std::string opt     = argv[i];
+        std::vector<std::string> tokens;
+        for (int i = 1; i < argc; i++) {
+            tokens.push_back(argv[i]);
+        }
+        process_tokens(tokens, values);
+        for (auto& [key, is_req] : is_required) {
+            if (is_req and values.count(key) == 0) {
+                parse_error("required option has not been set: --" + key);
+                break;
+            }
+        }
+        return {values, types, throw_on_error};
+    };
+    void process_tokens(std::vector<std::string>& tokens, std::map<std::string, std::string>& values, bool processing_config_file = false) {
+        unsigned i = 0;
+        unsigned n_tokens = tokens.size();
+        while (i < n_tokens) {
+            std::string opt     = tokens[i];
             std::string nextopt = "";
-            if (i + 1 < argc) {
-                nextopt = argv[i + 1];
+            if (i + 1 < n_tokens) {
+                nextopt = tokens[i + 1];
             }
             if (opt.starts_with("--")) {
                 // remove the dashes and see if it's recognized
                 std::string opt_name = opt.substr(2);
-                if (values.count(opt_name)) {
+                // check for help and show immediately
+                if (opt_name == "help") {
+                    std::cerr << help() << std::endl;
+                    exit(0);
+                }
+                if (opt_name == "config_file") {
+                    if (nextopt.empty() or nextopt.starts_with("--")) {
+                        // this option needs a value, but there isn't one
+                        parse_error("option requires a value: " + opt);
+                    } else if(processing_config_file) {
+                        parse_error("option cannot be used inside a config file: " + opt);
+                    } else {
+                        auto config_file_name = nextopt;
+                        auto file_tokens = read_tokens_from_file(config_file_name);
+                        process_tokens(file_tokens, values, true);
+                        i += 2;
+                    }
+                    continue;
+                }
+                if (allowed_values.count(opt_name)) {
                     if (types[opt_name] == supported_types::BOOLEAN) {
                         // this is a flag, set the value to true
-                        set_values[opt_name] = "T";
+                        values[opt_name] = "T";
                         i++;
                     } else {
                         if (nextopt.empty() or nextopt.starts_with("--")) {
                             // this option needs a value, but there isn't one
                             parse_error("option requires a value: " + opt);
-                            return {set_values, types, throw_on_error};
                         } else {
                             // this option looks like it has a value
-                            set_values[opt_name] = nextopt;
+                            values[opt_name] = nextopt;
                             i += 2;
                         }
                     }
@@ -190,28 +218,28 @@ class program_options {
                     if (opt_name.starts_with("no")) {
                         // see if this is the --nosomething form of the --something flag
                         std::string test_flag = opt_name.substr(2);
-                        if (values.count(test_flag) and types[test_flag] == supported_types::BOOLEAN) {
-                            set_values[test_flag] = "F";
+                        if (allowed_values.count(test_flag) and types[test_flag] == supported_types::BOOLEAN) {
+                            values[test_flag] = "F";
                             i++;
                         }
                     } else {
-                        parse_error("unrecognized option: --" + opt);
-                        return {set_values, types, throw_on_error};
+                        parse_error("unrecognized option: " + opt);
                     }
                 }
             } else {
-                parse_error("unrecognized option: --" + opt);
-                return {set_values, types, throw_on_error};
+                parse_error("unrecognized option: " + opt);
             }
         }
-        for (auto& [key, is_req] : is_required) {
-            if (is_req and set_values.count(key) == 0) {
-                parse_error("required option has not been set: --" + key);
-                break;
-            }
+    }
+    std::vector<std::string> read_tokens_from_file(const std::string& file_name) {
+        std::vector<std::string> tokens;
+        std::ifstream infile(file_name);
+        if (not infile.is_open()) {
+            parse_error("cannot open config file: " + file_name);
         }
-        return {set_values, types, throw_on_error};
-    };
+        std::copy(std::istream_iterator<std::string>(infile), std::istream_iterator<std::string>(), std::back_inserter(tokens));
+        return tokens;
+    }
     void parse_error(const std::string& error_message) const {
         if (throw_on_error) {
             throw std::runtime_error(error_message);
@@ -221,7 +249,7 @@ class program_options {
         }
     }
     void add_flag(const std::string& long_name, const std::string& help_text) {
-        add_option(long_name, help_text, supported_types::BOOLEAN, false, "F");
+        add_option(long_name, help_text, supported_types::BOOLEAN);
     }
     void add_flag(const std::string& long_name, const std::string& help_text, const bool required) {
         add_option(long_name, help_text, supported_types::BOOLEAN, required);
@@ -235,7 +263,7 @@ class program_options {
     }
     void add_option(const std::string& long_name, const std::string& help_text, supported_types type) {
         types[long_name]    = type;
-        values[long_name]   = "";
+        allowed_values[long_name]   = "";
         help_msg[long_name] = help_text;
         is_required[long_name] = false;
     }
@@ -244,7 +272,7 @@ class program_options {
                     supported_types type,
                     const bool required) {
         types[long_name]    = type;
-        values[long_name]   = "";
+        allowed_values[long_name]   = "";
         help_msg[long_name] = help_text;
         is_required[long_name] = required;
     }
@@ -254,7 +282,7 @@ class program_options {
                     const bool required,
                     const std::string& default_value) {
         types[long_name]    = type;
-        values[long_name]   = default_value;
+        allowed_values[long_name]   = default_value;
         help_msg[long_name] = help_text;
         // if an empty default is given, then it's still required on the command line, otherwise not
         is_required[long_name] = default_value.empty();
@@ -269,7 +297,7 @@ class program_options {
             outstr << std::endl;
         }
         outstr << "Command line options:" << std::endl;
-        for (auto& [key, value] : values) {
+        for (auto& [key, value] : allowed_values) {
             if (types[key] == supported_types::BOOLEAN) {
                 outstr << "     --" << key << " (flag, opposite is --no" << key << "): " << help_msg[key];
             } else {
