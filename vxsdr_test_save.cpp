@@ -51,7 +51,7 @@ int main(int argc, char* argv[]) {
             {"thread_affinity_offset",       vm["thread_affinity_offset"].as<int>()}
         };
 
-        if (vm.count("udp_data_transport:mtu_bytes") > 0) {
+        if (vm.count("network_mtu") > 0) {
             settings["udp_data_transport:mtu_bytes"] = vm["network_mtu"].as<unsigned>();
         }
 

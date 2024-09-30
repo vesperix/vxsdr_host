@@ -49,7 +49,7 @@ void add_network_options(option_utils::program_options& desc) {
     desc.add_option("local_address", "IPv4 address of local interface", option_utils::supported_types::STRING, true);
     desc.add_option("device_address", "IPv4 address of device (including broadcast/multicast)", option_utils::supported_types::STRING, true);
     desc.add_option("netmask", "IPv4 netmask of local interface", option_utils::supported_types::STRING, false, "255.255.255.0");
-    desc.add_option("payload_size", "maximum data packet payload size in bytes", option_utils::supported_types::INTEGER, false, "8832");
+    desc.add_option("payload_size", "maximum data packet payload size in bytes", option_utils::supported_types::INTEGER, false);
     desc.add_option("network_mtu", "network maximum UDP packet size in bytes", option_utils::supported_types::INTEGER, false, "9000");
     desc.add_option("network_send_buffer_bytes", "network transmit buffer size in bytes", option_utils::supported_types::INTEGER, false, "262144");
     desc.add_option("network_receive_buffer_bytes", "network receive buffer size in bytes", option_utils::supported_types::INTEGER, false, "8388608");
