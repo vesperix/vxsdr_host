@@ -104,9 +104,9 @@ int main(int argc, char* argv[]) {
         // how many seconds of data does the tx buffer hold at the current rate?
         double tx_buffer_duration_s = tx_buffer_bytes / (vm["network_bit_rate"].as<double>() / 8);
 
-        LOG_INFO(fmt::format("payload size    {:d} bytes)",
+        LOG_INFO(fmt::format("payload size    {:d} bytes",
                 radio->get_max_payload_bytes().value_or(-1)));
-        LOG_INFO(fmt::format("payload size    {:d} samples)",
+        LOG_INFO(fmt::format("payload size    {:d} samples",
                 radio->get_max_payload_bytes().value_or(-1) / sizeof(vxsdr::wire_sample)));
 
         LOG_INFO(fmt::format("buffer size     {:d} bytes", tx_buffer_bytes));
