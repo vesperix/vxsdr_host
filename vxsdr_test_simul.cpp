@@ -53,9 +53,14 @@ int main(int argc, char* argv[]) {
             {"thread_affinity_offset",       vm["thread_affinity_offset"].as<int>()}
         };
 
+        if (vm.count("udp_data_transport:mtu_bytes") > 0) {
+            settings["udp_data_transport:mtu_bytes"] = vm["network_mtu"].as<unsigned>();
+        }
+
         auto radio = std::make_unique<vxsdr>(settings);
 
         set_common_options(vm, radio);
+        set_network_options(vm, radio);
         set_tx_1ch_options(vm, radio);
         set_rx_1ch_options(vm, radio);
 
@@ -98,6 +103,11 @@ int main(int argc, char* argv[]) {
         auto tx_buffer_bytes = buf_info->at(1);
         // how many seconds of data does the tx buffer hold at the current rate?
         double tx_buffer_duration_s = tx_buffer_bytes / (vm["network_bit_rate"].as<double>() / 8);
+
+        LOG_INFO(fmt::format("payload size    {:d} bytes)",
+                radio->get_max_payload_bytes().value_or(-1)));
+        LOG_INFO(fmt::format("payload size    {:d} samples)",
+                radio->get_max_payload_bytes().value_or(-1) / sizeof(vxsdr::wire_sample)));
 
         LOG_INFO(fmt::format("buffer size     {:d} bytes", tx_buffer_bytes));
         LOG_INFO(fmt::format("buffer size     {:d} samples", tx_buffer_bytes / sizeof(vxsdr::wire_sample)));

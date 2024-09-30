@@ -49,7 +49,8 @@ void add_network_options(option_utils::program_options& desc) {
     desc.add_option("local_address", "IPv4 address of local interface", option_utils::supported_types::STRING, true);
     desc.add_option("device_address", "IPv4 address of device (including broadcast/multicast)", option_utils::supported_types::STRING, true);
     desc.add_option("netmask", "IPv4 netmask of local interface", option_utils::supported_types::STRING, false, "255.255.255.0");
-    desc.add_option("payload_size", "maximum data packet payload size in bytes", option_utils::supported_types::INTEGER, false, "8192");
+    desc.add_option("payload_size", "maximum data packet payload size in bytes", option_utils::supported_types::INTEGER, false, "8832");
+    desc.add_option("network_mtu", "network maximum UDP packet size in bytes", option_utils::supported_types::INTEGER, false, "9000");
     desc.add_option("network_send_buffer_bytes", "network transmit buffer size in bytes", option_utils::supported_types::INTEGER, false, "262144");
     desc.add_option("network_receive_buffer_bytes", "network receive buffer size in bytes", option_utils::supported_types::INTEGER, false, "8388608");
     desc.add_option("tx_data_queue_packets", "number of packets in the transmit packet queue", option_utils::supported_types::INTEGER, false, "512");
@@ -211,6 +212,16 @@ int set_tx_1ch_options(option_utils::parsed_options& vm, std::unique_ptr<vxsdr>&
     if (vm.count("tx_gain") > 0) {
         if (not radio->set_tx_gain(vm["tx_gain"].as<double>())) {
             LOG_ERROR("error in set_tx_1ch_options: set_tx_gain");
+        }
+    }
+
+    return 0;
+}
+
+int set_network_options(option_utils::parsed_options& vm, std::unique_ptr<vxsdr>& radio) {
+    if (vm.count("payload_size") > 0) {
+        if (not radio->set_max_payload_bytes(vm["payload_size"].as<unsigned>())) {
+            LOG_ERROR("error in set_network_options: set_max_payload_bytes");
         }
     }
 

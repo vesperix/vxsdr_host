@@ -51,9 +51,14 @@ int main(int argc, char* argv[]) {
             {"thread_affinity_offset",       vm["thread_affinity_offset"].as<int>()}
         };
 
+        if (vm.count("udp_data_transport:mtu_bytes") > 0) {
+            settings["udp_data_transport:mtu_bytes"] = vm["network_mtu"].as<unsigned>();
+        }
+
         auto radio = std::make_unique<vxsdr>(settings);
 
         set_common_options(vm, radio);
+        set_network_options(vm, radio);
         set_tx_1ch_options(vm, radio);
         set_rx_1ch_options(vm, radio);
 
@@ -96,6 +101,10 @@ int main(int argc, char* argv[]) {
         LOG_INFO(fmt::format("using rx_freq   {:.5e}", radio->get_rx_freq().value_or(-1)));
         LOG_INFO(fmt::format("using rx_rate   {:.5e}", radio->get_rx_rate().value_or(-1)));
         LOG_INFO(fmt::format("using rx_gain   {:.1f}", radio->get_rx_gain().value_or(-1)));
+
+        LOG_INFO(fmt::format("payload size {:d} bytes ({:d} samples)",
+                radio->get_max_payload_bytes().value_or(-1),
+                radio->get_max_payload_bytes().value_or(-1) / sizeof(vxsdr::wire_sample)));
 
         size_t n_received = 0;
 
