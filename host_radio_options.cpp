@@ -2,11 +2,56 @@
 #include <iostream>
 #include <string>
 #include <thread>
+#include <sstream>
+#include <vector>
+#include <iterator>
 
 #include "option_utils.hpp"
 #include "errors.hpp"
 #include "logging.hpp"
 #include "vxsdr.hpp"
+
+std::vector<double> interpret_bracketed_list(const std::string &list, const char delim = ',') {
+    // these list matching brackets in the same order
+    const std::string left_brackets  = "[({";
+    const std::string right_brackets = "])}";
+
+    if (list.size() < 2) {
+        LOG_FATAL(fmt::format("error parsing command line options (bracketed list): cannot interpret {:s} as a bracketed list", list));
+        exit(EXIT_CMD_LINE_ERROR);
+    }
+
+    unsigned i_bracket = left_brackets.size();
+    for (unsigned i = 0; i < left_brackets.size(); i++) {
+        if (list[0] == left_brackets[i] and list[list.size() - 1] == right_brackets[i]) {
+            // found a matching pair of brackets
+            i_bracket = i;
+            break;
+        }
+    }
+
+    if (i_bracket == left_brackets.size()) {
+        LOG_FATAL(fmt::format("error parsing command line options (bracketed list): cannot find matching brackets in {:s}", list));
+        exit(EXIT_CMD_LINE_ERROR);
+    }
+
+    // make a stringstream of the portion inside the brackets
+    std::istringstream iss(list.substr(1, list.size() - 2));
+    std::vector<double> ret;
+    std::string number;
+    while (std::getline(iss, number, delim)) {
+        try {
+            double x = std::stod(number.c_str(), NULL);
+            ret.push_back(x);
+        }
+        catch(std::invalid_argument&) {
+            LOG_FATAL(fmt::format("error parsing command line options (bracketed list): cannot interpret {:s} as a number", number));
+            exit(EXIT_CMD_LINE_ERROR);
+        }
+    }
+
+    return ret;
+}
 
 void add_rx_1ch_options(option_utils::program_options& desc) {
     // clang-format off
@@ -14,6 +59,7 @@ void add_rx_1ch_options(option_utils::program_options& desc) {
     desc.add_option("rx_freq", "RX center frequency in Hz", option_utils::supported_types::REAL);
     desc.add_option("rx_gain", "RX gain in dB", option_utils::supported_types::REAL, false, "0.0");
     desc.add_option("rx_ant", "RX antenna input selection", option_utils::supported_types::STRING);
+    desc.add_option("rx_iq_corr", "RX iq correction in the format \"(corr_11,corr_12,corr_21,corr_22)\"", option_utils::supported_types::STRING);
     // clang-format on
 }
 
@@ -23,6 +69,8 @@ void add_tx_1ch_options(option_utils::program_options& desc) {
     desc.add_option("tx_freq", "TX center frequency in Hz", option_utils::supported_types::REAL);
     desc.add_option("tx_gain", "TX gain in dB", option_utils::supported_types::REAL, false, "0.0");
     desc.add_option("tx_ant", "TX antenna output selection", option_utils::supported_types::STRING);
+    desc.add_option("tx_iq_bias", "TX iq bias in the format \"(bias_t,bias_i))\"", option_utils::supported_types::STRING);
+    desc.add_option("tx_iq_corr", "TX iq correction in the format \"[corr_11,corr_12,corr_21,corr_22]\"", option_utils::supported_types::STRING);
     // clang-format on
 }
 
@@ -158,6 +206,21 @@ int set_rx_1ch_options(option_utils::parsed_options& vm, std::unique_ptr<vxsdr>&
         }
     }
 
+    if (vm.count("rx_iq_corr") > 0) {
+        auto x = interpret_bracketed_list(vm["rx_iq_corr"].as<std::string>());
+        if (x.size() != 4) {
+            LOG_ERROR("error in set_rx_1ch_options: set_rx_iq_corr (requires 4 arguments)");
+        } else {
+            std::array<double, 4> y;
+            for (int i = 0; i < 4; i++) {
+                y[i] = x[i];
+            }
+            if (not radio->set_rx_iq_corr(y)) {
+                LOG_ERROR("error in set_rx_1ch_options: set_rx_iq_corr");
+            }
+        }
+    }
+
     return 0;
 }
 
@@ -212,6 +275,36 @@ int set_tx_1ch_options(option_utils::parsed_options& vm, std::unique_ptr<vxsdr>&
     if (vm.count("tx_gain") > 0) {
         if (not radio->set_tx_gain(vm["tx_gain"].as<double>())) {
             LOG_ERROR("error in set_tx_1ch_options: set_tx_gain");
+        }
+    }
+
+    if (vm.count("tx_iq_bias") > 0) {
+        auto x = interpret_bracketed_list(vm["tx_iq_bias"].as<std::string>());
+        if (x.size() != 2) {
+            LOG_ERROR("error in set_tx_1ch_options: set_tx_iq_bias (requires 2 arguments)");
+        } else {
+            std::array<double, 2> y;
+            for (int i = 0; i < 2; i++) {
+                y[i] = x[i];
+            }
+            if (not radio->set_tx_iq_bias(y)) {
+                LOG_ERROR("error in set_tx_1ch_options: set_tx_iq_bias");
+            }
+        }
+    }
+
+    if (vm.count("tx_iq_corr") > 0) {
+        auto x = interpret_bracketed_list(vm["tx_iq_corr"].as<std::string>());
+        if (x.size() != 4) {
+            LOG_ERROR("error in set_tx_1ch_options: set_tx_iq_corr (requires 4 arguments)");
+        } else {
+            std::array<double, 4> y;
+            for (int i = 0; i < 4; i++) {
+                y[i] = x[i];
+            }
+            if (not radio->set_tx_iq_corr(y)) {
+                LOG_ERROR("error in set_tx_1ch_options: set_tx_iq_corr");
+            }
         }
     }
 
