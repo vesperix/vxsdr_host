@@ -81,9 +81,9 @@ void add_common_options(option_utils::program_options& desc) {
     desc.add_option("prefix", "prefix for the output file", option_utils::supported_types::STRING, false, "test-");
     desc.add_option("suffix", "suffix for the output file", option_utils::supported_types::STRING, false, ".dat");
     desc.add_option("duration", "duration in seconds", option_utils::supported_types::REAL, false, "1.0");
-    desc.add_flag("filename-time", "include time in output filenames", false, true);
+    desc.add_flag("filename_time", "include time in output filenames", false, true);
     desc.add_option("clock_source", "source for frequency reference", option_utils::supported_types::STRING);
-    desc.add_option("time_source", "source for time reference (host or pps)", option_utils::supported_types::STRING, false, "host");
+    desc.add_option("time_source", "source for time reference (host, radio, or pps)", option_utils::supported_types::STRING, false, "host");
     desc.add_option("rate", "TX/RX sample rate in Hz", option_utils::supported_types::REAL, true);
     desc.add_option("freq", "TX/RX center frequency in Hz", option_utils::supported_types::REAL, true);
     desc.add_option("verbose_level", "log level (6 = trace, 5 = debug, 4 = info, 3 = warning, 2 = error, 1 = fatal, 0 = none)",
@@ -122,8 +122,10 @@ int set_common_options(option_utils::parsed_options& vm, std::unique_ptr<vxsdr>&
             if (not radio->set_time_now(std::chrono::system_clock::now())) {
                 LOG_ERROR("error in set_common_options: set_time_now");
             }
+        } else if (ts_str.compare("radio") == 0) {
+            // don't do anything
         } else if (ts_str.compare("pps") == 0) {
-            constexpr unsigned max_host_clock_error_ms = 200; // cannot be 500 or more!
+            constexpr unsigned max_host_clock_error_ms = 200; // how wrong host clock can be: cannot be 500 ms or more!
             auto t_now = std::chrono::system_clock::now();
             auto msecs = std::chrono::time_point_cast<std::chrono::milliseconds>(t_now) -
                          std::chrono::time_point_cast<std::chrono::milliseconds>(std::chrono::floor<std::chrono::seconds>(t_now));
@@ -141,7 +143,7 @@ int set_common_options(option_utils::parsed_options& vm, std::unique_ptr<vxsdr>&
                 LOG_ERROR("error in set_common_options: set_time_next_pps");
             }
         } else {
-            LOG_FATAL(fmt::format("Error: unknown option value for --time_source: {:s} (allowed values are host or pps)",
+            LOG_FATAL(fmt::format("Error: unknown option value for --time_source: {:s} (allowed values are host, radio, or pps)",
                      vm["time_source"].as<std::string>()));
             exit(EXIT_CMD_LINE_ERROR);
         }
